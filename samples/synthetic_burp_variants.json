@@ -1,0 +1,206 @@
+{
+  "events": [
+    {
+      "id": "variant-form-001",
+      "request": {
+        "method": "POST",
+        "url": "https://forms.example.test/login",
+        "headers": {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Cookie": "login_sid=form-session-demo"
+        },
+        "body": "username=demo-user&password=FormPassword123!&csrf=form-csrf-token-abcdef123456"
+      },
+      "response": {
+        "status": 302,
+        "headers": {
+          "Set-Cookie": "login=form-response-session; Path=/"
+        },
+        "body": ""
+      }
+    },
+    {
+      "id": "variant-json-002",
+      "request": {
+        "method": "POST",
+        "url": "https://api.example.test/api/profile/998",
+        "headers": {
+          "Authorization": "Bearer json-demo-token-abcdef1234567890",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "email": "json-user@example.test",
+          "phone": "010-2222-3333",
+          "rrn": "880101-1234567",
+          "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZSI6InJlYWQifQ.JsonSignatureDemo123"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "userId": 998,
+          "email": "json-user@example.test",
+          "memberNo": "SYN-998"
+        }
+      }
+    },
+    {
+      "id": "variant-multipart-003",
+      "request": {
+        "method": "POST",
+        "url": "https://files.example.test/upload",
+        "headers": {
+          "Content-Type": "multipart/form-data; boundary=----demoBoundary"
+        },
+        "body": "------demoBoundary\nContent-Disposition: form-data; name=\"accountNumber\"\n\n1234567890123456\n------demoBoundary\nContent-Disposition: form-data; name=\"file\"; filename=\"synthetic-report.txt\"\nContent-Type: text/plain\n\nSynthetic upload body with secret ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890\n------demoBoundary--"
+      },
+      "response": {
+        "status": 201,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "uploadId": "ABCDEF1234567890",
+          "status": "stored"
+        }
+      }
+    },
+    {
+      "id": "variant-graphql-004",
+      "request": {
+        "method": "POST",
+        "url": "https://graphql.example.test/graphql",
+        "headers": {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": "graphql-csrf-token-abcdef"
+        },
+        "body": {
+          "query": "query User($id: ID!) { user(id: $id) { id email accountNumber } }",
+          "variables": {
+            "id": "777",
+            "email": "graphql-user@example.test",
+            "accountNumber": "9999888877776666",
+            "token": "graphql-token-abcdef123456"
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "data": {
+            "user": {
+              "id": 777,
+              "email": "graphql-user@example.test",
+              "accountNumber": "9999888877776666"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "variant-html-005",
+      "request": {
+        "method": "GET",
+        "url": "https://portal.example.test/account/settings",
+        "headers": {
+          "Cookie": "settings_sid=settings-session-demo"
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Settings</title></head><body><form><input type=\"hidden\" name=\"csrf\" value=\"hidden-csrf-token\"><input type=\"email\" name=\"email\" value=\"html-user@example.test\"><input type=\"password\" name=\"password\" value=\"HtmlPassword123\"></form></body></html>"
+      }
+    },
+    {
+      "id": "variant-query-jwt-006",
+      "request": {
+        "method": "GET",
+        "url": "https://portal.example.test/api/download?downloadJwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkb3dubG9hZCI6dHJ1ZX0.QuerySignatureDemo123&fileId=444",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "fileId": 444,
+          "ownerEmail": "download-owner@example.test"
+        }
+      }
+    },
+    {
+      "id": "variant-internal-ip-007",
+      "request": {
+        "method": "GET",
+        "url": "http://192.168.10.55/internal/users/42",
+        "headers": {
+          "Cookie": "intranet_sid=internal-demo-session"
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": 42,
+          "phone": "010-9999-0000"
+        }
+      }
+    },
+    {
+      "id": "variant-internal-host-008",
+      "request": {
+        "method": "GET",
+        "url": "https://app.internal.example.test/admin/accounts/1234567890123456",
+        "headers": {
+          "Authorization": "Bearer internal-host-token-abcdef123456"
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 403,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "error": "forbidden"
+        }
+      }
+    },
+    {
+      "id": "variant-entropy-009",
+      "request": {
+        "method": "GET",
+        "url": "https://portal.example.test/api/state?state=AbCdEfGhIjKlMnOpQrStUvWxYz1234567890abcdEFGH",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": ""
+      }
+    }
+  ]
+}
+

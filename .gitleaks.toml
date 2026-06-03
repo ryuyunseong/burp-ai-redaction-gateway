@@ -1,0 +1,23 @@
+title = "burp-ai-redaction-gateway"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Synthetic fixtures use explicit demo values for scanner regression tests."
+regexes = [
+  '''(?i)DUMMY[_A-Z0-9.-]*''',
+  '''(?i)FAKE[_A-Z0-9.-]*''',
+  '''(?i)EXAMPLE[_A-Z0-9.-]*''',
+  '''(?i)demo[-_A-Za-z0-9.!]*''',
+  '''(?i)synthetic[-_A-Za-z0-9.!]*''',
+  '''(?i)CorrectHorseBatteryStaple1!''',
+  '''(?i)FormPassword123!''',
+  '''(?i)HtmlPassword123''',
+  '''eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*Demo[A-Za-z0-9_-]*''',
+  '''dXNlcjpwYXNzd29yZA=='''
+]
+paths = [
+  '''samples/burp_xml_base64_history\.xml'''
+]
+

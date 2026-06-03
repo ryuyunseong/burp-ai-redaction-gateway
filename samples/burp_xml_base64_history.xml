@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<items>
+  <item>
+    <time>Thu Jun 04 06:30:00 KST 2026</time>
+    <url>https://xml-client.example.test/api/users/321/profile</url>
+    <host ip="203.0.113.10">xml-client.example.test</host>
+    <port>443</port>
+    <protocol>https</protocol>
+    <method>GET</method>
+    <path>/api/users/321/profile</path>
+    <extension>json</extension>
+    <request base64="true">R0VUIC9hcGkvdXNlcnMvMzIxL3Byb2ZpbGU/and0PWV5SmhiR2NpT2lKSVV6STFOaUlzSW5SNWNDSTZJa3BYVkNKOS5leUp6ZFdJaU9pSXpNakVpZlEuU2lnbmF0dXJlRm9yWG1sRGVtbzEyMyBIVFRQLzEuMQ0KSG9zdDogeG1sLWNsaWVudC5leGFtcGxlLnRlc3QNCkF1dGhvcml6YXRpb246IEJhc2ljIGRYTmxjanB3WVhOemQyOXlaQT09DQpDb29raWU6IFhTUkYtVE9LRU49eG1sLWNvb2tpZS1kZW1vOyBzaWQ9eG1sLXNlc3Npb24tZGVtbw0KQWNjZXB0OiBhcHBsaWNhdGlvbi9qc29uDQoNCg==</request>
+    <status>200</status>
+    <responselength>342</responselength>
+    <mimetype>JSON</mimetype>
+    <response base64="true">SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb24NClNldC1Db29raWU6IHhtbHNpZD14bWwtcmVzcG9uc2Utc2Vzc2lvbjsgU2FtZVNpdGU9Tm9uZQ0KQWNjZXNzLUNvbnRyb2wtQWxsb3ctT3JpZ2luOiBodHRwczovL2V2aWwuZXhhbXBsZS50ZXN0DQpBY2Nlc3MtQ29udHJvbC1BbGxvdy1DcmVkZW50aWFsczogdHJ1ZQ0KDQp7InVzZXJJZCI6MzIxLCJlbWFpbCI6InhtbC11c2VyQGV4YW1wbGUudGVzdCIsInBob25lIjoiMDEwLTg4ODgtNzc3NyIsImFjY291bnROdW1iZXIiOiIxMjM0NTY3ODkwMTIzNDU2In0=</response>
+  </item>
+</items>
+

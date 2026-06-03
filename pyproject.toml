@@ -1,0 +1,13 @@
+[project]
+name = "burp-ai-redaction-gateway"
+version = "0.1.0"
+description = "Local redaction gateway for Burp HTTP history prompt packets."
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+

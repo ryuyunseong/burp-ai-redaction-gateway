@@ -1,0 +1,226 @@
+{
+  "events": [
+    {
+      "id": "burp-history-001",
+      "request": {
+        "method": "GET",
+        "url": "https://portal.example.test/api/users/123/profile?view=full",
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMifQ.SignaturePartForDemoOnly123",
+          "Cookie": "JSESSIONID=demo-session-value; theme=dark",
+          "Accept": "application/json"
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "Set-Cookie": "session=demo-session-value; HttpOnly; SameSite=Lax"
+        },
+        "body": {
+          "userId": 123,
+          "name": "Alice Example",
+          "email": "alice@example.test",
+          "phone": "010-1234-5678",
+          "role": "user"
+        }
+      }
+    },
+    {
+      "id": "burp-history-002",
+      "request": {
+        "method": "GET",
+        "url": "https://portal.example.test/api/orders/550e8400-e29b-41d4-a716-446655440000?account=12345678901234",
+        "headers": {
+          "X-Api-Key": "test_api_key_1234567890abcdef",
+          "Accept": "application/json"
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "Cache-Control": "public"
+        },
+        "body": {
+          "orderId": "550e8400-e29b-41d4-a716-446655440000",
+          "accountNumber": "12345678901234",
+          "amount": 12000
+        }
+      }
+    },
+    {
+      "id": "burp-history-003",
+      "request": {
+        "method": "POST",
+        "url": "https://portal.example.test/login",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "username": "demo-user",
+          "password": "CorrectHorseBatteryStaple1!",
+          "csrf": "csrf-token-demo-123456789"
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": {
+          "Set-Cookie": "sid=login-session-value; SameSite=None"
+        },
+        "body": ""
+      }
+    },
+    {
+      "id": "burp-history-004",
+      "request": {
+        "method": "OPTIONS",
+        "url": "https://api.example.test/api/admin/users",
+        "headers": {
+          "Origin": "https://attacker.example.test"
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 204,
+        "headers": {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Credentials": "true",
+          "Allow": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        "body": ""
+      }
+    },
+    {
+      "id": "burp-history-005",
+      "request": {
+        "method": "GET",
+        "url": "https://portal.example.test/api/reports/export?token=download-token-abcdef123456",
+        "headers": {
+          "Cookie": "sid=download-session-value",
+          "Accept": "application/json"
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "reportId": 77,
+          "ownerEmail": "report-owner@example.test",
+          "downloadReady": true
+        }
+      }
+    },
+    {
+      "id": "burp-history-006",
+      "request": {
+        "method": "GET",
+        "url": "https://portal.example.test/api/debug/777",
+        "headers": {
+          "Accept": "text/plain"
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "Traceback synthetic demo: NullReferenceException at DemoController line 42"
+      }
+    },
+    {
+      "id": "burp-history-007",
+      "request": {
+        "method": "GET",
+        "url": "http://10.2.3.4/admin/users/555",
+        "headers": {
+          "Cookie": "adminsid=internal-session-value"
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "id": 555,
+          "memberNo": "M-10001",
+          "email": "admin@example.test"
+        }
+      }
+    },
+    {
+      "id": "burp-history-008",
+      "request": {
+        "method": "POST",
+        "url": "https://portal.example.test/api/search",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "query": "lookup",
+          "rrn": "900101-1234567"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "matches": []
+        }
+      }
+    },
+    {
+      "id": "burp-history-009",
+      "request": {
+        "method": "GET",
+        "url": "https://static.example.test/products/42",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=3600"
+        },
+        "body": {
+          "productId": 42,
+          "name": "Synthetic Product"
+        }
+      }
+    },
+    {
+      "id": "burp-history-010",
+      "request": {
+        "method": "DELETE",
+        "url": "https://portal.example.test/api/items/ABCDEF1234567890",
+        "headers": {
+          "Authorization": "Bearer delete-demo-token-abcdef1234567890"
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 403,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "error": "forbidden"
+        }
+      }
+    }
+  ]
+}
+

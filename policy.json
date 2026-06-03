@@ -1,0 +1,65 @@
+{
+  "project": {
+    "alias": "client_alias_demo",
+    "raw_output_allowed": false
+  },
+  "redaction": {
+    "mode": "fail_closed",
+    "preserve_header_names": true,
+    "preserve_cookie_names": true,
+    "preserve_json_keys": true,
+    "preserve_value_type": true,
+    "preserve_value_length_bucket": true,
+    "hmac_pseudonymization": false
+  },
+  "blocked_fields": [
+    "authorization",
+    "cookie",
+    "set-cookie",
+    "x-api-key",
+    "x-csrf-token",
+    "password",
+    "passwd",
+    "pwd",
+    "token",
+    "secret",
+    "session",
+    "access_token",
+    "refresh_token",
+    "email",
+    "phone",
+    "rrn",
+    "account",
+    "card"
+  ],
+  "pii": {
+    "detect_email": true,
+    "detect_phone_kr": true,
+    "detect_rrn_kr": true,
+    "detect_account_number": true,
+    "detect_card_number": true
+  },
+  "output": {
+    "allow_response_snippet": false,
+    "allow_error_snippet_after_scan": false,
+    "max_snippet_chars": 300,
+    "include_raw_reference_id": true,
+    "include_raw_value": false
+  },
+  "verification": {
+    "file_extensions": [".json", ".jsonl", ".md", ".txt"],
+    "allowlisted_literals": [
+      "10.0.0.0/8",
+      "127.0.0.0/8",
+      "172.16.0.0/12",
+      "192.168.0.0/16"
+    ],
+    "allowlist_notes": {
+      "10.0.0.0/8": "Network bucket only, not a raw internal host IP.",
+      "127.0.0.0/8": "Loopback bucket only, not a raw host IP.",
+      "172.16.0.0/12": "Network bucket only, not a raw internal host IP.",
+      "192.168.0.0/16": "Network bucket only, not a raw internal host IP."
+    }
+  }
+}
+
