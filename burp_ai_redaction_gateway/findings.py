@@ -17,6 +17,7 @@ SECURITY_HEADERS_TO_CHECK = {
     "Content-Security-Policy",
     "X-Frame-Options",
 }
+SESSION_COOKIE_NAME_HINTS = ("session", "sid", "jsessionid", "auth", "login")
 
 
 def build_finding_candidates(events: list[SanitizedEvent]) -> dict[str, Any]:
@@ -40,12 +41,20 @@ def build_finding_candidates(events: list[SanitizedEvent]) -> dict[str, Any]:
     }
 
 
-def _base_candidate(event: SanitizedEvent, rule_type: str, title: str, confidence: str) -> dict[str, Any]:
+def _base_candidate(
+    event: SanitizedEvent,
+    rule_type: str,
+    title: str,
+    confidence: str,
+    confidence_rationale: list[str],
+) -> dict[str, Any]:
     endpoint = f"{event.request['method']} {event.request['path_template']}"
     return {
         "type": rule_type,
         "title": title,
         "confidence": confidence,
+        "confidence_rationale": confidence_rationale,
+        "manual_verification_required": True,
         "affected_endpoint": endpoint,
         "evidence_ids": [event.evidence_id],
         "rationale": [],
@@ -64,7 +73,16 @@ def _add_missing_security_headers(candidates: list[dict[str, Any]], event: Sanit
     ]
     if not missing:
         return
-    candidate = _base_candidate(event, "missing_security_headers", "Missing security headers", "low")
+    candidate = _base_candidate(
+        event,
+        "missing_security_headers",
+        "Missing security headers",
+        "low",
+        [
+            "Passive single-response header observation only.",
+            "Headers may be added by an upstream proxy or environment-specific edge layer.",
+        ],
+    )
     candidate["rationale"] = [f"Response did not include: {', '.join(sorted(missing))}."]
     candidate["recommended_manual_tests"] = [
         "Confirm whether the endpoint is served over HTTPS in the target environment.",
@@ -84,7 +102,14 @@ def _add_weak_cookie_attributes(candidates: list[dict[str, Any]], event: Sanitiz
             missing.append("SameSite")
         if not missing:
             continue
-        candidate = _base_candidate(event, "weak_cookie_attributes", "Weak cookie attributes", "medium")
+        confidence = _cookie_confidence(cookie, missing)
+        candidate = _base_candidate(
+            event,
+            "weak_cookie_attributes",
+            "Weak cookie attributes",
+            confidence,
+            _cookie_confidence_rationale(cookie, missing, confidence),
+        )
         candidate["rationale"] = [f"Set-Cookie for {cookie['name']} is missing: {', '.join(missing)}."]
         candidate["recommended_manual_tests"] = [
             "Confirm the cookie is used for authentication or session state.",
@@ -99,7 +124,18 @@ def _add_cors_candidate(candidates: list[dict[str, Any]], event: SanitizedEvent)
     credentials = str(cors.get("Access-Control-Allow-Credentials", "")).lower()
     if origin != "*" and not (origin and credentials == "true"):
         return
-    candidate = _base_candidate(event, "cors_candidate", "CORS misconfiguration candidate", "medium")
+    confidence = "medium" if credentials == "true" else "low"
+    candidate = _base_candidate(
+        event,
+        "cors_candidate",
+        "CORS misconfiguration candidate",
+        confidence,
+        [
+            "CORS headers were observed in sanitized response metadata.",
+            "Browser enforcement and authenticated cross-origin behavior require manual reproduction.",
+            f"Credentialed CORS marker observed: {credentials == 'true'}.",
+        ],
+    )
     candidate["rationale"] = [
         "CORS response allows a wildcard origin or credentialed cross-origin access.",
         "Manual origin and credential checks are required before confirming impact.",
@@ -117,11 +153,18 @@ def _add_cache_control_on_authenticated_response(candidates: list[dict[str, Any]
     cache_control = event.signals["cache_control"].lower()
     if any(value in cache_control for value in ["no-store", "no-cache", "private"]):
         return
+    user_specific_signal = bool(event.signals["user_specific_response"] or event.signals["response_sensitive_fields"])
+    confidence = "medium" if user_specific_signal else "low"
     candidate = _base_candidate(
         event,
         "cache_control_on_authenticated_response",
         "Cache-Control issue on authenticated-looking response",
-        "low",
+        confidence,
+        [
+            "Authenticated-looking request signal was observed after redaction.",
+            "No no-store, no-cache, or private Cache-Control policy was observed.",
+            f"User-specific response signal observed: {user_specific_signal}.",
+        ],
     )
     candidate["rationale"] = [
         "Request appears authenticated and response did not include no-store, no-cache, or private Cache-Control policy."
@@ -136,7 +179,16 @@ def _add_cache_control_on_authenticated_response(candidates: list[dict[str, Any]
 def _add_error_exposure(candidates: list[dict[str, Any]], event: SanitizedEvent) -> None:
     if event.signals["status"] < 500 and not event.signals["error_snippet_present"]:
         return
-    candidate = _base_candidate(event, "error_exposure", "Error message exposure candidate", "low")
+    candidate = _base_candidate(
+        event,
+        "error_exposure",
+        "Error message exposure candidate",
+        "low",
+        [
+            "Passive error status or sanitized error snippet signal only.",
+            "Production error handling may differ and must be reproduced safely.",
+        ],
+    )
     candidate["rationale"] = ["Response indicates a server error or includes a sanitized error snippet."]
     candidate["recommended_manual_tests"] = [
         "Reproduce the error with safe input and check whether stack traces or internal paths are exposed.",
@@ -153,7 +205,16 @@ def _add_idor_candidate(candidates: list[dict[str, Any]], event: SanitizedEvent)
         and event.signals["user_specific_response"]
     ):
         return
-    candidate = _base_candidate(event, "idor_candidate", "Potential Broken Access Control / IDOR", "medium")
+    candidate = _base_candidate(
+        event,
+        "idor_candidate",
+        "Potential Broken Access Control / IDOR",
+        "medium",
+        [
+            "Identifier, authenticated-looking request, HTTP 2xx, and user-specific response signals were all observed.",
+            "Cross-user or cross-role access was not tested and must be manually verified.",
+        ],
+    )
     candidate["rationale"] = [
         "Identifier parameter observed in path or query.",
         "Authenticated-looking request returned HTTP 2xx.",
@@ -172,11 +233,18 @@ def _add_sensitive_data_exposure_candidate(candidates: list[dict[str, Any]], eve
     fields = event.signals["response_sensitive_fields"]
     if not fields:
         return
+    contextual_signal = bool(event.signals["auth_observed"] or event.signals["user_specific_response"])
+    confidence = "medium" if contextual_signal else "low"
     candidate = _base_candidate(
         event,
         "sensitive_data_exposure_candidate",
         "Sensitive data exposure candidate",
-        "medium",
+        confidence,
+        [
+            "Response schema contains sanitized sensitive-field markers.",
+            f"Authenticated or user-specific context observed: {contextual_signal}.",
+            "Business necessity and role visibility must be manually reviewed.",
+        ],
     )
     candidate["rationale"] = [
         "Response schema contains fields that required redaction.",
@@ -187,3 +255,22 @@ def _add_sensitive_data_exposure_candidate(candidates: list[dict[str, Any]], eve
         "Check role-based access and data minimization requirements.",
     ]
     candidates.append(candidate)
+
+
+def _cookie_confidence(cookie: dict[str, Any], missing: list[str]) -> str:
+    name = str(cookie["name"]).lower()
+    session_like = any(hint in name for hint in SESSION_COOKIE_NAME_HINTS)
+    if session_like and ("Secure" in missing or "HttpOnly" in missing):
+        return "medium"
+    return "low"
+
+
+def _cookie_confidence_rationale(cookie: dict[str, Any], missing: list[str], confidence: str) -> list[str]:
+    name = str(cookie["name"]).lower()
+    session_like = any(hint in name for hint in SESSION_COOKIE_NAME_HINTS)
+    return [
+        "Only Set-Cookie attribute metadata was used; cookie values were not inspected.",
+        f"Session-like cookie name signal observed: {session_like}.",
+        f"Missing high-impact attributes observed: {bool({'Secure', 'HttpOnly'} & set(missing))}.",
+        f"Confidence remains {confidence} until cookie purpose is manually confirmed.",
+    ]
