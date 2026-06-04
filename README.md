@@ -115,6 +115,18 @@ pass the existing Python `verify` gate before use.
 
 See [docs/MONTOYA_COLLECTOR.md](C:/coding/burp-ai-redaction-gateway/docs/MONTOYA_COLLECTOR.md).
 
+## Localhost Receiver
+
+Run the loopback-only receiver for Montoya collector handoff payloads:
+
+```powershell
+python -m burp_ai_redaction_gateway serve --host 127.0.0.1 --port 8765 --output out\receiver --project montoya_receiver_alias
+```
+
+The receiver accepts `POST /ingest/burp-history`, applies redaction immediately,
+and writes only verified sanitized output. See
+[docs/LOCALHOST_RECEIVER.md](C:/coding/burp-ai-redaction-gateway/docs/LOCALHOST_RECEIVER.md).
+
 ## Security Notes
 
 - Do not commit real Burp exports, raw HTTP history, tokens, cookies, customer

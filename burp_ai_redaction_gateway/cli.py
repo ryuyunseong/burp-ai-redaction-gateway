@@ -7,6 +7,7 @@ from .findings import build_finding_candidates
 from .output import write_outputs
 from .parser import load_events
 from .policy import load_policy
+from .receiver import DEFAULT_HOST, DEFAULT_MAX_BYTES, DEFAULT_PORT, ReceiverConfig, ReceiverError, create_server
 from .redaction import Redactor
 from .verifier import verify_path
 
@@ -25,11 +26,21 @@ def main(argv: list[str] | None = None) -> int:
     verify.add_argument("--input", required=True, type=Path, help="Output file or directory to scan.")
     verify.add_argument("--policy", type=Path, help="Optional policy.json path.")
 
+    serve = subparsers.add_parser("serve", help="Run the loopback-only Montoya handoff receiver.")
+    serve.add_argument("--host", default=DEFAULT_HOST, help="Bind host. Only 127.0.0.1 is allowed.")
+    serve.add_argument("--port", default=DEFAULT_PORT, type=int, help="Bind port.")
+    serve.add_argument("--output", default=Path("out") / "receiver", type=Path, help="Sanitized output root.")
+    serve.add_argument("--project", default="montoya_receiver_alias", help="Project alias. Do not use a real name.")
+    serve.add_argument("--policy", type=Path, help="Optional policy.json path.")
+    serve.add_argument("--max-bytes", default=DEFAULT_MAX_BYTES, type=int, help="Maximum accepted JSON payload bytes.")
+
     args = parser.parse_args(argv)
     if args.command == "generate":
         return _generate(args.input, args.output, args.project, args.policy)
     if args.command == "verify":
         return _verify(args.input, args.policy)
+    if args.command == "serve":
+        return _serve(args.host, args.port, args.output, args.project, args.policy, args.max_bytes)
     parser.error("Unknown command")
     return 2
 
@@ -60,3 +71,22 @@ def _verify(input_path: Path, policy_path: Path | None) -> int:
     if len(result.findings) > 20:
         print(f"- ... {len(result.findings) - 20} additional findings omitted")
     return 1
+
+
+def _serve(host: str, port: int, output_dir: Path, project: str, policy_path: Path | None, max_bytes: int) -> int:
+    try:
+        config = ReceiverConfig(output_dir=output_dir, project=project, policy_path=policy_path, max_body_bytes=max_bytes)
+        server = create_server(host, port, config)
+    except ReceiverError as error:
+        print(f"Receiver startup failed: {error.error_type}")
+        return 1
+
+    print(f"Receiver listening on {host}:{port}")
+    print("Raw HTTP is accepted only over loopback and is not logged.")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("Receiver stopped")
+    finally:
+        server.server_close()
+    return 0

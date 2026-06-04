@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
 from .models import HttpRequest, HttpResponse, RawEvent
+
+SAFE_MONTOYA_SOURCE_ID_RE = re.compile(r"^[A-Za-z0-9_.:-]{1,80}$")
 
 
 def load_events(path: Path) -> list[RawEvent]:
@@ -26,6 +29,23 @@ def load_events(path: Path) -> list[RawEvent]:
     else:
         raise ValueError("Unsupported input format")
     return [_fixture_event(item, index) for index, item in enumerate(items, start=1)]
+
+
+def event_from_montoya_handoff(payload: dict[str, Any]) -> RawEvent:
+    source_event_id = str(payload["source_event_id"])
+    if not SAFE_MONTOYA_SOURCE_ID_RE.fullmatch(source_event_id):
+        raise ValueError("Unsafe Montoya source event id")
+
+    request_text = str(payload["request"])
+    response_value = payload.get("response")
+    response_text = "" if response_value is None else str(response_value)
+    fallback_url = _fallback_url_from_request_message(request_text)
+    return RawEvent(
+        raw_id=f"montoya:{source_event_id}",
+        request=_parse_request_message(request_text, fallback_url, "GET"),
+        response=_parse_response_message(response_text),
+        source="montoya_handoff",
+    )
 
 
 def _fixture_event(item: dict[str, Any], index: int) -> RawEvent:
@@ -183,6 +203,25 @@ def _fallback_url_from_xml_item(item: ET.Element) -> str:
     if not path.startswith("/"):
         path = f"/{path}"
     return f"{protocol}://{host}{path}"
+
+
+def _fallback_url_from_request_message(message: str) -> str:
+    if not message.strip():
+        return ""
+    head, _body = _split_http_message(message)
+    lines = head.splitlines()
+    if not lines:
+        return ""
+    parts = lines[0].split()
+    target = parts[1] if len(parts) >= 2 else "/"
+    if target.startswith(("http://", "https://")):
+        return target
+    headers = _parse_header_lines(lines[1:])
+    host = next((value for name, value in headers.items() if name.lower() == "host"), "")
+    if not host:
+        return ""
+    path = target if target.startswith("/") else "/"
+    return f"https://{host}{path}"
 
 
 def _headers_to_dict(headers: Any) -> dict[str, str]:
