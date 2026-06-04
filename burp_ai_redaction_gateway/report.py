@@ -86,6 +86,8 @@ def _candidate_section(candidate: dict[str, Any]) -> list[str]:
     kind = _safe_text(candidate.get("type"), "unknown_type")
     endpoint = _safe_text(candidate.get("affected_endpoint"), "unknown_endpoint")
     confidence = _safe_text(candidate.get("confidence"), "unknown")
+    confidence_rationale = _safe_list(candidate.get("confidence_rationale"))
+    manual_required = bool(candidate.get("manual_verification_required", True))
     evidence_ids = _safe_list(candidate.get("evidence_ids"))
     rationale = _safe_list(candidate.get("rationale"))
     manual_tests = _safe_list(candidate.get("recommended_manual_tests"))
@@ -98,10 +100,16 @@ def _candidate_section(candidate: dict[str, Any]) -> list[str]:
         f"- Candidate type: {kind}",
         f"- Affected endpoint: {endpoint}",
         f"- Confidence: {confidence}",
+        f"- Manual verification required: {str(manual_required).lower()}",
         f"- Evidence IDs: {', '.join(evidence_ids) if evidence_ids else 'none'}",
         "",
-        "### Rationale",
+        "### Confidence Rationale",
     ]
+    lines.extend(_bullets(confidence_rationale, "Confidence is conservative until manual verification is complete."))
+    lines.extend([
+        "",
+        "### Rationale",
+    ])
     lines.extend(_bullets(rationale, "No rationale was provided in the analysis packet."))
     lines.extend(["", "### Impact Draft"])
     lines.extend(_bullets(_impact_draft(kind), "Manual verification is required before impact can be stated."))

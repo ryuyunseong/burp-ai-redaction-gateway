@@ -11,6 +11,8 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 from burp_ai_redaction_gateway.cli import main
+from burp_ai_redaction_gateway.findings import build_finding_candidates
+from burp_ai_redaction_gateway.models import SanitizedEvent
 from burp_ai_redaction_gateway.parser import load_events
 from burp_ai_redaction_gateway.policy import load_policy
 from burp_ai_redaction_gateway.receiver import ReceiverConfig, ReceiverError, create_server, ingest_montoya_payload
@@ -131,15 +133,77 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("affected_endpoint", item)
                 self.assertIn("evidence_ids", item)
                 self.assertIn("confidence", item)
+                self.assertIn(item["confidence"], {"low", "medium"})
+                self.assertIn("confidence_rationale", item)
+                self.assertIn("manual_verification_required", item)
                 self.assertIn("rationale", item)
                 self.assertIn("recommended_manual_tests", item)
                 self.assertIn("do_not_claim", item)
                 self.assertTrue(item["evidence_ids"])
+                self.assertTrue(item["confidence_rationale"])
+                self.assertTrue(item["manual_verification_required"])
                 self.assertTrue(item["rationale"])
                 self.assertTrue(item["recommended_manual_tests"])
                 self.assertIn("Vulnerability confirmed", item["do_not_claim"])
                 self.assertNotIn("raw_request", json.dumps(item))
                 self.assertNotIn("raw_response", json.dumps(item))
+            weak_sensitive_candidate = next(
+                item
+                for item in candidates
+                if item["type"] == "sensitive_data_exposure_candidate" and item["evidence_ids"] == ["EV-0002"]
+            )
+            self.assertEqual(weak_sensitive_candidate["confidence"], "medium")
+            idor_candidate = next(item for item in candidates if item["type"] == "idor_candidate")
+            self.assertEqual(idor_candidate["confidence"], "medium")
+
+    def test_schema_only_sensitive_data_candidate_stays_low_confidence(self) -> None:
+        event = SanitizedEvent(
+            evidence_id="EV-9001",
+            raw_reference="LOCAL_ONLY:synthetic-low-confidence",
+            raw_values_included=False,
+            request={
+                "method": "GET",
+                "host": "host_001",
+                "path_template": "/public/profile",
+                "headers": {},
+                "query_schema": {},
+                "body_schema": {"type": "empty"},
+            },
+            response={
+                "status": 200,
+                "headers": {},
+                "body_schema": {"type": "json", "fields": {"supportEmail": "<EMAIL>"}},
+            },
+            redaction={"strategy": "allowlist_schema_only", "counts": {}, "diagnostics": []},
+            signals={
+                "method": "GET",
+                "host_alias": "host_001",
+                "path_template": "/public/profile",
+                "query_param_names": [],
+                "identifier_observed": False,
+                "auth_observed": False,
+                "status": 200,
+                "content_type": "application/json",
+                "response_security_headers": {
+                    "Strict-Transport-Security": True,
+                    "X-Content-Type-Options": True,
+                    "Content-Security-Policy": True,
+                    "X-Frame-Options": True,
+                },
+                "set_cookie_security": [],
+                "cors": {},
+                "cache_control": "public, max-age=3600",
+                "allow_methods": "",
+                "response_sensitive_fields": ["$.supportEmail"],
+                "user_specific_response": False,
+                "error_snippet_present": False,
+            },
+        )
+        findings = build_finding_candidates([event])
+        candidate = next(item for item in findings["finding_candidates"] if item["type"] == "sensitive_data_exposure_candidate")
+        self.assertEqual(candidate["confidence"], "low")
+        self.assertIn("Authenticated or user-specific context observed: False.", candidate["confidence_rationale"])
+        self.assertTrue(candidate["manual_verification_required"])
 
     def test_analysis_packet_prompts_include_only_candidate_fields(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -158,6 +222,8 @@ class RedactionGatewayTests(unittest.TestCase):
                     "finding_id",
                     "type",
                     "confidence",
+                    "confidence_rationale",
+                    "manual_verification_required",
                     "affected_endpoint",
                     "evidence_ids",
                     "rationale",
@@ -177,6 +243,8 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("evidence_ids", prompt)
                 self.assertIn("affected_endpoint", prompt)
                 self.assertIn("confidence", prompt)
+                self.assertIn("confidence_rationale", prompt)
+                self.assertIn("manual_verification_required", prompt)
                 self.assertIn("rationale", prompt)
                 self.assertIn("recommended_manual_tests", prompt)
                 self.assertIn("do_not_claim", prompt)
@@ -250,10 +318,12 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("# Sanitized Candidate Report Draft", text)
             self.assertIn("Candidate status: suspected, requires manual verification", text)
             self.assertIn("### Rationale", text)
+            self.assertIn("### Confidence Rationale", text)
             self.assertIn("### Impact Draft", text)
             self.assertIn("### Additional Verification Steps", text)
             self.assertIn("### Remediation Draft", text)
             self.assertIn("### Claims Not Allowed Before Proof", text)
+            self.assertIn("Manual verification required: true", text)
             self.assertIn("missing_security_headers", text)
             self.assertIn("EV-0001", text)
             self.assertIn("not a confirmed vulnerability report", text.lower())

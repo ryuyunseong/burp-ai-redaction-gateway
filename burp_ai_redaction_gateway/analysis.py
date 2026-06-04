@@ -10,6 +10,8 @@ ANALYSIS_CANDIDATE_FIELDS = [
     "type",
     "title",
     "confidence",
+    "confidence_rationale",
+    "manual_verification_required",
     "affected_endpoint",
     "evidence_ids",
     "rationale",
@@ -92,7 +94,7 @@ Hard requirements:
 2. Do not request, print, store, or infer raw request/response values.
 3. Do not log Cookie, Authorization, token, real domain, IP, or personal data values.
 4. Keep every issue as a candidate until manual reproduction proves it.
-5. Preserve `finding_id`, `evidence_ids`, `affected_endpoint`, `confidence`, `rationale`, `recommended_manual_tests`, and `do_not_claim` in any derived output.
+5. Preserve `finding_id`, `evidence_ids`, `affected_endpoint`, `confidence`, `confidence_rationale`, `manual_verification_required`, `rationale`, `recommended_manual_tests`, and `do_not_claim` in any derived output.
 6. Include cautious report draft wording and explicit manual verification steps.
 7. Do not make any claim listed in `do_not_claim`.
 
