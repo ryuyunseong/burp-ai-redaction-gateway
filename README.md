@@ -37,12 +37,19 @@ fails.
 Generate a cautious report draft from verified analysis packets:
 
 ```powershell
-python -m burp_ai_redaction_gateway report --input out/demo --output out/demo/report_draft.md
+python -m burp_ai_redaction_gateway report --input out/demo --output out/demo/report_draft.md --profile conservative
 ```
 
-The report draft keeps every item in candidate status and includes rationale,
-impact draft, additional verification steps, remediation draft, and claims that
-must not be made before proof.
+The report draft keeps every item in candidate or suspected finding status and
+includes rationale, impact draft, additional verification steps, remediation
+draft, and claims that must not be made before proof. The `confidence` value is
+evidence confidence, not severity.
+
+Report wording profiles:
+
+- `conservative`: most cautious wording; all findings remain candidates.
+- `consultant`: consultant report draft wording; manual verification remains
+  required and confirmed vulnerability claims remain blocked.
 
 Generated files:
 
@@ -163,7 +170,9 @@ and writes only verified sanitized output. See
 - Use `review` only on output directories that should pass `verify`; it prints
   summary counts and safe prompt file names, not raw HTTP content.
 - Use `report` only after verification. Report drafts must keep candidate
-  wording until manual reproduction is complete.
+  wording until manual reproduction is complete. Use `--profile conservative`
+  for the most cautious wording or `--profile consultant` for consultant draft
+  language that still requires manual verification.
 - The audit database stores evidence references and redaction counters only. It
   does not store raw request or response values.
 - Output generation is fail-closed. If a likely token, JWT, email, phone number,
