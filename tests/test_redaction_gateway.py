@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import hashlib
+import http.client
 import json
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
 from burp_ai_redaction_gateway.cli import main
 from burp_ai_redaction_gateway.parser import load_events
 from burp_ai_redaction_gateway.policy import load_policy
+from burp_ai_redaction_gateway.receiver import ReceiverConfig, ReceiverError, create_server, ingest_montoya_payload
 from burp_ai_redaction_gateway.redaction import Redactor
 from burp_ai_redaction_gateway.scanner import assert_no_sensitive_text, scan_text
 from burp_ai_redaction_gateway.verifier import verify_path
@@ -23,6 +26,8 @@ MONTOYA_DIR = ROOT / "extensions" / "montoya-collector"
 MONTOYA_SOURCE_DIR = MONTOYA_DIR / "src" / "main" / "java" / "com" / "ryuyunseong" / "burpai" / "redactiongateway"
 MONTOYA_DOC = ROOT / "docs" / "MONTOYA_COLLECTOR.md"
 MONTOYA_SCOPE_FIXTURE = ROOT / "samples" / "synthetic_montoya_scope_inventory.json"
+MONTOYA_HANDOFF = ROOT / "samples" / "synthetic_montoya_handoff_payload.json"
+RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 
 
 class RedactionGatewayTests(unittest.TestCase):
@@ -322,6 +327,114 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("Safe Real-Like Smoke Test", real_testing)
         self.assertIn("not a real Burp export compatibility test", real_testing)
 
+    def test_montoya_handoff_payload_is_redacted_and_verified(self) -> None:
+        payload = json.loads(MONTOYA_HANDOFF.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_root = Path(temp_dir)
+            result = ingest_montoya_payload(
+                payload,
+                ReceiverConfig(output_dir=output_root, project="montoya_receiver_alias"),
+            )
+            self.assertEqual(result.status, "accepted")
+            self.assertEqual(result.evidence_id, "EV-0001")
+            self.assertEqual(result.files_written, 7)
+            self.assertFalse(result.raw_data_included)
+            self.assertEqual(main(["verify", "--input", str(output_root)]), 0)
+
+            text = "\n".join(
+                path.read_text(encoding="utf-8")
+                for path in output_root.rglob("*")
+                if path.suffix in {".json", ".jsonl", ".md", ".txt"}
+            )
+            blocked_markers = [
+                "FAKE-client.example.test",
+                "DUMMY_QUERY_TOKEN",
+                "DUMMY_BEARER_TOKEN",
+                "DUMMY_COOKIE_VALUE",
+                "DUMMY_SET_COOKIE",
+                "DUMMY-user@example.test",
+                "010-0000-0000",
+                "DUMMY_ACCOUNT_12345",
+            ]
+            for marker in blocked_markers:
+                self.assertNotIn(marker, text)
+            assert_no_sensitive_text(text)
+
+    def test_receiver_rejects_non_loopback_bind_and_bad_schema(self) -> None:
+        payload = json.loads(MONTOYA_HANDOFF.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config = ReceiverConfig(output_dir=Path(temp_dir), project="montoya_receiver_alias")
+            with self.assertRaises(ReceiverError) as bind_error:
+                create_server("0.0.0.0", 0, config)
+            self.assertEqual(bind_error.exception.error_type, "non_loopback_bind_rejected")
+
+            bad_payload = dict(payload)
+            bad_payload["source_event_id"] = "https://FAKE-client.example.test/raw"
+            with self.assertRaises(ValueError):
+                ingest_montoya_payload(bad_payload, config)
+
+            out_of_scope = dict(payload)
+            out_of_scope["in_scope"] = False
+            with self.assertRaises(ReceiverError) as schema_error:
+                ingest_montoya_payload(out_of_scope, config)
+            self.assertEqual(schema_error.exception.error_type, "out_of_scope_rejected")
+
+    def test_http_receiver_accepts_loopback_json_and_rejects_oversized_payload(self) -> None:
+        payload = json.loads(MONTOYA_HANDOFF.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config = ReceiverConfig(output_dir=Path(temp_dir), project="montoya_receiver_alias", max_body_bytes=20000)
+            server = create_server("127.0.0.1", 0, config)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = server.server_address[1]
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                body = json.dumps(payload).encode("utf-8")
+                connection.request(
+                    "POST",
+                    "/ingest/burp-history",
+                    body=body,
+                    headers={"Content-Type": "application/json; charset=utf-8"},
+                )
+                response = connection.getresponse()
+                response_body = json.loads(response.read().decode("utf-8"))
+                self.assertEqual(response.status, 202)
+                self.assertEqual(response_body["status"], "accepted")
+                self.assertEqual(response_body["raw_data_included"], False)
+                self.assertNotIn("request", response_body)
+                self.assertNotIn("response", response_body)
+                connection.close()
+
+                small_config_server = create_server(
+                    "127.0.0.1",
+                    0,
+                    ReceiverConfig(output_dir=Path(temp_dir), project="montoya_receiver_alias", max_body_bytes=16),
+                )
+                small_thread = threading.Thread(target=small_config_server.serve_forever, daemon=True)
+                small_thread.start()
+                try:
+                    small_port = small_config_server.server_address[1]
+                    small_connection = http.client.HTTPConnection("127.0.0.1", small_port, timeout=5)
+                    small_connection.request(
+                        "POST",
+                        "/ingest/burp-history",
+                        body=body,
+                        headers={"Content-Type": "application/json"},
+                    )
+                    small_response = small_connection.getresponse()
+                    small_body = json.loads(small_response.read().decode("utf-8"))
+                    self.assertEqual(small_response.status, 413)
+                    self.assertEqual(small_body["error_type"], "payload_too_large")
+                    small_connection.close()
+                finally:
+                    small_config_server.shutdown()
+                    small_config_server.server_close()
+                    small_thread.join(timeout=5)
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
     def test_montoya_collector_gradle_project_exists(self) -> None:
         self.assertTrue((MONTOYA_DIR / "settings.gradle").is_file())
         build_gradle = (MONTOYA_DIR / "build.gradle").read_text(encoding="utf-8")
@@ -395,6 +508,15 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertTrue(all(item["raw_values_included"] is False for item in fixture["items"]))
         self.assertNotIn("raw_request", json.dumps(fixture))
         self.assertNotIn("raw_response", json.dumps(fixture))
+
+    def test_localhost_receiver_is_documented(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        doc = RECEIVER_DOC.read_text(encoding="utf-8")
+        for text in [readme, doc]:
+            self.assertIn("serve --host 127.0.0.1 --port 8765", text)
+            self.assertIn("/ingest/burp-history", text)
+        self.assertIn("Raw request and response values are not logged", doc)
+        self.assertIn("Oversized payloads are rejected", doc)
 
 
 if __name__ == "__main__":
