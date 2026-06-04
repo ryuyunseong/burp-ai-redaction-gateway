@@ -78,7 +78,7 @@ def _load_burp_xml(path: Path) -> list[RawEvent]:
     root = ET.parse(path).getroot()
     events: list[RawEvent] = []
     for index, item in enumerate(root.findall(".//item"), start=1):
-        fallback_url = _node_text(item, "url")
+        fallback_url = _node_text(item, "url") or _fallback_url_from_xml_item(item)
         fallback_method = _node_text(item, "method") or "GET"
         request_text = _decode_http_message(item.find("request"))
         response_text = _decode_http_message(item.find("response"))
@@ -174,6 +174,17 @@ def _node_text(node: ET.Element, name: str) -> str:
     return child.text.strip()
 
 
+def _fallback_url_from_xml_item(item: ET.Element) -> str:
+    host = _node_text(item, "host")
+    if not host:
+        return ""
+    protocol = _node_text(item, "protocol") or "https"
+    path = _node_text(item, "path") or "/"
+    if not path.startswith("/"):
+        path = f"/{path}"
+    return f"{protocol}://{host}{path}"
+
+
 def _headers_to_dict(headers: Any) -> dict[str, str]:
     if isinstance(headers, dict):
         return {str(key): str(value) for key, value in headers.items()}
@@ -184,4 +195,3 @@ def _headers_to_dict(headers: Any) -> dict[str, str]:
                 result[str(item["name"])] = str(item.get("value", ""))
         return result
     return {}
-

@@ -63,6 +63,25 @@ They cover JSON APIs, URL-encoded forms, multipart upload shape, GraphQL,
 HTML forms with hidden input, JWT in multiple locations, Korean PII, internal
 IP/host aliasing, high entropy strings, and Burp XML base64 request/response.
 
+## Real-Like Smoke Test
+
+When a real Burp export is not available, generate a safe real-like smoke test
+sample:
+
+```powershell
+python scripts\make_safe_burp_export_sample.py
+scripts\run_safe_sample_smoke_test.bat
+```
+
+This writes `local_only\real_burp_history_sample.xml` with synthetic data only
+and then runs `generate`, `verify`, and the Git safety gate. The generated sample
+is useful for parser and redaction smoke testing, but it is not a substitute for
+compatibility testing with an export saved directly from Burp.
+
+Real Burp exports must still be tested separately under `local_only/`. Raw real
+exports must never be committed, pasted into prompts, copied into issues, or
+added to documentation.
+
 ## Verification
 
 The tests are written with `unittest`, so they also run under pytest when pytest

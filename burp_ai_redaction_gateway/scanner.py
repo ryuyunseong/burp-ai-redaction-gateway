@@ -25,13 +25,16 @@ SECRET_ASSIGNMENT_RE = re.compile(
 HIGH_ENTROPY_RE = re.compile(r"\b[A-Za-z0-9._~+/=-]{32,}\b")
 PLACEHOLDER_RE = re.compile(r"<[A-Z0-9_:. -]+>")
 DOMAIN_RE = re.compile(r"\b(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}\b")
+SAFE_FIELD_PATH_RE = re.compile(
+    r"^(?:request|response|xml|headers|body_schema|query|html)(?:\.[A-Za-z_][A-Za-z0-9_-]*)+$"
+)
 PRIVATE_IP_RE = re.compile(
     r"\b(?:10\.(?:\d{1,3}\.){2}\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|127\.\d{1,3}\.\d{1,3}\.\d{1,3})\b"
 )
 RAW_MARKER_RE = re.compile(r"(?i)\b(?:raw_request|raw_response|request_raw|response_raw)\b")
 COOKIE_PAIR_RE = re.compile(r"\b([A-Za-z][A-Za-z0-9_.-]{1,63})=([^;,\s\"']+)")
-SAFE_COOKIE_ATTRS = {"secure", "httponly", "samesite", "path", "domain", "max-age", "expires"}
-SAFE_COOKIE_VALUES = {"true", "false", "lax", "strict", "none", "present", "<placeholder>"}
+SAFE_COOKIE_ATTRS = {"secure", "httponly", "samesite", "path", "domain", "max-age", "expires", "charset"}
+SAFE_COOKIE_VALUES = {"true", "false", "lax", "strict", "none", "present", "<placeholder>", "{value}"}
 ALLOWED_IP_BUCKETS = {"10.0.0.0", "127.0.0.0", "172.16.0.0", "192.168.0.0"}
 
 
@@ -67,12 +70,41 @@ def scan_text(text: str) -> list[SensitiveMatch]:
 def assert_no_sensitive_text(text: str) -> None:
     matches = scan_text(text)
     if matches:
-        summary = ", ".join(f"{m.kind}:{m.excerpt}" for m in matches[:5])
+        summary = ", ".join(f"{kind}:<REDACTED>" for kind in _unique_match_kinds(matches)[:5])
         raise ValueError(f"Output blocked by fail-closed scan: {summary}")
 
 
 def has_high_entropy_secret(value: str) -> bool:
     return any(_looks_like_secret(token) for token in HIGH_ENTROPY_RE.findall(value))
+
+
+def redacted_match_diagnostics(
+    text: str,
+    *,
+    source_kind: str = "generated_output",
+    field_path: str = "output",
+    event_id: str | None = None,
+) -> list[dict[str, str]]:
+    diagnostics: list[dict[str, str]] = []
+    for kind in _unique_match_kinds(scan_text(text)):
+        item = {
+            "failure_type": kind,
+            "field_path": field_path,
+            "source_kind": source_kind,
+            "value_preview": "<REDACTED>",
+        }
+        if event_id:
+            item["event_id"] = event_id
+        diagnostics.append(item)
+    return diagnostics
+
+
+def _unique_match_kinds(matches: list[SensitiveMatch]) -> list[str]:
+    kinds: list[str] = []
+    for match in matches:
+        if match.kind not in kinds:
+            kinds.append(match.kind)
+    return kinds
 
 
 def _looks_like_secret(token: str) -> bool:
@@ -119,6 +151,8 @@ def _scan_domains(text: str) -> list[SensitiveMatch]:
         if match.start() >= 2 and text[match.start() - 2 : match.start()] == "$.":
             continue
         if value.lower().endswith((".md", ".json", ".jsonl", ".txt")):
+            continue
+        if SAFE_FIELD_PATH_RE.match(value):
             continue
         if value.lower() in {"example.com", "example.test"}:
             continue
