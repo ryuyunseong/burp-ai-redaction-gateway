@@ -30,4 +30,6 @@ The command rejects non-`127.0.0.1` bind hosts. The receiver exposes:
 This slice receives one Montoya handoff event per request and writes a sanitized
 packet for that event. The generated `finding_candidates.json` uses only
 sanitized event signals and emits passive suspicious finding candidates for
-manual review.
+manual review. `analysis_packet.json`, `chatgpt_prompt.md`, and
+`codex_task_prompt.md` are derived from those candidates and keep every issue in
+candidate status until manual verification is complete.
