@@ -14,10 +14,9 @@ if exist out (
 
 where gitleaks >nul 2>nul
 if %errorlevel%==0 (
-  gitleaks detect --source . --no-git -v
+  gitleaks dir -v --redact=100 --config .gitleaks.toml .
   if errorlevel 1 exit /b 1
 )
 
 echo Pre-commit checks passed.
 exit /b 0
-

@@ -11,8 +11,7 @@ if [ -d out ]; then
 fi
 
 if command -v gitleaks >/dev/null 2>&1; then
-  gitleaks detect --source . --no-git -v
+  gitleaks dir -v --redact=100 --config .gitleaks.toml .
 fi
 
 echo "Pre-commit checks passed."
-

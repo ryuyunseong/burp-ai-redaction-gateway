@@ -4,7 +4,8 @@ title = "burp-ai-redaction-gateway"
 useDefault = true
 
 [allowlist]
-description = "Synthetic fixtures use explicit demo values for scanner regression tests."
+description = "Project allowlist for local raw inputs, generated outputs, and known synthetic placeholders."
+regexTarget = "match"
 regexes = [
   '''(?i)DUMMY[_A-Z0-9.-]*''',
   '''(?i)FAKE[_A-Z0-9.-]*''',
@@ -14,10 +15,16 @@ regexes = [
   '''(?i)CorrectHorseBatteryStaple1!''',
   '''(?i)FormPassword123!''',
   '''(?i)HtmlPassword123''',
+  '''test_api_key_1234567890abcdef''',
   '''eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*Demo[A-Za-z0-9_-]*''',
   '''dXNlcjpwYXNzd29yZA=='''
 ]
 paths = [
+  '''(^|[\\/])local_only[\\/]''',
+  '''(^|[\\/])out[\\/]''',
+  '''(^|[\\/])raw[\\/]''',
+  '''(^|[\\/])raw_vault[\\/]''',
+  '''(^|[\\/])exports[\\/]''',
+  '''(^|[\\/])reports[\\/]''',
   '''samples/burp_xml_base64_history\.xml'''
 ]
-

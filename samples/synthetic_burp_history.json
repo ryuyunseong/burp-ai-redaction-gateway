@@ -33,7 +33,7 @@
         "method": "GET",
         "url": "https://portal.example.test/api/orders/550e8400-e29b-41d4-a716-446655440000?account=12345678901234",
         "headers": {
-          "X-Api-Key": "test_api_key_1234567890abcdef",
+          "X-Api-Key": "DUMMY",
           "Accept": "application/json"
         },
         "body": ""
@@ -223,4 +223,3 @@
     }
   ]
 }
-

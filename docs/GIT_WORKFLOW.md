@@ -45,6 +45,25 @@ git check-ignore -v sample_raw.json
 Each command should print the ignore rule that matched. If a raw-data path is
 not ignored, update `.gitignore` before staging anything.
 
+## Gitleaks Scope
+
+Do not assume `.gitignore` makes files invisible to `gitleaks dir .`. Directory
+scans inspect local files unless the Gitleaks config excludes them. This repo
+uses `.gitleaks.toml` to exclude local raw-input and generated-output folders
+such as `local_only/`, `out/`, `raw/`, `raw_vault/`, `exports/`, and `reports/`.
+
+When sharing Gitleaks results, run it with full redaction:
+
+```bat
+gitleaks dir -v --redact=100 --config .gitleaks.toml .
+gitleaks git -v --redact=100 --config .gitleaks.toml .
+```
+
+Never paste a secret-like value found in a real export into chat, issues,
+documentation, or commit messages. If a synthetic fixture triggers Gitleaks,
+prefer changing the fixture to a short placeholder such as `DUMMY` or `EXAMPLE`
+before adding any allowlist regex.
+
 ## Allowed `git add` Targets
 
 Use explicit paths:
@@ -104,4 +123,3 @@ git commit -m "feat: add Burp history redaction gateway MVP"
 Do not use `git add -A` when real exports or generated evidence are present in
 the workspace. Prefer explicit `git add` commands for the known-safe project
 paths above.
-

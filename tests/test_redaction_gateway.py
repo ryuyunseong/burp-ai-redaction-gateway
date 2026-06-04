@@ -271,6 +271,21 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertTrue((ROOT / "scripts" / "run_safe_sample_smoke_test.sh").is_file())
         self.assertTrue((ROOT / ".gitleaks.toml").is_file())
 
+    def test_gitleaks_scope_and_redaction_are_documented_in_repo_files(self) -> None:
+        config = (ROOT / ".gitleaks.toml").read_text(encoding="utf-8")
+        for path in ["local_only", "out", "raw", "raw_vault", "exports", "reports"]:
+            self.assertIn(path, config)
+
+        pre_commit_bat = (ROOT / "scripts" / "pre_commit_check.bat").read_text(encoding="utf-8")
+        pre_commit_sh = (ROOT / "scripts" / "pre_commit_check.sh").read_text(encoding="utf-8")
+        self.assertIn("--redact=100", pre_commit_bat)
+        self.assertIn("--redact=100", pre_commit_sh)
+        self.assertIn("--config .gitleaks.toml", pre_commit_bat)
+        self.assertIn("--config .gitleaks.toml", pre_commit_sh)
+
+        sample = SAMPLE.read_text(encoding="utf-8")
+        self.assertNotIn("test_api_key_1234567890abcdef", sample)
+
     def test_security_model_documents_raw_data_boundary(self) -> None:
         security_model = (ROOT / "docs" / "SECURITY_MODEL.md").read_text(encoding="utf-8")
         real_testing = (ROOT / "docs" / "REAL_BURP_EXPORT_TESTING.md").read_text(encoding="utf-8")
@@ -286,6 +301,8 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("local_only", workflow)
         self.assertIn("raw_vault", workflow)
         self.assertIn("pre_commit_check", workflow)
+        self.assertIn("gitleaks dir -v --redact=100", workflow)
+        self.assertIn(".gitleaks.toml", workflow)
 
     def test_real_like_smoke_test_is_documented_as_synthetic_only(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
