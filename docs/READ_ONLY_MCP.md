@@ -33,10 +33,27 @@ modification, file deletion, Burp replay, active scan, or raw exchange lookup.
 - The selected output directory must pass `verify` before any tool response is
   returned.
 - Tool responses are scanned before returning.
-- MCP audit output is written to stderr and contains only timestamp, tool name,
-  and sanitized project label.
+- MCP audit output is written to stderr for operator visibility.
+- MCP tool-call audit records are appended to `.audit/mcp_audit.jsonl` under
+  the configured root. Records contain only metadata such as timestamp, tool
+  name, sanitized output id, optional finding id, result status, blocked reason,
+  response class, and `raw_data_included: false`.
 - `readOnlyHint` is included in tool annotations, but safety is enforced in
   server code rather than relying on client interpretation.
+
+## Audit Log
+
+The audit log path is:
+
+```text
+<root>/.audit/mcp_audit.jsonl
+```
+
+The audit log must remain raw-free. It does not store request or response
+bodies, analysis packet contents, report draft contents, cookies, authorization
+headers, tokens, real domains, internal IPs, personal data, or stack traces.
+Blocked events such as path traversal, forbidden directory access, and
+verification failure are recorded with a safe `blocked_reason`.
 
 ## Allowed Output Scope
 
