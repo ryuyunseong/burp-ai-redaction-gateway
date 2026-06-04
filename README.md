@@ -34,6 +34,16 @@ python -m burp_ai_redaction_gateway review --input out/demo --export-dir exports
 The review command runs `verify` first and refuses to export files if verification
 fails.
 
+Generate a cautious report draft from verified analysis packets:
+
+```powershell
+python -m burp_ai_redaction_gateway report --input out/demo --output out/demo/report_draft.md
+```
+
+The report draft keeps every item in candidate status and includes rationale,
+impact draft, additional verification steps, remediation draft, and claims that
+must not be made before proof.
+
 Generated files:
 
 - `endpoint_inventory.md`
@@ -151,6 +161,8 @@ and writes only verified sanitized output. See
 - Fixtures in this repository must remain synthetic.
 - Use `review` only on output directories that should pass `verify`; it prints
   summary counts and safe prompt file names, not raw HTTP content.
+- Use `report` only after verification. Report drafts must keep candidate
+  wording until manual reproduction is complete.
 - The audit database stores evidence references and redaction counters only. It
   does not store raw request or response values.
 - Output generation is fail-closed. If a likely token, JWT, email, phone number,
