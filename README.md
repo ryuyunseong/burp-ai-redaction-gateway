@@ -30,6 +30,7 @@ Generated files:
 - `endpoint_inventory.md`
 - `sanitized_events.jsonl`
 - `finding_candidates.json`
+- `analysis_packet.json`
 - `chatgpt_prompt.md`
 - `codex_task_prompt.md`
 - `redaction_audit.json`
@@ -43,6 +44,8 @@ Each generated text artifact includes metadata such as `sanitizer_version`,
 uses a `finding_id`, passive rule `type`, confidence, templated
 `affected_endpoint`, `evidence_ids`, rationale, manual test guidance, and a
 `do_not_claim` list to prevent over-claiming before manual verification.
+`analysis_packet.json`, `chatgpt_prompt.md`, and `codex_task_prompt.md` are
+derived from those candidates and must be used only after `verify` passes.
 
 ## Policy
 

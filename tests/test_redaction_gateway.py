@@ -60,6 +60,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 "endpoint_inventory.md",
                 "sanitized_events.jsonl",
                 "finding_candidates.json",
+                "analysis_packet.json",
                 "chatgpt_prompt.md",
                 "codex_task_prompt.md",
                 "redaction_audit.json",
@@ -73,6 +74,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "endpoint_inventory.md",
                     "sanitized_events.jsonl",
                     "finding_candidates.json",
+                    "analysis_packet.json",
                     "chatgpt_prompt.md",
                     "codex_task_prompt.md",
                     "redaction_audit.json",
@@ -136,6 +138,51 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("Vulnerability confirmed", item["do_not_claim"])
                 self.assertNotIn("raw_request", json.dumps(item))
                 self.assertNotIn("raw_response", json.dumps(item))
+
+    def test_analysis_packet_prompts_include_only_candidate_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir)
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+            packet = json.loads((output / "analysis_packet.json").read_text(encoding="utf-8"))
+            self.assertEqual(packet["schema_version"], "analysis-prompt-packet-v1")
+            self.assertEqual(packet["source"], "finding_candidates.json")
+            self.assertFalse(packet["raw_data_included"])
+            self.assertTrue(packet["use_only_after_verify_passed"])
+            self.assertEqual(packet["candidate_count"], len(packet["finding_candidates"]))
+
+            for candidate in packet["finding_candidates"]:
+                for field in [
+                    "summary",
+                    "finding_id",
+                    "type",
+                    "confidence",
+                    "affected_endpoint",
+                    "evidence_ids",
+                    "rationale",
+                    "recommended_manual_tests",
+                    "do_not_claim",
+                ]:
+                    self.assertIn(field, candidate)
+                self.assertIn("candidate", candidate["summary"])
+                self.assertNotIn("raw_request", json.dumps(candidate))
+                self.assertNotIn("raw_response", json.dumps(candidate))
+
+            chatgpt_prompt = (output / "chatgpt_prompt.md").read_text(encoding="utf-8")
+            codex_prompt = (output / "codex_task_prompt.md").read_text(encoding="utf-8")
+            for prompt in [chatgpt_prompt, codex_prompt]:
+                self.assertIn("analysis-prompt-packet-v1", prompt)
+                self.assertIn("finding_id", prompt)
+                self.assertIn("evidence_ids", prompt)
+                self.assertIn("affected_endpoint", prompt)
+                self.assertIn("confidence", prompt)
+                self.assertIn("rationale", prompt)
+                self.assertIn("recommended_manual_tests", prompt)
+                self.assertIn("do_not_claim", prompt)
+                self.assertIn("candidate", prompt)
+                self.assertNotIn("raw_request", prompt)
+                self.assertNotIn("raw_response", prompt)
+            assert_no_sensitive_text(chatgpt_prompt)
+            assert_no_sensitive_text(codex_prompt)
 
     def test_fail_closed_scanner_detects_raw_secret_patterns(self) -> None:
         unsafe = (
@@ -360,7 +407,7 @@ class RedactionGatewayTests(unittest.TestCase):
             )
             self.assertEqual(result.status, "accepted")
             self.assertEqual(result.evidence_id, "EV-0001")
-            self.assertEqual(result.files_written, 7)
+            self.assertEqual(result.files_written, 8)
             self.assertFalse(result.raw_data_included)
             self.assertEqual(main(["verify", "--input", str(output_root)]), 0)
 
