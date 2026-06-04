@@ -208,6 +208,9 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertTrue((ROOT / "scripts" / "pre_commit_check.sh").is_file())
         self.assertTrue((ROOT / "scripts" / "git_safety_check.bat").is_file())
         self.assertTrue((ROOT / "scripts" / "git_safety_check.sh").is_file())
+        self.assertTrue((ROOT / "scripts" / "make_safe_burp_export_sample.py").is_file())
+        self.assertTrue((ROOT / "scripts" / "run_safe_sample_smoke_test.bat").is_file())
+        self.assertTrue((ROOT / "scripts" / "run_safe_sample_smoke_test.sh").is_file())
         self.assertTrue((ROOT / ".gitleaks.toml").is_file())
 
     def test_security_model_documents_raw_data_boundary(self) -> None:
@@ -225,6 +228,14 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("local_only", workflow)
         self.assertIn("raw_vault", workflow)
         self.assertIn("pre_commit_check", workflow)
+
+    def test_real_like_smoke_test_is_documented_as_synthetic_only(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        real_testing = (ROOT / "docs" / "REAL_BURP_EXPORT_TESTING.md").read_text(encoding="utf-8")
+        self.assertIn("Real-Like Smoke Test", readme)
+        self.assertIn("not a substitute for", readme)
+        self.assertIn("Safe Real-Like Smoke Test", real_testing)
+        self.assertIn("not a real Burp export compatibility test", real_testing)
 
 
 if __name__ == "__main__":

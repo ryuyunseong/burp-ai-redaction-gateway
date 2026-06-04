@@ -4,6 +4,24 @@ Use this process only for local validation with explicit authorization. Real
 customer data must not be copied into issues, commits, prompts, documentation,
 or test fixtures.
 
+## Safe Real-Like Smoke Test
+
+If no real Burp export is available yet, generate a synthetic real-like sample:
+
+```bat
+python scripts\make_safe_burp_export_sample.py
+scripts\run_safe_sample_smoke_test.bat
+```
+
+The generated file is `local_only\real_burp_history_sample.xml`. It contains
+only synthetic values with `FAKE_`, `DUMMY_`, or `EXAMPLE_` style data. This
+smoke test checks XML parsing, Base64 request/response handling, redaction,
+verification, and Git ignore behavior.
+
+This is not a real Burp export compatibility test. Real compatibility testing
+still requires a file saved directly from Burp and kept only under `local_only/`.
+Do not commit, upload, paste, or document real raw exports.
+
 ## Store Real Exports Locally
 
 Create a local-only folder and put the real Burp export there:
@@ -63,4 +81,3 @@ rmdir /s /q out\real_sample_check
 
 If you need to keep raw evidence, store it outside the repository in an
 approved encrypted location with restricted OS file permissions.
-
