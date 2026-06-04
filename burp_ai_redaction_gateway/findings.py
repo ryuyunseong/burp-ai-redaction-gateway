@@ -5,40 +5,51 @@ from typing import Any
 from .models import SanitizedEvent
 
 
+DO_NOT_CLAIM = [
+    "Vulnerability confirmed",
+    "Privilege escalation confirmed",
+    "Data breach confirmed",
+    "Token reuse confirmed",
+]
+SECURITY_HEADERS_TO_CHECK = {
+    "Strict-Transport-Security",
+    "X-Content-Type-Options",
+    "Content-Security-Policy",
+    "X-Frame-Options",
+}
+
+
 def build_finding_candidates(events: list[SanitizedEvent]) -> dict[str, Any]:
     candidates: list[dict[str, Any]] = []
     for event in events:
         _add_missing_security_headers(candidates, event)
-        _add_cookie_attribute_issues(candidates, event)
-        _add_cors_issue(candidates, event)
-        _add_cache_issue(candidates, event)
-        _add_method_exposure(candidates, event)
+        _add_weak_cookie_attributes(candidates, event)
+        _add_cache_control_on_authenticated_response(candidates, event)
+        _add_cors_candidate(candidates, event)
         _add_error_exposure(candidates, event)
         _add_idor_candidate(candidates, event)
-        _add_sensitive_data_candidate(candidates, event)
+        _add_sensitive_data_exposure_candidate(candidates, event)
 
     for index, candidate in enumerate(candidates, start=1):
-        candidate["candidate_id"] = f"FC-{index:04d}"
+        finding_id = f"FC-{index:04d}"
+        candidate["finding_id"] = finding_id
+        candidate["candidate_id"] = finding_id
     return {
         "raw_data_included": False,
         "finding_candidates": candidates,
     }
 
 
-def _base_candidate(event: SanitizedEvent, finding_type: str, confidence: str) -> dict[str, Any]:
+def _base_candidate(event: SanitizedEvent, rule_type: str, title: str, confidence: str) -> dict[str, Any]:
     endpoint = f"{event.request['method']} {event.request['path_template']}"
     return {
-        "type": finding_type,
+        "type": rule_type,
+        "title": title,
         "confidence": confidence,
         "affected_endpoint": endpoint,
         "evidence_ids": [event.evidence_id],
         "rationale": [],
-        "do_not_claim": [
-            "Vulnerability confirmed",
-            "Privilege escalation confirmed",
-            "Data breach confirmed",
-            "Token reuse confirmed",
-        ],
+        "do_not_claim": DO_NOT_CLAIM,
         "recommended_manual_tests": [],
     }
 
@@ -49,11 +60,11 @@ def _add_missing_security_headers(candidates: list[dict[str, Any]], event: Sanit
     missing = [
         name
         for name, present in event.signals["response_security_headers"].items()
-        if name in {"Strict-Transport-Security", "X-Content-Type-Options", "Content-Security-Policy"} and not present
+        if name in SECURITY_HEADERS_TO_CHECK and not present
     ]
     if not missing:
         return
-    candidate = _base_candidate(event, "Missing security headers", "low")
+    candidate = _base_candidate(event, "missing_security_headers", "Missing security headers", "low")
     candidate["rationale"] = [f"Response did not include: {', '.join(sorted(missing))}."]
     candidate["recommended_manual_tests"] = [
         "Confirm whether the endpoint is served over HTTPS in the target environment.",
@@ -62,7 +73,7 @@ def _add_missing_security_headers(candidates: list[dict[str, Any]], event: Sanit
     candidates.append(candidate)
 
 
-def _add_cookie_attribute_issues(candidates: list[dict[str, Any]], event: SanitizedEvent) -> None:
+def _add_weak_cookie_attributes(candidates: list[dict[str, Any]], event: SanitizedEvent) -> None:
     for cookie in event.signals["set_cookie_security"]:
         missing = []
         if not cookie["secure"]:
@@ -73,7 +84,7 @@ def _add_cookie_attribute_issues(candidates: list[dict[str, Any]], event: Saniti
             missing.append("SameSite")
         if not missing:
             continue
-        candidate = _base_candidate(event, "Cookie missing security attributes", "medium")
+        candidate = _base_candidate(event, "weak_cookie_attributes", "Weak cookie attributes", "medium")
         candidate["rationale"] = [f"Set-Cookie for {cookie['name']} is missing: {', '.join(missing)}."]
         candidate["recommended_manual_tests"] = [
             "Confirm the cookie is used for authentication or session state.",
@@ -82,13 +93,13 @@ def _add_cookie_attribute_issues(candidates: list[dict[str, Any]], event: Saniti
         candidates.append(candidate)
 
 
-def _add_cors_issue(candidates: list[dict[str, Any]], event: SanitizedEvent) -> None:
+def _add_cors_candidate(candidates: list[dict[str, Any]], event: SanitizedEvent) -> None:
     cors = event.signals["cors"]
     origin = cors.get("Access-Control-Allow-Origin", "")
     credentials = str(cors.get("Access-Control-Allow-Credentials", "")).lower()
     if origin != "*" and not (origin and credentials == "true"):
         return
-    candidate = _base_candidate(event, "CORS misconfiguration candidate", "medium")
+    candidate = _base_candidate(event, "cors_candidate", "CORS misconfiguration candidate", "medium")
     candidate["rationale"] = [
         "CORS response allows a wildcard origin or credentialed cross-origin access.",
         "Manual origin and credential checks are required before confirming impact.",
@@ -100,13 +111,18 @@ def _add_cors_issue(candidates: list[dict[str, Any]], event: SanitizedEvent) -> 
     candidates.append(candidate)
 
 
-def _add_cache_issue(candidates: list[dict[str, Any]], event: SanitizedEvent) -> None:
+def _add_cache_control_on_authenticated_response(candidates: list[dict[str, Any]], event: SanitizedEvent) -> None:
     if not event.signals["auth_observed"] or not (200 <= event.signals["status"] < 300):
         return
     cache_control = event.signals["cache_control"].lower()
     if any(value in cache_control for value in ["no-store", "no-cache", "private"]):
         return
-    candidate = _base_candidate(event, "Cache-Control issue on authenticated-looking response", "low")
+    candidate = _base_candidate(
+        event,
+        "cache_control_on_authenticated_response",
+        "Cache-Control issue on authenticated-looking response",
+        "low",
+    )
     candidate["rationale"] = [
         "Request appears authenticated and response did not include no-store, no-cache, or private Cache-Control policy."
     ]
@@ -117,25 +133,10 @@ def _add_cache_issue(candidates: list[dict[str, Any]], event: SanitizedEvent) ->
     candidates.append(candidate)
 
 
-def _add_method_exposure(candidates: list[dict[str, Any]], event: SanitizedEvent) -> None:
-    allow = event.signals["allow_methods"].upper()
-    method = event.signals["method"]
-    exposed = [verb for verb in ["PUT", "PATCH", "DELETE"] if verb in allow]
-    if method != "OPTIONS" and not exposed:
-        return
-    candidate = _base_candidate(event, "Verb or method exposure candidate", "low")
-    candidate["rationale"] = ["Endpoint exposes OPTIONS or unsafe methods in the Allow header."]
-    candidate["recommended_manual_tests"] = [
-        "Confirm which methods are actually accepted server-side.",
-        "Verify authentication and authorization checks for unsafe methods.",
-    ]
-    candidates.append(candidate)
-
-
 def _add_error_exposure(candidates: list[dict[str, Any]], event: SanitizedEvent) -> None:
     if event.signals["status"] < 500 and not event.signals["error_snippet_present"]:
         return
-    candidate = _base_candidate(event, "Error message exposure candidate", "low")
+    candidate = _base_candidate(event, "error_exposure", "Error message exposure candidate", "low")
     candidate["rationale"] = ["Response indicates a server error or includes a sanitized error snippet."]
     candidate["recommended_manual_tests"] = [
         "Reproduce the error with safe input and check whether stack traces or internal paths are exposed.",
@@ -152,7 +153,7 @@ def _add_idor_candidate(candidates: list[dict[str, Any]], event: SanitizedEvent)
         and event.signals["user_specific_response"]
     ):
         return
-    candidate = _base_candidate(event, "Potential Broken Access Control / IDOR", "medium")
+    candidate = _base_candidate(event, "idor_candidate", "Potential Broken Access Control / IDOR", "medium")
     candidate["rationale"] = [
         "Identifier parameter observed in path or query.",
         "Authenticated-looking request returned HTTP 2xx.",
@@ -167,11 +168,16 @@ def _add_idor_candidate(candidates: list[dict[str, Any]], event: SanitizedEvent)
     candidates.append(candidate)
 
 
-def _add_sensitive_data_candidate(candidates: list[dict[str, Any]], event: SanitizedEvent) -> None:
+def _add_sensitive_data_exposure_candidate(candidates: list[dict[str, Any]], event: SanitizedEvent) -> None:
     fields = event.signals["response_sensitive_fields"]
     if not fields:
         return
-    candidate = _base_candidate(event, "Sensitive data exposure candidate", "medium")
+    candidate = _base_candidate(
+        event,
+        "sensitive_data_exposure_candidate",
+        "Sensitive data exposure candidate",
+        "medium",
+    )
     candidate["rationale"] = [
         "Response schema contains fields that required redaction.",
         f"Redacted field count: {len(fields)}.",
@@ -181,4 +187,3 @@ def _add_sensitive_data_candidate(candidates: list[dict[str, Any]], event: Sanit
         "Check role-based access and data minimization requirements.",
     ]
     candidates.append(candidate)
-

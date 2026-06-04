@@ -28,5 +28,6 @@ The command rejects non-`127.0.0.1` bind hosts. The receiver exposes:
 ## Current Scope
 
 This slice receives one Montoya handoff event per request and writes a sanitized
-packet for that event. Batch grouping and suspicious finding improvements remain
-separate follow-up work.
+packet for that event. The generated `finding_candidates.json` uses only
+sanitized event signals and emits passive suspicious finding candidates for
+manual review.

@@ -130,10 +130,11 @@ Requirements:
 1. Do not print or store raw request or response values.
 2. Do not log Cookie, Authorization, JWT, CSRF, API key, password, email, phone, RRN, or account numbers.
 3. Template path parameters and query identifiers.
-4. Improve IDOR candidate rules.
-5. Rule output must include confidence, evidence_ids, rationale, and recommended_manual_tests.
+4. Improve only passive rules that operate on sanitized events.
+5. Rule output must include finding_id, type, confidence, affected_endpoint, evidence_ids, rationale, recommended_manual_tests, and do_not_claim.
 6. Add regression tests.
 7. If redaction is incomplete, fail closed before output generation.
+8. Supported passive rule IDs are missing_security_headers, weak_cookie_attributes, cache_control_on_authenticated_response, cors_candidate, error_exposure, idor_candidate, and sensitive_data_exposure_candidate.
 
 Metadata:
 

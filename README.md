@@ -39,6 +39,11 @@ Each generated text artifact includes metadata such as `sanitizer_version`,
 `policy_hash`, `raw_data_included: false`, `generated_at`,
 `source_event_count`, aggregate `redaction_counts`, and `scanner_result`.
 
+`finding_candidates.json` is built only from sanitized events. Each candidate
+uses a `finding_id`, passive rule `type`, confidence, templated
+`affected_endpoint`, `evidence_ids`, rationale, manual test guidance, and a
+`do_not_claim` list to prevent over-claiming before manual verification.
+
 ## Policy
 
 The default policy is [policy.json](C:/coding/burp-ai-redaction-gateway/policy.json).

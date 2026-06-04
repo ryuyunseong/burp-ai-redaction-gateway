@@ -28,6 +28,15 @@ MONTOYA_DOC = ROOT / "docs" / "MONTOYA_COLLECTOR.md"
 MONTOYA_SCOPE_FIXTURE = ROOT / "samples" / "synthetic_montoya_scope_inventory.json"
 MONTOYA_HANDOFF = ROOT / "samples" / "synthetic_montoya_handoff_payload.json"
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
+EXPECTED_PASSIVE_FINDING_TYPES = {
+    "missing_security_headers",
+    "weak_cookie_attributes",
+    "cache_control_on_authenticated_response",
+    "cors_candidate",
+    "error_exposure",
+    "idor_candidate",
+    "sensitive_data_exposure_candidate",
+}
 
 
 class RedactionGatewayTests(unittest.TestCase):
@@ -107,12 +116,26 @@ class RedactionGatewayTests(unittest.TestCase):
             main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
             findings = json.loads((output / "finding_candidates.json").read_text(encoding="utf-8"))
             candidates = findings["finding_candidates"]
-            self.assertTrue(any(item["type"] == "Potential Broken Access Control / IDOR" for item in candidates))
+            candidate_types = {item["type"] for item in candidates}
+            self.assertEqual(candidate_types, EXPECTED_PASSIVE_FINDING_TYPES)
             for item in candidates:
+                self.assertIn("finding_id", item)
+                self.assertRegex(item["finding_id"], r"^FC-\d{4}$")
+                self.assertEqual(item["candidate_id"], item["finding_id"])
+                self.assertIn("type", item)
+                self.assertIn(item["type"], EXPECTED_PASSIVE_FINDING_TYPES)
+                self.assertIn("affected_endpoint", item)
                 self.assertIn("evidence_ids", item)
                 self.assertIn("confidence", item)
                 self.assertIn("rationale", item)
                 self.assertIn("recommended_manual_tests", item)
+                self.assertIn("do_not_claim", item)
+                self.assertTrue(item["evidence_ids"])
+                self.assertTrue(item["rationale"])
+                self.assertTrue(item["recommended_manual_tests"])
+                self.assertIn("Vulnerability confirmed", item["do_not_claim"])
+                self.assertNotIn("raw_request", json.dumps(item))
+                self.assertNotIn("raw_response", json.dumps(item))
 
     def test_fail_closed_scanner_detects_raw_secret_patterns(self) -> None:
         unsafe = (
