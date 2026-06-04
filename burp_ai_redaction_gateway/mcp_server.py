@@ -20,6 +20,15 @@ PROMPT_FILES = ("analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.
 FINDINGS_FILE = "finding_candidates.json"
 ANALYSIS_PACKET_FILE = "analysis_packet.json"
 DEFAULT_REPORT_FILE = "report_draft.md"
+AUDIT_DIR_NAME = ".audit"
+AUDIT_FILE_NAME = "mcp_audit.jsonl"
+TOOL_RESPONSE_CLASSES = {
+    "list_findings": "finding_summary",
+    "get_finding": "finding_detail",
+    "get_analysis_packet": "analysis_packet",
+    "get_report_draft": "report_draft",
+    "list_prompt_files": "prompt_file_list",
+}
 
 
 @dataclass(frozen=True)
@@ -149,6 +158,7 @@ class ReadOnlyMcpServer:
     def __init__(self, gateway: ReadOnlyMcpGateway, audit_stream: TextIO | None = None) -> None:
         self.gateway = gateway
         self.audit_stream = audit_stream if audit_stream is not None else sys.stderr
+        self.audit_log_path = gateway.root / AUDIT_DIR_NAME / AUDIT_FILE_NAME
 
     def handle_message(self, message: Any) -> dict[str, Any] | list[dict[str, Any]] | None:
         if isinstance(message, list):
@@ -174,7 +184,7 @@ class ReadOnlyMcpServer:
 
     def _handle_notification(self, method: Any) -> None:
         if method:
-            self._audit(str(method), "<notification>")
+            self._audit_stream(str(method), "<notification>")
 
     def _handle_tool_call(self, request_id: Any, params: Any) -> dict[str, Any]:
         if not isinstance(params, dict):
@@ -183,19 +193,68 @@ class ReadOnlyMcpServer:
         arguments = params.get("arguments", {})
         if not isinstance(name, str) or not isinstance(arguments, dict):
             return _error_response(request_id, -32602, "Invalid params")
-        self._audit(name, _safe_project_label(str(arguments.get("project", ""))))
+        project = _safe_project_label(str(arguments.get("project", "")))
+        finding_id = _safe_optional_id(arguments.get("finding_id"))
+        self._audit_stream(name, project)
         try:
             result = self.gateway.call_tool(name, arguments)
         except ValueError as error:
-            error_result = _tool_error_result(str(error))
+            error_type = str(error)
+            error_result = _tool_error_result(error_type)
+            self._write_audit_event(
+                tool_name=name,
+                output_id=project,
+                finding_id=finding_id,
+                result_status=_status_for_error(error_type),
+                blocked_reason=_blocked_reason(error_type),
+                response_class=_response_class(name),
+                error_type=error_type,
+            )
             return _success_response(request_id, error_result.to_protocol_result())
+        self._write_audit_event(
+            tool_name=name,
+            output_id=project,
+            finding_id=finding_id,
+            result_status="success",
+            blocked_reason="",
+            response_class=_response_class(name),
+            error_type="",
+        )
         return _success_response(request_id, result.to_protocol_result())
 
-    def _audit(self, tool_name: str, project: str) -> None:
+    def _audit_stream(self, tool_name: str, project: str) -> None:
         timestamp = datetime.now(UTC).isoformat()
         safe_tool = tool_name.replace("\r", " ").replace("\n", " ")[:80]
         safe_project = project.replace("\r", " ").replace("\n", " ")[:120]
         print(f"mcp_audit timestamp={timestamp} tool={safe_tool} project={safe_project}", file=self.audit_stream)
+
+    def _write_audit_event(
+        self,
+        *,
+        tool_name: str,
+        output_id: str,
+        finding_id: str,
+        result_status: str,
+        blocked_reason: str,
+        response_class: str,
+        error_type: str,
+    ) -> None:
+        event = {
+            "timestamp_utc": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            "event_type": "mcp_tool_call",
+            "tool_name": _safe_identifier(tool_name, "unknown_tool"),
+            "output_id": _safe_output_id(output_id),
+            "result_status": _safe_status(result_status),
+            "response_class": _safe_identifier(response_class, "unknown_response"),
+            "raw_data_included": False,
+        }
+        if finding_id:
+            event["finding_id"] = finding_id
+        if blocked_reason:
+            event["blocked_reason"] = _safe_identifier(blocked_reason, "blocked")
+        if error_type:
+            event["error_type"] = _safe_identifier(error_type, "error")
+        _append_audit_event(self.audit_log_path, event)
 
 
 def serve_mcp_stdio(root: Path, policy: RedactionPolicy) -> None:
@@ -299,6 +358,14 @@ def _tool_error_result(error_type: str) -> McpToolResult:
     return McpToolResult(structured_content=structured, text=text, is_error=True)
 
 
+def _append_audit_event(path: Path, event: dict[str, Any]) -> None:
+    text = json.dumps(event, ensure_ascii=True, sort_keys=True)
+    assert_no_sensitive_text(text)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as file:
+        file.write(text + "\n")
+
+
 def _validated_root(root: Path) -> Path:
     resolved = root.resolve()
     if not resolved.is_dir():
@@ -368,6 +435,59 @@ def _safe_report_name(report_name: str) -> str:
 def _safe_project_label(project: str) -> str:
     text = str(project).replace("\\", "/").replace("\r", " ").replace("\n", " ").strip()
     return text[:160] if text else "."
+
+
+def _safe_output_id(value: str) -> str:
+    text = _safe_project_label(value)
+    parts = [part for part in text.split("/") if part and part not in {".", ".."}]
+    if not parts:
+        return "."
+    return "/".join(_safe_identifier(part, "output") for part in parts)[:160]
+
+
+def _safe_optional_id(value: Any) -> str:
+    if not isinstance(value, str):
+        return ""
+    text = value.strip()
+    if not text:
+        return ""
+    return _safe_identifier(text, "id")
+
+
+def _safe_identifier(value: str, fallback: str) -> str:
+    text = str(value).replace("\r", " ").replace("\n", " ").strip()
+    result = []
+    for char in text[:120]:
+        if char.isalnum() or char in {"_", "-", ".", ":"}:
+            result.append(char)
+        else:
+            result.append("_")
+    safe = "".join(result).strip("._-")
+    return safe or fallback
+
+
+def _safe_status(value: str) -> str:
+    return value if value in {"success", "blocked", "error"} else "error"
+
+
+def _response_class(tool_name: str) -> str:
+    return TOOL_RESPONSE_CLASSES.get(tool_name, "unknown_response")
+
+
+def _status_for_error(error_type: str) -> str:
+    if _blocked_reason(error_type):
+        return "blocked"
+    return "error"
+
+
+def _blocked_reason(error_type: str) -> str:
+    reasons = {
+        "path_traversal_forbidden": "path_traversal",
+        "absolute_project_path_forbidden": "path_traversal",
+        "forbidden_directory": "forbidden_directory",
+        "verification_failed": "verify_failed",
+    }
+    return reasons.get(error_type, "")
 
 
 def _safe_text(value: Any) -> str:

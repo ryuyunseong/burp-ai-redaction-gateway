@@ -174,6 +174,8 @@ The MCP server exposes only read-only tools for verified output directories and
 does not implement raw exchange lookup, replay, file writes, or external
 transmission. See
 [docs/READ_ONLY_MCP.md](C:/coding/burp-ai-redaction-gateway/docs/READ_ONLY_MCP.md).
+Tool-call audit records are written under `<root>/.audit/mcp_audit.jsonl` with
+raw-free metadata only.
 
 ## Security Notes
 
@@ -188,6 +190,8 @@ transmission. See
   language that still requires manual verification.
 - Use `mcp` only with an explicit sanitized output root. MCP tools are read-only
   and must not be used to access local raw data or real Burp exports.
+- MCP audit logs must remain raw-free and store only metadata such as tool name,
+  sanitized output id, status, and blocked reason.
 - The audit database stores evidence references and redaction counters only. It
   does not store raw request or response values.
 - Output generation is fail-closed. If a likely token, JWT, email, phone number,

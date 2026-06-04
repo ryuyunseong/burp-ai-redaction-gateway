@@ -459,6 +459,21 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertFalse(response["result"]["isError"], tool_name)
                 assert_no_sensitive_text(response["result"]["content"][0]["text"])
 
+            audit_path = root / ".audit" / "mcp_audit.jsonl"
+            self.assertTrue(audit_path.is_file())
+            audit_text = audit_path.read_text(encoding="utf-8")
+            assert_no_sensitive_text(audit_text)
+            audit_events = [json.loads(line) for line in audit_text.splitlines() if line.strip()]
+            self.assertEqual(len(audit_events), 5)
+            self.assertTrue(all(event["event_type"] == "mcp_tool_call" for event in audit_events))
+            self.assertTrue(all(event["result_status"] == "success" for event in audit_events))
+            self.assertTrue(all(event["raw_data_included"] is False for event in audit_events))
+            self.assertIn("finding_id", audit_events[1])
+            self.assertNotIn("Sanitized Candidate Report Draft", audit_text)
+            self.assertNotIn("finding_candidates", audit_text)
+            self.assertNotIn("raw_request", audit_text)
+            self.assertNotIn("raw_response", audit_text)
+
     def test_read_only_mcp_blocks_path_traversal_forbidden_dirs_and_unverified_output(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -501,6 +516,21 @@ class RedactionGatewayTests(unittest.TestCase):
             )
             self.assertTrue(verify_response["result"]["isError"])
             self.assertEqual(verify_response["result"]["structuredContent"]["error_type"], "verification_failed")
+            audit_path = root / ".audit" / "mcp_audit.jsonl"
+            self.assertTrue(audit_path.is_file())
+            audit_text = audit_path.read_text(encoding="utf-8")
+            assert_no_sensitive_text(audit_text)
+            audit_events = [json.loads(line) for line in audit_text.splitlines() if line.strip()]
+            self.assertEqual(
+                [event["blocked_reason"] for event in audit_events],
+                ["path_traversal", "forbidden_directory", "verify_failed"],
+            )
+            self.assertTrue(all(event["result_status"] == "blocked" for event in audit_events))
+            self.assertTrue(all(event["raw_data_included"] is False for event in audit_events))
+            self.assertTrue(all("error_type" in event for event in audit_events))
+            self.assertNotIn("rawBearerToken1234567890", audit_text)
+            self.assertNotIn("Authorization", audit_text)
+            self.assertNotIn("..\\generated", audit_text)
 
     def test_fail_closed_scanner_detects_raw_secret_patterns(self) -> None:
         unsafe = (
