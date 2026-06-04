@@ -26,5 +26,7 @@ paths = [
   '''(^|[\\/])raw_vault[\\/]''',
   '''(^|[\\/])exports[\\/]''',
   '''(^|[\\/])reports[\\/]''',
+  '''(^|[\\/])extensions[\\/][^\\/]+[\\/]\.gradle[\\/]''',
+  '''(^|[\\/])extensions[\\/][^\\/]+[\\/]build[\\/]''',
   '''samples/burp_xml_base64_history\.xml'''
 ]

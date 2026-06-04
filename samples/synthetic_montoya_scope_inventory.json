@@ -1,0 +1,15 @@
+{
+  "schema_version": "montoya-scope-inventory-v1",
+  "description": "Synthetic metadata fixture for the Burp Montoya collector safety boundary.",
+  "items": [
+    {
+      "source_event_id": "burp-proxy-history-0001",
+      "in_scope": true,
+      "raw_transport": "loopback_localhost",
+      "raw_values_included": false,
+      "request_values": "omitted",
+      "response_values": "omitted",
+      "safe_log_line": "Scoped Proxy history handoff completed. items_sent=1, skipped=0"
+    }
+  ]
+}
