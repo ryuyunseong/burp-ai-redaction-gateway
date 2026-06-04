@@ -229,6 +229,54 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("Review failed: verification_failed", text)
             self.assertFalse(export_dir.exists())
 
+    def test_report_command_generates_cautious_candidate_draft(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "generated"
+            report_path = root / "report_draft.md"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                exit_code = main(["report", "--input", str(output), "--output", str(report_path)])
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(report_path.is_file())
+            stdout = buffer.getvalue()
+            self.assertIn("Report draft written: <report_draft_path>", stdout)
+            self.assertIn("Raw data included: false", stdout)
+            self.assertNotIn(str(report_path), stdout)
+
+            text = report_path.read_text(encoding="utf-8")
+            self.assertIn("# Sanitized Candidate Report Draft", text)
+            self.assertIn("Candidate status: suspected, requires manual verification", text)
+            self.assertIn("### Rationale", text)
+            self.assertIn("### Impact Draft", text)
+            self.assertIn("### Additional Verification Steps", text)
+            self.assertIn("### Remediation Draft", text)
+            self.assertIn("### Claims Not Allowed Before Proof", text)
+            self.assertIn("missing_security_headers", text)
+            self.assertIn("EV-0001", text)
+            self.assertIn("not a confirmed vulnerability report", text.lower())
+            self.assertNotIn("is a confirmed vulnerability report", text.lower())
+            self.assertNotIn("raw_request", text)
+            self.assertNotIn("raw_response", text)
+            assert_no_sensitive_text(text)
+
+    def test_report_command_blocks_draft_when_verify_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "generated"
+            report_path = root / "report_draft.md"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+            (output / "unsafe.md").write_text("Authorization: Bearer rawBearerToken1234567890\n", encoding="utf-8")
+
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                exit_code = main(["report", "--input", str(output), "--output", str(report_path)])
+            self.assertEqual(exit_code, 1)
+            self.assertIn("Report draft failed: verification_failed", buffer.getvalue())
+            self.assertFalse(report_path.exists())
+
     def test_fail_closed_scanner_detects_raw_secret_patterns(self) -> None:
         unsafe = (
             "Authorization: Bearer "

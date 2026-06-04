@@ -26,6 +26,8 @@ The command rejects non-`127.0.0.1` bind hosts. The receiver exposes:
 - Oversized payloads are rejected before parsing.
 - Use `python -m burp_ai_redaction_gateway review --input <output-dir>` to
   review verified sanitized packets without printing raw HTTP values.
+- Use `python -m burp_ai_redaction_gateway report --input <output-dir>` to
+  create a candidate-only report draft after verification.
 
 ## Current Scope
 
