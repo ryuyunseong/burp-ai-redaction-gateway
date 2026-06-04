@@ -9,7 +9,7 @@ from .parser import load_events
 from .policy import load_policy
 from .receiver import DEFAULT_HOST, DEFAULT_MAX_BYTES, DEFAULT_PORT, ReceiverConfig, ReceiverError, create_server
 from .redaction import Redactor
-from .report import write_report_draft
+from .report import DEFAULT_REPORT_PROFILE, REPORT_PROFILE_NAMES, write_report_draft
 from .review import build_review, render_review_summary
 from .verifier import verify_path
 
@@ -36,6 +36,12 @@ def main(argv: list[str] | None = None) -> int:
     report = subparsers.add_parser("report", help="Generate a cautious report draft from verified analysis packets.")
     report.add_argument("--input", required=True, type=Path, help="Verified generated output directory.")
     report.add_argument("--output", type=Path, help="Report draft path. Defaults to report_draft.md under input.")
+    report.add_argument(
+        "--profile",
+        default=DEFAULT_REPORT_PROFILE,
+        choices=REPORT_PROFILE_NAMES,
+        help="Report wording profile. Defaults to conservative.",
+    )
     report.add_argument("--policy", type=Path, help="Optional policy.json path.")
 
     serve = subparsers.add_parser("serve", help="Run the loopback-only Montoya handoff receiver.")
@@ -54,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "review":
         return _review(args.input, args.export_dir, args.policy)
     if args.command == "report":
-        return _report(args.input, args.output, args.policy)
+        return _report(args.input, args.output, args.profile, args.policy)
     if args.command == "serve":
         return _serve(args.host, args.port, args.output, args.project, args.policy, args.max_bytes)
     parser.error("Unknown command")
@@ -100,14 +106,15 @@ def _review(input_dir: Path, export_dir: Path | None, policy_path: Path | None) 
     return 0
 
 
-def _report(input_dir: Path, output_path: Path | None, policy_path: Path | None) -> int:
+def _report(input_dir: Path, output_path: Path | None, profile: str, policy_path: Path | None) -> int:
     policy = load_policy(policy_path)
     try:
-        result = write_report_draft(input_dir, output_path, policy)
+        result = write_report_draft(input_dir, output_path, policy, profile)
     except ValueError as error:
         print(f"Report draft failed: {error}")
         return 1
     print("Report draft written: <report_draft_path>")
+    print(f"Profile: {result.profile}")
     print(f"Candidate count: {result.candidate_count}")
     print("Raw data included: false")
     return 0

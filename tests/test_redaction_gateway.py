@@ -311,12 +311,15 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertTrue(report_path.is_file())
             stdout = buffer.getvalue()
             self.assertIn("Report draft written: <report_draft_path>", stdout)
+            self.assertIn("Profile: conservative", stdout)
             self.assertIn("Raw data included: false", stdout)
             self.assertNotIn(str(report_path), stdout)
 
             text = report_path.read_text(encoding="utf-8")
             self.assertIn("# Sanitized Candidate Report Draft", text)
+            self.assertIn("Report profile: conservative", text)
             self.assertIn("Candidate status: suspected, requires manual verification", text)
+            self.assertIn("Evidence confidence:", text)
             self.assertIn("### Rationale", text)
             self.assertIn("### Confidence Rationale", text)
             self.assertIn("### Impact Draft", text)
@@ -326,6 +329,48 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("Manual verification required: true", text)
             self.assertIn("missing_security_headers", text)
             self.assertIn("EV-0001", text)
+            self.assertIn("not a confirmed vulnerability report", text.lower())
+            self.assertNotIn("is a confirmed vulnerability report", text.lower())
+            self.assertNotIn("raw_request", text)
+            self.assertNotIn("raw_response", text)
+            assert_no_sensitive_text(text)
+
+    def test_report_command_supports_consultant_profile_without_confirmed_claims(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "generated"
+            report_path = root / "consultant_report_draft.md"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                exit_code = main(
+                    [
+                        "report",
+                        "--input",
+                        str(output),
+                        "--output",
+                        str(report_path),
+                        "--profile",
+                        "consultant",
+                    ]
+                )
+            self.assertEqual(exit_code, 0)
+            stdout = buffer.getvalue()
+            self.assertIn("Profile: consultant", stdout)
+            self.assertNotIn(str(report_path), stdout)
+
+            text = report_path.read_text(encoding="utf-8")
+            self.assertIn("# Sanitized Consultant Report Draft", text)
+            self.assertIn("Report profile: consultant", text)
+            self.assertIn("Suspected finding status: candidate only, manual verification required", text)
+            self.assertIn("Evidence confidence:", text)
+            self.assertIn("Manual verification required: true", text)
+            self.assertIn("### Assessment Rationale", text)
+            self.assertIn("### Potential Impact If Confirmed", text)
+            self.assertIn("### Required Manual Verification", text)
+            self.assertIn("### Recommended Remediation Draft", text)
+            self.assertIn("### Claims To Avoid Before Verification", text)
             self.assertIn("not a confirmed vulnerability report", text.lower())
             self.assertNotIn("is a confirmed vulnerability report", text.lower())
             self.assertNotIn("raw_request", text)
