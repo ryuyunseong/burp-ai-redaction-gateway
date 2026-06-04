@@ -162,6 +162,19 @@ The receiver accepts `POST /ingest/burp-history`, applies redaction immediately,
 and writes only verified sanitized output. See
 [docs/LOCALHOST_RECEIVER.md](C:/coding/burp-ai-redaction-gateway/docs/LOCALHOST_RECEIVER.md).
 
+## Read-Only MCP Server
+
+Run the read-only MCP server over stdio for verified sanitized output:
+
+```powershell
+python -m burp_ai_redaction_gateway mcp --root out
+```
+
+The MCP server exposes only read-only tools for verified output directories and
+does not implement raw exchange lookup, replay, file writes, or external
+transmission. See
+[docs/READ_ONLY_MCP.md](C:/coding/burp-ai-redaction-gateway/docs/READ_ONLY_MCP.md).
+
 ## Security Notes
 
 - Do not commit real Burp exports, raw HTTP history, tokens, cookies, customer
@@ -173,6 +186,8 @@ and writes only verified sanitized output. See
   wording until manual reproduction is complete. Use `--profile conservative`
   for the most cautious wording or `--profile consultant` for consultant draft
   language that still requires manual verification.
+- Use `mcp` only with an explicit sanitized output root. MCP tools are read-only
+  and must not be used to access local raw data or real Burp exports.
 - The audit database stores evidence references and redaction counters only. It
   does not store raw request or response values.
 - Output generation is fail-closed. If a likely token, JWT, email, phone number,

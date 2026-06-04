@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 
 from .findings import build_finding_candidates
+from .mcp_server import serve_mcp_stdio
 from .output import write_outputs
 from .parser import load_events
 from .policy import load_policy
@@ -44,6 +45,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     report.add_argument("--policy", type=Path, help="Optional policy.json path.")
 
+    mcp = subparsers.add_parser("mcp", help="Run the read-only MCP server over stdio.")
+    mcp.add_argument("--root", required=True, type=Path, help="Allowed verified output root.")
+    mcp.add_argument("--policy", type=Path, help="Optional policy.json path.")
+
     serve = subparsers.add_parser("serve", help="Run the loopback-only Montoya handoff receiver.")
     serve.add_argument("--host", default=DEFAULT_HOST, help="Bind host. Only 127.0.0.1 is allowed.")
     serve.add_argument("--port", default=DEFAULT_PORT, type=int, help="Bind port.")
@@ -61,6 +66,8 @@ def main(argv: list[str] | None = None) -> int:
         return _review(args.input, args.export_dir, args.policy)
     if args.command == "report":
         return _report(args.input, args.output, args.profile, args.policy)
+    if args.command == "mcp":
+        return _mcp(args.root, args.policy)
     if args.command == "serve":
         return _serve(args.host, args.port, args.output, args.project, args.policy, args.max_bytes)
     parser.error("Unknown command")
@@ -117,6 +124,16 @@ def _report(input_dir: Path, output_path: Path | None, profile: str, policy_path
     print(f"Profile: {result.profile}")
     print(f"Candidate count: {result.candidate_count}")
     print("Raw data included: false")
+    return 0
+
+
+def _mcp(root: Path, policy_path: Path | None) -> int:
+    policy = load_policy(policy_path)
+    try:
+        serve_mcp_stdio(root, policy)
+    except ValueError as error:
+        print(f"MCP server failed: {error}")
+        return 1
     return 0
 
 
