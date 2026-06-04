@@ -104,6 +104,17 @@ scripts\git_safety_check.bat
 `git_safety_check` is safe to run before `git init`; in that case it skips the
 tracked/staged file check and still runs the pre-commit verification.
 
+## Burp Montoya Collector
+
+The Burp-side collector skeleton lives under
+[extensions/montoya-collector](C:/coding/burp-ai-redaction-gateway/extensions/montoya-collector).
+It is a Java/Gradle Montoya extension that collects only in-scope Proxy HTTP
+history items and hands them off to a loopback-only local gateway endpoint. It
+does not log raw request or response values, and any generated output must still
+pass the existing Python `verify` gate before use.
+
+See [docs/MONTOYA_COLLECTOR.md](C:/coding/burp-ai-redaction-gateway/docs/MONTOYA_COLLECTOR.md).
+
 ## Security Notes
 
 - Do not commit real Burp exports, raw HTTP history, tokens, cookies, customer

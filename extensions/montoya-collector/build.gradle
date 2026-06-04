@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.ryuyunseong.burpai'
+version = '0.1.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+dependencies {
+    compileOnly 'net.portswigger.burp.extensions:montoya-api:2026.4'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+
+jar {
+    archiveBaseName = 'burp-ai-redaction-gateway-montoya-collector'
+    manifest {
+        attributes(
+            'Implementation-Title': 'Burp AI Redaction Gateway Montoya Collector',
+            'Implementation-Version': project.version
+        )
+    }
+}

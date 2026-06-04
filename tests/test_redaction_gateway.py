@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import unittest
@@ -18,6 +19,10 @@ SAMPLE = ROOT / "samples" / "synthetic_burp_history.json"
 VARIANTS = ROOT / "samples" / "synthetic_burp_variants.json"
 BURP_XML = ROOT / "samples" / "burp_xml_base64_history.xml"
 REDACTION_EDGES = ROOT / "samples" / "synthetic_redaction_edges.json"
+MONTOYA_DIR = ROOT / "extensions" / "montoya-collector"
+MONTOYA_SOURCE_DIR = MONTOYA_DIR / "src" / "main" / "java" / "com" / "ryuyunseong" / "burpai" / "redactiongateway"
+MONTOYA_DOC = ROOT / "docs" / "MONTOYA_COLLECTOR.md"
+MONTOYA_SCOPE_FIXTURE = ROOT / "samples" / "synthetic_montoya_scope_inventory.json"
 
 
 class RedactionGatewayTests(unittest.TestCase):
@@ -257,6 +262,11 @@ class RedactionGatewayTests(unittest.TestCase):
             "secrets.*",
             "client_*",
             "customer_*",
+            "extensions/**/.gradle/",
+            "extensions/**/build/",
+            "extensions/**/*.jar",
+            "!extensions/**/gradle/wrapper/gradle-wrapper.jar",
+            "*.class",
         ]
         for pattern in required_patterns:
             self.assertIn(pattern, gitignore)
@@ -273,7 +283,7 @@ class RedactionGatewayTests(unittest.TestCase):
 
     def test_gitleaks_scope_and_redaction_are_documented_in_repo_files(self) -> None:
         config = (ROOT / ".gitleaks.toml").read_text(encoding="utf-8")
-        for path in ["local_only", "out", "raw", "raw_vault", "exports", "reports"]:
+        for path in ["local_only", "out", "raw", "raw_vault", "exports", "reports", "extensions"]:
             self.assertIn(path, config)
 
         pre_commit_bat = (ROOT / "scripts" / "pre_commit_check.bat").read_text(encoding="utf-8")
@@ -311,6 +321,80 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("not a substitute for", readme)
         self.assertIn("Safe Real-Like Smoke Test", real_testing)
         self.assertIn("not a real Burp export compatibility test", real_testing)
+
+    def test_montoya_collector_gradle_project_exists(self) -> None:
+        self.assertTrue((MONTOYA_DIR / "settings.gradle").is_file())
+        build_gradle = (MONTOYA_DIR / "build.gradle").read_text(encoding="utf-8")
+        self.assertIn("id 'java'", build_gradle)
+        self.assertIn("compileOnly 'net.portswigger.burp.extensions:montoya-api:2026.4'", build_gradle)
+        self.assertIn("sourceCompatibility = JavaVersion.VERSION_17", build_gradle)
+        self.assertIn("options.release = 17", build_gradle)
+        self.assertIn("burp-ai-redaction-gateway-montoya-collector", build_gradle)
+
+    def test_montoya_collector_gradle_wrapper_is_pinned(self) -> None:
+        self.assertTrue((MONTOYA_DIR / "gradlew").is_file())
+        self.assertTrue((MONTOYA_DIR / "gradlew.bat").is_file())
+        wrapper_jar = MONTOYA_DIR / "gradle" / "wrapper" / "gradle-wrapper.jar"
+        self.assertTrue(wrapper_jar.is_file())
+        wrapper_hash = hashlib.sha256(wrapper_jar.read_bytes()).hexdigest()
+        self.assertEqual(wrapper_hash, "497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7")
+
+        wrapper = (MONTOYA_DIR / "gradle" / "wrapper" / "gradle-wrapper.properties").read_text(encoding="utf-8")
+        self.assertIn("distributionUrl=https\\://services.gradle.org/distributions/gradle-9.5.1-bin.zip", wrapper)
+        self.assertIn(
+            "distributionSha256Sum=bafc141b619ad6350fd975fc903156dd5c151998cc8b058e8c1044ab5f7b031f",
+            wrapper,
+        )
+
+    def test_montoya_collector_uses_scope_only_loopback_handoff(self) -> None:
+        source = "\n".join(path.read_text(encoding="utf-8") for path in MONTOYA_SOURCE_DIR.glob("*.java"))
+        self.assertIn("implements BurpExtension", source)
+        self.assertIn("api.proxy()", source)
+        self.assertIn("proxy.history(requestResponse ->", source)
+        self.assertIn("requestResponse.request().isInScope()", source)
+        self.assertIn("raw_transport", source)
+        self.assertIn("loopback_localhost", source)
+        self.assertIn("isLoopbackHost", source)
+        self.assertIn("127.0.0.1", source)
+        self.assertIn("BURP_AI_REDACTION_GATEWAY_URL", source)
+
+        banned_log_patterns = [
+            "logToOutput(item.request",
+            "logToOutput(item.response",
+            "logToError(item.request",
+            "logToError(item.response",
+            "logToOutput(payload",
+            "logToError(payload",
+        ]
+        for pattern in banned_log_patterns:
+            self.assertNotIn(pattern, source)
+
+        banned_storage_patterns = [
+            "FileWriter",
+            "FileOutputStream",
+            "Files.write",
+            "Path.of",
+            "createTempFile",
+        ]
+        for pattern in banned_storage_patterns:
+            self.assertNotIn(pattern, source)
+
+    def test_montoya_collector_docs_and_fixture_keep_raw_boundary(self) -> None:
+        doc = MONTOYA_DOC.read_text(encoding="utf-8")
+        self.assertIn("accepts only items whose request is in Burp suite scope", doc)
+        self.assertIn("Raw request and response values are never logged", doc)
+        self.assertIn(".\\gradlew.bat clean build", doc)
+        self.assertIn("Extensions -> Installed", doc)
+        self.assertIn("loopback", doc)
+        self.assertIn("non-loopback URLs", doc)
+        self.assertIn("verify", doc)
+
+        fixture = json.loads(MONTOYA_SCOPE_FIXTURE.read_text(encoding="utf-8"))
+        self.assertEqual(fixture["schema_version"], "montoya-scope-inventory-v1")
+        self.assertTrue(all(item["in_scope"] for item in fixture["items"]))
+        self.assertTrue(all(item["raw_values_included"] is False for item in fixture["items"]))
+        self.assertNotIn("raw_request", json.dumps(fixture))
+        self.assertNotIn("raw_response", json.dumps(fixture))
 
 
 if __name__ == "__main__":
