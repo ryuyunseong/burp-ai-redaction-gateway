@@ -12,6 +12,7 @@ from pathlib import Path
 
 from burp_ai_redaction_gateway.cli import main
 from burp_ai_redaction_gateway.findings import build_finding_candidates
+from burp_ai_redaction_gateway.mcp_server import ReadOnlyMcpGateway, ReadOnlyMcpServer
 from burp_ai_redaction_gateway.models import SanitizedEvent
 from burp_ai_redaction_gateway.parser import load_events
 from burp_ai_redaction_gateway.policy import load_policy
@@ -391,6 +392,115 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertEqual(exit_code, 1)
             self.assertIn("Report draft failed: verification_failed", buffer.getvalue())
             self.assertFalse(report_path.exists())
+
+    def test_read_only_mcp_exposes_verified_sanitized_outputs_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "generated"
+            report_path = output / "report_draft.md"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+            main(["report", "--input", str(output), "--output", str(report_path), "--profile", "conservative"])
+
+            server = ReadOnlyMcpServer(ReadOnlyMcpGateway(root, load_policy(None)), audit_stream=io.StringIO())
+            tools_response = server.handle_message({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
+            self.assertIsInstance(tools_response, dict)
+            tool_names = {tool["name"] for tool in tools_response["result"]["tools"]}
+            self.assertEqual(
+                tool_names,
+                {"list_findings", "get_finding", "get_analysis_packet", "get_report_draft", "list_prompt_files"},
+            )
+            for tool in tools_response["result"]["tools"]:
+                self.assertTrue(tool["annotations"]["readOnlyHint"])
+                self.assertFalse(tool["annotations"]["destructiveHint"])
+
+            list_response = server.handle_message(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {"name": "list_findings", "arguments": {"project": "generated"}},
+                }
+            )
+            self.assertFalse(list_response["result"]["isError"])
+            list_text = list_response["result"]["content"][0]["text"]
+            self.assertIn("findings", list_text)
+            self.assertNotIn("raw_request", list_text)
+            self.assertNotIn("raw_response", list_text)
+            assert_no_sensitive_text(list_text)
+
+            first_finding = list_response["result"]["structuredContent"]["findings"][0]["finding_id"]
+            detail_response = server.handle_message(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "get_finding",
+                        "arguments": {"project": "generated", "finding_id": first_finding},
+                    },
+                }
+            )
+            self.assertFalse(detail_response["result"]["isError"])
+            self.assertIn("manual_verification_required", detail_response["result"]["content"][0]["text"])
+
+            for request_id, tool_name in [
+                (4, "get_analysis_packet"),
+                (5, "get_report_draft"),
+                (6, "list_prompt_files"),
+            ]:
+                response = server.handle_message(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": request_id,
+                        "method": "tools/call",
+                        "params": {"name": tool_name, "arguments": {"project": "generated"}},
+                    }
+                )
+                self.assertFalse(response["result"]["isError"], tool_name)
+                assert_no_sensitive_text(response["result"]["content"][0]["text"])
+
+    def test_read_only_mcp_blocks_path_traversal_forbidden_dirs_and_unverified_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "generated"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+            server = ReadOnlyMcpServer(ReadOnlyMcpGateway(root, load_policy(None)), audit_stream=io.StringIO())
+
+            traversal_response = server.handle_message(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": {"name": "list_findings", "arguments": {"project": "..\\generated"}},
+                }
+            )
+            self.assertTrue(traversal_response["result"]["isError"])
+            self.assertEqual(
+                traversal_response["result"]["structuredContent"]["error_type"], "path_traversal_forbidden"
+            )
+
+            forbidden_response = server.handle_message(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {"name": "list_findings", "arguments": {"project": "raw"}},
+                }
+            )
+            self.assertTrue(forbidden_response["result"]["isError"])
+            self.assertEqual(forbidden_response["result"]["structuredContent"]["error_type"], "forbidden_directory")
+
+            (output / "unsafe.md").write_text("Authorization: Bearer rawBearerToken1234567890\n", encoding="utf-8")
+            verify_response = server.handle_message(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "tools/call",
+                    "params": {"name": "list_findings", "arguments": {"project": "generated"}},
+                }
+            )
+            self.assertTrue(verify_response["result"]["isError"])
+            self.assertEqual(verify_response["result"]["structuredContent"]["error_type"], "verification_failed")
 
     def test_fail_closed_scanner_detects_raw_secret_patterns(self) -> None:
         unsafe = (
