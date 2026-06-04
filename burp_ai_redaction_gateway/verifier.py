@@ -44,7 +44,7 @@ def assert_verification_passed(path: Path, policy: RedactionPolicy) -> Verificat
     result = verify_path(path, policy)
     if not result.passed:
         summary = ", ".join(
-            f"{finding.path}:{finding.match.kind}:{finding.match.excerpt}" for finding in result.findings[:5]
+            f"{finding.path}:{finding.match.kind}:<REDACTED>" for finding in result.findings[:5]
         )
         raise ValueError(f"Verification failed: {summary}")
     return result
@@ -63,4 +63,3 @@ def _apply_literal_allowlist(text: str, allowlisted_literals: tuple[str, ...]) -
     for literal in allowlisted_literals:
         result = result.replace(literal, "<ALLOWLISTED_LITERAL>")
     return result
-

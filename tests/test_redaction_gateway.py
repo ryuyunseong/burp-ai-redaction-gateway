@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SAMPLE = ROOT / "samples" / "synthetic_burp_history.json"
 VARIANTS = ROOT / "samples" / "synthetic_burp_variants.json"
 BURP_XML = ROOT / "samples" / "burp_xml_base64_history.xml"
+REDACTION_EDGES = ROOT / "samples" / "synthetic_redaction_edges.json"
 
 
 class RedactionGatewayTests(unittest.TestCase):
@@ -144,6 +145,63 @@ class RedactionGatewayTests(unittest.TestCase):
                     self.assertNotIn("hidden-csrf-token", text)
                     self.assertNotIn("192.168.10.55", text)
                     self.assertNotIn("AbCdEfGhIjKlMnOpQrStUvWxYz1234567890abcdEFGH", text)
+
+    def test_redaction_edge_fixture_generates_safe_diagnostics(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir)
+            self.assertEqual(
+                main(
+                    [
+                        "generate",
+                        "--input",
+                        str(REDACTION_EDGES),
+                        "--output",
+                        str(output),
+                        "--project",
+                        "client_alias_demo",
+                    ]
+                ),
+                0,
+            )
+            self.assertEqual(main(["verify", "--input", str(output)]), 0)
+            text = "\n".join(
+                path.read_text(encoding="utf-8")
+                for path in output.iterdir()
+                if path.suffix in {".json", ".jsonl", ".md", ".txt"}
+            )
+            blocked_markers = [
+                "FAKE-client.example.test",
+                "DUMMY-callback.example.test",
+                "DUMMY-origin.example.test",
+                "DUMMY-referer.example.test",
+                "EXAMPLE-redirect.example.test",
+                "DUMMY_COOKIE_VALUE",
+                "DUMMY_SET_COOKIE",
+                "DUMMY_API_KEY",
+                "DUMMY_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890",
+                "38cd434596c9b0.dict",
+                "xjs.hd.ko",
+            ]
+            for marker in blocked_markers:
+                self.assertNotIn(marker, text)
+            assert_no_sensitive_text(text)
+
+            events = [
+                json.loads(line)
+                for line in (output / "sanitized_events.jsonl").read_text(encoding="utf-8").splitlines()
+            ]
+            diagnostics = [
+                item
+                for event in events
+                for item in event["redaction"].get("diagnostics", [])
+            ]
+            self.assertTrue(diagnostics)
+            for item in diagnostics:
+                self.assertEqual(item["value_preview"], "<REDACTED>")
+                self.assertIn("failure_type", item)
+                self.assertIn("event_id", item)
+                self.assertIn("field_path", item)
+                self.assertIn("source_kind", item)
 
     def test_verify_fails_on_raw_output_leakage(self) -> None:
         policy = load_policy(None)

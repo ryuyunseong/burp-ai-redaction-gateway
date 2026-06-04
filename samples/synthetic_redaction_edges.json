@@ -1,0 +1,61 @@
+{
+  "events": [
+    {
+      "id": "edge-domain-entropy-001",
+      "request": {
+        "method": "POST",
+        "url": "https://FAKE-client.example.test/cdn/shared_domain_38cd434596c9b0.dict?callbackUrl=https%3A%2F%2FDUMMY-callback.example.test%2Fdone&state=DUMMY_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890abcdEFGH&fileId=12345",
+        "headers": {
+          "Host": "FAKE-client.example.test",
+          "Origin": "https://DUMMY-origin.example.test",
+          "Referer": "https://DUMMY-referer.example.test/login?nonce=DUMMY_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890abcdEFGH",
+          "Authorization": "Bearer DUMMY_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890abcdEFGH",
+          "Cookie": "edge_sid=DUMMY_COOKIE_VALUE_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890; theme=EXAMPLE_THEME",
+          "X-API-Key": "DUMMY_API_KEY_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890"
+        },
+        "body": {
+          "callbackUrl": "https://DUMMY-callback.example.test/after",
+          "redirectUri": "https://DUMMY-redirect.example.test/next",
+          "domain": "FAKE-client.example.test",
+          "host": "DUMMY-api.example.test",
+          "sessionToken": "DUMMY_SESSION_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890",
+          "nonce": "DUMMY_NONCE_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890"
+        }
+      },
+      "response": {
+        "status": 302,
+        "headers": {
+          "Location": "https://EXAMPLE-redirect.example.test/next?token=DUMMY_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890abcdEFGH",
+          "Set-Cookie": "edge_sid=DUMMY_SET_COOKIE_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890; Domain=FAKE-client.example.test; Path=/; SameSite=None",
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><a href=\"https://DUMMY-link.example.test/path?code=DUMMY_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890\">link</a><script src=\"https://DUMMY-static.example.test/app.js\"></script><form action=\"https://DUMMY-form.example.test/login\"><input type=\"hidden\" name=\"csrf\" value=\"DUMMY_CSRF_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890\"></form></body></html>"
+      }
+    },
+    {
+      "id": "edge-unsafe-field-names-002",
+      "request": {
+        "method": "GET",
+        "url": "https://DUMMY-api.example.test/og/_/js/k=DUMMY_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890abcdEFGH/m=xjs.hd.ko/am=AbCdEfGhIjKlMnOpQrStUvWxYz1234567890",
+        "headers": {
+          "Accept": "application/json"
+        },
+        "body": ""
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "38cd434596c9b0.dict": "DUMMY_DICTIONARY_VALUE_AbCdEfGhIjKlMnOpQrStUvWxYz1234567890",
+          "xjs.hd.ko": {
+            "redirect": "https://DUMMY-nested.example.test/continue",
+            "safeName": "EXAMPLE_VALUE"
+          },
+          "normalField": "EXAMPLE_TEXT"
+        }
+      }
+    }
+  ]
+}

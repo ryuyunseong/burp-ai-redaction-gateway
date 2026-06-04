@@ -56,7 +56,7 @@ def _verify(input_path: Path, policy_path: Path | None) -> int:
 
     print(f"Verification failed: {len(result.findings)} findings in {result.files_checked} files")
     for finding in result.findings[:20]:
-        print(f"- {finding.path}: {finding.match.kind}: {finding.match.excerpt}")
+        print(f"- {finding.path}: {finding.match.kind}: <REDACTED>")
     if len(result.findings) > 20:
         print(f"- ... {len(result.findings) - 20} additional findings omitted")
     return 1
