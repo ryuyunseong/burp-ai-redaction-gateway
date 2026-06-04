@@ -9,6 +9,7 @@ from .parser import load_events
 from .policy import load_policy
 from .receiver import DEFAULT_HOST, DEFAULT_MAX_BYTES, DEFAULT_PORT, ReceiverConfig, ReceiverError, create_server
 from .redaction import Redactor
+from .review import build_review, render_review_summary
 from .verifier import verify_path
 
 
@@ -26,6 +27,11 @@ def main(argv: list[str] | None = None) -> int:
     verify.add_argument("--input", required=True, type=Path, help="Output file or directory to scan.")
     verify.add_argument("--policy", type=Path, help="Optional policy.json path.")
 
+    review = subparsers.add_parser("review", help="Review verified analysis packet output without printing raw data.")
+    review.add_argument("--input", required=True, type=Path, help="Verified generated output directory.")
+    review.add_argument("--export-dir", type=Path, help="Optional directory for safe prompt packet copies.")
+    review.add_argument("--policy", type=Path, help="Optional policy.json path.")
+
     serve = subparsers.add_parser("serve", help="Run the loopback-only Montoya handoff receiver.")
     serve.add_argument("--host", default=DEFAULT_HOST, help="Bind host. Only 127.0.0.1 is allowed.")
     serve.add_argument("--port", default=DEFAULT_PORT, type=int, help="Bind port.")
@@ -39,6 +45,8 @@ def main(argv: list[str] | None = None) -> int:
         return _generate(args.input, args.output, args.project, args.policy)
     if args.command == "verify":
         return _verify(args.input, args.policy)
+    if args.command == "review":
+        return _review(args.input, args.export_dir, args.policy)
     if args.command == "serve":
         return _serve(args.host, args.port, args.output, args.project, args.policy, args.max_bytes)
     parser.error("Unknown command")
@@ -71,6 +79,17 @@ def _verify(input_path: Path, policy_path: Path | None) -> int:
     if len(result.findings) > 20:
         print(f"- ... {len(result.findings) - 20} additional findings omitted")
     return 1
+
+
+def _review(input_dir: Path, export_dir: Path | None, policy_path: Path | None) -> int:
+    policy = load_policy(policy_path)
+    try:
+        result = build_review(input_dir, policy, export_dir)
+    except ValueError as error:
+        print(f"Review failed: {error}")
+        return 1
+    print(render_review_summary(result), end="")
+    return 0
 
 
 def _serve(host: str, port: int, output_dir: Path, project: str, policy_path: Path | None, max_bytes: int) -> int:

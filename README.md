@@ -25,6 +25,15 @@ Verify generated output:
 python -m burp_ai_redaction_gateway verify --input out/demo --policy policy.json
 ```
 
+Review verified analysis packet output and optionally export safe prompt files:
+
+```powershell
+python -m burp_ai_redaction_gateway review --input out/demo --export-dir exports/demo_review
+```
+
+The review command runs `verify` first and refuses to export files if verification
+fails.
+
 Generated files:
 
 - `endpoint_inventory.md`
@@ -140,6 +149,8 @@ and writes only verified sanitized output. See
 - Do not commit real Burp exports, raw HTTP history, tokens, cookies, customer
   domains, internal IPs, or local audit databases.
 - Fixtures in this repository must remain synthetic.
+- Use `review` only on output directories that should pass `verify`; it prints
+  summary counts and safe prompt file names, not raw HTTP content.
 - The audit database stores evidence references and redaction counters only. It
   does not store raw request or response values.
 - Output generation is fail-closed. If a likely token, JWT, email, phone number,

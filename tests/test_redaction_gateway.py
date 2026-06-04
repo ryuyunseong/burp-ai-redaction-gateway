@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import http.client
+import io
 import json
 import tempfile
 import threading
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
 from burp_ai_redaction_gateway.cli import main
@@ -183,6 +185,49 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn("raw_response", prompt)
             assert_no_sensitive_text(chatgpt_prompt)
             assert_no_sensitive_text(codex_prompt)
+
+    def test_review_command_summarizes_verified_output_and_exports_prompts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "generated"
+            export_dir = root / "review_export"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                exit_code = main(["review", "--input", str(output), "--export-dir", str(export_dir)])
+            self.assertEqual(exit_code, 0)
+            text = buffer.getvalue()
+            self.assertIn("Review summary", text)
+            self.assertIn("Verification: passed", text)
+            self.assertIn("Raw data included: false", text)
+            self.assertIn("Candidate count:", text)
+            self.assertIn("missing_security_headers", text)
+            self.assertIn("do_not_claim", text.lower())
+            self.assertNotIn("raw_request", text)
+            self.assertNotIn("raw_response", text)
+            assert_no_sensitive_text(text)
+
+            for name in ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md"]:
+                copied = export_dir / name
+                self.assertTrue(copied.is_file(), name)
+                assert_no_sensitive_text(copied.read_text(encoding="utf-8"))
+
+    def test_review_command_blocks_export_when_verify_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "generated"
+            export_dir = root / "review_export"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+            (output / "unsafe.md").write_text("Authorization: Bearer rawBearerToken1234567890\n", encoding="utf-8")
+
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                exit_code = main(["review", "--input", str(output), "--export-dir", str(export_dir)])
+            self.assertEqual(exit_code, 1)
+            text = buffer.getvalue()
+            self.assertIn("Review failed: verification_failed", text)
+            self.assertFalse(export_dir.exists())
 
     def test_fail_closed_scanner_detects_raw_secret_patterns(self) -> None:
         unsafe = (
