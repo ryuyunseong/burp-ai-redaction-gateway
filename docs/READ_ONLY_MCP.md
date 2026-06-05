@@ -70,7 +70,22 @@ and without the `event_hash` field itself. The stored hash format is
 `sha256:<hex>`. `prev_event_hash` is included in the canonical input, so row
 insertion, deletion, reordering, and mutation are detectable by recalculation.
 The first chained event has `prev_event_hash: null`; later events point to the
-previous event hash in the same audit file. Retention, rotation, and
+previous event hash across retained rotated files and the active file.
+
+Audit log rotation is file-size based. The active file stays at
+`mcp_audit.jsonl`; when the next event would exceed the configured size limit,
+the active file is moved to a deterministic rotated name such as
+`mcp_audit.000001.jsonl`. The numeric suffix is derived from the chain-wide
+sequence number at the start of the rotated segment, so retained rotation names
+do not restart at `000001` while the audit chain continues. The default limit is
+10 MiB and the default retention keeps 20 rotated files. Retention deletes only
+older rotated files and never deletes the active file. The first event in a new active file keeps
+`prev_event_hash` pointing at the last retained event hash from the previous
+file, so the chain continues across rotation. Hash chain verification is
+guaranteed across retained rotated files and the active file only. When older
+rotated files are removed by retention, historical verification before the
+retained boundary is intentionally no longer available. Retention days, a
+dedicated `review-audit` command, policy configuration, compression, and
 tamper-resistance controls are follow-up hardening work.
 
 ## Allowed Output Scope
