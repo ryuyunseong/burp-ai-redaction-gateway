@@ -187,6 +187,19 @@ guaranteed across retained rotated files and the active file only; history
 before the retained boundary is outside the verification scope after older
 rotated files are removed.
 
+Review retained audit logs with the dedicated audit command:
+
+```powershell
+python -m burp_ai_redaction_gateway review-audit --input out\.audit
+python -m burp_ai_redaction_gateway review-audit --input out\.audit --format json
+```
+
+`review-audit` checks JSONL parsing, required schema fields, UUID event ids,
+sequence continuity, hash chain integrity, rotated suffix order, and raw-free
+scanner results across retained rotated files and the active audit file. It is
+strict about audit schema `1.1`, so pre-schema local audit rows from older runs
+fail review.
+
 ## Security Notes
 
 - Do not commit real Burp exports, raw HTTP history, tokens, cookies, customer
@@ -203,6 +216,7 @@ rotated files are removed.
 - MCP audit logs must remain raw-free and store only metadata such as tool name,
   sanitized output id, status, blocked reason, event id, sequence number, and
   hash chain fields.
+- Use `review-audit` to inspect retained audit logs without printing raw values.
 - The audit database stores evidence references and redaction counters only. It
   does not store raw request or response values.
 - Output generation is fail-closed. If a likely token, JWT, email, phone number,

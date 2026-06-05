@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
+from .audit_review import render_audit_review_summary, review_audit_path
 from .findings import build_finding_candidates
 from .mcp_server import serve_mcp_stdio
 from .output import write_outputs
@@ -28,6 +30,15 @@ def main(argv: list[str] | None = None) -> int:
     verify = subparsers.add_parser("verify", help="Verify generated output files for remaining sensitive values.")
     verify.add_argument("--input", required=True, type=Path, help="Output file or directory to scan.")
     verify.add_argument("--policy", type=Path, help="Optional policy.json path.")
+
+    review_audit = subparsers.add_parser("review-audit", help="Review MCP audit logs without printing raw data.")
+    review_audit.add_argument("--input", required=True, type=Path, help="Audit directory or audit JSONL file.")
+    review_audit.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format. Defaults to text.",
+    )
 
     review = subparsers.add_parser("review", help="Review verified analysis packet output without printing raw data.")
     review.add_argument("--input", required=True, type=Path, help="Verified generated output directory.")
@@ -62,6 +73,8 @@ def main(argv: list[str] | None = None) -> int:
         return _generate(args.input, args.output, args.project, args.policy)
     if args.command == "verify":
         return _verify(args.input, args.policy)
+    if args.command == "review-audit":
+        return _review_audit(args.input, args.format)
     if args.command == "review":
         return _review(args.input, args.export_dir, args.policy)
     if args.command == "report":
@@ -100,6 +113,15 @@ def _verify(input_path: Path, policy_path: Path | None) -> int:
     if len(result.findings) > 20:
         print(f"- ... {len(result.findings) - 20} additional findings omitted")
     return 1
+
+
+def _review_audit(input_path: Path, output_format: str) -> int:
+    result = review_audit_path(input_path)
+    if output_format == "json":
+        print(json.dumps(result.to_json(), ensure_ascii=True, sort_keys=True))
+    else:
+        print(render_audit_review_summary(result), end="")
+    return 0 if result.passed else 1
 
 
 def _review(input_dir: Path, export_dir: Path | None, policy_path: Path | None) -> int:
