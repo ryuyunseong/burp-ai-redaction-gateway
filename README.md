@@ -139,6 +139,13 @@ scripts\git_safety_check.bat
 `git_safety_check` is safe to run before `git init`; in that case it skips the
 tracked/staged file check and still runs the pre-commit verification.
 
+## Operating Guide
+
+For the full safe operating flow, including Burp collection, receiver usage,
+verification, AI-safe files, audit retention, HMAC verification, and failure
+handling, see
+[docs/OPERATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/OPERATING_GUIDE.md).
+
 ## Burp Montoya Collector
 
 The Burp-side collector skeleton lives under
