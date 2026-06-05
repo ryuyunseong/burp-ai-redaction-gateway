@@ -1175,12 +1175,10 @@ class RedactionGatewayTests(unittest.TestCase):
                 try:
                     small_port = small_config_server.server_address[1]
                     small_connection = http.client.HTTPConnection("127.0.0.1", small_port, timeout=5)
-                    small_connection.request(
-                        "POST",
-                        "/ingest/burp-history",
-                        body=body,
-                        headers={"Content-Type": "application/json"},
-                    )
+                    small_connection.putrequest("POST", "/ingest/burp-history")
+                    small_connection.putheader("Content-Type", "application/json")
+                    small_connection.putheader("Content-Length", str(len(body)))
+                    small_connection.endheaders()
                     small_response = small_connection.getresponse()
                     small_body = json.loads(small_response.read().decode("utf-8"))
                     self.assertEqual(small_response.status, 413)
