@@ -46,10 +46,14 @@ EXPECTED_PASSIVE_FINDING_TYPES = {
 
 
 class RedactionGatewayTests(unittest.TestCase):
-    def assert_audit_hash_chain(self, audit_events: list[dict[str, object]]) -> None:
-        previous_hash = None
+    def assert_audit_hash_chain(
+        self, audit_events: list[dict[str, object]], *, allow_prefix_gap: bool = False
+    ) -> None:
+        self.assertTrue(audit_events)
+        previous_hash = audit_events[0]["prev_event_hash"] if allow_prefix_gap else None
         chain_id = None
-        for index, event in enumerate(audit_events, start=1):
+        start_sequence = int(audit_events[0]["sequence_no"]) if allow_prefix_gap else 1
+        for index, event in enumerate(audit_events, start=start_sequence):
             self.assertEqual(event["audit_schema_version"], "1.1")
             uuid.UUID(str(event["event_id"]))
             self.assertEqual(event["sequence_no"], index)
@@ -66,6 +70,14 @@ class RedactionGatewayTests(unittest.TestCase):
             expected_hash = "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
             self.assertEqual(event["event_hash"], expected_hash)
             previous_hash = event["event_hash"]
+
+    def read_audit_events(self, audit_files: list[Path]) -> list[dict[str, object]]:
+        events = []
+        for audit_file in audit_files:
+            text = audit_file.read_text(encoding="utf-8")
+            assert_no_sensitive_text(text)
+            events.extend(json.loads(line) for line in text.splitlines() if line.strip())
+        return events
 
     def test_audit_hash_chain_helper_detects_deletion_reorder_and_mutation(self) -> None:
         events = [
@@ -626,6 +638,43 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn("rawBearerToken1234567890", audit_text)
             self.assertNotIn("Authorization", audit_text)
             self.assertNotIn("..\\generated", audit_text)
+
+    def test_read_only_mcp_verifies_hash_chain_across_retained_rotated_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "generated"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+            server = ReadOnlyMcpServer(
+                ReadOnlyMcpGateway(root, load_policy(None)),
+                audit_stream=io.StringIO(),
+                audit_max_bytes=1,
+                audit_max_rotated_files=2,
+            )
+
+            for request_id in range(1, 6):
+                response = server.handle_message(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": request_id,
+                        "method": "tools/call",
+                        "params": {"name": "list_prompt_files", "arguments": {"project": "generated"}},
+                    }
+                )
+                self.assertFalse(response["result"]["isError"])
+
+            audit_dir = root / ".audit"
+            active = audit_dir / "mcp_audit.jsonl"
+            rotated = sorted(audit_dir.glob("mcp_audit.*.jsonl"))
+            self.assertTrue(active.is_file())
+            self.assertEqual([path.name for path in rotated], ["mcp_audit.000003.jsonl", "mcp_audit.000004.jsonl"])
+            self.assertFalse((audit_dir / "mcp_audit.000001.jsonl").exists())
+            self.assertFalse((audit_dir / "mcp_audit.000002.jsonl").exists())
+
+            events = self.read_audit_events([*rotated, active])
+            self.assertEqual([event["sequence_no"] for event in events], [3, 4, 5])
+            self.assert_audit_hash_chain(events, allow_prefix_gap=True)
+            self.assertEqual(events[-1]["prev_event_hash"], events[-2]["event_hash"])
+            self.assertTrue(all(event["raw_data_included"] is False for event in events))
 
     def test_fail_closed_scanner_detects_raw_secret_patterns(self) -> None:
         unsafe = (

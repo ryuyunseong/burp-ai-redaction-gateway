@@ -26,6 +26,8 @@ AUDIT_DIR_NAME = ".audit"
 AUDIT_FILE_NAME = "mcp_audit.jsonl"
 AUDIT_SCHEMA_VERSION = "1.1"
 AUDIT_HASH_ALGORITHM = "SHA-256"
+DEFAULT_AUDIT_MAX_BYTES = 10 * 1024 * 1024
+DEFAULT_AUDIT_MAX_ROTATED_FILES = 20
 TOOL_RESPONSE_CLASSES = {
     "list_findings": "finding_summary",
     "get_finding": "finding_detail",
@@ -159,10 +161,19 @@ class ReadOnlyMcpGateway:
 
 
 class ReadOnlyMcpServer:
-    def __init__(self, gateway: ReadOnlyMcpGateway, audit_stream: TextIO | None = None) -> None:
+    def __init__(
+        self,
+        gateway: ReadOnlyMcpGateway,
+        audit_stream: TextIO | None = None,
+        *,
+        audit_max_bytes: int = DEFAULT_AUDIT_MAX_BYTES,
+        audit_max_rotated_files: int = DEFAULT_AUDIT_MAX_ROTATED_FILES,
+    ) -> None:
         self.gateway = gateway
         self.audit_stream = audit_stream if audit_stream is not None else sys.stderr
         self.audit_log_path = gateway.root / AUDIT_DIR_NAME / AUDIT_FILE_NAME
+        self.audit_max_bytes = audit_max_bytes
+        self.audit_max_rotated_files = audit_max_rotated_files
 
     def handle_message(self, message: Any) -> dict[str, Any] | list[dict[str, Any]] | None:
         if isinstance(message, list):
@@ -258,7 +269,12 @@ class ReadOnlyMcpServer:
             event["blocked_reason"] = _safe_identifier(blocked_reason, "blocked")
         if error_type:
             event["error_type"] = _safe_identifier(error_type, "error")
-        _append_audit_event(self.audit_log_path, event)
+        _append_audit_event(
+            self.audit_log_path,
+            event,
+            max_bytes=self.audit_max_bytes,
+            max_rotated_files=self.audit_max_rotated_files,
+        )
 
 
 def serve_mcp_stdio(root: Path, policy: RedactionPolicy) -> None:
@@ -362,13 +378,16 @@ def _tool_error_result(error_type: str) -> McpToolResult:
     return McpToolResult(structured_content=structured, text=text, is_error=True)
 
 
-def _append_audit_event(path: Path, event: dict[str, Any]) -> None:
+def _append_audit_event(path: Path, event: dict[str, Any], *, max_bytes: int, max_rotated_files: int) -> None:
     event = _audit_event_with_chain_fields(path, event)
     text = json.dumps(event, ensure_ascii=True, sort_keys=True)
     assert_no_sensitive_text(text)
     path.parent.mkdir(parents=True, exist_ok=True)
+    line = text + "\n"
+    if _should_rotate_audit_file(path, line, max_bytes):
+        _rotate_audit_file(path, max_rotated_files)
     with path.open("a", encoding="utf-8") as file:
-        file.write(text + "\n")
+        file.write(line)
 
 
 def _audit_event_with_chain_fields(path: Path, event: dict[str, Any]) -> dict[str, Any]:
@@ -396,19 +415,73 @@ def _audit_event_with_chain_fields(path: Path, event: dict[str, Any]) -> dict[st
 
 
 def _last_chained_audit_event(path: Path) -> dict[str, Any] | None:
-    if not path.is_file():
-        return None
     last_event: dict[str, Any] | None = None
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if _is_chained_audit_event(event):
-            last_event = event
+    for audit_file in _audit_log_files(path):
+        for line in audit_file.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if _is_chained_audit_event(event):
+                last_event = event
     return last_event
+
+
+def _should_rotate_audit_file(path: Path, next_line: str, max_bytes: int) -> bool:
+    if max_bytes <= 0 or not path.is_file():
+        return False
+    current_size = path.stat().st_size
+    if current_size <= 0:
+        return False
+    return current_size + len(next_line.encode("utf-8")) > max_bytes
+
+
+def _rotate_audit_file(path: Path, max_rotated_files: int) -> None:
+    if not path.is_file() or path.stat().st_size <= 0:
+        return
+    target = _next_rotated_audit_path(path)
+    path.replace(target)
+    _prune_rotated_audit_files(path, max_rotated_files)
+
+
+def _next_rotated_audit_path(path: Path) -> Path:
+    rotated = _rotated_audit_files(path)
+    next_index = rotated[-1][0] + 1 if rotated else 1
+    return path.with_name(f"{path.stem}.{next_index:06d}{path.suffix}")
+
+
+def _prune_rotated_audit_files(path: Path, max_rotated_files: int) -> None:
+    rotated = _rotated_audit_files(path)
+    if max_rotated_files < 0:
+        return
+    for _, file_path in rotated[: max(0, len(rotated) - max_rotated_files)]:
+        file_path.unlink(missing_ok=True)
+
+
+def _audit_log_files(path: Path) -> list[Path]:
+    files = [file_path for _, file_path in _rotated_audit_files(path)]
+    if path.is_file():
+        files.append(path)
+    return files
+
+
+def _rotated_audit_files(path: Path) -> list[tuple[int, Path]]:
+    if not path.parent.is_dir():
+        return []
+    prefix = f"{path.stem}."
+    suffix = path.suffix
+    rotated: list[tuple[int, Path]] = []
+    for file_path in path.parent.glob(f"{path.stem}.*{path.suffix}"):
+        name = file_path.name
+        if not name.startswith(prefix) or not name.endswith(suffix):
+            continue
+        index_text = name[len(prefix) : -len(suffix)]
+        if len(index_text) != 6 or not index_text.isdigit():
+            continue
+        rotated.append((int(index_text), file_path))
+    return sorted(rotated, key=lambda item: item[0])
 
 
 def _is_chained_audit_event(event: Any) -> bool:
