@@ -84,9 +84,39 @@ older rotated files and never deletes the active file. The first event in a new 
 file, so the chain continues across rotation. Hash chain verification is
 guaranteed across retained rotated files and the active file only. When older
 rotated files are removed by retention, historical verification before the
-retained boundary is intentionally no longer available. Retention days, a
-dedicated `review-audit` command, policy configuration, compression, and
-tamper-resistance controls are follow-up hardening work.
+retained boundary is intentionally no longer available.
+
+## Audit Review
+
+Use `review-audit` to verify retained rotated files and the active audit file:
+
+```powershell
+python -m burp_ai_redaction_gateway review-audit --input out\.audit
+```
+
+The command accepts either an audit directory or one audit JSONL file. It checks
+JSONL parsing, required audit schema fields, standard UUID `event_id` values,
+chain-wide `sequence_no` continuity, `chain_id` consistency,
+`prev_event_hash`, canonical SHA-256 `event_hash` recalculation, hash
+algorithm, rotated suffix order, and raw-free scanner results. It returns exit
+code 0 only when the retained audit range passes.
+
+Use JSON output for automation:
+
+```powershell
+python -m burp_ai_redaction_gateway review-audit --input out\.audit --format json
+```
+
+The review is intentionally limited to retained rotated files and the active
+file. If retention removed older rotated files, verification before that
+retained boundary is reported as a warning rather than a failure. Retention
+days, policy configuration, compression, signatures, HMAC, and external storage
+are follow-up hardening work.
+
+The command is intentionally strict about audit schema `1.1`. Pre-schema audit
+rows from older local runs, malformed development rows, or rows with nonstandard
+event ids fail review. Use a fresh audit directory when validating the current
+release baseline.
 
 ## Allowed Output Scope
 

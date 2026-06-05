@@ -8,9 +8,11 @@ import tempfile
 import threading
 import unittest
 import uuid
+from copy import deepcopy
 from contextlib import redirect_stdout
 from pathlib import Path
 
+from burp_ai_redaction_gateway.audit_review import review_audit_path
 from burp_ai_redaction_gateway.cli import main
 from burp_ai_redaction_gateway.findings import build_finding_candidates
 from burp_ai_redaction_gateway.mcp_server import ReadOnlyMcpGateway, ReadOnlyMcpServer, _next_rotated_audit_path
@@ -78,6 +80,34 @@ class RedactionGatewayTests(unittest.TestCase):
             assert_no_sensitive_text(text)
             events.extend(json.loads(line) for line in text.splitlines() if line.strip())
         return events
+
+    def write_audit_events(self, audit_file: Path, events: list[dict[str, object]]) -> None:
+        audit_file.parent.mkdir(parents=True, exist_ok=True)
+        audit_file.write_text(
+            "\n".join(json.dumps(event, ensure_ascii=True, sort_keys=True) for event in events) + "\n",
+            encoding="utf-8",
+        )
+
+    def generated_audit_dir(self, root: Path, *, request_count: int = 3, rotate: bool = False) -> Path:
+        output = root / "generated"
+        main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+        server = ReadOnlyMcpServer(
+            ReadOnlyMcpGateway(root, load_policy(None)),
+            audit_stream=io.StringIO(),
+            audit_max_bytes=1 if rotate else 10 * 1024 * 1024,
+            audit_max_rotated_files=2 if rotate else 20,
+        )
+        for request_id in range(1, request_count + 1):
+            response = server.handle_message(
+                {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "method": "tools/call",
+                    "params": {"name": "list_prompt_files", "arguments": {"project": "generated"}},
+                }
+            )
+            self.assertFalse(response["result"]["isError"])
+        return root / ".audit"
 
     def test_audit_hash_chain_helper_detects_deletion_reorder_and_mutation(self) -> None:
         events = [
@@ -707,6 +737,143 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertEqual([event["sequence_no"] for event in events], [3])
             self.assertEqual(_next_rotated_audit_path(active).name, "mcp_audit.000003.jsonl")
 
+    def test_review_audit_command_accepts_rotated_and_active_logs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_dir = self.generated_audit_dir(Path(temp_dir), request_count=5, rotate=True)
+            result = review_audit_path(audit_dir)
+
+            self.assertTrue(result.passed)
+            self.assertEqual(result.events_checked, 3)
+            self.assertEqual(result.files, ["mcp_audit.000003.jsonl", "mcp_audit.000004.jsonl", "mcp_audit.jsonl"])
+            self.assertEqual(result.sequence_start, 3)
+            self.assertEqual(result.sequence_end, 5)
+            self.assertEqual(result.retention_boundary, "retained_files_only")
+            self.assertTrue(result.raw_free_scan_passed)
+            self.assertTrue(any(warning.kind == "retention_boundary" for warning in result.warnings))
+
+            with redirect_stdout(io.StringIO()) as stdout:
+                exit_code = main(["review-audit", "--input", str(audit_dir)])
+            text = stdout.getvalue()
+            self.assertEqual(exit_code, 0)
+            self.assertIn("Audit review passed.", text)
+            self.assertIn("Retention boundary: retained files only", text)
+            assert_no_sensitive_text(text)
+
+    def test_review_audit_json_format_is_safe(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_dir = self.generated_audit_dir(Path(temp_dir), request_count=2)
+
+            with redirect_stdout(io.StringIO()) as stdout:
+                exit_code = main(["review-audit", "--input", str(audit_dir), "--format", "json"])
+            payload = json.loads(stdout.getvalue())
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(payload["status"], "passed")
+            self.assertEqual(payload["events_checked"], 2)
+            self.assertEqual(payload["raw_free_scan"], "passed")
+            assert_no_sensitive_text(stdout.getvalue())
+
+    def test_review_audit_fails_on_event_hash_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_dir = self.generated_audit_dir(Path(temp_dir), request_count=2)
+            active = audit_dir / "mcp_audit.jsonl"
+            events = self.read_audit_events([active])
+            mutated = deepcopy(events)
+            mutated[0]["result_status"] = "blocked"
+            self.write_audit_events(active, mutated)
+
+            result = review_audit_path(audit_dir)
+
+            self.assertFalse(result.passed)
+            self.assertTrue(any(finding.kind == "event_hash_mismatch" for finding in result.findings))
+
+    def test_review_audit_fails_on_prev_hash_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_dir = self.generated_audit_dir(Path(temp_dir), request_count=3)
+            active = audit_dir / "mcp_audit.jsonl"
+            events = self.read_audit_events([active])
+            mutated = deepcopy(events)
+            mutated[2]["prev_event_hash"] = mutated[0]["event_hash"]
+            body = {key: value for key, value in mutated[2].items() if key != "event_hash"}
+            canonical = json.dumps(body, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+            mutated[2]["event_hash"] = "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+            self.write_audit_events(active, mutated)
+
+            result = review_audit_path(audit_dir)
+
+            self.assertFalse(result.passed)
+            self.assertTrue(any(finding.kind == "prev_event_hash_mismatch" for finding in result.findings))
+
+    def test_review_audit_fails_on_sequence_gap_and_invalid_uuid(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_dir = self.generated_audit_dir(Path(temp_dir), request_count=3)
+            active = audit_dir / "mcp_audit.jsonl"
+            events = self.read_audit_events([active])
+            mutated = deepcopy(events)
+            mutated[1]["sequence_no"] = 4
+            mutated[1]["event_id"] = "not-a-uuid"
+            self.write_audit_events(active, mutated)
+
+            result = review_audit_path(audit_dir)
+
+            self.assertFalse(result.passed)
+            self.assertTrue(any(finding.kind == "sequence_no_not_contiguous" for finding in result.findings))
+            self.assertTrue(any(finding.kind == "invalid_event_id" for finding in result.findings))
+
+    def test_review_audit_fails_on_raw_keyword_without_printing_value(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_dir = self.generated_audit_dir(Path(temp_dir), request_count=1)
+            active = audit_dir / "mcp_audit.jsonl"
+            active.write_text(
+                active.read_text(encoding="utf-8") + "Authorization: Bearer rawBearerToken1234567890\n",
+                encoding="utf-8",
+            )
+
+            with redirect_stdout(io.StringIO()) as stdout:
+                exit_code = main(["review-audit", "--input", str(audit_dir)])
+            text = stdout.getvalue()
+
+            self.assertEqual(exit_code, 1)
+            self.assertIn("raw_sensitive_data:bearer_token", text)
+            self.assertNotIn("rawBearerToken1234567890", text)
+
+    def test_review_audit_fails_on_invalid_rotated_suffix(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_dir = self.generated_audit_dir(Path(temp_dir), request_count=1)
+            (audit_dir / "mcp_audit.latest.jsonl").write_text("", encoding="utf-8")
+
+            result = review_audit_path(audit_dir)
+
+            self.assertFalse(result.passed)
+            self.assertTrue(any(finding.kind == "invalid_rotated_suffix" for finding in result.findings))
+
+    def test_review_audit_fails_on_pre_schema_legacy_row(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_dir = Path(temp_dir) / ".audit"
+            audit_dir.mkdir()
+            (audit_dir / "mcp_audit.jsonl").write_text(
+                json.dumps(
+                    {
+                        "event_type": "mcp_tool_call",
+                        "tool_name": "list_prompt_files",
+                        "output_id": "demo",
+                        "result_status": "success",
+                        "response_class": "prompt_file_list",
+                        "raw_data_included": False,
+                    },
+                    ensure_ascii=True,
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            result = review_audit_path(audit_dir)
+
+            self.assertFalse(result.passed)
+            self.assertTrue(any(finding.kind == "missing_field:audit_schema_version" for finding in result.findings))
+            self.assertTrue(any(finding.kind == "invalid_audit_schema_version" for finding in result.findings))
+
     def test_fail_closed_scanner_detects_raw_secret_patterns(self) -> None:
         unsafe = (
             "Authorization: Bearer "
@@ -1008,12 +1175,10 @@ class RedactionGatewayTests(unittest.TestCase):
                 try:
                     small_port = small_config_server.server_address[1]
                     small_connection = http.client.HTTPConnection("127.0.0.1", small_port, timeout=5)
-                    small_connection.request(
-                        "POST",
-                        "/ingest/burp-history",
-                        body=body,
-                        headers={"Content-Type": "application/json"},
-                    )
+                    small_connection.putrequest("POST", "/ingest/burp-history")
+                    small_connection.putheader("Content-Type", "application/json")
+                    small_connection.putheader("Content-Length", str(len(body)))
+                    small_connection.endheaders()
                     small_response = small_connection.getresponse()
                     small_body = json.loads(small_response.read().decode("utf-8"))
                     self.assertEqual(small_response.status, 413)
