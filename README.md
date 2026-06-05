@@ -43,7 +43,8 @@ python -m burp_ai_redaction_gateway report --input out/demo --output out/demo/re
 The report draft keeps every item in candidate or suspected finding status and
 includes rationale, impact draft, additional verification steps, remediation
 draft, and claims that must not be made before proof. The `confidence` value is
-evidence confidence, not severity.
+evidence confidence, not severity. Risk rating appears only as a separate draft
+with likelihood, impact, and severity draft values that require manual review.
 
 Report wording profiles:
 
@@ -68,9 +69,11 @@ Each generated text artifact includes metadata such as `sanitizer_version`,
 
 `finding_candidates.json` is built only from sanitized events. Each candidate
 uses a `finding_id`, passive rule `type`, confidence, templated
-`affected_endpoint`, `evidence_ids`, rationale, confidence rationale, manual
-test guidance, and a `do_not_claim` list to prevent over-claiming before manual
-verification.
+`affected_endpoint`, `evidence_ids`, rationale, confidence rationale, a
+`risk_rating_draft`, manual test guidance, and a `do_not_claim` list to prevent
+over-claiming before manual verification. `risk_rating_draft` keeps likelihood,
+impact, and severity values in draft-only state and explicitly marks the rating
+as not finalized.
 `analysis_packet.json`, `chatgpt_prompt.md`, and `codex_task_prompt.md` are
 derived from those candidates and must be used only after `verify` passes.
 
@@ -206,7 +209,8 @@ Audit status is summarized without printing audit rows, cookies, authorization
 values, tokens, domains, internal IPs, personal data, or HMAC secrets.
 The dashboard highlights verify-passed status, raw-free display mode, candidate
 finding language, manual verification requirements, and the rule that evidence
-confidence is not severity.
+confidence is not severity. Finding cards may show the separate risk rating
+draft, but the draft remains unfinalized until manual risk review.
 
 See
 [docs/LOCAL_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/LOCAL_DASHBOARD.md).

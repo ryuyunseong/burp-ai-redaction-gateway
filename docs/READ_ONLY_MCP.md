@@ -190,5 +190,9 @@ The server is intended for sanitized files such as:
 - `codex_task_prompt.md`
 - `report_draft.md`
 
+Finding candidates may include `risk_rating_draft` metadata. It is draft-only
+likelihood, impact, and severity guidance and must not be treated as final
+severity until manual verification and separate risk review are complete.
+
 Do not expose real Burp exports, local raw vaults, tokens, cookies, real
 domains, or personal data through MCP.

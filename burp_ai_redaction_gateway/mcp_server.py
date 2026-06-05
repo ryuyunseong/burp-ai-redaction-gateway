@@ -67,6 +67,7 @@ class ReadOnlyMcpGateway:
                 "title": _safe_text(candidate.get("title")),
                 "confidence": _safe_text(candidate.get("confidence")),
                 "confidence_rationale": _safe_list(candidate.get("confidence_rationale")),
+                "risk_rating_draft": _safe_risk_rating_draft(candidate.get("risk_rating_draft")),
                 "manual_verification_required": bool(candidate.get("manual_verification_required", True)),
                 "affected_endpoint": _safe_text(candidate.get("affected_endpoint")),
                 "evidence_ids": _safe_list(candidate.get("evidence_ids")),
@@ -602,6 +603,27 @@ def _candidate_list(findings: dict[str, Any]) -> list[dict[str, Any]]:
     if not isinstance(candidates, list):
         raise ValueError("invalid_findings_file")
     return [candidate for candidate in candidates if isinstance(candidate, dict)]
+
+
+def _safe_risk_rating_draft(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    result: dict[str, Any] = {}
+    for key in [
+        "schema_version",
+        "status",
+        "likelihood_draft",
+        "impact_draft",
+        "severity_draft",
+        "evidence_confidence",
+    ]:
+        result[key] = _safe_text(value.get(key))
+    result["severity_basis"] = _safe_list(value.get("severity_basis"))
+    result["manual_verification_required"] = bool(value.get("manual_verification_required", True))
+    result["confidence_is_severity"] = bool(value.get("confidence_is_severity", False))
+    result["risk_rating_finalized"] = bool(value.get("risk_rating_finalized", False))
+    result["do_not_claim"] = _safe_list(value.get("do_not_claim"))
+    return result
 
 
 def _required_string(args: dict[str, Any], name: str) -> str:

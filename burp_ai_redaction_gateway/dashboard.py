@@ -456,6 +456,7 @@ def _candidate_card(candidate: dict[str, Any]) -> str:
     confidence_rationale = _safe_list(candidate.get("confidence_rationale"))
     manual_tests = _safe_list(candidate.get("recommended_manual_tests"))
     do_not_claim = _safe_list(candidate.get("do_not_claim"))
+    risk_summary = _risk_rating_summary(candidate.get("risk_rating_draft"))
     return f"""
     <article class="candidate">
       <div class="candidate-head">
@@ -471,6 +472,7 @@ def _candidate_card(candidate: dict[str, Any]) -> str:
       </div>
       <dl class="facts compact">
         <div><dt>Manual verification</dt><dd>{manual_required}</dd></div>
+        <div><dt>Risk rating draft</dt><dd>{risk_summary}</dd></div>
         <div><dt>Rationale</dt><dd>{_bullets(rationale)}</dd></div>
         <div><dt>Confidence basis</dt><dd>{_bullets(confidence_rationale)}</dd></div>
         <div><dt>Manual tests</dt><dd>{_bullets(manual_tests)}</dd></div>
@@ -478,6 +480,21 @@ def _candidate_card(candidate: dict[str, Any]) -> str:
       </dl>
     </article>
     """
+
+
+def _risk_rating_summary(value: Any) -> str:
+    if not isinstance(value, dict):
+        return "Manual risk rating required before severity assignment."
+    severity = _safe_value(value.get("severity_draft"), "unknown")
+    likelihood = _safe_value(value.get("likelihood_draft"), "unknown")
+    impact = _safe_value(value.get("impact_draft"), "unknown")
+    finalized = str(bool(value.get("risk_rating_finalized", False))).lower()
+    return (
+        f"Severity draft: {_h(severity)}; "
+        f"likelihood draft: {_h(likelihood)}; "
+        f"impact draft: {_h(impact)}; "
+        f"finalized: {_h(finalized)}"
+    )
 
 
 def _audit_panel(status: dict[str, str]) -> str:

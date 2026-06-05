@@ -321,6 +321,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("confidence", item)
                 self.assertIn(item["confidence"], {"low", "medium"})
                 self.assertIn("confidence_rationale", item)
+                self.assertIn("risk_rating_draft", item)
                 self.assertIn("manual_verification_required", item)
                 self.assertIn("rationale", item)
                 self.assertIn("recommended_manual_tests", item)
@@ -331,6 +332,16 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertTrue(item["rationale"])
                 self.assertTrue(item["recommended_manual_tests"])
                 self.assertIn("Vulnerability confirmed", item["do_not_claim"])
+                risk_draft = item["risk_rating_draft"]
+                self.assertEqual(risk_draft["schema_version"], "risk-rating-draft-v1")
+                self.assertIn(risk_draft["likelihood_draft"], {"low", "medium", "unknown"})
+                self.assertIn(risk_draft["impact_draft"], {"low", "medium", "unknown"})
+                self.assertIn(risk_draft["severity_draft"], {"low", "medium", "unknown"})
+                self.assertEqual(risk_draft["evidence_confidence"], item["confidence"])
+                self.assertFalse(risk_draft["confidence_is_severity"])
+                self.assertFalse(risk_draft["risk_rating_finalized"])
+                self.assertTrue(risk_draft["manual_verification_required"])
+                self.assertTrue(risk_draft["severity_basis"])
                 self.assertNotIn("raw_request", json.dumps(item))
                 self.assertNotIn("raw_response", json.dumps(item))
             weak_sensitive_candidate = next(
@@ -341,6 +352,7 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertEqual(weak_sensitive_candidate["confidence"], "medium")
             idor_candidate = next(item for item in candidates if item["type"] == "idor_candidate")
             self.assertEqual(idor_candidate["confidence"], "medium")
+            self.assertEqual(idor_candidate["risk_rating_draft"]["severity_draft"], "medium")
 
     def test_schema_only_sensitive_data_candidate_stays_low_confidence(self) -> None:
         event = SanitizedEvent(
@@ -390,6 +402,8 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertEqual(candidate["confidence"], "low")
         self.assertIn("Authenticated or user-specific context observed: False.", candidate["confidence_rationale"])
         self.assertTrue(candidate["manual_verification_required"])
+        self.assertEqual(candidate["risk_rating_draft"]["evidence_confidence"], "low")
+        self.assertFalse(candidate["risk_rating_draft"]["confidence_is_severity"])
 
     def test_analysis_packet_prompts_include_only_candidate_fields(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -409,6 +423,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "type",
                     "confidence",
                     "confidence_rationale",
+                    "risk_rating_draft",
                     "manual_verification_required",
                     "affected_endpoint",
                     "evidence_ids",
@@ -430,6 +445,8 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("affected_endpoint", prompt)
                 self.assertIn("confidence", prompt)
                 self.assertIn("confidence_rationale", prompt)
+                self.assertIn("risk_rating_draft", prompt)
+                self.assertIn("draft-only", prompt)
                 self.assertIn("manual_verification_required", prompt)
                 self.assertIn("rationale", prompt)
                 self.assertIn("recommended_manual_tests", prompt)
@@ -508,6 +525,10 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("Evidence confidence:", text)
             self.assertIn("### Rationale", text)
             self.assertIn("### Confidence Rationale", text)
+            self.assertIn("### Risk Rating Draft", text)
+            self.assertIn("Severity draft:", text)
+            self.assertIn("Risk rating finalized: false", text)
+            self.assertIn("Confidence is severity: false", text)
             self.assertIn("### Impact Draft", text)
             self.assertIn("### Additional Verification Steps", text)
             self.assertIn("### Remediation Draft", text)
@@ -551,6 +572,9 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("Report profile: consultant", text)
             self.assertIn("Suspected finding status: candidate only, manual verification required", text)
             self.assertIn("Evidence confidence:", text)
+            self.assertIn("### Risk Rating Draft", text)
+            self.assertIn("Severity draft:", text)
+            self.assertIn("Risk rating finalized: false", text)
             self.assertIn("Manual verification required: true", text)
             self.assertIn("### Assessment Rationale", text)
             self.assertIn("### Potential Impact If Confirmed", text)
@@ -616,6 +640,9 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("evidence confidence", detail)
                 self.assertIn("manual check required", detail)
                 self.assertIn("Rationale", detail)
+                self.assertIn("Risk rating draft", detail)
+                self.assertIn("Severity draft", detail)
+                self.assertIn("finalized: false", detail)
                 self.assertIn("Confidence basis", detail)
                 self.assertIn("Manual verification", detail)
                 self.assertIn("Severity", detail)
