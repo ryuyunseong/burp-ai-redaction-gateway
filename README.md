@@ -179,10 +179,13 @@ raw-free metadata only. Audit schema `1.1` also records an event id, sequence
 number, and SHA-256 hash chain fields for each new MCP tool-call event.
 `event_id` is stored as a standard UUID string. The active audit file rotates
 to deterministic names such as `mcp_audit.000001.jsonl` when the next event
-would exceed the size limit; retention keeps rotated files only and never
-deletes the active file. Hash chain verification is guaranteed across retained
-rotated files and the active file only; history before the retained boundary is
-outside the verification scope after older rotated files are removed.
+would exceed the size limit. The suffix is derived from the chain-wide sequence
+number at the start of the rotated segment, so retained rotation names do not
+restart at `000001` while the audit chain continues. Retention keeps rotated
+files only and never deletes the active file. Hash chain verification is
+guaranteed across retained rotated files and the active file only; history
+before the retained boundary is outside the verification scope after older
+rotated files are removed.
 
 ## Security Notes
 

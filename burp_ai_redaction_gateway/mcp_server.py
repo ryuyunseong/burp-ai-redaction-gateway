@@ -447,9 +447,30 @@ def _rotate_audit_file(path: Path, max_rotated_files: int) -> None:
 
 
 def _next_rotated_audit_path(path: Path) -> Path:
-    rotated = _rotated_audit_files(path)
-    next_index = rotated[-1][0] + 1 if rotated else 1
-    return path.with_name(f"{path.stem}.{next_index:06d}{path.suffix}")
+    next_index = _first_chained_audit_sequence_no(path)
+    if next_index is None:
+        rotated = _rotated_audit_files(path)
+        next_index = rotated[-1][0] + 1 if rotated else 1
+    target = path.with_name(f"{path.stem}.{next_index:06d}{path.suffix}")
+    while target.exists():
+        next_index += 1
+        target = path.with_name(f"{path.stem}.{next_index:06d}{path.suffix}")
+    return target
+
+
+def _first_chained_audit_sequence_no(path: Path) -> int | None:
+    if not path.is_file():
+        return None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if _is_chained_audit_event(event):
+            return int(event["sequence_no"])
+    return None
 
 
 def _prune_rotated_audit_files(path: Path, max_rotated_files: int) -> None:

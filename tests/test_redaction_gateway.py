@@ -13,7 +13,7 @@ from pathlib import Path
 
 from burp_ai_redaction_gateway.cli import main
 from burp_ai_redaction_gateway.findings import build_finding_candidates
-from burp_ai_redaction_gateway.mcp_server import ReadOnlyMcpGateway, ReadOnlyMcpServer
+from burp_ai_redaction_gateway.mcp_server import ReadOnlyMcpGateway, ReadOnlyMcpServer, _next_rotated_audit_path
 from burp_ai_redaction_gateway.models import SanitizedEvent
 from burp_ai_redaction_gateway.parser import load_events
 from burp_ai_redaction_gateway.policy import load_policy
@@ -675,6 +675,37 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assert_audit_hash_chain(events, allow_prefix_gap=True)
             self.assertEqual(events[-1]["prev_event_hash"], events[-2]["event_hash"])
             self.assertTrue(all(event["raw_data_included"] is False for event in events))
+
+    def test_audit_rotation_suffix_does_not_reuse_after_zero_file_retention(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "generated"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+            server = ReadOnlyMcpServer(
+                ReadOnlyMcpGateway(root, load_policy(None)),
+                audit_stream=io.StringIO(),
+                audit_max_bytes=1,
+                audit_max_rotated_files=0,
+            )
+
+            for request_id in range(1, 4):
+                response = server.handle_message(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": request_id,
+                        "method": "tools/call",
+                        "params": {"name": "list_prompt_files", "arguments": {"project": "generated"}},
+                    }
+                )
+                self.assertFalse(response["result"]["isError"])
+
+            audit_dir = root / ".audit"
+            active = audit_dir / "mcp_audit.jsonl"
+            self.assertTrue(active.is_file())
+            self.assertEqual(list(audit_dir.glob("mcp_audit.*.jsonl")), [])
+            events = self.read_audit_events([active])
+            self.assertEqual([event["sequence_no"] for event in events], [3])
+            self.assertEqual(_next_rotated_audit_path(active).name, "mcp_audit.000003.jsonl")
 
     def test_fail_closed_scanner_detects_raw_secret_patterns(self) -> None:
         unsafe = (
