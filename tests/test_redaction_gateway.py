@@ -10,8 +10,10 @@ import unittest
 import uuid
 from copy import deepcopy
 from contextlib import redirect_stdout
+from datetime import UTC, datetime
 from pathlib import Path
 
+from burp_ai_redaction_gateway.audit_retention import AuditRetentionError, apply_audit_retention
 from burp_ai_redaction_gateway.audit_review import review_audit_path
 from burp_ai_redaction_gateway.cli import main
 from burp_ai_redaction_gateway.findings import build_finding_candidates
@@ -108,6 +110,47 @@ class RedactionGatewayTests(unittest.TestCase):
             )
             self.assertFalse(response["result"]["isError"])
         return root / ".audit"
+
+    def audit_event(
+        self,
+        *,
+        sequence_no: int,
+        timestamp_utc: str,
+        prev_event_hash: str | None,
+        chain_id: str = "mcp-audit-20260605",
+    ) -> dict[str, object]:
+        event: dict[str, object] = {
+            "audit_schema_version": "1.1",
+            "event_id": str(uuid.uuid4()),
+            "sequence_no": sequence_no,
+            "chain_id": chain_id,
+            "prev_event_hash": prev_event_hash,
+            "hash_algorithm": "SHA-256",
+            "event_type": "mcp_tool_call",
+            "timestamp_utc": timestamp_utc,
+            "tool_name": "list_prompt_files",
+            "output_id": "demo",
+            "result_status": "success",
+            "response_class": "prompt_file_list",
+            "raw_data_included": False,
+        }
+        body = {key: value for key, value in event.items() if key != "event_hash"}
+        canonical = json.dumps(body, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+        event["event_hash"] = "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        return event
+
+    def audit_event_chain(self, timestamps: list[str]) -> list[dict[str, object]]:
+        events = []
+        previous_hash = None
+        for sequence_no, timestamp in enumerate(timestamps, start=1):
+            event = self.audit_event(
+                sequence_no=sequence_no,
+                timestamp_utc=timestamp,
+                prev_event_hash=previous_hash,
+            )
+            events.append(event)
+            previous_hash = str(event["event_hash"])
+        return events
 
     def test_audit_hash_chain_helper_detects_deletion_reorder_and_mutation(self) -> None:
         events = [
@@ -873,6 +916,149 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertFalse(result.passed)
             self.assertTrue(any(finding.kind == "missing_field:audit_schema_version" for finding in result.findings))
             self.assertTrue(any(finding.kind == "invalid_audit_schema_version" for finding in result.findings))
+
+    def test_audit_retention_dry_run_counts_rows_without_writing_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_file = Path(temp_dir) / "mcp_audit.jsonl"
+            output_file = Path(temp_dir) / "mcp_audit.retained.jsonl"
+            self.write_audit_events(
+                audit_file,
+                self.audit_event_chain(
+                    [
+                        "2026-05-01T00:00:00Z",
+                        "2026-06-04T00:00:00Z",
+                        "2026-06-05T00:00:00Z",
+                    ]
+                ),
+            )
+
+            result = apply_audit_retention(
+                audit_file,
+                output_file,
+                retention_days=30,
+                dry_run=True,
+                now=datetime(2026, 6, 5, tzinfo=UTC),
+            )
+
+            self.assertEqual(result.total_rows, 3)
+            self.assertEqual(result.retained_rows, 2)
+            self.assertEqual(result.expired_rows, 1)
+            self.assertTrue(result.dry_run)
+            self.assertFalse(output_file.exists())
+
+    def test_audit_retention_writes_reviewable_retained_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_file = Path(temp_dir) / "mcp_audit.jsonl"
+            output_file = Path(temp_dir) / "mcp_audit.retained.jsonl"
+            self.write_audit_events(
+                audit_file,
+                self.audit_event_chain(
+                    [
+                        "2026-05-01T00:00:00Z",
+                        "2026-06-04T00:00:00Z",
+                        "2026-06-05T00:00:00Z",
+                    ]
+                ),
+            )
+
+            result = apply_audit_retention(
+                audit_file,
+                output_file,
+                retention_days=30,
+                now=datetime(2026, 6, 5, tzinfo=UTC),
+            )
+            retained = self.read_audit_events([output_file])
+            review = review_audit_path(output_file)
+
+            self.assertFalse(result.dry_run)
+            self.assertTrue(result.output_written)
+            self.assertEqual([event["sequence_no"] for event in retained], [2, 3])
+            self.assertTrue(review.passed)
+            self.assertEqual(review.retention_boundary, "retained_files_only")
+            assert_no_sensitive_text(output_file.read_text(encoding="utf-8"))
+
+    def test_audit_retention_cli_summary_is_raw_free(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_file = Path(temp_dir) / "mcp_audit.jsonl"
+            output_file = Path(temp_dir) / "mcp_audit.retained.jsonl"
+            self.write_audit_events(
+                audit_file,
+                self.audit_event_chain(["2026-06-04T00:00:00Z", "2026-06-05T00:00:00Z"]),
+            )
+
+            with redirect_stdout(io.StringIO()) as stdout:
+                exit_code = main(
+                    [
+                        "audit-retention",
+                        "--input",
+                        str(audit_file),
+                        "--output",
+                        str(output_file),
+                        "--retention-days",
+                        "30",
+                        "--dry-run",
+                    ]
+                )
+            text = stdout.getvalue()
+
+            self.assertEqual(exit_code, 0)
+            self.assertIn("Audit retention passed.", text)
+            self.assertIn("Dry run: true", text)
+            self.assertIn("Raw data included: false", text)
+            assert_no_sensitive_text(text)
+
+    def test_audit_retention_rejects_legacy_rows_and_in_place_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_file = Path(temp_dir) / "mcp_audit.jsonl"
+            audit_file.write_text(
+                json.dumps({"event_type": "mcp_tool_call", "raw_data_included": False}, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(AuditRetentionError) as review_error:
+                apply_audit_retention(
+                    audit_file,
+                    Path(temp_dir) / "mcp_audit.retained.jsonl",
+                    retention_days=30,
+                    now=datetime(2026, 6, 5, tzinfo=UTC),
+                )
+            self.assertEqual(review_error.exception.error_type, "audit_review_failed")
+
+            valid_file = Path(temp_dir) / "valid_mcp_audit.jsonl"
+            self.write_audit_events(valid_file, self.audit_event_chain(["2026-06-05T00:00:00Z"]))
+            with self.assertRaises(AuditRetentionError) as in_place_error:
+                apply_audit_retention(
+                    valid_file,
+                    valid_file,
+                    retention_days=30,
+                    now=datetime(2026, 6, 5, tzinfo=UTC),
+                )
+            self.assertEqual(in_place_error.exception.error_type, "in_place_output_forbidden")
+
+    def test_audit_retention_rejects_raw_audit_log_without_printing_value(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_file = Path(temp_dir) / "mcp_audit.jsonl"
+            audit_file.write_text("Authorization: Bearer rawBearerToken1234567890\n", encoding="utf-8")
+            output_file = Path(temp_dir) / "mcp_audit.retained.jsonl"
+
+            with redirect_stdout(io.StringIO()) as stdout:
+                exit_code = main(
+                    [
+                        "audit-retention",
+                        "--input",
+                        str(audit_file),
+                        "--output",
+                        str(output_file),
+                        "--retention-days",
+                        "30",
+                    ]
+                )
+            text = stdout.getvalue()
+
+            self.assertEqual(exit_code, 1)
+            self.assertIn("Audit retention failed: audit_review_failed", text)
+            self.assertNotIn("rawBearerToken1234567890", text)
+            self.assertFalse(output_file.exists())
 
     def test_fail_closed_scanner_detects_raw_secret_patterns(self) -> None:
         unsafe = (
