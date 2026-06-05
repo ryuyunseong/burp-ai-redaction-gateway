@@ -109,9 +109,9 @@ python -m burp_ai_redaction_gateway review-audit --input out\.audit --format jso
 
 The review is intentionally limited to retained rotated files and the active
 file. If retention removed older rotated files, verification before that
-retained boundary is reported as a warning rather than a failure. Retention
-days, policy configuration, compression, signatures, HMAC, and external storage
-are follow-up hardening work.
+retained boundary is reported as a warning rather than a failure. Policy
+configuration, compression, external signatures, and external storage remain
+follow-up hardening work.
 
 The command is intentionally strict about audit schema `1.1`. Pre-schema audit
 rows from older local runs, malformed development rows, or rows with nonstandard
