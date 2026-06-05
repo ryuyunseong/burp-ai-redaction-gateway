@@ -40,11 +40,13 @@ highlights the safe workflow state directly in the UI:
 - candidate or suspected finding language
 - manual verification required before confirmation
 - confidence as evidence confidence, not severity
-- severity requiring a separate risk rating step
+- draft likelihood, impact, and severity requiring a separate risk rating step
 
 Finding cards may show sanitized candidate metadata, rationale, confidence
-basis, recommended manual tests, and `do_not_claim` guidance. They must not show
-raw request or response data.
+basis, risk rating draft metadata, recommended manual tests, and `do_not_claim`
+guidance. The risk rating draft must remain unfinalized and must not be treated
+as a confirmed severity. Finding cards must not show raw request or response
+data.
 
 ## Blocked Scope
 
@@ -80,6 +82,7 @@ type rather than printing the secret configuration.
 ## Finding Language
 
 Dashboard findings remain candidate or suspected findings. `confidence` is
-evidence confidence, not severity. Manual verification is required before any
-finding is reported as confirmed.
+evidence confidence, not severity. `risk_rating_draft` is a separate draft-only
+workflow for likelihood, impact, and severity. Manual verification is required
+before any finding is reported as confirmed or assigned final severity.
 

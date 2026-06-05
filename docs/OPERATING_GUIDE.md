@@ -96,7 +96,9 @@ python -m burp_ai_redaction_gateway report --input out\receiver --output out\rec
 
 All findings remain candidate or suspected findings until manual reproduction is
 complete. `confidence` is evidence confidence, not severity. Severity requires a
-separate risk rating step.
+separate risk rating step. Generated candidates may include `risk_rating_draft`
+with likelihood, impact, and severity draft values, but those values are not a
+final rating and must be reviewed after manual verification.
 
 ### 6. Optional Local Dashboard
 
@@ -224,7 +226,8 @@ Before using a draft in customer-facing material:
 - Do not claim confirmed exploitation, data breach, privilege escalation, or
   token reuse without proof.
 - Treat `confidence` as evidence confidence only.
-- Perform a separate severity or risk rating step before assigning severity.
+- Treat `risk_rating_draft` as draft-only.
+- Perform a separate severity or risk rating review before assigning final severity.
 - Remove any accidental raw URL, domain, IP, cookie, token, account identifier,
   or personal data.
 - Keep HMAC manifest and audit logs local unless a separate safe export process

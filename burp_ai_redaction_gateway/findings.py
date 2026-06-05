@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from .models import SanitizedEvent
+from .risk import build_risk_rating_draft
 
 
 DO_NOT_CLAIM = [
@@ -54,6 +55,7 @@ def _base_candidate(
         "title": title,
         "confidence": confidence,
         "confidence_rationale": confidence_rationale,
+        "risk_rating_draft": build_risk_rating_draft(rule_type, confidence),
         "manual_verification_required": True,
         "affected_endpoint": endpoint,
         "evidence_ids": [event.evidence_id],

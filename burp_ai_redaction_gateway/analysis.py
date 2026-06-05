@@ -11,6 +11,7 @@ ANALYSIS_CANDIDATE_FIELDS = [
     "title",
     "confidence",
     "confidence_rationale",
+    "risk_rating_draft",
     "manual_verification_required",
     "affected_endpoint",
     "evidence_ids",
@@ -24,11 +25,13 @@ ANALYSIS_CONSTRAINTS = [
     "Do not request or infer raw request or response values.",
     "Do not include Cookie, Authorization, token, real domain, IP, or personal data values.",
     "Keep every issue as a candidate until manual verification is complete.",
+    "Treat risk_rating_draft as a manual-review severity draft, not final severity.",
     "Do not claim privilege escalation, data breach, or exploitation without separate proof.",
 ]
 
 REPORT_DRAFT_REQUESTS = [
     "Assess whether each candidate is plausible from the sanitized evidence.",
+    "Review risk_rating_draft separately from evidence confidence and keep it draft-only.",
     "List missing evidence and safe manual verification steps.",
     "Draft cautious report wording that preserves candidate status.",
     "Suggest likely OWASP Top 10 or CWE mappings as references only.",
@@ -67,10 +70,11 @@ Boundaries:
 Tasks:
 1. Summarize each finding candidate.
 2. Assess plausibility and confidence without over-claiming.
-3. Identify evidence gaps.
-4. Provide safe manual verification steps for Burp.
-5. Draft cautious report language for candidates that remain plausible.
-6. Suggest likely OWASP Top 10 or CWE mappings as references only.
+3. Review `risk_rating_draft` separately from evidence confidence; keep severity draft-only.
+4. Identify evidence gaps.
+5. Provide safe manual verification steps for Burp.
+6. Draft cautious report language for candidates that remain plausible.
+7. Suggest likely OWASP Top 10 or CWE mappings as references only.
 
 Analysis packet:
 
@@ -94,9 +98,10 @@ Hard requirements:
 2. Do not request, print, store, or infer raw request/response values.
 3. Do not log Cookie, Authorization, token, real domain, IP, or personal data values.
 4. Keep every issue as a candidate until manual reproduction proves it.
-5. Preserve `finding_id`, `evidence_ids`, `affected_endpoint`, `confidence`, `confidence_rationale`, `manual_verification_required`, `rationale`, `recommended_manual_tests`, and `do_not_claim` in any derived output.
-6. Include cautious report draft wording and explicit manual verification steps.
-7. Do not make any claim listed in `do_not_claim`.
+5. Preserve `finding_id`, `evidence_ids`, `affected_endpoint`, `confidence`, `confidence_rationale`, `risk_rating_draft`, `manual_verification_required`, `rationale`, `recommended_manual_tests`, and `do_not_claim` in any derived output.
+6. Treat `risk_rating_draft` as draft-only; do not convert evidence confidence into final severity.
+7. Include cautious report draft wording and explicit manual verification steps.
+8. Do not make any claim listed in `do_not_claim`.
 
 Analysis packet:
 

@@ -130,6 +130,7 @@ def render_report_draft(candidates: list[dict[str, Any]], profile_name: str = DE
         "- Do not add raw request or response values.",
         "- Do not add Cookie, Authorization, token, real domain, IP, or personal data values.",
         "- Treat confidence as evidence confidence, not severity.",
+        "- Treat risk rating values as draft-only until separate manual risk review is complete.",
         "- Keep candidate or suspected finding wording until manual reproduction is complete.",
         "",
     ]
@@ -175,6 +176,7 @@ def _candidate_section(candidate: dict[str, Any], profile: ReportProfile) -> lis
     endpoint = _safe_text(candidate.get("affected_endpoint"), "unknown_endpoint")
     confidence = _safe_text(candidate.get("confidence"), "unknown")
     confidence_rationale = _safe_list(candidate.get("confidence_rationale"))
+    risk_rating_draft = _risk_rating_draft_lines(candidate.get("risk_rating_draft"))
     manual_required = bool(candidate.get("manual_verification_required", True))
     evidence_ids = _safe_list(candidate.get("evidence_ids"))
     rationale = _safe_list(candidate.get("rationale"))
@@ -194,6 +196,11 @@ def _candidate_section(candidate: dict[str, Any], profile: ReportProfile) -> lis
         "### Confidence Rationale",
     ]
     lines.extend(_bullets(confidence_rationale, profile.confidence_fallback))
+    lines.extend([
+        "",
+        "### Risk Rating Draft",
+    ])
+    lines.extend(_bullets(risk_rating_draft, "Manual risk rating is required before assigning severity."))
     lines.extend([
         "",
         f"### {profile.rationale_heading}",
@@ -311,6 +318,28 @@ def _remediation_draft(kind: str, profile_name: str) -> list[str]:
     }
     remediations = consultant if profile_name == "consultant" else conservative
     return remediations.get(kind, ["Review the endpoint's server-side security controls."])
+
+
+def _risk_rating_draft_lines(value: Any) -> list[str]:
+    if not isinstance(value, dict):
+        return ["Manual risk rating is required before assigning severity."]
+    likelihood = _safe_text(value.get("likelihood_draft"), "unknown")
+    impact = _safe_text(value.get("impact_draft"), "unknown")
+    severity = _safe_text(value.get("severity_draft"), "unknown")
+    status = _safe_text(value.get("status"), "draft_requires_manual_verification")
+    finalized = str(bool(value.get("risk_rating_finalized", False))).lower()
+    confidence_is_severity = str(bool(value.get("confidence_is_severity", False))).lower()
+    basis = _safe_list(value.get("severity_basis"))
+    lines = [
+        f"Status: {status}.",
+        f"Likelihood draft: {likelihood}.",
+        f"Impact draft: {impact}.",
+        f"Severity draft: {severity}.",
+        f"Risk rating finalized: {finalized}.",
+        f"Confidence is severity: {confidence_is_severity}.",
+    ]
+    lines.extend(basis or ["Manual verification is required before assigning final severity."])
+    return lines
 
 
 def _safe_list(value: Any) -> list[str]:
