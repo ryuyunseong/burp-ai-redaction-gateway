@@ -108,10 +108,12 @@ Run the local dashboard on loopback to inspect verified outputs in a browser:
 python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out
 ```
 
-The dashboard is read-only. It previews and downloads only verified
-`analysis_packet.json`, `chatgpt_prompt.md`, `codex_task_prompt.md`, and
-`report_draft.md` files. It does not show raw request or response values, replay
-traffic, run active scans, write files, or expose unverified output.
+The dashboard previews and downloads only verified `analysis_packet.json`,
+`chatgpt_prompt.md`, `codex_task_prompt.md`, and `report_draft.md` files. It can
+also run a small set of CSRF-protected actions: verify, review summary, report
+draft generation, and safe file export. It does not show raw request or response
+values, replay traffic, run active scans, delete files, edit findings, or expose
+unverified output.
 
 ## AI-Safe Files
 

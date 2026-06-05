@@ -32,8 +32,8 @@ are HTML-escaped in browser previews.
 
 ## Review Surface
 
-The dashboard is designed as a review surface, not an execution console. It
-highlights the safe workflow state directly in the UI:
+The dashboard is designed as a review surface with a small set of safe workflow
+actions. It highlights the safe workflow state directly in the UI:
 
 - verify passed output only
 - raw-free display mode
@@ -41,6 +41,7 @@ highlights the safe workflow state directly in the UI:
 - manual verification required before confirmation
 - confidence as evidence confidence, not severity
 - draft likelihood, impact, and severity requiring a separate risk rating step
+- CSRF-protected POST actions
 
 Finding cards may show sanitized candidate metadata, rationale, confidence
 basis, risk rating draft metadata, recommended manual tests, and `do_not_claim`
@@ -54,10 +55,23 @@ The dashboard does not implement:
 
 - raw request or response viewers
 - replay or active scan actions
-- file writes
-- state-changing requests
+- arbitrary file writes
+- delete or edit actions
 - automatic exploit confirmation
 - severity assignment
+
+## Dashboard Actions
+
+The dashboard supports only these state-changing POST actions:
+
+- `Verify`: re-runs fail-closed verification for the selected output.
+- `Review`: renders a safe review summary without exporting raw data.
+- `Report`: writes or refreshes `report_draft.md` after verify passes.
+- `Export`: copies only the four safe preview files to `exports/dashboard/`.
+
+Every POST action requires a per-server CSRF token. Missing or invalid tokens
+return a safe error page without raw request, response, cookie, token, domain, or
+personal data values. `Refresh` remains a read-only GET reload.
 
 The following paths are rejected:
 

@@ -261,7 +261,7 @@ def _dashboard(host: str, port: int, root: Path, policy_path: Path | None) -> in
     try:
         server = create_dashboard_server(host, port, DashboardConfig(root=root, policy_path=policy_path))
         print(f"Dashboard listening on http://{host}:{port}")
-        print("Raw HTTP viewing, replay, and state-changing actions are unavailable.")
+        print("Raw HTTP viewing and replay are unavailable. Dashboard actions require CSRF protection.")
     except DashboardError as error:
         print(f"Dashboard startup failed: {error.error_type}")
         return 1

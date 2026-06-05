@@ -194,8 +194,8 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 ```
 
 The dashboard binds only to `127.0.0.1`, discovers output directories under the
-configured root, and allows preview or download only after the selected output
-passes `verify`. It exposes only these safe files:
+configured root, and allows preview, download, and protected safe actions only
+after the selected output passes `verify`. It exposes only these safe files:
 
 - `analysis_packet.json`
 - `chatgpt_prompt.md`
@@ -203,10 +203,13 @@ passes `verify`. It exposes only these safe files:
 - `report_draft.md`
 
 The dashboard does not implement raw request or response viewing, replay, active
-scan actions, file writes, or state-changing requests. It rejects path traversal
-and blocks `local_only/`, `raw/`, `raw_vault/`, `build/`, and `.gradle/` paths.
-Audit status is summarized without printing audit rows, cookies, authorization
-values, tokens, domains, internal IPs, personal data, or HMAC secrets.
+scan actions, arbitrary file writes, delete, or edit operations. State-changing
+dashboard actions use POST with a CSRF token. Supported actions are limited to
+verify, review summary, report draft generation, and safe file export. It
+rejects path traversal and blocks `local_only/`, `raw/`, `raw_vault/`, `build/`,
+and `.gradle/` paths. Audit status is summarized without printing audit rows,
+cookies, authorization values, tokens, domains, internal IPs, personal data, or
+HMAC secrets.
 The dashboard highlights verify-passed status, raw-free display mode, candidate
 finding language, manual verification requirements, and the rule that evidence
 confidence is not severity. Finding cards may show the separate risk rating
