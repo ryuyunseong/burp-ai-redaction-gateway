@@ -4,6 +4,15 @@ import argparse
 import json
 from pathlib import Path
 
+from .audit_hmac import (
+    DEFAULT_HMAC_ENV_VAR,
+    AuditHmacError,
+    create_audit_hmac_manifest,
+    load_hmac_secret,
+    render_audit_hmac_summary,
+    render_audit_hmac_verify_summary,
+    verify_audit_hmac_manifest,
+)
 from .audit_retention import AuditRetentionError, apply_audit_retention, render_audit_retention_summary
 from .audit_review import render_audit_review_summary, review_audit_path
 from .findings import build_finding_candidates
@@ -50,6 +59,32 @@ def main(argv: list[str] | None = None) -> int:
     audit_retention.add_argument("--retention-days", required=True, type=int, help="Number of days to retain.")
     audit_retention.add_argument("--dry-run", action="store_true", help="Print counts without writing the output file.")
 
+    audit_hmac = subparsers.add_parser(
+        "audit-hmac",
+        help="Write a raw-free HMAC manifest for a reviewed MCP audit JSONL file.",
+    )
+    audit_hmac.add_argument("--input", required=True, type=Path, help="Reviewed audit JSONL file.")
+    audit_hmac.add_argument("--manifest", required=True, type=Path, help="Manifest JSON output path.")
+    audit_hmac.add_argument("--key-file", type=Path, help="Local HMAC secret file. Do not commit this file.")
+    audit_hmac.add_argument(
+        "--env-var",
+        default=DEFAULT_HMAC_ENV_VAR,
+        help=f"Environment variable containing the HMAC secret. Defaults to {DEFAULT_HMAC_ENV_VAR}.",
+    )
+
+    audit_hmac_verify = subparsers.add_parser(
+        "audit-hmac-verify",
+        help="Verify a raw-free HMAC manifest for a reviewed MCP audit JSONL file.",
+    )
+    audit_hmac_verify.add_argument("--input", required=True, type=Path, help="Reviewed audit JSONL file.")
+    audit_hmac_verify.add_argument("--manifest", required=True, type=Path, help="Manifest JSON path.")
+    audit_hmac_verify.add_argument("--key-file", type=Path, help="Local HMAC secret file. Do not commit this file.")
+    audit_hmac_verify.add_argument(
+        "--env-var",
+        default=DEFAULT_HMAC_ENV_VAR,
+        help=f"Environment variable containing the HMAC secret. Defaults to {DEFAULT_HMAC_ENV_VAR}.",
+    )
+
     review = subparsers.add_parser("review", help="Review verified analysis packet output without printing raw data.")
     review.add_argument("--input", required=True, type=Path, help="Verified generated output directory.")
     review.add_argument("--export-dir", type=Path, help="Optional directory for safe prompt packet copies.")
@@ -87,6 +122,10 @@ def main(argv: list[str] | None = None) -> int:
         return _review_audit(args.input, args.format)
     if args.command == "audit-retention":
         return _audit_retention(args.input, args.output, args.retention_days, args.dry_run)
+    if args.command == "audit-hmac":
+        return _audit_hmac(args.input, args.manifest, args.env_var, args.key_file)
+    if args.command == "audit-hmac-verify":
+        return _audit_hmac_verify(args.input, args.manifest, args.env_var, args.key_file)
     if args.command == "review":
         return _review(args.input, args.export_dir, args.policy)
     if args.command == "report":
@@ -143,6 +182,28 @@ def _audit_retention(input_path: Path, output_path: Path, retention_days: int, d
         print(f"Audit retention failed: {error.error_type}")
         return 1
     print(render_audit_retention_summary(result), end="")
+    return 0
+
+
+def _audit_hmac(input_path: Path, manifest_path: Path, env_var: str, key_file: Path | None) -> int:
+    try:
+        secret = load_hmac_secret(env_var=env_var, key_file=key_file)
+        result = create_audit_hmac_manifest(input_path, manifest_path, secret=secret)
+    except AuditHmacError as error:
+        print(f"Audit HMAC failed: {error.error_type}")
+        return 1
+    print(render_audit_hmac_summary(result), end="")
+    return 0
+
+
+def _audit_hmac_verify(input_path: Path, manifest_path: Path, env_var: str, key_file: Path | None) -> int:
+    try:
+        secret = load_hmac_secret(env_var=env_var, key_file=key_file)
+        result = verify_audit_hmac_manifest(input_path, manifest_path, secret=secret)
+    except AuditHmacError as error:
+        print(f"Audit HMAC verification failed: {error.error_type}")
+        return 1
+    print(render_audit_hmac_verify_summary(result), end="")
     return 0
 
 

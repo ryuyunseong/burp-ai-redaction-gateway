@@ -212,6 +212,20 @@ python -m burp_ai_redaction_gateway review-audit --input out\.audit\mcp_audit.re
 legacy or malformed rows, forbids in-place modification, and prints only
 raw-free summary metadata.
 
+Create and verify a raw-free HMAC manifest for a retained audit file:
+
+```powershell
+$env:BURP_AI_AUDIT_HMAC_KEY = "<LOCAL_ONLY_HMAC_SECRET>"
+python -m burp_ai_redaction_gateway audit-hmac --input out\.audit\mcp_audit.retained.jsonl --manifest out\.audit\mcp_audit.retained.manifest.json
+python -m burp_ai_redaction_gateway audit-hmac-verify --input out\.audit\mcp_audit.retained.jsonl --manifest out\.audit\mcp_audit.retained.manifest.json
+```
+
+`audit-hmac` accepts only audit JSONL files that pass strict `review-audit`.
+The manifest stores file alias, row count, SHA-256, HMAC-SHA256, creation time,
+and `raw_data_included: false`; it does not store raw audit rows or the HMAC
+secret. HMAC provides tamper detection, not encryption. Store the HMAC secret in
+an environment variable or ignored local secret file only.
+
 ## Security Notes
 
 - Do not commit real Burp exports, raw HTTP history, tokens, cookies, customer
@@ -231,6 +245,9 @@ raw-free summary metadata.
 - Use `review-audit` to inspect retained audit logs without printing raw values.
 - Use `audit-retention` only with a separate `--output` file; do not modify
   audit logs in place.
+- Use `audit-hmac` and `audit-hmac-verify` only with a local HMAC secret from
+  `BURP_AI_AUDIT_HMAC_KEY` or an ignored secret file. Do not commit HMAC
+  secrets or generated manifests.
 - The audit database stores evidence references and redaction counters only. It
   does not store raw request or response values.
 - Output generation is fail-closed. If a likely token, JWT, email, phone number,
