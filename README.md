@@ -175,7 +175,9 @@ does not implement raw exchange lookup, replay, file writes, or external
 transmission. See
 [docs/READ_ONLY_MCP.md](C:/coding/burp-ai-redaction-gateway/docs/READ_ONLY_MCP.md).
 Tool-call audit records are written under `<root>/.audit/mcp_audit.jsonl` with
-raw-free metadata only.
+raw-free metadata only. Audit schema `1.1` also records an event id, sequence
+number, and SHA-256 hash chain fields for each new MCP tool-call event.
+`event_id` is stored as a standard UUID string.
 
 ## Security Notes
 
@@ -191,7 +193,8 @@ raw-free metadata only.
 - Use `mcp` only with an explicit sanitized output root. MCP tools are read-only
   and must not be used to access local raw data or real Burp exports.
 - MCP audit logs must remain raw-free and store only metadata such as tool name,
-  sanitized output id, status, and blocked reason.
+  sanitized output id, status, blocked reason, event id, sequence number, and
+  hash chain fields.
 - The audit database stores evidence references and redaction counters only. It
   does not store raw request or response values.
 - Output generation is fail-closed. If a likely token, JWT, email, phone number,
