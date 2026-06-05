@@ -165,10 +165,12 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
             <span class="badge neutral">Read-only preview</span>
           </div>
         </section>
+        {_safety_strip()}
         <section class="metrics">
           <div class="metric"><span class="metric-value">{len(outputs)}</span><span>Verified outputs</span></div>
           <div class="metric"><span class="metric-value">{blocked_count}</span><span>Blocked or hidden outputs</span></div>
           <div class="metric"><span class="metric-value">{_h(audit_status["review_status"])}</span><span>Audit review</span></div>
+          <div class="metric"><span class="metric-value">false</span><span>Raw data displayed</span></div>
         </section>
         <section class="panel">
           <div class="panel-head">
@@ -217,9 +219,15 @@ def render_output_detail(output: DashboardOutput) -> str:
           </div>
           <span class="badge good">Verification passed</span>
         </section>
+        <section class="safety-strip">
+          <div class="rail"><span>Verify</span><strong>passed</strong></div>
+          <div class="rail"><span>Display mode</span><strong>raw-free</strong></div>
+          <div class="rail"><span>Finding status</span><strong>candidate only</strong></div>
+          <div class="rail"><span>Severity</span><strong>separate rating required</strong></div>
+        </section>
         <section class="grid">
           <div class="panel">
-            <div class="panel-head"><h2>Safe Files</h2><span class="muted">Preview or download allowed files only.</span></div>
+            <div class="panel-head"><h2>Safe Files</h2><span class="muted">Only AI-safe files are exposed.</span></div>
             <div class="file-grid">{file_cards}</div>
           </div>
           <div class="panel">
@@ -410,7 +418,7 @@ def _output_row(output: DashboardOutput) -> str:
       <td>{output.candidate_count}</td>
       <td>{file_count}</td>
       <td>{'available' if output.report_available else 'missing'}</td>
-      <td><span class="badge good">verified</span></td>
+      <td><span class="badge good">verify passed</span></td>
       <td><a class="button small" href="{_output_href(output.output_id)}">Open</a></td>
     </tr>
     """
@@ -430,6 +438,7 @@ def _safe_file_card(output: DashboardOutput, file_name: str) -> str:
       <div>
         <strong>{_h(file_name)}</strong>
         <span>{status}</span>
+        <small>{_h(_safe_file_description(file_name))}</small>
       </div>
       <div class="actions">{actions}</div>
     </div>
@@ -443,6 +452,7 @@ def _candidate_card(candidate: dict[str, Any]) -> str:
     endpoint = _safe_value(candidate.get("affected_endpoint"), "unknown_endpoint")
     confidence = _safe_value(candidate.get("confidence"), "unknown")
     manual_required = str(bool(candidate.get("manual_verification_required", True))).lower()
+    rationale = _safe_list(candidate.get("rationale"))
     confidence_rationale = _safe_list(candidate.get("confidence_rationale"))
     manual_tests = _safe_list(candidate.get("recommended_manual_tests"))
     do_not_claim = _safe_list(candidate.get("do_not_claim"))
@@ -450,13 +460,18 @@ def _candidate_card(candidate: dict[str, Any]) -> str:
     <article class="candidate">
       <div class="candidate-head">
         <div>
+          <span class="kicker">Candidate finding</span>
           <h3>{_h(finding_id)} - {_h(title)}</h3>
           <p>{_h(kind)} on {_h(endpoint)}</p>
         </div>
-        <span class="badge neutral">{_h(confidence)}</span>
+        <div class="status-stack">
+          <span class="badge neutral">evidence confidence: {_h(confidence)}</span>
+          <span class="badge warning">manual check required</span>
+        </div>
       </div>
       <dl class="facts compact">
         <div><dt>Manual verification</dt><dd>{manual_required}</dd></div>
+        <div><dt>Rationale</dt><dd>{_bullets(rationale)}</dd></div>
         <div><dt>Confidence basis</dt><dd>{_bullets(confidence_rationale)}</dd></div>
         <div><dt>Manual tests</dt><dd>{_bullets(manual_tests)}</dd></div>
         <div><dt>Do not claim</dt><dd>{_bullets(do_not_claim)}</dd></div>
@@ -468,13 +483,44 @@ def _candidate_card(candidate: dict[str, Any]) -> str:
 def _audit_panel(status: dict[str, str]) -> str:
     return f"""
     <dl class="facts">
-      <div><dt>Review status</dt><dd>{_h(status["review_status"])}</dd></div>
+      <div><dt>Review status</dt><dd>{_status_badge(status["review_status"])}</dd></div>
       <div><dt>Events checked</dt><dd>{_h(status["events"])}</dd></div>
       <div><dt>Files checked</dt><dd>{_h(status["files"])}</dd></div>
-      <div><dt>Retained JSONL</dt><dd>{_h(status["retained_status"])}</dd></div>
-      <div><dt>HMAC manifest</dt><dd>{_h(status["hmac_status"])}</dd></div>
+      <div><dt>Retained JSONL</dt><dd>{_status_badge(status["retained_status"])}</dd></div>
+      <div><dt>HMAC manifest</dt><dd>{_status_badge(status["hmac_status"])}</dd></div>
+      <div><dt>Displayed content</dt><dd>metadata only</dd></div>
     </dl>
     """
+
+
+def _safety_strip() -> str:
+    return """
+    <section class="safety-strip" aria-label="Dashboard safety boundary">
+      <div class="rail"><span>Input gate</span><strong>verify passed only</strong></div>
+      <div class="rail"><span>Display mode</span><strong>raw-free</strong></div>
+      <div class="rail"><span>Report stance</span><strong>candidate only</strong></div>
+      <div class="rail"><span>Actions</span><strong>read-only</strong></div>
+    </section>
+    """
+
+
+def _safe_file_description(file_name: str) -> str:
+    descriptions = {
+        "analysis_packet.json": "Structured candidate evidence packet.",
+        "chatgpt_prompt.md": "Safe ChatGPT review prompt.",
+        "codex_task_prompt.md": "Safe Codex task prompt.",
+        "report_draft.md": "Candidate report draft.",
+    }
+    return descriptions.get(file_name, "Safe generated file.")
+
+
+def _status_badge(value: str) -> str:
+    safe = _h(value)
+    if value == "passed":
+        return f'<span class="badge good">{safe}</span>'
+    if value in {"failed", "input_missing"} or value.endswith("_missing"):
+        return f'<span class="badge danger">{safe}</span>'
+    return f'<span class="badge neutral">{safe}</span>'
 
 
 def _format_preview(file_name: str, text: str) -> str:
@@ -628,9 +674,42 @@ def _page(title: str, body: str) -> str:
     }}
     .badge.good {{ color: var(--ok); background: #eaf7ef; border-color: #bfe6cb; }}
     .badge.danger {{ color: var(--danger); background: #fff0ed; border-color: #fac7be; }}
+    .badge.warning {{ color: #805600; background: #fff7df; border-color: #f1d38d; }}
+    .safety-strip {{
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }}
+    .rail {{
+      min-height: 74px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }}
+    .rail span, .kicker, .file-card small {{
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.35;
+    }}
+    .rail strong {{
+      display: block;
+      margin-top: 6px;
+      font-size: 15px;
+      line-height: 1.3;
+    }}
+    .kicker {{
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }}
     .metrics {{
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 12px;
       margin-bottom: 14px;
     }}
@@ -684,6 +763,7 @@ def _page(title: str, body: str) -> str:
       background: #fbfcfc;
     }}
     .file-card strong, .file-card span {{ display: block; }}
+    .file-card small {{ margin-top: 5px; font-weight: 500; }}
     .candidate {{
       padding: 13px;
       border: 1px solid var(--border);
@@ -716,7 +796,7 @@ def _page(title: str, body: str) -> str:
     @media (max-width: 820px) {{
       main {{ width: min(100vw - 20px, 760px); padding-top: 18px; }}
       .topbar, .panel-head, .file-card, .candidate-head {{ flex-direction: column; align-items: stretch; }}
-      .metrics, .grid, .facts {{ grid-template-columns: 1fr; }}
+      .metrics, .grid, .facts, .safety-strip {{ grid-template-columns: 1fr; }}
       table {{ table-layout: auto; }}
       th:nth-child(3), td:nth-child(3), th:nth-child(4), td:nth-child(4) {{ display: none; }}
       .status-stack, .actions {{ justify-content: flex-start; }}

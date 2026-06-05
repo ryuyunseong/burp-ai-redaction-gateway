@@ -204,6 +204,9 @@ scan actions, file writes, or state-changing requests. It rejects path traversal
 and blocks `local_only/`, `raw/`, `raw_vault/`, `build/`, and `.gradle/` paths.
 Audit status is summarized without printing audit rows, cookies, authorization
 values, tokens, domains, internal IPs, personal data, or HMAC secrets.
+The dashboard highlights verify-passed status, raw-free display mode, candidate
+finding language, manual verification requirements, and the rule that evidence
+confidence is not severity.
 
 See
 [docs/LOCAL_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/LOCAL_DASHBOARD.md).
