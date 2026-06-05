@@ -12,7 +12,13 @@ from copy import deepcopy
 from contextlib import redirect_stdout
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import patch
 
+from burp_ai_redaction_gateway.audit_hmac import (
+    AuditHmacError,
+    create_audit_hmac_manifest,
+    verify_audit_hmac_manifest,
+)
 from burp_ai_redaction_gateway.audit_retention import AuditRetentionError, apply_audit_retention
 from burp_ai_redaction_gateway.audit_review import review_audit_path
 from burp_ai_redaction_gateway.cli import main
@@ -1059,6 +1065,144 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("Audit retention failed: audit_review_failed", text)
             self.assertNotIn("rawBearerToken1234567890", text)
             self.assertFalse(output_file.exists())
+
+    def test_audit_hmac_cli_creates_and_verifies_raw_free_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_file = Path(temp_dir) / "mcp_audit.retained.jsonl"
+            manifest_file = Path(temp_dir) / "mcp_audit.retained.manifest.json"
+            self.write_audit_events(
+                audit_file,
+                self.audit_event_chain(["2026-06-04T00:00:00Z", "2026-06-05T00:00:00Z"]),
+            )
+
+            with patch.dict("os.environ", {"BURP_AI_AUDIT_HMAC_KEY": "DUMMY_HMAC_SECRET_1234567890"}, clear=False):
+                with redirect_stdout(io.StringIO()) as create_stdout:
+                    create_exit = main(
+                        [
+                            "audit-hmac",
+                            "--input",
+                            str(audit_file),
+                            "--manifest",
+                            str(manifest_file),
+                        ]
+                    )
+                with redirect_stdout(io.StringIO()) as verify_stdout:
+                    verify_exit = main(
+                        [
+                            "audit-hmac-verify",
+                            "--input",
+                            str(audit_file),
+                            "--manifest",
+                            str(manifest_file),
+                        ]
+                    )
+
+            manifest_text = manifest_file.read_text(encoding="utf-8")
+            manifest = json.loads(manifest_text)
+            self.assertEqual(create_exit, 0)
+            self.assertEqual(verify_exit, 0)
+            self.assertEqual(manifest["manifest_schema_version"], "1.0")
+            self.assertEqual(manifest["audit_schema_version"], "1.1")
+            self.assertEqual(manifest["file_alias"], "mcp_audit.retained.jsonl")
+            self.assertEqual(manifest["row_count"], 2)
+            self.assertEqual(manifest["hmac_algorithm"], "HMAC-SHA256")
+            self.assertFalse(manifest["raw_data_included"])
+            self.assertEqual(len(manifest["sha256"]), 64)
+            self.assertEqual(len(manifest["hmac"]), 64)
+            self.assertIn("Audit HMAC manifest written.", create_stdout.getvalue())
+            self.assertIn("Audit HMAC verification passed.", verify_stdout.getvalue())
+            self.assertNotIn(str(manifest["hmac"]), create_stdout.getvalue())
+            self.assertNotIn(str(manifest["hmac"]), verify_stdout.getvalue())
+            assert_no_sensitive_text(manifest_text)
+            assert_no_sensitive_text(create_stdout.getvalue())
+            assert_no_sensitive_text(verify_stdout.getvalue())
+
+    def test_audit_hmac_accepts_local_key_file_without_printing_secret(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_file = Path(temp_dir) / "mcp_audit.retained.jsonl"
+            manifest_file = Path(temp_dir) / "mcp_audit.retained.manifest.json"
+            key_file = Path(temp_dir) / "secrets.local"
+            key_file.write_text("DUMMY_HMAC_SECRET_FILE_1234567890\n", encoding="utf-8")
+            self.write_audit_events(audit_file, self.audit_event_chain(["2026-06-05T00:00:00Z"]))
+
+            with redirect_stdout(io.StringIO()) as stdout:
+                exit_code = main(
+                    [
+                        "audit-hmac",
+                        "--input",
+                        str(audit_file),
+                        "--manifest",
+                        str(manifest_file),
+                        "--key-file",
+                        str(key_file),
+                    ]
+                )
+            text = stdout.getvalue()
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(manifest_file.is_file())
+            self.assertNotIn("DUMMY_HMAC_SECRET_FILE_1234567890", text)
+            assert_no_sensitive_text(text)
+
+    def test_audit_hmac_verify_detects_file_and_manifest_tampering(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_file = Path(temp_dir) / "mcp_audit.retained.jsonl"
+            manifest_file = Path(temp_dir) / "mcp_audit.retained.manifest.json"
+            secret = b"DUMMY_HMAC_SECRET_1234567890"
+            self.write_audit_events(audit_file, self.audit_event_chain(["2026-06-05T00:00:00Z"]))
+            create_audit_hmac_manifest(audit_file, manifest_file, secret=secret)
+
+            audit_file.write_text(audit_file.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+            with self.assertRaises(AuditHmacError) as file_error:
+                verify_audit_hmac_manifest(audit_file, manifest_file, secret=secret)
+            self.assertEqual(file_error.exception.error_type, "sha256_mismatch")
+
+            audit_file.write_text(audit_file.read_text(encoding="utf-8").strip() + "\n", encoding="utf-8")
+            manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
+            manifest["hmac"] = "0" * 64
+            manifest_file.write_text(json.dumps(manifest, ensure_ascii=True, sort_keys=True) + "\n", encoding="utf-8")
+            with self.assertRaises(AuditHmacError) as manifest_error:
+                verify_audit_hmac_manifest(audit_file, manifest_file, secret=secret)
+            self.assertEqual(manifest_error.exception.error_type, "hmac_mismatch")
+
+    def test_audit_hmac_rejects_missing_secret_and_raw_log_without_printing_value(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_file = Path(temp_dir) / "mcp_audit.retained.jsonl"
+            manifest_file = Path(temp_dir) / "mcp_audit.retained.manifest.json"
+            self.write_audit_events(audit_file, self.audit_event_chain(["2026-06-05T00:00:00Z"]))
+
+            with patch.dict("os.environ", {}, clear=True):
+                with redirect_stdout(io.StringIO()) as missing_stdout:
+                    missing_exit = main(
+                        [
+                            "audit-hmac",
+                            "--input",
+                            str(audit_file),
+                            "--manifest",
+                            str(manifest_file),
+                        ]
+                    )
+            self.assertEqual(missing_exit, 1)
+            self.assertIn("Audit HMAC failed: hmac_secret_missing", missing_stdout.getvalue())
+            self.assertFalse(manifest_file.exists())
+
+            raw_file = Path(temp_dir) / "mcp_audit.raw.jsonl"
+            raw_file.write_text("Authorization: Bearer rawBearerToken1234567890\n", encoding="utf-8")
+            with patch.dict("os.environ", {"BURP_AI_AUDIT_HMAC_KEY": "DUMMY_HMAC_SECRET_1234567890"}, clear=False):
+                with redirect_stdout(io.StringIO()) as raw_stdout:
+                    raw_exit = main(
+                        [
+                            "audit-hmac",
+                            "--input",
+                            str(raw_file),
+                            "--manifest",
+                            str(manifest_file),
+                        ]
+                    )
+            text = raw_stdout.getvalue()
+            self.assertEqual(raw_exit, 1)
+            self.assertIn("Audit HMAC failed: audit_review_failed", text)
+            self.assertNotIn("rawBearerToken1234567890", text)
 
     def test_fail_closed_scanner_detects_raw_secret_patterns(self) -> None:
         unsafe = (

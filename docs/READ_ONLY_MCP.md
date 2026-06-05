@@ -149,7 +149,36 @@ Retention is based on each row's `timestamp_utc` value. The output file must
 also pass `review-audit`. If retention removes an older prefix of the chain,
 review remains limited to the retained boundary. Retention days are now
 supported for explicit output files; policy configuration, compression,
-signatures, HMAC, and external storage remain follow-up hardening work.
+external signatures, and external storage remain follow-up hardening work.
+
+## Audit HMAC
+
+Use `audit-hmac` to create a tamper-detection manifest for a retained audit
+JSONL file:
+
+```powershell
+$env:BURP_AI_AUDIT_HMAC_KEY = "<LOCAL_ONLY_HMAC_SECRET>"
+
+python -m burp_ai_redaction_gateway audit-hmac `
+  --input out\.audit\mcp_audit.retained.jsonl `
+  --manifest out\.audit\mcp_audit.retained.manifest.json
+
+python -m burp_ai_redaction_gateway audit-hmac-verify `
+  --input out\.audit\mcp_audit.retained.jsonl `
+  --manifest out\.audit\mcp_audit.retained.manifest.json
+```
+
+The input must pass strict `review-audit` before any manifest is written or
+verified. The manifest contains only metadata: manifest schema version, audit
+schema version, safe file alias, row count, SHA-256, HMAC-SHA256, creation time,
+and `raw_data_included: false`. It does not contain raw audit rows, request or
+response data, cookies, tokens, domains, PII, stack traces, or the HMAC secret.
+
+HMAC is not encryption. It detects file changes when the same local secret is
+available for verification. Load the secret from `BURP_AI_AUDIT_HMAC_KEY` or an
+ignored local secret file via `--key-file`; never commit the secret or print it
+in logs. Manifest output under `out/.audit` is ignored by Git and should remain
+local unless explicitly exported through a separate safe process.
 
 ## Allowed Output Scope
 
