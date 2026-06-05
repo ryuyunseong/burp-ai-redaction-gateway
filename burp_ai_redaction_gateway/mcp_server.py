@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
+import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,6 +24,8 @@ ANALYSIS_PACKET_FILE = "analysis_packet.json"
 DEFAULT_REPORT_FILE = "report_draft.md"
 AUDIT_DIR_NAME = ".audit"
 AUDIT_FILE_NAME = "mcp_audit.jsonl"
+AUDIT_SCHEMA_VERSION = "1.1"
+AUDIT_HASH_ALGORITHM = "SHA-256"
 TOOL_RESPONSE_CLASSES = {
     "list_findings": "finding_summary",
     "get_finding": "finding_detail",
@@ -359,11 +363,99 @@ def _tool_error_result(error_type: str) -> McpToolResult:
 
 
 def _append_audit_event(path: Path, event: dict[str, Any]) -> None:
+    event = _audit_event_with_chain_fields(path, event)
     text = json.dumps(event, ensure_ascii=True, sort_keys=True)
     assert_no_sensitive_text(text)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as file:
         file.write(text + "\n")
+
+
+def _audit_event_with_chain_fields(path: Path, event: dict[str, Any]) -> dict[str, Any]:
+    timestamp = _safe_text(event.get("timestamp_utc"))
+    previous = _last_chained_audit_event(path)
+    if previous:
+        sequence_no = int(previous["sequence_no"]) + 1
+        previous_hash = previous["event_hash"]
+        chain_id = previous["chain_id"]
+    else:
+        sequence_no = 1
+        previous_hash = None
+        chain_id = _new_chain_id(timestamp)
+    chained = {
+        "audit_schema_version": AUDIT_SCHEMA_VERSION,
+        "event_id": str(uuid.uuid4()),
+        "sequence_no": sequence_no,
+        "chain_id": chain_id,
+        "prev_event_hash": previous_hash,
+        "hash_algorithm": AUDIT_HASH_ALGORITHM,
+        **event,
+    }
+    chained["event_hash"] = _audit_event_hash(chained)
+    return chained
+
+
+def _last_chained_audit_event(path: Path) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    last_event: dict[str, Any] | None = None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if _is_chained_audit_event(event):
+            last_event = event
+    return last_event
+
+
+def _is_chained_audit_event(event: Any) -> bool:
+    return (
+        isinstance(event, dict)
+        and event.get("audit_schema_version") == AUDIT_SCHEMA_VERSION
+        and isinstance(event.get("chain_id"), str)
+        and isinstance(event.get("sequence_no"), int)
+        and _is_standard_uuid(str(event.get("event_id", "")))
+        and _is_sha256_hash(str(event.get("event_hash", "")))
+        and (
+            event.get("prev_event_hash") is None
+            or _is_sha256_hash(str(event.get("prev_event_hash", "")))
+        )
+    )
+
+
+def _new_chain_id(timestamp_utc: str) -> str:
+    date_part = timestamp_utc.split("T", 1)[0].replace("-", "")
+    if len(date_part) != 8 or not date_part.isdigit():
+        date_part = datetime.now(UTC).strftime("%Y%m%d")
+    return f"mcp-audit-{date_part}"
+
+
+def _audit_event_hash(event: dict[str, Any]) -> str:
+    canonical = _canonical_audit_event_text(event)
+    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return f"sha256:{digest}"
+
+
+def _canonical_audit_event_text(event: dict[str, Any]) -> str:
+    body = {key: value for key, value in event.items() if key != "event_hash"}
+    return json.dumps(body, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+
+
+def _is_standard_uuid(value: str) -> bool:
+    try:
+        parsed = uuid.UUID(value)
+    except ValueError:
+        return False
+    return str(parsed) == value.lower()
+
+
+def _is_sha256_hash(value: str) -> bool:
+    prefix = "sha256:"
+    digest = value[len(prefix) :] if value.startswith(prefix) else ""
+    return len(digest) == 64 and all(char in "0123456789abcdef" for char in digest)
 
 
 def _validated_root(root: Path) -> Path:

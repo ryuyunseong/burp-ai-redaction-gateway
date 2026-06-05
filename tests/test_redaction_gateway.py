@@ -7,6 +7,7 @@ import json
 import tempfile
 import threading
 import unittest
+import uuid
 from contextlib import redirect_stdout
 from pathlib import Path
 
@@ -45,6 +46,98 @@ EXPECTED_PASSIVE_FINDING_TYPES = {
 
 
 class RedactionGatewayTests(unittest.TestCase):
+    def assert_audit_hash_chain(self, audit_events: list[dict[str, object]]) -> None:
+        previous_hash = None
+        chain_id = None
+        for index, event in enumerate(audit_events, start=1):
+            self.assertEqual(event["audit_schema_version"], "1.1")
+            uuid.UUID(str(event["event_id"]))
+            self.assertEqual(event["sequence_no"], index)
+            self.assertEqual(event["hash_algorithm"], "SHA-256")
+            self.assertEqual(event["prev_event_hash"], previous_hash)
+            if chain_id is None:
+                chain_id = event["chain_id"]
+                self.assertIsInstance(chain_id, str)
+                self.assertTrue(str(chain_id).startswith("mcp-audit-"))
+            else:
+                self.assertEqual(event["chain_id"], chain_id)
+            body = {key: value for key, value in event.items() if key != "event_hash"}
+            canonical = json.dumps(body, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+            expected_hash = "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+            self.assertEqual(event["event_hash"], expected_hash)
+            previous_hash = event["event_hash"]
+
+    def test_audit_hash_chain_helper_detects_deletion_reorder_and_mutation(self) -> None:
+        events = [
+            {
+                "audit_schema_version": "1.1",
+                "event_id": str(uuid.uuid4()),
+                "sequence_no": 1,
+                "chain_id": "mcp-audit-20260605",
+                "prev_event_hash": None,
+                "hash_algorithm": "SHA-256",
+                "event_type": "mcp_tool_call",
+                "timestamp_utc": "2026-06-05T00:00:00Z",
+                "tool_name": "list_prompt_files",
+                "output_id": "demo",
+                "result_status": "success",
+                "response_class": "prompt_file_list",
+                "raw_data_included": False,
+            },
+            {
+                "audit_schema_version": "1.1",
+                "event_id": str(uuid.uuid4()),
+                "sequence_no": 2,
+                "chain_id": "mcp-audit-20260605",
+                "prev_event_hash": "",
+                "hash_algorithm": "SHA-256",
+                "event_type": "mcp_tool_call",
+                "timestamp_utc": "2026-06-05T00:00:01Z",
+                "tool_name": "get_report_draft",
+                "output_id": "demo",
+                "result_status": "success",
+                "response_class": "report_draft",
+                "raw_data_included": False,
+            },
+            {
+                "audit_schema_version": "1.1",
+                "event_id": str(uuid.uuid4()),
+                "sequence_no": 3,
+                "chain_id": "mcp-audit-20260605",
+                "prev_event_hash": "",
+                "hash_algorithm": "SHA-256",
+                "event_type": "mcp_tool_call",
+                "timestamp_utc": "2026-06-05T00:00:02Z",
+                "tool_name": "list_findings",
+                "output_id": "demo",
+                "result_status": "success",
+                "response_class": "finding_summary",
+                "raw_data_included": False,
+            },
+        ]
+        previous_hash = None
+        for event in events:
+            event["prev_event_hash"] = previous_hash
+            body = {key: value for key, value in event.items() if key != "event_hash"}
+            canonical = json.dumps(body, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+            event["event_hash"] = "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+            previous_hash = event["event_hash"]
+
+        self.assert_audit_hash_chain(events)
+        with self.assertRaises(AssertionError):
+            self.assert_audit_hash_chain([events[0], events[2]])
+        with self.assertRaises(AssertionError):
+            self.assert_audit_hash_chain([events[1], events[0], events[2]])
+        mutated = [dict(event) for event in events]
+        mutated[1]["result_status"] = "blocked"
+        with self.assertRaises(AssertionError):
+            self.assert_audit_hash_chain(mutated)
+
+    def test_scanner_allows_standard_uuid_only_in_event_id_field(self) -> None:
+        numeric_uuid = "01012345-6789-1111-2222-333344444444"
+        self.assertTrue(scan_text(numeric_uuid))
+        assert_no_sensitive_text(json.dumps({"event_id": numeric_uuid}, ensure_ascii=True))
+
     def test_sample_generates_required_outputs_without_raw_sensitive_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir)
@@ -465,6 +558,7 @@ class RedactionGatewayTests(unittest.TestCase):
             assert_no_sensitive_text(audit_text)
             audit_events = [json.loads(line) for line in audit_text.splitlines() if line.strip()]
             self.assertEqual(len(audit_events), 5)
+            self.assert_audit_hash_chain(audit_events)
             self.assertTrue(all(event["event_type"] == "mcp_tool_call" for event in audit_events))
             self.assertTrue(all(event["result_status"] == "success" for event in audit_events))
             self.assertTrue(all(event["raw_data_included"] is False for event in audit_events))
@@ -521,6 +615,7 @@ class RedactionGatewayTests(unittest.TestCase):
             audit_text = audit_path.read_text(encoding="utf-8")
             assert_no_sensitive_text(audit_text)
             audit_events = [json.loads(line) for line in audit_text.splitlines() if line.strip()]
+            self.assert_audit_hash_chain(audit_events)
             self.assertEqual(
                 [event["blocked_reason"] for event in audit_events],
                 ["path_traversal", "forbidden_directory", "verify_failed"],

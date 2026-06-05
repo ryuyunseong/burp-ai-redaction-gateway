@@ -36,10 +36,16 @@ COOKIE_PAIR_RE = re.compile(r"\b([A-Za-z][A-Za-z0-9_.-]{1,63})=([^;,\s\"']+)")
 SAFE_COOKIE_ATTRS = {"secure", "httponly", "samesite", "path", "domain", "max-age", "expires", "charset"}
 SAFE_COOKIE_VALUES = {"true", "false", "lax", "strict", "none", "present", "<placeholder>", "{value}"}
 ALLOWED_IP_BUCKETS = {"10.0.0.0", "127.0.0.0", "172.16.0.0", "192.168.0.0"}
+SAFE_EVENT_ID_RE = re.compile(
+    r'("event_id"\s*:\s*")'
+    r'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+    r'(")'
+)
 
 
 def scan_text(text: str) -> list[SensitiveMatch]:
     safe_text = PLACEHOLDER_RE.sub("<PLACEHOLDER>", text)
+    safe_text = SAFE_EVENT_ID_RE.sub(r"\1<SAFE_UUID>\2", safe_text)
     matches: list[SensitiveMatch] = []
     checks = [
         ("jwt", JWT_RE),
