@@ -15,6 +15,13 @@ from .audit_hmac import (
 )
 from .audit_retention import AuditRetentionError, apply_audit_retention, render_audit_retention_summary
 from .audit_review import render_audit_review_summary, review_audit_path
+from .dashboard import (
+    DEFAULT_DASHBOARD_HOST,
+    DEFAULT_DASHBOARD_PORT,
+    DashboardConfig,
+    DashboardError,
+    create_dashboard_server,
+)
 from .findings import build_finding_candidates
 from .mcp_server import serve_mcp_stdio
 from .output import write_outputs
@@ -105,6 +112,12 @@ def main(argv: list[str] | None = None) -> int:
     mcp.add_argument("--root", required=True, type=Path, help="Allowed verified output root.")
     mcp.add_argument("--policy", type=Path, help="Optional policy.json path.")
 
+    dashboard = subparsers.add_parser("dashboard", help="Run the local read-only dashboard for verified output.")
+    dashboard.add_argument("--host", default=DEFAULT_DASHBOARD_HOST, help="Bind host. Only 127.0.0.1 is allowed.")
+    dashboard.add_argument("--port", default=DEFAULT_DASHBOARD_PORT, type=int, help="Bind port.")
+    dashboard.add_argument("--root", required=True, type=Path, help="Verified output root, for example out.")
+    dashboard.add_argument("--policy", type=Path, help="Optional policy.json path.")
+
     serve = subparsers.add_parser("serve", help="Run the loopback-only Montoya handoff receiver.")
     serve.add_argument("--host", default=DEFAULT_HOST, help="Bind host. Only 127.0.0.1 is allowed.")
     serve.add_argument("--port", default=DEFAULT_PORT, type=int, help="Bind port.")
@@ -132,6 +145,8 @@ def main(argv: list[str] | None = None) -> int:
         return _report(args.input, args.output, args.profile, args.policy)
     if args.command == "mcp":
         return _mcp(args.root, args.policy)
+    if args.command == "dashboard":
+        return _dashboard(args.host, args.port, args.root, args.policy)
     if args.command == "serve":
         return _serve(args.host, args.port, args.output, args.project, args.policy, args.max_bytes)
     parser.error("Unknown command")
@@ -239,6 +254,23 @@ def _mcp(root: Path, policy_path: Path | None) -> int:
     except ValueError as error:
         print(f"MCP server failed: {error}")
         return 1
+    return 0
+
+
+def _dashboard(host: str, port: int, root: Path, policy_path: Path | None) -> int:
+    try:
+        server = create_dashboard_server(host, port, DashboardConfig(root=root, policy_path=policy_path))
+        print(f"Dashboard listening on http://{host}:{port}")
+        print("Raw HTTP viewing, replay, and state-changing actions are unavailable.")
+    except DashboardError as error:
+        print(f"Dashboard startup failed: {error.error_type}")
+        return 1
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("Dashboard stopped")
+    finally:
+        server.server_close()
     return 0
 
 

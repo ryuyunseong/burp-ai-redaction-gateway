@@ -98,6 +98,19 @@ All findings remain candidate or suspected findings until manual reproduction is
 complete. `confidence` is evidence confidence, not severity. Severity requires a
 separate risk rating step.
 
+### 6. Optional Local Dashboard
+
+Run the local dashboard on loopback to inspect verified outputs in a browser:
+
+```powershell
+python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out
+```
+
+The dashboard is read-only. It previews and downloads only verified
+`analysis_packet.json`, `chatgpt_prompt.md`, `codex_task_prompt.md`, and
+`report_draft.md` files. It does not show raw request or response values, replay
+traffic, run active scans, write files, or expose unverified output.
+
 ## AI-Safe Files
 
 The following files may be used with ChatGPT, Codex, or another AI only after
