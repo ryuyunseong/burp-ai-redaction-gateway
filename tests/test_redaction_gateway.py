@@ -22,6 +22,7 @@ from burp_ai_redaction_gateway.audit_hmac import (
 from burp_ai_redaction_gateway.audit_retention import AuditRetentionError, apply_audit_retention
 from burp_ai_redaction_gateway.audit_review import review_audit_path
 from burp_ai_redaction_gateway.cli import main
+from burp_ai_redaction_gateway.dashboard import DashboardConfig, DashboardError, create_dashboard_server
 from burp_ai_redaction_gateway.findings import build_finding_candidates
 from burp_ai_redaction_gateway.mcp_server import ReadOnlyMcpGateway, ReadOnlyMcpServer, _next_rotated_audit_path
 from burp_ai_redaction_gateway.models import SanitizedEvent
@@ -576,6 +577,164 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertEqual(exit_code, 1)
             self.assertIn("Report draft failed: verification_failed", buffer.getvalue())
             self.assertFalse(report_path.exists())
+
+    def test_dashboard_lists_verified_output_and_previews_safe_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "generated"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+            main(["report", "--input", str(output), "--output", str(output / "report_draft.md")])
+
+            server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = server.server_address[1]
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/")
+                response = connection.getresponse()
+                body = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("Burp AI Redaction Gateway", body)
+                self.assertIn("generated", body)
+                self.assertIn("Verified outputs", body)
+                self.assertNotIn("raw_request", body)
+                self.assertNotIn("raw_response", body)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/output?project=generated")
+                response = connection.getresponse()
+                detail = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("Finding Candidates", detail)
+                self.assertIn("Confidence basis", detail)
+                self.assertIn("Manual verification", detail)
+                self.assertNotIn("Confirmed vulnerability", detail)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/preview?project=generated&file=chatgpt_prompt.md")
+                response = connection.getresponse()
+                preview = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("analysis-prompt-packet-v1", preview)
+                self.assertNotIn("raw_request", preview)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/download?project=generated&file=analysis_packet.json")
+                response = connection.getresponse()
+                downloaded = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("attachment", response.getheader("Content-Disposition", ""))
+                self.assertIn('"candidate_count"', downloaded)
+                assert_no_sensitive_text(downloaded)
+                connection.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
+    def test_dashboard_blocks_unverified_output_forbidden_paths_and_unsafe_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "generated"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+
+            server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = server.server_address[1]
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/preview?project=generated&file=sanitized_events.jsonl")
+                response = connection.getresponse()
+                body = response.read().decode("utf-8")
+                self.assertEqual(response.status, 403)
+                self.assertIn("safe_file_not_allowed", body)
+                connection.close()
+
+                (output / "unsafe.md").write_text("Authorization: Bearer rawBearerToken1234567890\n", encoding="utf-8")
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/output?project=generated")
+                response = connection.getresponse()
+                blocked = response.read().decode("utf-8")
+                self.assertEqual(response.status, 403)
+                self.assertIn("verification_failed", blocked)
+                self.assertNotIn("rawBearerToken", blocked)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/output?project=..%2Flocal_only")
+                response = connection.getresponse()
+                traversal = response.read().decode("utf-8")
+                self.assertEqual(response.status, 403)
+                self.assertIn("forbidden_directory", traversal)
+                connection.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
+            with self.assertRaises(DashboardError) as bind_error:
+                create_dashboard_server("0.0.0.0", 0, DashboardConfig(root=root))
+            self.assertEqual(bind_error.exception.error_type, "non_loopback_bind_rejected")
+
+    def test_dashboard_shows_audit_status_without_audit_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.generated_audit_dir(root, request_count=2)
+
+            server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = server.server_address[1]
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/")
+                response = connection.getresponse()
+                body = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("Audit", body)
+                self.assertIn("Events checked", body)
+                self.assertIn("passed", body)
+                self.assertNotIn("list_prompt_files", body)
+                self.assertNotIn("mcp_tool_call", body)
+                connection.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
+    def test_dashboard_escapes_preview_html_special_characters(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output = root / "generated"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+            (output / "report_draft.md").write_text(
+                "# Candidate\n\n<script>alert(1)</script>\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(main(["verify", "--input", str(output)]), 0)
+
+            server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = server.server_address[1]
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/preview?project=generated&file=report_draft.md")
+                response = connection.getresponse()
+                body = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt;", body)
+                self.assertNotIn("<script>alert(1)</script>", body)
+                connection.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
 
     def test_read_only_mcp_exposes_verified_sanitized_outputs_only(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

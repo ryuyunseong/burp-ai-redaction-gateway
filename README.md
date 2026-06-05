@@ -181,6 +181,35 @@ The MCP server exposes only read-only tools for verified output directories and
 does not implement raw exchange lookup, replay, file writes, or external
 transmission. See
 [docs/READ_ONLY_MCP.md](C:/coding/burp-ai-redaction-gateway/docs/READ_ONLY_MCP.md).
+
+## Local Dashboard
+
+Run the local read-only dashboard for verified output:
+
+```powershell
+python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out
+```
+
+The dashboard binds only to `127.0.0.1`, discovers output directories under the
+configured root, and allows preview or download only after the selected output
+passes `verify`. It exposes only these safe files:
+
+- `analysis_packet.json`
+- `chatgpt_prompt.md`
+- `codex_task_prompt.md`
+- `report_draft.md`
+
+The dashboard does not implement raw request or response viewing, replay, active
+scan actions, file writes, or state-changing requests. It rejects path traversal
+and blocks `local_only/`, `raw/`, `raw_vault/`, `build/`, and `.gradle/` paths.
+Audit status is summarized without printing audit rows, cookies, authorization
+values, tokens, domains, internal IPs, personal data, or HMAC secrets.
+
+See
+[docs/LOCAL_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/LOCAL_DASHBOARD.md).
+
+## MCP Audit Records
+
 Tool-call audit records are written under `<root>/.audit/mcp_audit.jsonl` with
 raw-free metadata only. Audit schema `1.1` also records an event id, sequence
 number, and SHA-256 hash chain fields for each new MCP tool-call event.
