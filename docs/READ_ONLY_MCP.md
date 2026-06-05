@@ -118,6 +118,39 @@ rows from older local runs, malformed development rows, or rows with nonstandard
 event ids fail review. Use a fresh audit directory when validating the current
 release baseline.
 
+## Audit Retention
+
+Use `audit-retention` to create a retained audit JSONL file without modifying
+the input file:
+
+```powershell
+python -m burp_ai_redaction_gateway audit-retention `
+  --input out\.audit\mcp_audit.jsonl `
+  --output out\.audit\mcp_audit.retained.jsonl `
+  --retention-days 30 `
+  --dry-run
+
+python -m burp_ai_redaction_gateway audit-retention `
+  --input out\.audit\mcp_audit.jsonl `
+  --output out\.audit\mcp_audit.retained.jsonl `
+  --retention-days 30
+
+python -m burp_ai_redaction_gateway review-audit --input out\.audit\mcp_audit.retained.jsonl
+```
+
+The command first runs strict audit review on the input. Pre-schema rows,
+malformed rows, raw markers, broken hash chains, and nonstandard event ids fail
+before any output is written. In-place modification is intentionally forbidden;
+the retained rows must be written to a separate `--output` file. The summary
+prints only raw-free metadata such as total rows, retained rows, expired rows,
+retained timestamp range, and dry-run status.
+
+Retention is based on each row's `timestamp_utc` value. The output file must
+also pass `review-audit`. If retention removes an older prefix of the chain,
+review remains limited to the retained boundary. Retention days are now
+supported for explicit output files; policy configuration, compression,
+signatures, HMAC, and external storage remain follow-up hardening work.
+
 ## Allowed Output Scope
 
 The server is intended for sanitized files such as:

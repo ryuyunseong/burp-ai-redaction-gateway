@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .audit_retention import AuditRetentionError, apply_audit_retention, render_audit_retention_summary
 from .audit_review import render_audit_review_summary, review_audit_path
 from .findings import build_finding_candidates
 from .mcp_server import serve_mcp_stdio
@@ -40,6 +41,15 @@ def main(argv: list[str] | None = None) -> int:
         help="Output format. Defaults to text.",
     )
 
+    audit_retention = subparsers.add_parser(
+        "audit-retention",
+        help="Write a retained MCP audit JSONL file without modifying the input.",
+    )
+    audit_retention.add_argument("--input", required=True, type=Path, help="Audit JSONL file to filter.")
+    audit_retention.add_argument("--output", required=True, type=Path, help="Retained audit JSONL output path.")
+    audit_retention.add_argument("--retention-days", required=True, type=int, help="Number of days to retain.")
+    audit_retention.add_argument("--dry-run", action="store_true", help="Print counts without writing the output file.")
+
     review = subparsers.add_parser("review", help="Review verified analysis packet output without printing raw data.")
     review.add_argument("--input", required=True, type=Path, help="Verified generated output directory.")
     review.add_argument("--export-dir", type=Path, help="Optional directory for safe prompt packet copies.")
@@ -75,6 +85,8 @@ def main(argv: list[str] | None = None) -> int:
         return _verify(args.input, args.policy)
     if args.command == "review-audit":
         return _review_audit(args.input, args.format)
+    if args.command == "audit-retention":
+        return _audit_retention(args.input, args.output, args.retention_days, args.dry_run)
     if args.command == "review":
         return _review(args.input, args.export_dir, args.policy)
     if args.command == "report":
@@ -122,6 +134,16 @@ def _review_audit(input_path: Path, output_format: str) -> int:
     else:
         print(render_audit_review_summary(result), end="")
     return 0 if result.passed else 1
+
+
+def _audit_retention(input_path: Path, output_path: Path, retention_days: int, dry_run: bool) -> int:
+    try:
+        result = apply_audit_retention(input_path, output_path, retention_days=retention_days, dry_run=dry_run)
+    except AuditRetentionError as error:
+        print(f"Audit retention failed: {error.error_type}")
+        return 1
+    print(render_audit_retention_summary(result), end="")
+    return 0
 
 
 def _review(input_dir: Path, export_dir: Path | None, policy_path: Path | None) -> int:

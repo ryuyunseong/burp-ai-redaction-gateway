@@ -200,6 +200,18 @@ scanner results across retained rotated files and the active audit file. It is
 strict about audit schema `1.1`, so pre-schema local audit rows from older runs
 fail review.
 
+Create an explicit retained audit file with `audit-retention`:
+
+```powershell
+python -m burp_ai_redaction_gateway audit-retention --input out\.audit\mcp_audit.jsonl --output out\.audit\mcp_audit.retained.jsonl --retention-days 30 --dry-run
+python -m burp_ai_redaction_gateway audit-retention --input out\.audit\mcp_audit.jsonl --output out\.audit\mcp_audit.retained.jsonl --retention-days 30
+python -m burp_ai_redaction_gateway review-audit --input out\.audit\mcp_audit.retained.jsonl
+```
+
+`audit-retention` validates the input with strict `review-audit` first, rejects
+legacy or malformed rows, forbids in-place modification, and prints only
+raw-free summary metadata.
+
 ## Security Notes
 
 - Do not commit real Burp exports, raw HTTP history, tokens, cookies, customer
@@ -217,6 +229,8 @@ fail review.
   sanitized output id, status, blocked reason, event id, sequence number, and
   hash chain fields.
 - Use `review-audit` to inspect retained audit logs without printing raw values.
+- Use `audit-retention` only with a separate `--output` file; do not modify
+  audit logs in place.
 - The audit database stores evidence references and redaction counters only. It
   does not store raw request or response values.
 - Output generation is fail-closed. If a likely token, JWT, email, phone number,
