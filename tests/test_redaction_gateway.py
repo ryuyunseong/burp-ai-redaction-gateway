@@ -4,6 +4,7 @@ import hashlib
 import http.client
 import io
 import json
+import re
 import tempfile
 import threading
 import unittest
@@ -13,6 +14,7 @@ from contextlib import redirect_stdout
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
+from urllib.parse import urlencode
 
 from burp_ai_redaction_gateway.audit_hmac import (
     AuditHmacError,
@@ -625,6 +627,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("verify passed only", body)
                 self.assertIn("raw-free", body)
                 self.assertIn("Raw data displayed", body)
+                self.assertIn("CSRF-protected", body)
                 self.assertNotIn("raw_request", body)
                 self.assertNotIn("raw_response", body)
                 connection.close()
@@ -635,6 +638,13 @@ class RedactionGatewayTests(unittest.TestCase):
                 detail = response.read().decode("utf-8")
                 self.assertEqual(response.status, 200)
                 self.assertIn("Finding Candidates", detail)
+                self.assertIn("Dashboard Actions", detail)
+                self.assertIn("POST actions require CSRF protection", detail)
+                self.assertIn("Verify", detail)
+                self.assertIn("Review", detail)
+                self.assertIn("Report", detail)
+                self.assertIn("Export", detail)
+                self.assertIn("Refresh", detail)
                 self.assertIn("Only AI-safe files are exposed", detail)
                 self.assertIn("Candidate finding", detail)
                 self.assertIn("evidence confidence", detail)
@@ -716,6 +726,109 @@ class RedactionGatewayTests(unittest.TestCase):
             with self.assertRaises(DashboardError) as bind_error:
                 create_dashboard_server("0.0.0.0", 0, DashboardConfig(root=root))
             self.assertEqual(bind_error.exception.error_type, "non_loopback_bind_rejected")
+
+    def test_dashboard_actions_require_csrf_and_write_safe_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "out"
+            output = root / "generated"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+            server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = server.server_address[1]
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/output?project=generated")
+                response = connection.getresponse()
+                detail = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                token_match = re.search(r'name="csrf_token" value="([0-9a-f]{32})"', detail)
+                self.assertIsNotNone(token_match)
+                csrf_token = token_match.group(1)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                invalid_body = urlencode({"project": "generated", "action": "verify", "csrf_token": "invalid"})
+                connection.request(
+                    "POST",
+                    "/action",
+                    body=invalid_body,
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                )
+                response = connection.getresponse()
+                blocked = response.read().decode("utf-8")
+                self.assertEqual(response.status, 403)
+                self.assertIn("csrf_token_invalid", blocked)
+                self.assertNotIn("raw_request", blocked)
+                connection.close()
+
+                for action in ["verify", "review"]:
+                    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                    body = urlencode({"project": "generated", "action": action, "csrf_token": csrf_token})
+                    connection.request(
+                        "POST",
+                        "/action",
+                        body=body,
+                        headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    )
+                    response = connection.getresponse()
+                    result = response.read().decode("utf-8")
+                    self.assertEqual(response.status, 200)
+                    self.assertIn("Raw data included", result)
+                    self.assertIn("false", result)
+                    self.assertNotIn("raw_request", result)
+                    self.assertNotIn("raw_response", result)
+                    connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                report_body = urlencode(
+                    {
+                        "project": "generated",
+                        "action": "report",
+                        "profile": "consultant",
+                        "csrf_token": csrf_token,
+                    }
+                )
+                connection.request(
+                    "POST",
+                    "/action",
+                    body=report_body,
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                )
+                response = connection.getresponse()
+                report_result = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("Report draft generated", report_result)
+                self.assertIn("Profile: consultant", report_result)
+                self.assertTrue((output / "report_draft.md").is_file())
+                report_text = (output / "report_draft.md").read_text(encoding="utf-8")
+                self.assertIn("# Sanitized Consultant Report Draft", report_text)
+                assert_no_sensitive_text(report_text)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                export_body = urlencode({"project": "generated", "action": "export", "csrf_token": csrf_token})
+                connection.request(
+                    "POST",
+                    "/action",
+                    body=export_body,
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                )
+                response = connection.getresponse()
+                export_result = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("Safe files exported", export_result)
+                self.assertIn("Export directory: &lt;safe_export_dir&gt;", export_result)
+                export_dir = Path(temp_dir) / "exports" / "dashboard" / "generated"
+                for name in ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"]:
+                    exported = export_dir / name
+                    self.assertTrue(exported.is_file())
+                    assert_no_sensitive_text(exported.read_text(encoding="utf-8"))
+                connection.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
 
     def test_dashboard_shows_audit_status_without_audit_rows(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

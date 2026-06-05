@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 import json
 import os
+import secrets
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -14,6 +15,8 @@ from .audit_hmac import AuditHmacError, load_hmac_secret, verify_audit_hmac_mani
 from .audit_review import review_audit_path
 from .mcp_server import AUDIT_DIR_NAME, AUDIT_FILE_NAME, FORBIDDEN_PATH_PARTS
 from .policy import RedactionPolicy, load_policy
+from .report import DEFAULT_REPORT_PROFILE, REPORT_PROFILE_NAMES, write_report_draft
+from .review import build_review, render_review_summary
 from .scanner import assert_no_sensitive_text, scan_text
 from .verifier import VerificationResult, verify_path
 
@@ -29,6 +32,8 @@ SAFE_PREVIEW_FILES = (
 OUTPUT_MARKER_FILE = "analysis_packet.json"
 FINDINGS_FILE = "finding_candidates.json"
 MAX_PREVIEW_BYTES = 1024 * 1024
+MAX_FORM_BYTES = 16 * 1024
+ACTION_NAMES = {"verify", "review", "report", "export"}
 
 
 @dataclass(frozen=True)
@@ -48,6 +53,15 @@ class DashboardOutput:
     report_available: bool
 
 
+@dataclass(frozen=True)
+class DashboardActionResult:
+    title: str
+    status: str
+    output: DashboardOutput | None
+    summary_lines: list[str]
+    details: str | None = None
+
+
 class DashboardError(ValueError):
     def __init__(self, error_type: str, status: HTTPStatus = HTTPStatus.BAD_REQUEST) -> None:
         super().__init__(error_type)
@@ -61,6 +75,7 @@ class DashboardHttpServer(ThreadingHTTPServer):
         super().__init__(server_address, DashboardRequestHandler)
         self.config = DashboardConfig(root=validated_root, policy_path=config.policy_path)
         self.policy = policy
+        self.csrf_token = secrets.token_hex(16)
 
 
 class DashboardRequestHandler(BaseHTTPRequestHandler):
@@ -75,7 +90,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             if parsed.path == "/output":
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
-                self._send_html(render_output_detail(output))
+                self._send_html(render_output_detail(output, self.server.csrf_token))
                 return
             if parsed.path == "/preview":
                 output_id = _required_query_value(parsed.query, "project")
@@ -99,7 +114,24 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self._send_error("dashboard_request_failed", HTTPStatus.BAD_REQUEST)
 
     def do_POST(self) -> None:
-        self._send_error("state_changing_requests_disabled", HTTPStatus.METHOD_NOT_ALLOWED)
+        try:
+            parsed = urlsplit(self.path)
+            if parsed.path != "/action":
+                self._send_error("not_found", HTTPStatus.NOT_FOUND)
+                return
+            form = self._read_form()
+            _validate_csrf(_required_form_value(form, "csrf_token"), self.server.csrf_token)
+            output_id = _required_form_value(form, "project")
+            action = _safe_action_name(_required_form_value(form, "action"))
+            profile = form.get("profile", [DEFAULT_REPORT_PROFILE])[0]
+            result = run_dashboard_action(self.server.config.root, self.server.policy, output_id, action, profile)
+            self._send_html(render_action_result(result, self.server.csrf_token))
+        except DashboardError as error:
+            self._send_error(error.error_type, error.status)
+        except OSError:
+            self._send_error("dashboard_action_file_access_failed", HTTPStatus.INTERNAL_SERVER_ERROR)
+        except ValueError:
+            self._send_error("dashboard_action_failed", HTTPStatus.BAD_REQUEST)
 
     def log_message(self, format: str, *args: Any) -> None:
         return
@@ -130,6 +162,22 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         body = render_error(safe_error, status)
         self._send_html(body, status)
 
+    def _read_form(self) -> dict[str, list[str]]:
+        length_text = self.headers.get("Content-Length", "0")
+        try:
+            length = int(length_text)
+        except ValueError as error:
+            raise DashboardError("invalid_content_length", HTTPStatus.BAD_REQUEST) from error
+        if length <= 0:
+            raise DashboardError("empty_form", HTTPStatus.BAD_REQUEST)
+        if length > MAX_FORM_BYTES:
+            raise DashboardError("form_too_large", HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
+        content_type = self.headers.get("Content-Type", "")
+        if "application/x-www-form-urlencoded" not in content_type:
+            raise DashboardError("unsupported_form_content_type", HTTPStatus.UNSUPPORTED_MEDIA_TYPE)
+        body = self.rfile.read(length).decode("utf-8", errors="replace")
+        return parse_qs(body, keep_blank_values=False)
+
 
 def create_dashboard_server(host: str, port: int, config: DashboardConfig) -> DashboardHttpServer:
     if host != DEFAULT_DASHBOARD_HOST:
@@ -144,6 +192,88 @@ def serve_dashboard(host: str, port: int, root: Path, policy_path: Path | None) 
         server.serve_forever()
     finally:
         server.server_close()
+
+
+def run_dashboard_action(
+    root: Path,
+    policy: RedactionPolicy,
+    output_id: str,
+    action: str,
+    profile_name: str = DEFAULT_REPORT_PROFILE,
+) -> DashboardActionResult:
+    action_name = _safe_action_name(action)
+    if action_name == "verify":
+        output_dir = _resolve_output_dir(root, output_id)
+        verification = verify_path(output_dir, policy)
+        if not verification.passed:
+            return DashboardActionResult(
+                title="Verify output",
+                status="failed",
+                output=None,
+                summary_lines=[
+                    "Verification failed.",
+                    f"Files checked: {verification.files_checked}.",
+                    f"Findings: {len(verification.findings)}.",
+                    "Raw finding values are not displayed.",
+                ],
+            )
+        output = _verified_output(root, policy, output_id)
+        return DashboardActionResult(
+            title="Verify output",
+            status="passed",
+            output=output,
+            summary_lines=[
+                "Verification passed.",
+                f"Files checked: {verification.files_checked}.",
+                "Raw data included: false.",
+            ],
+        )
+
+    output = _verified_output(root, policy, output_id)
+    if action_name == "review":
+        result = build_review(output.path, policy)
+        return DashboardActionResult(
+            title="Review summary",
+            status="passed",
+            output=output,
+            summary_lines=[
+                f"Candidate count: {result.candidate_count}.",
+                f"Prompt files: {len(result.prompt_files)}.",
+                "Raw data included: false.",
+            ],
+            details=render_review_summary(result),
+        )
+    if action_name == "report":
+        profile = _safe_report_profile(profile_name)
+        result = write_report_draft(output.path, None, policy, profile)
+        refreshed = _verified_output(root, policy, output_id)
+        return DashboardActionResult(
+            title="Report draft",
+            status="passed",
+            output=refreshed,
+            summary_lines=[
+                "Report draft generated.",
+                f"Profile: {result.profile}.",
+                f"Candidate count: {result.candidate_count}.",
+                "Raw data included: false.",
+            ],
+        )
+    if action_name == "export":
+        export_dir = _dashboard_export_dir(root, output.output_id)
+        exported = _export_safe_files(output, export_dir)
+        return DashboardActionResult(
+            title="Safe file export",
+            status="passed",
+            output=output,
+            summary_lines=[
+                "Safe files exported.",
+                "Export directory: <safe_export_dir>.",
+                f"Files exported: {len(exported)}.",
+                "Raw data included: false.",
+            ],
+            details="\n".join(f"- {name}" for name in exported) + "\n",
+        )
+    raise DashboardError("unsupported_dashboard_action", HTTPStatus.BAD_REQUEST)
 
 
 def render_home(root: Path, policy: RedactionPolicy) -> str:
@@ -202,7 +332,7 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
     )
 
 
-def render_output_detail(output: DashboardOutput) -> str:
+def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
     candidates = _load_candidates(output.path)
     candidate_cards = "\n".join(_candidate_card(candidate) for candidate in candidates[:40]) or (
         '<div class="empty">No finding candidates were present.</div>'
@@ -231,10 +361,44 @@ def render_output_detail(output: DashboardOutput) -> str:
             <div class="file-grid">{file_cards}</div>
           </div>
           <div class="panel">
+            <div class="panel-head"><h2>Dashboard Actions</h2><span class="muted">POST actions require CSRF protection.</span></div>
+            {_action_panel(output, csrf_token)}
+          </div>
+          <div class="panel">
             <div class="panel-head"><h2>Finding Candidates</h2><span class="muted">{len(candidates)} total</span></div>
             <div class="candidate-list">{candidate_cards}</div>
           </div>
         </section>
+        """,
+    )
+
+
+def render_action_result(result: DashboardActionResult, csrf_token: str) -> str:
+    output_link = _output_href(result.output.output_id) if result.output else "/"
+    details = f'<pre class="preview">{_h(result.details)}</pre>' if result.details else ""
+    summary = "\n".join(f"<li>{_h(line)}</li>" for line in result.summary_lines)
+    return _page(
+        result.title,
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="{output_link}">Back to output</a>
+            <h1>{_h(result.title)}</h1>
+            <p class="subtitle">Safe action summary only. Raw request, response, cookie, token, domain, and personal data values are not printed.</p>
+          </div>
+          <span class="badge good">{_h(result.status)}</span>
+        </section>
+        <section class="panel">
+          <dl class="facts">
+            <div><dt>Action status</dt><dd>{_h(result.status)}</dd></div>
+            <div><dt>CSRF protected</dt><dd>true</dd></div>
+            <div><dt>Raw data included</dt><dd>false</dd></div>
+            <div><dt>State boundary</dt><dd>safe files only</dd></div>
+          </dl>
+          <ul>{summary}</ul>
+        </section>
+        {details}
+        {f'<section class="panel"><div class="panel-head"><h2>Run another action</h2><span class="muted">Same output, safe action controls.</span></div>{_action_panel(result.output, csrf_token)}</section>' if result.output else ''}
         """,
     )
 
@@ -312,6 +476,28 @@ def _verified_output(root: Path, policy: RedactionPolicy, output_id: str) -> Das
         prompt_files=[name for name in SAFE_PREVIEW_FILES if (output_dir / name).is_file()],
         report_available=(output_dir / "report_draft.md").is_file(),
     )
+
+
+def _export_safe_files(output: DashboardOutput, export_dir: Path) -> list[str]:
+    export_dir.mkdir(parents=True, exist_ok=True)
+    exported: list[str] = []
+    for name in SAFE_PREVIEW_FILES:
+        source = output.path / name
+        if not source.is_file():
+            continue
+        text = _safe_preview_text(output.path, name)
+        (export_dir / name).write_text(text, encoding="utf-8")
+        exported.append(name)
+    return exported
+
+
+def _dashboard_export_dir(root: Path, output_id: str) -> Path:
+    return root.resolve().parent / "exports" / "dashboard" / _safe_export_id(output_id)
+
+
+def _safe_export_id(output_id: str) -> str:
+    safe = "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in output_id)
+    return safe[:80] or "output"
 
 
 def _resolve_output_dir(root: Path, output_id: str) -> Path:
@@ -445,6 +631,46 @@ def _safe_file_card(output: DashboardOutput, file_name: str) -> str:
     """
 
 
+def _action_panel(output: DashboardOutput, csrf_token: str) -> str:
+    project = _h(output.output_id)
+    token = _h(csrf_token)
+    profile_options = "\n".join(
+        f'<option value="{_h(name)}"{" selected" if name == DEFAULT_REPORT_PROFILE else ""}>{_h(name)}</option>'
+        for name in REPORT_PROFILE_NAMES
+    )
+    return f"""
+    <div class="action-grid">
+      {_action_form(project, token, "verify", "Verify", "Re-run fail-closed output verification.")}
+      {_action_form(project, token, "review", "Review", "Generate a safe review summary.")}
+      <form class="action-card" method="post" action="/action">
+        <input type="hidden" name="csrf_token" value="{token}">
+        <input type="hidden" name="project" value="{project}">
+        <input type="hidden" name="action" value="report">
+        <label>Report profile<select name="profile">{profile_options}</select></label>
+        <button type="submit">Report</button>
+        <small>Write or refresh report_draft.md after verify passes.</small>
+      </form>
+      {_action_form(project, token, "export", "Export", "Copy safe preview files only.")}
+      <a class="action-card refresh-card" href="{_output_href(output.output_id)}">
+        <strong>Refresh</strong>
+        <small>Reload this output view with a read-only GET request.</small>
+      </a>
+    </div>
+    """
+
+
+def _action_form(project: str, token: str, action: str, label: str, description: str) -> str:
+    return f"""
+    <form class="action-card" method="post" action="/action">
+      <input type="hidden" name="csrf_token" value="{token}">
+      <input type="hidden" name="project" value="{project}">
+      <input type="hidden" name="action" value="{_h(action)}">
+      <button type="submit">{_h(label)}</button>
+      <small>{_h(description)}</small>
+    </form>
+    """
+
+
 def _candidate_card(candidate: dict[str, Any]) -> str:
     finding_id = _safe_value(candidate.get("finding_id"), "candidate")
     title = _safe_value(candidate.get("title"), "Finding candidate")
@@ -516,7 +742,7 @@ def _safety_strip() -> str:
       <div class="rail"><span>Input gate</span><strong>verify passed only</strong></div>
       <div class="rail"><span>Display mode</span><strong>raw-free</strong></div>
       <div class="rail"><span>Report stance</span><strong>candidate only</strong></div>
-      <div class="rail"><span>Actions</span><strong>read-only</strong></div>
+      <div class="rail"><span>Actions</span><strong>CSRF-protected</strong></div>
     </section>
     """
 
@@ -555,6 +781,32 @@ def _required_query_value(query: str, name: str) -> str:
     if not values or not values[0].strip():
         raise DashboardError(f"missing_query:{name}", HTTPStatus.BAD_REQUEST)
     return values[0]
+
+
+def _required_form_value(form: dict[str, list[str]], name: str) -> str:
+    values = form.get(name)
+    if not values or not str(values[0]).strip():
+        raise DashboardError(f"missing_form:{name}", HTTPStatus.BAD_REQUEST)
+    return str(values[0])
+
+
+def _validate_csrf(value: str, expected: str) -> None:
+    if not secrets.compare_digest(value, expected):
+        raise DashboardError("csrf_token_invalid", HTTPStatus.FORBIDDEN)
+
+
+def _safe_action_name(value: str) -> str:
+    action = str(value).strip().lower()
+    if action not in ACTION_NAMES:
+        raise DashboardError("unsupported_dashboard_action", HTTPStatus.BAD_REQUEST)
+    return action
+
+
+def _safe_report_profile(value: str) -> str:
+    profile = str(value).strip()
+    if profile not in REPORT_PROFILE_NAMES:
+        raise DashboardError("invalid_report_profile", HTTPStatus.BAD_REQUEST)
+    return profile
 
 
 def _validated_root(root: Path) -> Path:
@@ -770,6 +1022,39 @@ def _page(title: str, body: str) -> str:
     .back {{ display: inline-flex; margin-bottom: 10px; color: var(--accent-2); font-weight: 650; text-decoration: none; }}
     .muted, .empty {{ color: var(--muted); }}
     .file-grid, .candidate-list {{ display: grid; gap: 10px; }}
+    .action-grid {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }}
+    .action-card {{
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 118px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfcfc;
+      text-decoration: none;
+      color: var(--text);
+    }}
+    .action-card button {{
+      min-height: 34px;
+      border-radius: 6px;
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: #ffffff;
+      font-weight: 650;
+      cursor: pointer;
+    }}
+    .action-card small {{ color: var(--muted); line-height: 1.35; }}
+    .action-card label {{ display: grid; gap: 6px; font-size: 13px; color: var(--muted); font-weight: 700; }}
+    .action-card select {{
+      min-height: 34px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text);
+      padding: 0 8px;
+    }}
+    .refresh-card strong {{ color: var(--accent); }}
     .file-card {{
       display: flex;
       justify-content: space-between;
