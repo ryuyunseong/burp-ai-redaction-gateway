@@ -30,6 +30,22 @@ The only preview and download files are:
 All file content is scanned before it is rendered or returned. JSON and Markdown
 are HTML-escaped in browser previews.
 
+## Review Surface
+
+The dashboard is designed as a review surface, not an execution console. It
+highlights the safe workflow state directly in the UI:
+
+- verify passed output only
+- raw-free display mode
+- candidate or suspected finding language
+- manual verification required before confirmation
+- confidence as evidence confidence, not severity
+- severity requiring a separate risk rating step
+
+Finding cards may show sanitized candidate metadata, rationale, confidence
+basis, recommended manual tests, and `do_not_claim` guidance. They must not show
+raw request or response data.
+
 ## Blocked Scope
 
 The dashboard does not implement:
