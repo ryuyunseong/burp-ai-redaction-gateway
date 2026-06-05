@@ -497,7 +497,7 @@ def _safety_strip() -> str:
     return """
     <section class="safety-strip" aria-label="Dashboard safety boundary">
       <div class="rail"><span>Input gate</span><strong>verify passed only</strong></div>
-      <div class="rail"><span>Preview scope</span><strong>4 safe files</strong></div>
+      <div class="rail"><span>Display mode</span><strong>raw-free</strong></div>
       <div class="rail"><span>Report stance</span><strong>candidate only</strong></div>
       <div class="rail"><span>Actions</span><strong>read-only</strong></div>
     </section>

@@ -599,6 +599,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("generated", body)
                 self.assertIn("Verified outputs", body)
                 self.assertIn("verify passed only", body)
+                self.assertIn("raw-free", body)
                 self.assertIn("Raw data displayed", body)
                 self.assertNotIn("raw_request", body)
                 self.assertNotIn("raw_response", body)
