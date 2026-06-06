@@ -62,6 +62,7 @@ verify
 -> AI handoff index
 -> workflow status index
 -> prompt readiness index
+-> evidence boundary index
 -> finding triage index
 -> report readiness index
 -> manual review of selected safe files
@@ -74,6 +75,7 @@ verify
 | `/preflight?project=<alias>` | safe files 4개와 금지 마커 상태 확인 |
 | `/handoff?project=<alias>` | 안전 파일 목적, 순서, metadata 확인 |
 | `/workflow?project=<alias>` | 전체 GUI 흐름 상태 확인 |
+| `/evidence-boundary?project=<alias>` | 정제 evidence와 raw 금지 범위 경계 확인 |
 | `/triage?project=<alias>` | finding 후보와 수동 검토 경계 확인 |
 | `/report-readiness?project=<alias>` | 보고서 초안 준비 경계 확인 |
 

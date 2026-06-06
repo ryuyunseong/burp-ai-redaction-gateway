@@ -11,6 +11,8 @@
 [GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
 참조하세요. prompt 파일 투입 전 점검은
 [GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
+참조하세요. 정제 evidence와 raw 금지 범위 경계는
+[GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
 참조하세요.
 
 검증된 output에서 다음 주소를 엽니다.

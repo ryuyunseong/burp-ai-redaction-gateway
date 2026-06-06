@@ -18,6 +18,7 @@ verify
 -> preflight
 -> handoff
 -> prompt-readiness
+-> evidence-boundary
 -> triage
 -> report-readiness
 ```
@@ -37,7 +38,7 @@ workflow 상태 인덱스는 안전 metadata만 표시합니다.
 | `analysis_packet.json` | sanitization 완료 후보 packet 존재 여부 |
 | `report_draft.md` | 보고서 초안 존재 여부 |
 | safe file status | AI 안전 파일 4개의 존재 여부 |
-| related indexes | preflight, handoff, prompt-readiness, triage, report-readiness, review/report/export flow 링크 |
+| related indexes | preflight, handoff, prompt-readiness, evidence-boundary, triage, report-readiness, review/report/export flow 링크 |
 
 표시될 수 있는 상태 label 예시는 다음과 같습니다.
 
@@ -77,6 +78,7 @@ workflow 상태 인덱스는 조회 전용 이동 체크리스트로 사용합�
 | preflight | AI 안전 파일 준비 상태 확인 |
 | handoff | 안전 파일 순서, 목적, metadata 확인 |
 | prompt-readiness | prompt 파일 상태와 수동 검토 경계 확인 |
+| evidence-boundary | 정제 evidence와 raw 금지 범위 경계 확인 |
 | triage | sanitization 완료 finding 후보 metadata 검토 |
 | report-readiness | 보고서 초안 준비 경계 확인 |
 | review/report/export flow | 검증된 output 상세 화면으로 돌아가기 |

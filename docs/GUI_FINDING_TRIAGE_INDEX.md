@@ -23,6 +23,8 @@ active scan action을 실행하지 않습니다.
 [GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md)를
 참조하세요. prompt 파일 투입 전 점검은
 [GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
+참조하세요. 정제 evidence와 raw 금지 범위 경계는
+[GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
 참조하세요. 전체 조회 전용 workflow 체크리스트는
 [GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
 참조하세요.
