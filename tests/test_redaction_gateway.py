@@ -633,6 +633,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("원문 없음", body)
                 self.assertIn("원문 표시 여부", body)
                 self.assertIn("CSRF 보호", body)
+                self.assertIn("설정/상태", body)
                 self.assertNotIn("raw_request", body)
                 self.assertNotIn("raw_response", body)
                 connection.close()
@@ -685,6 +686,62 @@ class RedactionGatewayTests(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
                 thread.join(timeout=5)
+
+    def test_dashboard_settings_page_shows_safe_status_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "out"
+            output = root / "generated"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+            secret_value = "DUMMY_HMAC_SECRET_FOR_SETTINGS_PAGE_1234567890"
+
+            with patch.dict("os.environ", {"BURP_AI_AUDIT_HMAC_KEY": secret_value}, clear=False):
+                server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+                thread = threading.Thread(target=server.serve_forever, daemon=True)
+                thread.start()
+                try:
+                    port = server.server_address[1]
+                    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                    connection.request("GET", "/settings")
+                    response = connection.getresponse()
+                    body = response.read().decode("utf-8")
+                    self.assertEqual(response.status, 200)
+                    self.assertIn("설정 및 보안 상태", body)
+                    self.assertIn("root alias", body)
+                    self.assertIn(">out<", body)
+                    self.assertIn("127.0.0.1 only", body)
+                    self.assertIn("safe actions enabled", body)
+                    self.assertIn("read-only", body)
+                    self.assertIn("CSRF 보호", body)
+                    self.assertIn("값 숨김", body)
+                    self.assertIn("analysis_packet.json", body)
+                    self.assertIn("chatgpt_prompt.md", body)
+                    self.assertIn("codex_task_prompt.md", body)
+                    self.assertIn("report_draft.md", body)
+                    self.assertIn("conservative", body)
+                    self.assertIn("consultant", body)
+                    self.assertIn("draft only", body)
+                    self.assertIn("confidence_is_severity", body)
+                    self.assertIn("false", body)
+                    self.assertIn("audit schema", body)
+                    self.assertIn("1.1", body)
+                    self.assertIn("HMAC configured", body)
+                    self.assertIn("configured", body)
+                    self.assertNotIn(secret_value, body)
+                    self.assertNotIn("BURP_AI_AUDIT_HMAC_KEY", body)
+                    self.assertNotIn(str(root), body)
+                    self.assertNotIn('name="csrf_token"', body)
+                    self.assertNotIn("<form", body)
+                    self.assertNotIn("raw_request", body)
+                    self.assertNotIn("raw_response", body)
+                    self.assertNotIn("Replay", body)
+                    self.assertNotIn("Active scan", body)
+                    self.assertNotIn("Delete", body)
+                    self.assertNotIn("Edit", body)
+                    connection.close()
+                finally:
+                    server.shutdown()
+                    server.server_close()
+                    thread.join(timeout=5)
 
     def test_dashboard_blocks_unverified_output_forbidden_paths_and_unsafe_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

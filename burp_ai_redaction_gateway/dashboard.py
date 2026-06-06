@@ -12,11 +12,12 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, quote, urlsplit
 
-from .audit_hmac import AuditHmacError, load_hmac_secret, verify_audit_hmac_manifest
+from .audit_hmac import DEFAULT_HMAC_ENV_VAR, AuditHmacError, load_hmac_secret, verify_audit_hmac_manifest
 from .audit_review import review_audit_path
 from .mcp_server import (
     AUDIT_DIR_NAME,
     AUDIT_FILE_NAME,
+    AUDIT_SCHEMA_VERSION,
     DEFAULT_AUDIT_MAX_BYTES,
     DEFAULT_AUDIT_MAX_ROTATED_FILES,
     FORBIDDEN_PATH_PARTS,
@@ -100,6 +101,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             parsed = urlsplit(self.path)
             if parsed.path == "/":
                 self._send_html(render_home(self.server.config.root, self.server.policy))
+                return
+            if parsed.path == "/settings":
+                self._send_html(render_settings(self.server.config.root))
                 return
             if parsed.path == "/output":
                 output_id = _required_query_value(parsed.query, "project")
@@ -426,6 +430,7 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
           <div class="status-stack">
             <span class="badge good">로컬 전용</span>
             <span class="badge neutral">안전 미리보기</span>
+            <a class="button secondary" href="/settings">설정/상태</a>
           </div>
         </section>
         {_safety_strip()}
@@ -460,6 +465,81 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
             <span class="muted">메타데이터만 표시하며 감사 로그 원문 row는 표시하지 않습니다.</span>
           </div>
           {_audit_panel(audit_status)}
+        </section>
+        """,
+    )
+
+
+def render_settings(root: Path) -> str:
+    audit_status = _audit_status(root)
+    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
+    profiles = ", ".join(REPORT_PROFILE_NAMES)
+    return _page(
+        "설정 및 보안 상태",
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="/">산출물 목록으로</a>
+            <h1>설정 및 보안 상태</h1>
+            <p class="subtitle">로컬 대시보드의 안전 경계와 설정 상태만 표시합니다. 비밀값, 환경변수 값, 원문 데이터는 표시하지 않습니다.</p>
+          </div>
+          <div class="status-stack">
+            <span class="badge good">조회 전용</span>
+            <span class="badge neutral">메타데이터만</span>
+          </div>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>바인딩</span><strong>localhost-only</strong></div>
+          <div class="rail"><span>실행 요청</span><strong>CSRF 보호</strong></div>
+          <div class="rail"><span>위험도</span><strong>draft only</strong></div>
+          <div class="rail"><span>원문 표시</span><strong>false</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>대시보드 상태</h2><span class="muted">설정 변경 기능은 없습니다.</span></div>
+            <dl class="facts">
+              <div><dt>root alias</dt><dd>{_h(_safe_root_alias(root))}</dd></div>
+              <div><dt>bind mode</dt><dd>127.0.0.1 only</dd></div>
+              <div><dt>dashboard mode</dt><dd>safe actions enabled</dd></div>
+              <div><dt>settings page</dt><dd>read-only</dd></div>
+              <div><dt>CSRF 보호</dt><dd>enabled; 값 숨김</dd></div>
+              <div><dt>HTML 출력</dt><dd>escaped</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>허용된 안전 파일</h2><span class="muted">미리보기와 다운로드 허용 목록입니다.</span></div>
+            <ul class="safe-list">{safe_files}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>보고서와 위험도</h2><span class="muted">확정 심각도는 별도 수동 검토가 필요합니다.</span></div>
+            <dl class="facts">
+              <div><dt>report profiles</dt><dd>{_h(profiles)}</dd></div>
+              <div><dt>risk rating mode</dt><dd>draft only</dd></div>
+              <div><dt>confidence_is_severity</dt><dd>false</dd></div>
+              <div><dt>final severity</dt><dd>manual review required</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>감사와 무결성</h2><span class="muted">감사 row와 비밀값은 표시하지 않습니다.</span></div>
+            <dl class="facts">
+              <div><dt>audit schema</dt><dd>{_h(AUDIT_SCHEMA_VERSION)}</dd></div>
+              <div><dt>audit path alias</dt><dd>&lt;root&gt;/.audit/{_h(AUDIT_FILE_NAME)}</dd></div>
+              <div><dt>audit review</dt><dd>{_status_badge(audit_status["review_status"])}</dd></div>
+              <div><dt>HMAC configured</dt><dd>{_h(_hmac_configured_label())}</dd></div>
+              <div><dt>HMAC manifest</dt><dd>{_status_badge(audit_status["hmac_status"])}</dd></div>
+              <div><dt>retained JSONL</dt><dd>{_status_badge(audit_status["retained_status"])}</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>차단 범위</h2><span class="muted">대시보드에 추가하지 않는 기능입니다.</span></div>
+            <ul class="safe-list">
+              <li>원문 요청/응답 보기 없음</li>
+              <li>재전송 또는 active scan 없음</li>
+              <li>delete/edit 기능 없음</li>
+              <li>비밀값 또는 환경변수 값 표시 없음</li>
+              <li>검증 실패 산출물 사용 금지</li>
+            </ul>
+          </div>
         </section>
         """,
     )
@@ -727,6 +807,15 @@ def _hmac_status(input_file: Path, manifest_file: Path) -> str:
     except AuditHmacError as error:
         return _safe_error_type(error.error_type)
     return "passed"
+
+
+def _hmac_configured_label() -> str:
+    return "configured" if os.environ.get(DEFAULT_HMAC_ENV_VAR) else "not configured"
+
+
+def _safe_root_alias(root: Path) -> str:
+    alias = root.resolve().name or "dashboard_root"
+    return "redacted_root" if scan_text(alias) else alias
 
 
 def _output_row(output: DashboardOutput) -> str:
@@ -1291,6 +1380,7 @@ def _page(title: str, body: str) -> str:
     dt {{ color: var(--muted); font-size: 12px; font-weight: 700; margin-bottom: 5px; }}
     dd {{ margin: 0; word-break: break-word; }}
     ul {{ margin: 0; padding-left: 18px; }}
+    .safe-list {{ display: grid; gap: 8px; color: var(--text); }}
     pre.preview {{
       min-height: 360px;
       max-height: 70vh;
