@@ -167,7 +167,7 @@ PRs:
 ## Known Limits
 
 - The dashboard is local-only and is not a production web application.
-- Risk rating remains a draft. It is not a final severity rating.
+- Risk rating remains a draft. It is not a severity decision.
 - CVSS scoring is not part of the v0.4 dashboard baseline.
 - Settings are read-only. Configuration changes are not supported from the
   dashboard.

@@ -19,6 +19,7 @@ python -m burp_ai_redaction_gateway generate `
   --input samples/synthetic_burp_history.json `
   --output out/demo `
   --project client_alias_demo `
+  --risk-profile conservative `
   --policy policy.json
 ```
 
@@ -74,9 +75,11 @@ Each generated text artifact includes metadata such as `sanitizer_version`,
 uses a `finding_id`, passive rule `type`, confidence, templated
 `affected_endpoint`, `evidence_ids`, rationale, confidence rationale, a
 `risk_rating_draft`, manual test guidance, and a `do_not_claim` list to prevent
-over-claiming before manual verification. `risk_rating_draft` keeps likelihood,
-impact, and severity values in draft-only state and explicitly marks the rating
-as not finalized.
+over-claiming before manual verification. `risk_rating_draft` records the risk
+profile used for draft likelihood, impact, and severity values. Supported risk
+profiles are `conservative`, `consultant`, and `strict`; the default is
+`conservative`. The values remain draft-only and explicitly mark the rating as
+not finalized.
 `analysis_packet.json`, `chatgpt_prompt.md`, and `codex_task_prompt.md` are
 derived from those candidates and must be used only after `verify` passes.
 

@@ -326,19 +326,23 @@ def _risk_rating_draft_lines(value: Any) -> list[str]:
     likelihood = _safe_text(value.get("likelihood_draft"), "unknown")
     impact = _safe_text(value.get("impact_draft"), "unknown")
     severity = _safe_text(value.get("severity_draft"), "unknown")
+    risk_profile = _safe_text(value.get("risk_profile"), "conservative")
+    profile_conservatism = _safe_text(value.get("risk_profile_conservatism"), "unknown")
     status = _safe_text(value.get("status"), "draft_requires_manual_verification")
     finalized = str(bool(value.get("risk_rating_finalized", False))).lower()
     confidence_is_severity = str(bool(value.get("confidence_is_severity", False))).lower()
     basis = _safe_list(value.get("severity_basis"))
     lines = [
         f"Status: {status}.",
+        f"Risk profile: {risk_profile}.",
+        f"Profile conservatism: {profile_conservatism}.",
         f"Likelihood draft: {likelihood}.",
         f"Impact draft: {impact}.",
         f"Severity draft: {severity}.",
         f"Risk rating finalized: {finalized}.",
         f"Confidence is severity: {confidence_is_severity}.",
     ]
-    lines.extend(basis or ["Manual verification is required before assigning final severity."])
+    lines.extend(basis or ["Manual verification is required before using the severity draft."])
     return lines
 
 

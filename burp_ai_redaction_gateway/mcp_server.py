@@ -612,6 +612,9 @@ def _safe_risk_rating_draft(value: Any) -> dict[str, Any]:
     for key in [
         "schema_version",
         "status",
+        "risk_profile",
+        "risk_profile_label",
+        "risk_profile_conservatism",
         "likelihood_draft",
         "impact_draft",
         "severity_draft",

@@ -98,7 +98,10 @@ All findings remain candidate or suspected findings until manual reproduction is
 complete. `confidence` is evidence confidence, not severity. Severity requires a
 separate risk rating step. Generated candidates may include `risk_rating_draft`
 with likelihood, impact, and severity draft values, but those values are not a
-final rating and must be reviewed after manual verification.
+final rating and must be reviewed after manual verification. Draft risk rating
+profiles are `conservative`, `consultant`, and `strict`; `conservative` is the
+default. Profiles adjust draft likelihood and impact handling for review
+posture only. They do not assign a severity decision or CVSS scores.
 
 ### 6. Optional Local Dashboard
 
@@ -122,10 +125,10 @@ file allowlist. It must not include CSRF token values, raw HTTP values, stack
 traces, real domains, internal IPs, or personal data.
 
 The settings/status page is read-only. It shows only safe metadata such as root
-alias, localhost-only mode, safe file allowlist, report profile names,
-draft-only risk mode, audit schema version, HMAC configured status, and CSRF
-enabled status. It must not display HMAC secrets, CSRF values, environment
-variable values, full local paths, raw traffic, or personal data.
+alias, localhost-only mode, safe file allowlist, report profile names, risk
+profile names, draft-only risk mode, audit schema version, HMAC configured
+status, and CSRF enabled status. It must not display HMAC secrets, CSRF values,
+environment variable values, full local paths, raw traffic, or personal data.
 
 ## AI-Safe Files
 
@@ -241,7 +244,7 @@ Before using a draft in customer-facing material:
   token reuse without proof.
 - Treat `confidence` as evidence confidence only.
 - Treat `risk_rating_draft` as draft-only.
-- Perform a separate severity or risk rating review before assigning final severity.
+- Perform a separate severity or risk rating review before using the severity draft.
 - Remove any accidental raw URL, domain, IP, cookie, token, account identifier,
   or personal data.
 - Keep HMAC manifest and audit logs local unless a separate safe export process

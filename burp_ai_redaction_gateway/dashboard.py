@@ -29,6 +29,7 @@ from .mcp_server import (
 from .policy import RedactionPolicy, load_policy
 from .report import DEFAULT_REPORT_PROFILE, REPORT_PROFILE_NAMES, write_report_draft
 from .review import build_review, render_review_summary
+from .risk import DEFAULT_RISK_RATING_PROFILE, RISK_RATING_PROFILE_NAMES
 from .scanner import assert_no_sensitive_text, scan_text
 from .verifier import VerificationResult, verify_path
 
@@ -474,6 +475,7 @@ def render_settings(root: Path) -> str:
     audit_status = _audit_status(root)
     safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
     profiles = ", ".join(REPORT_PROFILE_NAMES)
+    risk_profiles = ", ".join(RISK_RATING_PROFILE_NAMES)
     return _page(
         "설정 및 보안 상태",
         f"""
@@ -514,9 +516,11 @@ def render_settings(root: Path) -> str:
             <div class="panel-head"><h2>보고서와 위험도</h2><span class="muted">확정 심각도는 별도 수동 검토가 필요합니다.</span></div>
             <dl class="facts">
               <div><dt>report profiles</dt><dd>{_h(profiles)}</dd></div>
+              <div><dt>risk profiles</dt><dd>{_h(risk_profiles)}</dd></div>
+              <div><dt>default risk profile</dt><dd>{_h(DEFAULT_RISK_RATING_PROFILE)}</dd></div>
               <div><dt>risk rating mode</dt><dd>draft only</dd></div>
               <div><dt>confidence_is_severity</dt><dd>false</dd></div>
-              <div><dt>final severity</dt><dd>manual review required</dd></div>
+              <div><dt>severity decision</dt><dd>manual review required</dd></div>
             </dl>
           </div>
           <div class="panel">
@@ -936,8 +940,10 @@ def _risk_rating_summary(value: Any) -> str:
     severity = _safe_value(value.get("severity_draft"), "unknown")
     likelihood = _safe_value(value.get("likelihood_draft"), "unknown")
     impact = _safe_value(value.get("impact_draft"), "unknown")
+    risk_profile = _safe_value(value.get("risk_profile"), DEFAULT_RISK_RATING_PROFILE)
     finalized = str(bool(value.get("risk_rating_finalized", False))).lower()
     return (
+        f"profile: {_h(risk_profile)}; "
         f"심각도 초안: {_h(severity)}; "
         f"likelihood 초안: {_h(likelihood)}; "
         f"impact 초안: {_h(impact)}; "
