@@ -22,13 +22,16 @@ http://127.0.0.1:8766/operations
 ```
 
 The operations index is a guide hub, not an action surface. It links the
-quickstart, GUI user flow guide, Windows launcher guide, audit operations
-guide, GUI audit panel guide, risk rating guide, and v0.4 release notes by
-repository-relative path. It also lists the four AI-safe files, blocked
-raw-data categories, and the candidate/draft interpretation boundary.
+quickstart, GUI user flow guide, GUI AI-safe preflight guide, Windows launcher
+guide, audit operations guide, GUI audit panel guide, risk rating guide, and
+v0.4 release notes by repository-relative path. It also lists the four AI-safe
+files, blocked raw-data categories, and the candidate/draft interpretation
+boundary.
 
 For the screen-by-screen operator sequence, see
 [GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md).
+For the AI handoff checklist, see
+[GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md).
 
 ## Allowed Scope
 
@@ -64,6 +67,30 @@ basis, risk rating draft metadata, recommended manual tests, and `do_not_claim`
 guidance. The risk rating draft must remain unfinalized and must not be treated
 as a confirmed severity. Finding cards must not show raw request or response
 data.
+
+## AI-Safe Preflight
+
+The dashboard provides a read-only AI-safe preflight view for a selected
+verified output:
+
+```text
+/preflight?project=<alias>
+```
+
+The preflight view summarizes only safe metadata:
+
+- whether each of the four AI-safe candidate files is present
+- verify-passed status and verifier file count
+- finding candidate count
+- `report_draft.md` presence
+- forbidden marker scan summary for the four safe files
+- `raw_data_included=false`
+- reminder that findings are candidates, risk is draft, and final severity is a
+  manual decision
+
+The preflight view does not add forms, POST actions, state-changing buttons, raw
+viewers, HMAC secret inputs, CSRF token display, replay, active scan, delete,
+edit, retention changes, or risk profile changes.
 
 ## Blocked Scope
 

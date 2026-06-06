@@ -52,6 +52,7 @@ ACTION_NAMES = {"verify", "review", "report", "export"}
 OPERATIONS_GUIDES = (
     ("빠른 시작", "docs/USER_QUICKSTART.md", "receiver, Burp 전송, dashboard 실행 흐름"),
     ("GUI 사용자 흐름", "docs/GUI_USER_FLOW.md", "처음 실행부터 AI 투입 전까지의 화면 흐름"),
+    ("AI-safe preflight", "docs/GUI_AI_SAFE_PREFLIGHT.md", "AI 투입 전 read-only 상태 확인"),
     ("Windows 실행기", "docs/WINDOWS_LAUNCHER_GUIDE.md", "start/stop 스크립트와 포트 충돌 처리"),
     ("감사 운영", "docs/AUDIT_OPERATIONS_GUIDE.md", "review-audit, retention, HMAC, archive 순서"),
     ("GUI 감사 패널", "docs/GUI_AUDIT_PANEL_GUIDE.md", "감사/보관 상태 표시 해석"),
@@ -101,6 +102,19 @@ class DashboardActionResult:
     report_profile: str = ""
 
 
+@dataclass(frozen=True)
+class AiSafePreflight:
+    output: DashboardOutput
+    file_statuses: list[tuple[str, str]]
+    ready_status: str
+    marker_scan_status: str
+    marker_scan_files: int
+    missing_files: list[str]
+    candidate_count: int
+    report_available: bool
+    files_checked: int
+
+
 class DashboardError(ValueError):
     def __init__(self, error_type: str, status: HTTPStatus = HTTPStatus.BAD_REQUEST) -> None:
         super().__init__(error_type)
@@ -136,6 +150,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
                 self._send_html(render_output_detail(output, self.server.csrf_token))
+                return
+            if parsed.path == "/preflight":
+                output_id = _required_query_value(parsed.query, "project")
+                output = _verified_output(self.server.config.root, self.server.policy, output_id)
+                self._send_html(render_ai_safe_preflight(_build_ai_safe_preflight(output)))
                 return
             if parsed.path == "/preview":
                 output_id = _required_query_value(parsed.query, "project")
@@ -661,6 +680,7 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
         '<div class="empty">표시할 finding 후보가 없습니다.</div>'
     )
     file_cards = "\n".join(_safe_file_card(output, name) for name in SAFE_PREVIEW_FILES)
+    preflight = _build_ai_safe_preflight(output)
     return _page(
         f"산출물 {output.label}",
         f"""
@@ -688,8 +708,78 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
             {_action_panel(output, csrf_token)}
           </div>
           <div class="panel">
+            <div class="panel-head"><h2>AI-safe preflight</h2><span class="muted">AI handoff before-check, read-only.</span></div>
+            {_preflight_summary(preflight)}
+            <a class="button small secondary" href="{_preflight_href(output.output_id)}">preflight detail</a>
+          </div>
+          <div class="panel">
             <div class="panel-head"><h2>탐지 후보</h2><span class="muted">총 {len(candidates)}개</span></div>
             <div class="candidate-list">{candidate_cards}</div>
+          </div>
+        </section>
+        """,
+    )
+
+
+def render_ai_safe_preflight(preflight: AiSafePreflight) -> str:
+    output = preflight.output
+    file_rows = "\n".join(
+        f"<div><dt>{_h(name)}</dt><dd>{_status_badge(status)}</dd></div>"
+        for name, status in preflight.file_statuses
+    )
+    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
+    forbidden_items = "".join(
+        f"<li>{_h(item)}</li>"
+        for item in (
+            "raw request/response",
+            "Cookie or Authorization values",
+            "token, JWT, or session values",
+            "real domain, URL, or IP values",
+            "personal data",
+            "HMAC secret or CSRF token values",
+            "local-only raw storage or unverified output artifacts",
+            "audit logs, archives, or manifests",
+        )
+    )
+    return _page(
+        f"AI-safe preflight {output.label}",
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="{_output_href(output.output_id)}">산출물로 돌아가기</a>
+            <h1>AI-safe preflight</h1>
+            <p class="subtitle">Read-only checklist before ChatGPT or Codex handoff. It shows aliases and status metadata only.</p>
+          </div>
+          <span class="badge good">read-only</span>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>verify</span><strong>{_h(_status_label("passed"))}</strong></div>
+          <div class="rail"><span>handoff</span><strong>{_h(_status_label(preflight.ready_status))}</strong></div>
+          <div class="rail"><span>raw data included</span><strong>false</strong></div>
+          <div class="rail"><span>final severity</span><strong>manual decision</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>Preflight summary</h2><span class="muted">safe metadata only</span></div>
+            {_preflight_summary(preflight)}
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Safe files for AI</h2><span class="muted">verify first, manual review required</span></div>
+            <dl class="facts">{file_rows}</dl>
+            <ul class="safe-list">{safe_files}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Do not send</h2><span class="muted">categories only; no values are shown</span></div>
+            <ul class="safe-list">{forbidden_items}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Interpretation boundary</h2><span class="muted">candidate and draft only</span></div>
+            <dl class="facts">
+              <div><dt>finding</dt><dd>candidate until manual verification is complete</dd></div>
+              <div><dt>risk rating</dt><dd>draft, not final severity</dd></div>
+              <div><dt>confidence</dt><dd>evidence confidence, not severity</dd></div>
+              <div><dt>CVSS</dt><dd>separate calculation scope</dd></div>
+            </dl>
           </div>
         </section>
         """,
@@ -799,6 +889,64 @@ def _verified_output(root: Path, policy: RedactionPolicy, output_id: str) -> Das
         prompt_files=[name for name in SAFE_PREVIEW_FILES if (output_dir / name).is_file()],
         report_available=(output_dir / "report_draft.md").is_file(),
     )
+
+
+def _build_ai_safe_preflight(output: DashboardOutput) -> AiSafePreflight:
+    file_statuses: list[tuple[str, str]] = []
+    missing_files: list[str] = []
+    marker_hits: list[str] = []
+    marker_scan_files = 0
+    for name in SAFE_PREVIEW_FILES:
+        path = output.path / name
+        if not path.is_file():
+            file_statuses.append((name, "missing"))
+            missing_files.append(name)
+            continue
+        file_statuses.append((name, "present"))
+        if path.stat().st_size > MAX_PREVIEW_BYTES:
+            marker_hits.append(name)
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        marker_scan_files += 1
+        if scan_text(text):
+            marker_hits.append(name)
+
+    marker_scan_status = "passed" if not marker_hits else "forbidden_marker_found"
+    if marker_hits:
+        ready_status = "needs_manual_review"
+    elif missing_files:
+        ready_status = "missing_safe_files"
+    else:
+        ready_status = "ready_candidate"
+    return AiSafePreflight(
+        output=output,
+        file_statuses=file_statuses,
+        ready_status=ready_status,
+        marker_scan_status=marker_scan_status,
+        marker_scan_files=marker_scan_files,
+        missing_files=missing_files,
+        candidate_count=output.candidate_count,
+        report_available=output.report_available,
+        files_checked=output.verification.files_checked,
+    )
+
+
+def _preflight_summary(preflight: AiSafePreflight) -> str:
+    missing = ", ".join(preflight.missing_files) if preflight.missing_files else "none"
+    report_status = "present" if preflight.report_available else "missing"
+    return f"""
+    <dl class="facts">
+      <div><dt>preflight status</dt><dd>{_status_badge(preflight.ready_status)}</dd></div>
+      <div><dt>verify status</dt><dd>{_status_badge("passed")}</dd></div>
+      <div><dt>verify files checked</dt><dd>{preflight.files_checked}</dd></div>
+      <div><dt>finding candidate count</dt><dd>{preflight.candidate_count}</dd></div>
+      <div><dt>report_draft.md</dt><dd>{_status_badge(report_status)}</dd></div>
+      <div><dt>forbidden marker scan</dt><dd>{_status_badge(preflight.marker_scan_status)}</dd></div>
+      <div><dt>marker scanned safe files</dt><dd>{preflight.marker_scan_files}</dd></div>
+      <div><dt>missing safe files</dt><dd>{_h(missing)}</dd></div>
+      <div><dt>raw_data_included</dt><dd>false</dd></div>
+    </dl>
+    """
 
 
 def _export_safe_files(output: DashboardOutput, export_dir: Path) -> list[str]:
@@ -1144,7 +1292,7 @@ def _safe_file_description(file_name: str) -> str:
 
 def _status_badge(value: str) -> str:
     safe = _h(_status_label(value))
-    if value == "passed":
+    if value in {"passed", "present", "ready_candidate"}:
         return f'<span class="badge good">{safe}</span>'
     if _is_error_status(value):
         return f'<span class="badge danger">{safe}</span>'
@@ -1153,7 +1301,7 @@ def _status_badge(value: str) -> str:
 
 def _is_error_status(value: str) -> bool:
     return (
-        value in {"failed", "input_missing"}
+        value in {"failed", "input_missing", "missing", "missing_safe_files", "forbidden_marker_found"}
         or value.endswith("_missing")
         or value.endswith("_failed")
         or value.endswith("_mismatch")
@@ -1174,6 +1322,12 @@ def _status_label(value: str) -> str:
         "not found": "없음",
         "not configured": "설정 안 됨",
         "input_missing": "입력 없음",
+        "present": "present",
+        "missing": "missing",
+        "ready_candidate": "ready candidate",
+        "missing_safe_files": "missing safe files",
+        "needs_manual_review": "needs manual review",
+        "forbidden_marker_found": "forbidden marker found",
     }
     return labels.get(value, value)
 
@@ -1341,6 +1495,10 @@ def _bullets(items: list[str]) -> str:
 
 def _output_href(output_id: str) -> str:
     return "/output?project=" + quote(output_id, safe="")
+
+
+def _preflight_href(output_id: str) -> str:
+    return "/preflight?project=" + quote(output_id, safe="")
 
 
 def _preview_href(output_id: str, file_name: str) -> str:
