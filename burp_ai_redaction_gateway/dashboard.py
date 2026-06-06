@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import hashlib
 import json
 import os
 import secrets
@@ -53,6 +54,7 @@ OPERATIONS_GUIDES = (
     ("빠른 시작", "docs/USER_QUICKSTART.md", "receiver, Burp 전송, dashboard 실행 흐름"),
     ("GUI 사용자 흐름", "docs/GUI_USER_FLOW.md", "처음 실행부터 AI 투입 전까지의 화면 흐름"),
     ("AI-safe preflight", "docs/GUI_AI_SAFE_PREFLIGHT.md", "AI 투입 전 read-only 상태 확인"),
+    ("AI handoff index", "docs/GUI_AI_HANDOFF_INDEX.md", "AI 투입 파일 순서와 주의사항"),
     ("Windows 실행기", "docs/WINDOWS_LAUNCHER_GUIDE.md", "start/stop 스크립트와 포트 충돌 처리"),
     ("감사 운영", "docs/AUDIT_OPERATIONS_GUIDE.md", "review-audit, retention, HMAC, archive 순서"),
     ("GUI 감사 패널", "docs/GUI_AUDIT_PANEL_GUIDE.md", "감사/보관 상태 표시 해석"),
@@ -115,6 +117,24 @@ class AiSafePreflight:
     files_checked: int
 
 
+@dataclass(frozen=True)
+class HandoffFile:
+    name: str
+    order: int
+    purpose: str
+    status: str
+    size_bytes: int | None
+    modified_utc: str
+    sha256: str
+
+
+@dataclass(frozen=True)
+class AiHandoffIndex:
+    output: DashboardOutput
+    preflight: AiSafePreflight
+    files: list[HandoffFile]
+
+
 class DashboardError(ValueError):
     def __init__(self, error_type: str, status: HTTPStatus = HTTPStatus.BAD_REQUEST) -> None:
         super().__init__(error_type)
@@ -155,6 +175,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
                 self._send_html(render_ai_safe_preflight(_build_ai_safe_preflight(output)))
+                return
+            if parsed.path == "/handoff":
+                output_id = _required_query_value(parsed.query, "project")
+                output = _verified_output(self.server.config.root, self.server.policy, output_id)
+                self._send_html(render_ai_handoff_index(_build_ai_handoff_index(output)))
                 return
             if parsed.path == "/preview":
                 output_id = _required_query_value(parsed.query, "project")
@@ -711,10 +736,72 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
             <div class="panel-head"><h2>AI-safe preflight</h2><span class="muted">AI handoff before-check, read-only.</span></div>
             {_preflight_summary(preflight)}
             <a class="button small secondary" href="{_preflight_href(output.output_id)}">preflight detail</a>
+            <a class="button small secondary" href="{_handoff_href(output.output_id)}">handoff index</a>
           </div>
           <div class="panel">
             <div class="panel-head"><h2>탐지 후보</h2><span class="muted">총 {len(candidates)}개</span></div>
             <div class="candidate-list">{candidate_cards}</div>
+          </div>
+        </section>
+        """,
+    )
+
+
+def render_ai_handoff_index(index: AiHandoffIndex) -> str:
+    output = index.output
+    file_rows = "\n".join(_handoff_file_card(file) for file in index.files)
+    forbidden_items = "".join(
+        f"<li>{_h(item)}</li>"
+        for item in (
+            "raw request/response",
+            "Cookie or Authorization values",
+            "token, JWT, or session values",
+            "real domain, URL, or IP values",
+            "personal data",
+            "HMAC secret or CSRF token values",
+            "local-only raw storage or unverified output artifacts",
+            "audit logs, archives, or manifests",
+        )
+    )
+    return _page(
+        f"AI handoff index {output.label}",
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="{_output_href(output.output_id)}">산출물로 돌아가기</a>
+            <h1>AI handoff index</h1>
+            <p class="subtitle">Read-only handoff checklist for AI-safe candidate files. Verify first; manual review required.</p>
+          </div>
+          <span class="badge good">read-only</span>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>file set</span><strong>AI-safe candidate files</strong></div>
+          <div class="rail"><span>verify</span><strong>verify first</strong></div>
+          <div class="rail"><span>review</span><strong>manual review required</strong></div>
+          <div class="rail"><span>severity</span><strong>human decision</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>Handoff summary</h2><span class="muted">metadata only</span></div>
+            {_handoff_summary(index)}
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Recommended order</h2><span class="muted">operator reading sequence</span></div>
+            <div class="file-grid">{file_rows}</div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Related flow</h2><span class="muted">read-only navigation</span></div>
+            <dl class="facts">
+              <div><dt>preflight status</dt><dd><a href="{_preflight_href(output.output_id)}">open preflight checklist</a></dd></div>
+              <div><dt>review/report/export flow</dt><dd><a href="{_output_href(output.output_id)}">return to verified output detail</a></dd></div>
+              <div><dt>finding</dt><dd>candidate finding until manual verification is complete</dd></div>
+              <div><dt>risk</dt><dd>draft risk, not severity confirmation</dd></div>
+              <div><dt>final severity</dt><dd>final severity requires human decision</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Do not send</h2><span class="muted">categories only; no values are shown</span></div>
+            <ul class="safe-list">{forbidden_items}</ul>
           </div>
         </section>
         """,
@@ -931,6 +1018,76 @@ def _build_ai_safe_preflight(output: DashboardOutput) -> AiSafePreflight:
     )
 
 
+def _build_ai_handoff_index(output: DashboardOutput) -> AiHandoffIndex:
+    preflight = _build_ai_safe_preflight(output)
+    files: list[HandoffFile] = []
+    for index, name in enumerate(SAFE_PREVIEW_FILES, start=1):
+        path = output.path / name
+        if not path.is_file():
+            files.append(
+                HandoffFile(
+                    name=name,
+                    order=index,
+                    purpose=_safe_handoff_purpose(name),
+                    status="missing",
+                    size_bytes=None,
+                    modified_utc="missing",
+                    sha256="missing",
+                )
+            )
+            continue
+        stat = path.stat()
+        files.append(
+            HandoffFile(
+                name=name,
+                order=index,
+                purpose=_safe_handoff_purpose(name),
+                status="present",
+                size_bytes=stat.st_size,
+                modified_utc=datetime.fromtimestamp(stat.st_mtime, UTC).replace(microsecond=0).isoformat(),
+                sha256=_sha256_file(path),
+            )
+        )
+    return AiHandoffIndex(output=output, preflight=preflight, files=files)
+
+
+def _handoff_summary(index: AiHandoffIndex) -> str:
+    present_count = sum(1 for file in index.files if file.status == "present")
+    return f"""
+    <dl class="facts">
+      <div><dt>handoff status</dt><dd>{_status_badge(index.preflight.ready_status)}</dd></div>
+      <div><dt>safe file count</dt><dd>{present_count}/{len(SAFE_PREVIEW_FILES)}</dd></div>
+      <div><dt>verify status</dt><dd>{_status_badge("passed")}</dd></div>
+      <div><dt>preflight status</dt><dd>{_status_badge(index.preflight.ready_status)}</dd></div>
+      <div><dt>forbidden marker scan</dt><dd>{_status_badge(index.preflight.marker_scan_status)}</dd></div>
+      <div><dt>finding candidate count</dt><dd>{index.preflight.candidate_count}</dd></div>
+      <div><dt>raw_data_included</dt><dd>false</dd></div>
+      <div><dt>file paths shown</dt><dd>false</dd></div>
+      <div><dt>hash type</dt><dd>SHA-256 file fingerprint, not HMAC</dd></div>
+    </dl>
+    """
+
+
+def _handoff_file_card(file: HandoffFile) -> str:
+    size = str(file.size_bytes) if file.size_bytes is not None else "missing"
+    return f"""
+    <article class="file-card">
+      <div>
+        <span class="kicker">order {file.order}</span>
+        <strong>{_h(file.name)}</strong>
+        <span>{_status_badge(file.status)}</span>
+        <small>{_h(file.purpose)}</small>
+      </div>
+      <dl class="facts compact">
+        <div><dt>purpose</dt><dd>{_h(file.purpose)}</dd></div>
+        <div><dt>size bytes</dt><dd>{_h(size)}</dd></div>
+        <div><dt>modified UTC</dt><dd>{_h(file.modified_utc)}</dd></div>
+        <div><dt>SHA-256</dt><dd>{_h(file.sha256)}</dd></div>
+      </dl>
+    </article>
+    """
+
+
 def _preflight_summary(preflight: AiSafePreflight) -> str:
     missing = ", ".join(preflight.missing_files) if preflight.missing_files else "none"
     report_status = "present" if preflight.report_available else "missing"
@@ -947,6 +1104,24 @@ def _preflight_summary(preflight: AiSafePreflight) -> str:
       <div><dt>raw_data_included</dt><dd>false</dd></div>
     </dl>
     """
+
+
+def _safe_handoff_purpose(file_name: str) -> str:
+    purposes = {
+        "analysis_packet.json": "Read first for structured sanitized candidate evidence.",
+        "chatgpt_prompt.md": "Use when asking ChatGPT for manual-review assistance.",
+        "codex_task_prompt.md": "Use when asking Codex for implementation or review assistance.",
+        "report_draft.md": "Read last as a candidate report draft for human review.",
+    }
+    return purposes.get(file_name, "AI-safe candidate file metadata.")
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _export_safe_files(output: DashboardOutput, export_dir: Path) -> list[str]:
@@ -1499,6 +1674,10 @@ def _output_href(output_id: str) -> str:
 
 def _preflight_href(output_id: str) -> str:
     return "/preflight?project=" + quote(output_id, safe="")
+
+
+def _handoff_href(output_id: str) -> str:
+    return "/handoff?project=" + quote(output_id, safe="")
 
 
 def _preview_href(output_id: str, file_name: str) -> str:

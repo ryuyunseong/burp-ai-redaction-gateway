@@ -99,6 +99,8 @@ For the complete GUI screen-by-screen sequence, see
 [GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md).
 For the read-only AI handoff checklist, see
 [GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md).
+For the read-only AI-safe candidate file index, see
+[GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md).
 The dashboard operations index is also available at:
 
 ```text
@@ -115,13 +117,15 @@ Use the dashboard actions in this order:
 3. Run `Review`.
 4. Run `Report`.
 5. Open `AI-safe preflight`.
-6. Run `Export`.
+6. Open `AI handoff index`.
+7. Run `Export`.
 
 Dashboard action boundaries:
 
 - State-changing actions use POST with CSRF protection.
 - `Refresh` is a read-only GET action.
 - `AI-safe preflight` is a read-only GET checklist before AI handoff.
+- `AI handoff index` is a read-only GET checklist for safe file purpose and order.
 - Export is limited to the safe file allowlist.
 - Raw viewer, replay, active scan, delete, and edit actions are not provided.
 - `/help`, `/operations`, and `/settings` are read-only status or guide pages.

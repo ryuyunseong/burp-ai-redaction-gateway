@@ -22,16 +22,18 @@ http://127.0.0.1:8766/operations
 ```
 
 The operations index is a guide hub, not an action surface. It links the
-quickstart, GUI user flow guide, GUI AI-safe preflight guide, Windows launcher
-guide, audit operations guide, GUI audit panel guide, risk rating guide, and
-v0.4 release notes by repository-relative path. It also lists the four AI-safe
-files, blocked raw-data categories, and the candidate/draft interpretation
-boundary.
+quickstart, GUI user flow guide, GUI AI-safe preflight guide, GUI AI handoff
+index guide, Windows launcher guide, audit operations guide, GUI audit panel
+guide, risk rating guide, and v0.4 release notes by repository-relative path.
+It also lists the four AI-safe files, blocked raw-data categories, and the
+candidate/draft interpretation boundary.
 
 For the screen-by-screen operator sequence, see
 [GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md).
 For the AI handoff checklist, see
 [GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md).
+For the AI-safe candidate file index, see
+[GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md).
 
 ## Allowed Scope
 
@@ -89,6 +91,31 @@ The preflight view summarizes only safe metadata:
   manual decision
 
 The preflight view does not add forms, POST actions, state-changing buttons, raw
+viewers, HMAC secret inputs, CSRF token display, replay, active scan, delete,
+edit, retention changes, or risk profile changes.
+
+## AI Handoff Index
+
+The dashboard provides a read-only AI handoff index for a selected verified
+output:
+
+```text
+/handoff?project=<alias>
+```
+
+The handoff index summarizes only safe metadata for the four AI-safe candidate
+files:
+
+- file alias
+- purpose
+- recommended reading order
+- exists or missing status
+- file size in bytes
+- modified UTC timestamp
+- SHA-256 file fingerprint
+
+The handoff index does not show full local paths or safe file body previews. It
+does not add download buttons, forms, POST actions, state-changing buttons, raw
 viewers, HMAC secret inputs, CSRF token display, replay, active scan, delete,
 edit, retention changes, or risk profile changes.
 

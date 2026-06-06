@@ -158,6 +158,8 @@ For the operator-facing GUI sequence from first run through safe AI handoff, see
 [docs/GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md).
 For the read-only GUI checklist before AI handoff, see
 [docs/GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md).
+For the read-only GUI handoff file index, see
+[docs/GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md).
 For the focused audit review, retention, HMAC, compression, and archive HMAC
 runbook, see
 [docs/AUDIT_OPERATIONS_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/AUDIT_OPERATIONS_GUIDE.md).
@@ -268,6 +270,11 @@ whether verify passed, candidate count, report draft presence, forbidden marker
 scan status, and the manual severity boundary. It does not add form, POST,
 state-changing button, raw viewer, HMAC secret input, CSRF token display, replay,
 active scan, delete, edit, or retention controls.
+The dashboard also includes a read-only AI handoff index for a selected verified
+output. It shows the four AI-safe candidate file aliases, purpose, recommended
+order, exists/missing status, file size, modified UTC timestamp, and SHA-256 file
+fingerprint without showing file bodies, full local paths, HMAC secrets, CSRF
+tokens, or adding new download or state-changing actions.
 The dashboard also includes a read-only settings/status page. It shows only
 safe metadata such as root alias, localhost-only mode, safe file allowlist,
 report profile names, draft-only risk mode, audit schema version, HMAC
@@ -276,9 +283,9 @@ secret values, environment variable values, raw HTTP data, or full local paths.
 The dashboard also includes a read-only operations index at `/help` and
 `/operations`. It summarizes quickstart flow, Windows launcher guidance, safe
 files, blocked raw-data boundaries, GUI user flow, AI-safe preflight, audit
-operations, GUI audit panel interpretation, and risk rating guide entry points
-without adding form, POST, archive/HMAC action, risk profile action, replay,
-active scan, delete, or edit controls.
+handoff index, audit operations, GUI audit panel interpretation, and risk rating
+guide entry points without adding form, POST, archive/HMAC action, risk profile
+action, replay, active scan, delete, or edit controls.
 
 See
 [docs/LOCAL_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/LOCAL_DASHBOARD.md).

@@ -8,6 +8,9 @@ settings, or submit data to an external service.
 Use it after an output has passed `verify` and before putting any file into
 ChatGPT, Codex, a PR, an issue, or a document.
 
+For the file order, purpose, size, modified time, and SHA-256 metadata view, see
+[GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md).
+
 ## Open the View
 
 From the output detail page, open:

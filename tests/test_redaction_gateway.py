@@ -729,6 +729,8 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("AI-safe preflight", detail)
                 self.assertIn("/preflight?project=generated", detail)
                 self.assertIn("preflight detail", detail)
+                self.assertIn("/handoff?project=generated", detail)
+                self.assertIn("handoff index", detail)
                 self.assertNotIn("Confirmed vulnerability", detail)
                 connection.close()
 
@@ -769,6 +771,55 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn("raw_request", preflight)
                 self.assertNotIn("raw_response", preflight)
                 self.assertNotIn(str(root), preflight)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/handoff?project=generated")
+                response = connection.getresponse()
+                handoff = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("AI handoff index", handoff)
+                self.assertIn("read-only", handoff)
+                self.assertIn("Read-only handoff checklist", handoff)
+                self.assertIn("AI-safe candidate files", handoff)
+                self.assertIn("verify first", handoff)
+                self.assertIn("manual review required", handoff)
+                self.assertIn("preflight status", handoff)
+                self.assertIn("open preflight checklist", handoff)
+                self.assertIn("/preflight?project=generated", handoff)
+                self.assertIn("review/report/export flow", handoff)
+                self.assertIn("candidate finding", handoff)
+                self.assertIn("draft risk", handoff)
+                self.assertIn("final severity requires human decision", handoff)
+                self.assertIn("size bytes", handoff)
+                self.assertIn("modified UTC", handoff)
+                self.assertIn("SHA-256", handoff)
+                self.assertIn("SHA-256 file fingerprint, not HMAC", handoff)
+                for name in ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"]:
+                    self.assertIn(name, handoff)
+                for purpose in [
+                    "Read first for structured sanitized candidate evidence.",
+                    "Use when asking ChatGPT for manual-review assistance.",
+                    "Use when asking Codex for implementation or review assistance.",
+                    "Read last as a candidate report draft for human review.",
+                ]:
+                    self.assertIn(purpose, handoff)
+                for label in [
+                    "raw request/response",
+                    "Cookie or Authorization values",
+                    "token, JWT, or session values",
+                    "real domain, URL, or IP values",
+                    "personal data",
+                    "HMAC secret or CSRF token values",
+                    "audit logs, archives, or manifests",
+                ]:
+                    self.assertIn(label, handoff)
+                self.assertNotIn('name="csrf_token"', handoff)
+                self.assertNotIn("<form", handoff)
+                self.assertNotIn("<button", handoff)
+                self.assertNotIn("raw_request", handoff)
+                self.assertNotIn("raw_response", handoff)
+                self.assertNotIn(str(root), handoff)
                 connection.close()
 
                 connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
@@ -891,6 +942,7 @@ class RedactionGatewayTests(unittest.TestCase):
                         self.assertIn("docs/USER_QUICKSTART.md", body)
                         self.assertIn("docs/GUI_USER_FLOW.md", body)
                         self.assertIn("docs/GUI_AI_SAFE_PREFLIGHT.md", body)
+                        self.assertIn("docs/GUI_AI_HANDOFF_INDEX.md", body)
                         self.assertIn("docs/WINDOWS_LAUNCHER_GUIDE.md", body)
                         self.assertIn("docs/AUDIT_OPERATIONS_GUIDE.md", body)
                         self.assertIn("docs/GUI_AUDIT_PANEL_GUIDE.md", body)
@@ -971,6 +1023,15 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertEqual(response.status, 403)
                 self.assertIn("forbidden_directory", preflight_traversal)
                 self.assertNotIn("rawBearerToken", preflight_traversal)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/handoff?project=..%2Flocal_only")
+                response = connection.getresponse()
+                handoff_traversal = response.read().decode("utf-8")
+                self.assertEqual(response.status, 403)
+                self.assertIn("forbidden_directory", handoff_traversal)
+                self.assertNotIn("rawBearerToken", handoff_traversal)
                 connection.close()
             finally:
                 server.shutdown()
@@ -2599,6 +2660,7 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("GUI_USER_FLOW.md", text)
         for text in [readme, quickstart, local_dashboard, user_flow]:
             self.assertIn("GUI_AI_SAFE_PREFLIGHT.md", text)
+            self.assertIn("GUI_AI_HANDOFF_INDEX.md", text)
 
         required = [
             "start receiver and dashboard",
@@ -2607,10 +2669,12 @@ class RedactionGatewayTests(unittest.TestCase):
             "review candidate findings",
             "generate report_draft.md",
             "check AI-safe preflight",
+            "check AI handoff index",
             "export safe files",
             "send only verified safe files to AI",
             "http://127.0.0.1:8766/",
             "/preflight?project=<alias>",
+            "/handoff?project=<alias>",
             "/help",
             "/operations",
             "/settings",
@@ -2618,6 +2682,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "Review",
             "Report",
             "AI-safe preflight",
+            "AI handoff index",
             "Export",
             "analysis_packet.json",
             "chatgpt_prompt.md",
@@ -2640,6 +2705,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "replay or active scan",
             "archive or HMAC execution buttons",
             "AI-safe preflight execution buttons",
+            "AI handoff execution buttons",
             "risk profile change buttons",
             "delete or edit actions",
             "settings-write actions",
@@ -2691,6 +2757,51 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("raw_response", guide)
         self.assertNotIn("DUMMY_COOKIE_VALUE", guide)
         self.assertNotIn("DUMMY_BEARER_TOKEN", guide)
+
+    def test_gui_ai_handoff_index_guide_documents_read_only_boundary(self) -> None:
+        guide = (ROOT / "docs" / "GUI_AI_HANDOFF_INDEX.md").read_text(encoding="utf-8")
+        required = [
+            "read-only checklist",
+            "/handoff?project=<alias>",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "Recommended order",
+            "exists or missing",
+            "file size in bytes",
+            "modified UTC timestamp",
+            "SHA-256 file fingerprint",
+            "not HMAC",
+            "verify first",
+            "Manual review is required",
+            "candidate finding",
+            "draft risk",
+            "final severity requires human decision",
+            "raw request or response data",
+            "Cookie or Authorization values",
+            "token, JWT, or session values",
+            "real domain, URL, or IP values",
+            "personal data",
+            "HMAC secret or CSRF token values",
+            "POST action",
+            "state-changing button",
+            "new download action",
+            "safe file body preview",
+            "raw viewer",
+            "replay or active scan",
+        ]
+        for item in required:
+            self.assertIn(item, guide)
+
+        self.assertNotIn("raw_request", guide)
+        self.assertNotIn("raw_response", guide)
+        self.assertNotIn("DUMMY_COOKIE_VALUE", guide)
+        self.assertNotIn("DUMMY_BEARER_TOKEN", guide)
+        self.assertNotIn("safe to share", guide)
+        self.assertNotIn("approved", guide)
+        self.assertNotIn("guaranteed safe", guide)
+        self.assertNotIn("severity confirmed", guide)
 
 
 if __name__ == "__main__":
