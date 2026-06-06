@@ -105,6 +105,8 @@ dashboard는 `127.0.0.1` 로컬 검토 도구입니다. production web applicati
 [GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
 참조하세요. 조회 전용 evidence boundary 체크리스트는
 [GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
+참조하세요. 조회 전용 operator runbook 체크리스트는
+[GUI_OPERATOR_RUNBOOK_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_OPERATOR_RUNBOOK_INDEX.md)를
 참조하세요. 조회 전용 finding 후보 triage 체크리스트는
 [GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 조회 전용 보고서 초안 준비 체크리스트는
@@ -132,7 +134,9 @@ dashboard action은 다음 순서로 사용합니다.
 8. `AI-safe preflight`를 엽니다.
 9. `AI handoff index`를 엽니다.
 10. `Prompt readiness index`를 열어 prompt 파일 상태와 경계를 확인합니다.
-11. `Export`를 실행합니다.
+11. `Evidence boundary index`를 열어 정제 evidence와 raw 금지 범위를 확인합니다.
+12. `Operator runbook index`를 열어 수집부터 AI 투입 전 수동 검토까지 운영 순서를 확인합니다.
+13. `Export`를 실행합니다.
 
 Dashboard action 경계:
 
@@ -148,6 +152,11 @@ Dashboard action 경계:
 - `Prompt readiness index`는 prompt 파일 본문을 표시하지 않고
   `chatgpt_prompt.md`와 `codex_task_prompt.md`의 점검 결과만 요약하는
   조회 전용 GET 체크리스트입니다.
+- `Evidence boundary index`는 정제 evidence와 raw 금지 범위를 분리해 보는
+  조회 전용 GET 체크리스트입니다.
+- `Operator runbook index`는 수집, verify, review, report, preflight, handoff,
+  triage, report-readiness, prompt-readiness, evidence-boundary, workflow status
+  recap 순서를 묶어 보는 조회 전용 GET 체크리스트입니다.
 - Export는 안전 파일 allowlist로 제한됩니다.
 - Raw viewer, replay, active scan, delete, edit action은 제공하지 않습니다.
 - `/help`, `/operations`, `/settings`는 조회 전용 상태 또는 안내 page입니다.

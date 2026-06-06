@@ -25,6 +25,7 @@ start receiver and dashboard
 -> check AI handoff index
 -> check prompt readiness index
 -> check evidence boundary index
+-> check operator runbook index
 -> export safe files
 -> send only verified safe files to AI
 ```
@@ -61,6 +62,7 @@ http://127.0.0.1:8766/
 | `/handoff?project=<alias>` | 안전 파일 4개의 alias, 목적, 순서, metadata 확인 | 조회 전용. 파일 본문 preview, download, form, POST action 없음 |
 | `/prompt-readiness?project=<alias>` | prompt 파일을 AI에 넣기 전 상태와 경계 확인 | 조회 전용. prompt 본문 preview, download, form, POST action 없음 |
 | `/evidence-boundary?project=<alias>` | 정제 evidence와 raw 금지 범위 경계 확인 | 조회 전용. raw body preview, download, form, POST action 없음 |
+| `/operator-runbook?project=<alias>` | 수집부터 AI 투입 전 수동 검토까지 운영 순서 확인 | 조회 전용 operator runbook checklist. form, POST action, button, 파일 내려받기 없음 |
 | `/settings` | dashboard 설정과 보안 상태 확인 | 조회 전용. 설정 변경 없음 |
 | `/help` and `/operations` | 운영 인덱스와 문서 진입점 확인 | 조회 전용 안내 허브. form 또는 POST action 없음 |
 | `/preview` and `/download` | allowlist에 있는 안전 파일 하나를 preview 또는 download | 안전 파일 4개만 허용 |
@@ -82,13 +84,14 @@ output 상세 화면의 action은 다음 순서로 사용합니다.
 8. `AI handoff index`: 안전 파일 4개와 권장 순서를 확인합니다.
 9. `Prompt readiness index`: prompt 파일 상태와 수동 검토 경계를 확인합니다.
 10. `Evidence boundary index`: 정제 evidence와 raw 금지 범위 경계를 확인합니다.
-11. `Export`: 안전 파일 4개만 dashboard export directory로 복사합니다.
+11. `Operator runbook index`: 수집부터 AI 투입 전 수동 검토까지 운영 순서를 다시 확인합니다.
+12. `Export`: 안전 파일 4개만 dashboard export directory로 복사합니다.
 
 `Refresh`는 조회 전용 GET reload입니다. `Verify`, `Review`, `Report`,
 `Export`는 상태 변경 POST action이며 CSRF token이 필요합니다.
 `Finding triage index`, `Report readiness index`, `Workflow status index`,
 `AI-safe preflight`, `AI handoff index`, `Prompt readiness index`,
-`Evidence boundary index`는 조회 전용 GET page이며 데이터를 제출하지 않습니다.
+`Evidence boundary index`, `Operator runbook index`는 조회 전용 GET page이며 데이터를 제출하지 않습니다.
 
 ## AI에 넣을 수 있는 파일
 
@@ -117,6 +120,8 @@ output 상세 화면의 action은 다음 순서로 사용합니다.
 [GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
 참조하세요. 정제 evidence와 raw 금지 범위 경계는
 [GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
+참조하세요. 운영 순서 runbook은
+[GUI_OPERATOR_RUNBOOK_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_OPERATOR_RUNBOOK_INDEX.md)를
 참조하세요.
 
 ## 보내거나 문서화하지 않을 값
@@ -160,6 +165,7 @@ dashboard에서 적절한 가이드를 찾을 때 `/help` 또는 `/operations`�
 - AI handoff 실행 버튼
 - prompt readiness 실행 버튼
 - evidence boundary 실행 버튼
+- operator runbook 실행 버튼
 - risk profile 변경 버튼
 - delete 또는 edit action
 - settings-write action

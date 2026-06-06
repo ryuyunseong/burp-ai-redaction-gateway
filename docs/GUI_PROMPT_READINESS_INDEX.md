@@ -76,6 +76,7 @@ verify
 | `/handoff?project=<alias>` | 안전 파일 목적, 순서, metadata 확인 |
 | `/workflow?project=<alias>` | 전체 GUI 흐름 상태 확인 |
 | `/evidence-boundary?project=<alias>` | 정제 evidence와 raw 금지 범위 경계 확인 |
+| `/operator-runbook?project=<alias>` | 수집부터 AI 투입 전 수동 검토까지 운영 순서 확인 |
 | `/triage?project=<alias>` | finding 후보와 수동 검토 경계 확인 |
 | `/report-readiness?project=<alias>` | 보고서 초안 준비 경계 확인 |
 
