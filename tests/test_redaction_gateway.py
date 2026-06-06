@@ -735,6 +735,8 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("triage index", detail)
                 self.assertIn("/report-readiness?project=generated", detail)
                 self.assertIn("report readiness", detail)
+                self.assertIn("/workflow?project=generated", detail)
+                self.assertIn("workflow status", detail)
                 self.assertNotIn("Confirmed vulnerability", detail)
                 connection.close()
 
@@ -944,6 +946,77 @@ class RedactionGatewayTests(unittest.TestCase):
                 connection.close()
 
                 connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/workflow?project=generated")
+                response = connection.getresponse()
+                workflow = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("Workflow status index", workflow)
+                self.assertIn("read-only", workflow)
+                self.assertIn("Read-only workflow checklist", workflow)
+                self.assertIn("project alias", workflow)
+                self.assertIn("verify status summary", workflow)
+                self.assertIn("review status summary", workflow)
+                self.assertIn("finding candidate count", workflow)
+                self.assertIn(">22<", workflow)
+                self.assertIn("report_draft.md", workflow)
+                self.assertIn("analysis_packet.json", workflow)
+                self.assertIn("chatgpt_prompt.md", workflow)
+                self.assertIn("codex_task_prompt.md", workflow)
+                self.assertIn("passed", workflow)
+                self.assertIn("candidate available", workflow)
+                self.assertIn("draft available", workflow)
+                self.assertIn("manual review required", workflow)
+                for step in [
+                    "Verify",
+                    "Review",
+                    "Report",
+                    "AI-safe preflight",
+                    "AI handoff index",
+                    "Finding triage index",
+                    "Report readiness index",
+                    "review/report/export flow",
+                ]:
+                    self.assertIn(step, workflow)
+                for link in [
+                    "/preflight?project=generated",
+                    "/handoff?project=generated",
+                    "/triage?project=generated",
+                    "/report-readiness?project=generated",
+                    "/output?project=generated",
+                ]:
+                    self.assertIn(link, workflow)
+                self.assertIn("finding is candidate", workflow)
+                self.assertIn("risk is draft", workflow)
+                self.assertIn("final severity is a manual decision", workflow)
+                self.assertIn("report_draft.md is a draft report, not a submission report", workflow)
+                for label in [
+                    "raw request/response",
+                    "raw audit row body",
+                    "Cookie or Authorization values",
+                    "token, JWT, or session values",
+                    "real domain, URL, or IP values",
+                    "personal data",
+                    "HMAC secret or CSRF token values",
+                    "full local path",
+                ]:
+                    self.assertIn(label, workflow)
+                self.assertNotIn('name="csrf_token"', workflow)
+                self.assertNotIn("<form", workflow)
+                self.assertNotIn("<button", workflow)
+                self.assertNotIn('method="post"', workflow)
+                self.assertNotIn("raw_request", workflow)
+                self.assertNotIn("raw_response", workflow)
+                self.assertNotIn("DUMMY_COOKIE_VALUE", workflow)
+                self.assertNotIn("DUMMY_BEARER_TOKEN", workflow)
+                self.assertNotIn("approved", workflow)
+                self.assertNotIn("guaranteed safe", workflow)
+                self.assertNotIn("safe to share", workflow)
+                self.assertNotIn("severity confirmed", workflow)
+                self.assertNotIn("ready to submit", workflow)
+                self.assertNotIn(str(root), workflow)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
                 connection.request("GET", "/preview?project=generated&file=chatgpt_prompt.md")
                 response = connection.getresponse()
                 preview = response.read().decode("utf-8")
@@ -1066,6 +1139,7 @@ class RedactionGatewayTests(unittest.TestCase):
                         self.assertIn("docs/GUI_AI_HANDOFF_INDEX.md", body)
                         self.assertIn("docs/GUI_FINDING_TRIAGE_INDEX.md", body)
                         self.assertIn("docs/GUI_REPORT_READINESS_INDEX.md", body)
+                        self.assertIn("docs/GUI_WORKFLOW_STATUS_INDEX.md", body)
                         self.assertIn("docs/WINDOWS_LAUNCHER_GUIDE.md", body)
                         self.assertIn("docs/AUDIT_OPERATIONS_GUIDE.md", body)
                         self.assertIn("docs/GUI_AUDIT_PANEL_GUIDE.md", body)
@@ -1173,6 +1247,15 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertEqual(response.status, 403)
                 self.assertIn("forbidden_directory", readiness_traversal)
                 self.assertNotIn("rawBearerToken", readiness_traversal)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/workflow?project=..%2Flocal_only")
+                response = connection.getresponse()
+                workflow_traversal = response.read().decode("utf-8")
+                self.assertEqual(response.status, 403)
+                self.assertIn("forbidden_directory", workflow_traversal)
+                self.assertNotIn("rawBearerToken", workflow_traversal)
                 connection.close()
             finally:
                 server.shutdown()
@@ -2804,6 +2887,7 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("GUI_AI_HANDOFF_INDEX.md", text)
             self.assertIn("GUI_FINDING_TRIAGE_INDEX.md", text)
             self.assertIn("GUI_REPORT_READINESS_INDEX.md", text)
+            self.assertIn("GUI_WORKFLOW_STATUS_INDEX.md", text)
 
         required = [
             "start receiver and dashboard",
@@ -2813,6 +2897,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "check finding triage index",
             "generate report_draft.md",
             "check report readiness index",
+            "check workflow status index",
             "check AI-safe preflight",
             "check AI handoff index",
             "export safe files",
@@ -2820,6 +2905,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "http://127.0.0.1:8766/",
             "/triage?project=<alias>",
             "/report-readiness?project=<alias>",
+            "/workflow?project=<alias>",
             "/preflight?project=<alias>",
             "/handoff?project=<alias>",
             "/help",
@@ -2830,6 +2916,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "Report",
             "Finding triage index",
             "Report readiness index",
+            "Workflow status index",
             "AI-safe preflight",
             "AI handoff index",
             "Export",
@@ -2855,6 +2942,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "archive or HMAC execution buttons",
             "finding triage execution buttons",
             "report readiness execution buttons",
+            "workflow status execution buttons",
             "AI-safe preflight execution buttons",
             "AI handoff execution buttons",
             "risk profile change buttons",
@@ -3006,6 +3094,59 @@ class RedactionGatewayTests(unittest.TestCase):
             "report body preview",
             "request preview",
             "response preview",
+            "new download action",
+            "raw viewer",
+            "replay or active scan",
+        ]
+        for item in required:
+            self.assertIn(item, guide)
+
+        self.assertNotIn("raw_request", guide)
+        self.assertNotIn("raw_response", guide)
+        self.assertNotIn("DUMMY_COOKIE_VALUE", guide)
+        self.assertNotIn("DUMMY_BEARER_TOKEN", guide)
+        self.assertNotIn("safe to share", guide)
+        self.assertNotIn("approved", guide)
+        self.assertNotIn("guaranteed safe", guide)
+        self.assertNotIn("severity confirmed", guide)
+        self.assertNotIn("ready to submit", guide)
+
+    def test_gui_workflow_status_index_guide_documents_read_only_boundary(self) -> None:
+        guide = (ROOT / "docs" / "GUI_WORKFLOW_STATUS_INDEX.md").read_text(encoding="utf-8")
+        required = [
+            "read-only workflow checklist",
+            "/workflow?project=<alias>",
+            "project alias",
+            "verify status summary",
+            "review status summary",
+            "finding candidate count",
+            "report_draft.md",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "preflight",
+            "handoff",
+            "triage",
+            "report-readiness",
+            "review/report/export flow",
+            "safe file status",
+            "candidate available",
+            "draft available",
+            "manual review required",
+            "finding is candidate",
+            "risk is draft",
+            "final severity is a manual decision",
+            "report_draft.md is a draft report, not a submission report",
+            "raw request or response data",
+            "raw audit row body",
+            "Cookie or Authorization values",
+            "token, JWT, or session values",
+            "real domain, URL, or IP values",
+            "personal data",
+            "HMAC secret or CSRF token values",
+            "full local path",
+            "form or POST action",
+            "state-changing button",
             "new download action",
             "raw viewer",
             "replay or active scan",

@@ -20,6 +20,7 @@ start receiver and dashboard
 -> check finding triage index
 -> generate report_draft.md
 -> check report readiness index
+-> check workflow status index
 -> check AI-safe preflight
 -> check AI handoff index
 -> export safe files
@@ -53,6 +54,7 @@ http://127.0.0.1:8766/
 | `/output?project=<alias>` | Review safe files, finding candidates, and allowed dashboard actions for one verified output. | Requires verify to pass before display. |
 | `/triage?project=<alias>` | Review sanitized finding candidate metadata before drafting report language. | Read-only; no finding body preview, form, POST action, or severity decision. |
 | `/report-readiness?project=<alias>` | Check draft report metadata and operator review items before manual report review. | Read-only; no report body preview, form, POST action, or submission decision. |
+| `/workflow?project=<alias>` | Check the full verify, review, report, preflight, handoff, triage, and report-readiness sequence. | Read-only workflow checklist; no form, POST action, button, or report body preview. |
 | `/preflight?project=<alias>` | Check whether the selected verified output is an AI-safe handoff candidate. | Read-only; no form, POST action, or external transmission. |
 | `/handoff?project=<alias>` | Review the four AI-safe candidate file aliases, purpose, order, and metadata. | Read-only; no file body preview, download, form, or POST action. |
 | `/settings` | Show dashboard settings and security status. | Read-only; no configuration edits. |
@@ -71,14 +73,16 @@ Use the output detail actions in this order:
 3. `Finding triage index`: check candidate metadata and manual review boundaries.
 4. `Report`: write or refresh `report_draft.md`.
 5. `Report readiness index`: check draft report metadata and manual review items.
-6. `AI-safe preflight`: check the read-only handoff checklist.
-7. `AI handoff index`: check the four AI-safe candidate files and their order.
-8. `Export`: copy only the four safe files to the dashboard export directory.
+6. `Workflow status index`: check the read-only workflow checklist.
+7. `AI-safe preflight`: check the read-only handoff checklist.
+8. `AI handoff index`: check the four AI-safe candidate files and their order.
+9. `Export`: copy only the four safe files to the dashboard export directory.
 
 `Refresh` is a read-only GET reload. `Verify`, `Review`, `Report`, and `Export`
 are state-changing POST actions and require a CSRF token.
-`Finding triage index`, `Report readiness index`, `AI-safe preflight`, and `AI handoff index` are
-read-only GET pages and do not submit data.
+`Finding triage index`, `Report readiness index`, `Workflow status index`,
+`AI-safe preflight`, and `AI handoff index` are read-only GET pages and do not
+submit data.
 
 ## Safe Files For AI
 
@@ -101,6 +105,8 @@ For finding candidate triage fields and boundaries, see
 [GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md).
 For draft report readiness fields and boundaries, see
 [GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md).
+For the full read-only workflow checklist, see
+[GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md).
 
 ## Never Send Or Document
 
@@ -138,6 +144,7 @@ dashboard. The operations index is intentionally read-only. It does not add:
 - archive or HMAC execution buttons
 - finding triage execution buttons
 - report readiness execution buttons
+- workflow status execution buttons
 - AI-safe preflight execution buttons
 - AI handoff execution buttons
 - risk profile change buttons

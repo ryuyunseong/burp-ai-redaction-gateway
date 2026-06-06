@@ -57,6 +57,7 @@ OPERATIONS_GUIDES = (
     ("AI handoff index", "docs/GUI_AI_HANDOFF_INDEX.md", "AI 투입 파일 순서와 주의사항"),
     ("Finding triage index", "docs/GUI_FINDING_TRIAGE_INDEX.md", "finding 후보 검토 순서와 수동 판단 경계"),
     ("Report readiness index", "docs/GUI_REPORT_READINESS_INDEX.md", "report_draft 초안 검토 상태와 수동 제출 경계"),
+    ("Workflow status index", "docs/GUI_WORKFLOW_STATUS_INDEX.md", "verified output read-only workflow checklist"),
     ("Windows 실행기", "docs/WINDOWS_LAUNCHER_GUIDE.md", "start/stop 스크립트와 포트 충돌 처리"),
     ("감사 운영", "docs/AUDIT_OPERATIONS_GUIDE.md", "review-audit, retention, HMAC, archive 순서"),
     ("GUI 감사 패널", "docs/GUI_AUDIT_PANEL_GUIDE.md", "감사/보관 상태 표시 해석"),
@@ -179,6 +180,25 @@ class ReportReadinessIndex:
     analysis_status: str
 
 
+@dataclass(frozen=True)
+class WorkflowStep:
+    name: str
+    status: str
+    summary: str
+    href: str
+
+
+@dataclass(frozen=True)
+class WorkflowStatusIndex:
+    output: DashboardOutput
+    file_statuses: list[tuple[str, str]]
+    steps: list[WorkflowStep]
+    candidate_count: int
+    review_status: str
+    report_status: str
+    analysis_status: str
+
+
 class DashboardError(ValueError):
     def __init__(self, error_type: str, status: HTTPStatus = HTTPStatus.BAD_REQUEST) -> None:
         super().__init__(error_type)
@@ -234,6 +254,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
                 self._send_html(render_report_readiness_index(_build_report_readiness_index(output)))
+                return
+            if parsed.path == "/workflow":
+                output_id = _required_query_value(parsed.query, "project")
+                output = _verified_output(self.server.config.root, self.server.policy, output_id)
+                self._send_html(render_workflow_status_index(_build_workflow_status_index(output)))
                 return
             if parsed.path == "/preview":
                 output_id = _required_query_value(parsed.query, "project")
@@ -793,6 +818,7 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
             <a class="button small secondary" href="{_handoff_href(output.output_id)}">handoff index</a>
             <a class="button small secondary" href="{_triage_href(output.output_id)}">triage index</a>
             <a class="button small secondary" href="{_report_readiness_href(output.output_id)}">report readiness</a>
+            <a class="button small secondary" href="{_workflow_href(output.output_id)}">workflow status</a>
           </div>
           <div class="panel">
             <div class="panel-head"><h2>탐지 후보</h2><span class="muted">총 {len(candidates)}개</span></div>
@@ -1039,6 +1065,99 @@ def render_report_readiness_index(index: ReportReadinessIndex) -> str:
           </div>
           <div class="panel">
             <div class="panel-head"><h2>Do not use in report readiness</h2><span class="muted">categories only; no values are shown</span></div>
+            <ul class="safe-list">{forbidden_items}</ul>
+          </div>
+        </section>
+        """,
+    )
+
+
+def render_workflow_status_index(index: WorkflowStatusIndex) -> str:
+    output = index.output
+    step_cards = "\n".join(_workflow_step_card(step) for step in index.steps)
+    file_rows = "\n".join(
+        f"<div><dt>{_h(name)}</dt><dd>{_status_badge(status)}</dd></div>"
+        for name, status in index.file_statuses
+    )
+    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
+    forbidden_items = "".join(
+        f"<li>{_h(item)}</li>"
+        for item in (
+            "raw request/response",
+            "raw audit row body",
+            "Cookie or Authorization values",
+            "token, JWT, or session values",
+            "real domain, URL, or IP values",
+            "personal data",
+            "HMAC secret or CSRF token values",
+            "full local path",
+            "local_only/, raw/, raw_vault/, unverified out/, or out/.audit artifacts",
+        )
+    )
+    return _page(
+        f"Workflow status index {output.label}",
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="{_output_href(output.output_id)}">verified output detail</a>
+            <h1>Workflow status index</h1>
+            <p class="subtitle">Read-only workflow checklist for verified output review. It links the safe dashboard sequence without running actions.</p>
+          </div>
+          <span class="badge good">read-only</span>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>project alias</span><strong>{_h(output.label)}</strong></div>
+          <div class="rail"><span>verify status summary</span><strong>passed</strong></div>
+          <div class="rail"><span>finding candidate count</span><strong>{index.candidate_count}</strong></div>
+          <div class="rail"><span>severity decision</span><strong>manual review required</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>Read-only workflow checklist</h2><span class="muted">safe metadata only</span></div>
+            <dl class="facts">
+              <div><dt>project alias</dt><dd>{_h(output.label)}</dd></div>
+              <div><dt>verify status summary</dt><dd>{_status_badge("passed")}</dd></div>
+              <div><dt>review status summary</dt><dd>{_status_badge(index.review_status)}</dd></div>
+              <div><dt>finding candidate count</dt><dd>{index.candidate_count}</dd></div>
+              <div><dt>report_draft.md</dt><dd>{_status_badge(index.report_status)}</dd></div>
+              <div><dt>analysis_packet.json</dt><dd>{_status_badge(index.analysis_status)}</dd></div>
+              <div><dt>raw_data_included</dt><dd>false</dd></div>
+              <div><dt>file paths shown</dt><dd>false</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Workflow steps</h2><span class="muted">read-only links</span></div>
+            <div class="file-grid">{step_cards}</div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Safe file status</h2><span class="muted">four-file allowlist only</span></div>
+            <dl class="facts">{file_rows}</dl>
+            <ul class="safe-list">{safe_files}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Related indexes</h2><span class="muted">GET navigation only</span></div>
+            <dl class="facts">
+              <div><dt>preflight</dt><dd><a href="{_preflight_href(output.output_id)}">open AI-safe preflight</a></dd></div>
+              <div><dt>handoff</dt><dd><a href="{_handoff_href(output.output_id)}">open AI handoff index</a></dd></div>
+              <div><dt>triage</dt><dd><a href="{_triage_href(output.output_id)}">open finding triage index</a></dd></div>
+              <div><dt>report-readiness</dt><dd><a href="{_report_readiness_href(output.output_id)}">open report readiness index</a></dd></div>
+              <div><dt>review/report/export flow</dt><dd><a href="{_output_href(output.output_id)}">return to verified output detail</a></dd></div>
+              <div><dt>boundary</dt><dd>read-only workflow checklist; no form or POST action</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Interpretation boundary</h2><span class="muted">candidate and draft only</span></div>
+            <dl class="facts">
+              <div><dt>finding</dt><dd>finding is candidate until manual verification is complete</dd></div>
+              <div><dt>risk</dt><dd>risk is draft and requires separate review</dd></div>
+              <div><dt>confidence</dt><dd>evidence confidence, not severity</dd></div>
+              <div><dt>report draft</dt><dd>report_draft.md is a draft report, not a submission report</dd></div>
+              <div><dt>final severity</dt><dd>final severity is a manual decision</dd></div>
+              <div><dt>safe files</dt><dd>use only verified safe files after review</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Forbidden data</h2><span class="muted">categories only; no values are shown</span></div>
             <ul class="safe-list">{forbidden_items}</ul>
           </div>
         </section>
@@ -1318,6 +1437,75 @@ def _build_report_readiness_index(output: DashboardOutput) -> ReportReadinessInd
     )
 
 
+def _build_workflow_status_index(output: DashboardOutput) -> WorkflowStatusIndex:
+    file_statuses = [
+        (name, "present" if (output.path / name).is_file() else "missing")
+        for name in SAFE_PREVIEW_FILES
+    ]
+    report_status = "draft available" if (output.path / "report_draft.md").is_file() else "missing"
+    analysis_status = "candidate available" if (output.path / "analysis_packet.json").is_file() else "missing"
+    review_status = "candidate available" if output.candidate_count else "missing"
+    steps = [
+        WorkflowStep(
+            name="Verify",
+            status="passed",
+            summary="Verified output gate passed before this page is shown.",
+            href=_output_href(output.output_id),
+        ),
+        WorkflowStep(
+            name="Review",
+            status=review_status,
+            summary="Candidate review summary is available only as sanitized metadata.",
+            href=_output_href(output.output_id),
+        ),
+        WorkflowStep(
+            name="Report",
+            status=report_status,
+            summary="report_draft.md remains a draft report for manual review.",
+            href=_output_href(output.output_id),
+        ),
+        WorkflowStep(
+            name="AI-safe preflight",
+            status="manual review required",
+            summary="Check whether the four safe files are present before AI handoff.",
+            href=_preflight_href(output.output_id),
+        ),
+        WorkflowStep(
+            name="AI handoff index",
+            status="manual review required",
+            summary="Read safe file aliases, order, purpose, and metadata.",
+            href=_handoff_href(output.output_id),
+        ),
+        WorkflowStep(
+            name="Finding triage index",
+            status="manual review required",
+            summary="Review sanitized finding candidates without severity confirmation.",
+            href=_triage_href(output.output_id),
+        ),
+        WorkflowStep(
+            name="Report readiness index",
+            status="manual review required",
+            summary="Check draft report readiness without submission approval.",
+            href=_report_readiness_href(output.output_id),
+        ),
+        WorkflowStep(
+            name="review/report/export flow",
+            status="manual review required",
+            summary="Return to the verified output detail for CSRF-protected actions.",
+            href=_output_href(output.output_id),
+        ),
+    ]
+    return WorkflowStatusIndex(
+        output=output,
+        file_statuses=file_statuses,
+        steps=steps,
+        candidate_count=output.candidate_count,
+        review_status=review_status,
+        report_status=report_status,
+        analysis_status=analysis_status,
+    )
+
+
 def _report_readiness_file(output_dir: Path, name: str, purpose: str) -> ReportReadinessFile:
     path = output_dir / name
     if not path.is_file():
@@ -1423,6 +1611,24 @@ def _report_readiness_file_card(file: ReportReadinessFile) -> str:
         <div><dt>file size in bytes</dt><dd>{_h(size)}</dd></div>
         <div><dt>modified UTC timestamp</dt><dd>{_h(file.modified_utc)}</dd></div>
         <div><dt>SHA-256 file fingerprint</dt><dd>{_h(file.sha256)}</dd></div>
+      </dl>
+    </article>
+    """
+
+
+def _workflow_step_card(step: WorkflowStep) -> str:
+    return f"""
+    <article class="file-card">
+      <div>
+        <span class="kicker">workflow step</span>
+        <strong>{_h(step.name)}</strong>
+        <span>{_status_badge(step.status)}</span>
+        <small>{_h(step.summary)}</small>
+      </div>
+      <dl class="facts compact">
+        <div><dt>status</dt><dd>{_h(step.status)}</dd></div>
+        <div><dt>link</dt><dd><a href="{_h(step.href)}">open read-only step</a></dd></div>
+        <div><dt>action surface</dt><dd>no form, no POST action, no state-changing button</dd></div>
       </dl>
     </article>
     """
@@ -2054,6 +2260,10 @@ def _triage_href(output_id: str) -> str:
 
 def _report_readiness_href(output_id: str) -> str:
     return "/report-readiness?project=" + quote(output_id, safe="")
+
+
+def _workflow_href(output_id: str) -> str:
+    return "/workflow?project=" + quote(output_id, safe="")
 
 
 def _preview_href(output_id: str, file_name: str) -> str:

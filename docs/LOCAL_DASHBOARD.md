@@ -23,7 +23,8 @@ http://127.0.0.1:8766/operations
 
 The operations index is a guide hub, not an action surface. It links the
 quickstart, GUI user flow guide, GUI AI-safe preflight guide, GUI AI handoff
-index guide, GUI finding triage index guide, GUI report readiness index guide, Windows launcher guide, audit
+index guide, GUI finding triage index guide, GUI report readiness index guide,
+GUI workflow status index guide, Windows launcher guide, audit
 operations guide, GUI audit panel guide, risk rating guide, and v0.4 release
 notes by repository-relative path. It also lists the four AI-safe files, blocked
 raw-data categories, and the candidate/draft interpretation boundary.
@@ -38,6 +39,8 @@ For the finding candidate triage checklist, see
 [GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md).
 For the draft report readiness checklist, see
 [GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md).
+For the full read-only workflow status checklist, see
+[GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md).
 
 ## Allowed Scope
 
@@ -71,7 +74,7 @@ actions. It highlights the safe workflow state directly in the UI:
 Finding cards may show sanitized candidate metadata, rationale, confidence
 basis, risk rating draft metadata, recommended manual tests, and `do_not_claim`
 guidance. The risk rating draft must remain unfinalized and must not be treated
-as a confirmed severity. Finding cards must not show raw request or response
+as a severity decision. Finding cards must not show raw request or response
 data.
 
 ## AI-Safe Preflight
@@ -183,6 +186,37 @@ addresses, or personal data. It does not add forms, POST actions,
 state-changing buttons, new download actions, archive/HMAC actions, replay,
 active scan, delete, edit, retention changes, or risk profile changes.
 
+## Workflow Status Index
+
+The dashboard provides a read-only workflow status index for a selected
+verified output:
+
+```text
+/workflow?project=<alias>
+```
+
+The workflow status index summarizes only safe metadata across the operator
+sequence:
+
+- project alias
+- verify status summary
+- review status summary
+- finding candidate count
+- `analysis_packet.json`, `chatgpt_prompt.md`, `codex_task_prompt.md`, and
+  `report_draft.md` present or missing status
+- links to preflight, handoff, triage, report-readiness, and the verified
+  output review/report/export flow
+- reminder that finding is candidate, risk is draft, final severity is a
+  manual decision, and `report_draft.md` is a draft report, not a submission
+  report
+
+The workflow status index is a read-only workflow checklist. It does not show
+report body previews, raw request or response data, raw audit row bodies, full
+local paths, HMAC secrets, CSRF token values, real domains, real URLs, real IP
+addresses, or personal data. It does not add forms, POST actions,
+state-changing buttons, new download actions, archive/HMAC actions, replay,
+active scan, delete, edit, retention changes, or risk profile changes.
+
 ## Blocked Scope
 
 The dashboard does not implement:
@@ -196,6 +230,7 @@ The dashboard does not implement:
 - archive or HMAC generation buttons on the operations index
 - finding triage execution buttons
 - report readiness execution buttons
+- workflow status execution buttons
 - risk profile change buttons on the operations index
 
 ## Dashboard Actions

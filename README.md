@@ -164,6 +164,8 @@ For the read-only GUI finding triage checklist, see
 [docs/GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md).
 For the read-only GUI draft report readiness checklist, see
 [docs/GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md).
+For the read-only GUI workflow status checklist, see
+[docs/GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md).
 For the focused audit review, retention, HMAC, compression, and archive HMAC
 runbook, see
 [docs/AUDIT_OPERATIONS_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/AUDIT_OPERATIONS_GUIDE.md).
@@ -290,6 +292,11 @@ safe file metadata, finding candidate count, related triage/preflight/handoff
 links, and an operator checklist for manual report review. It does not show
 report body previews, raw data, full local paths, forms, POST actions, new
 download actions, HMAC secret inputs, CSRF token values, or submission controls.
+The dashboard also includes a read-only workflow status index for a selected
+verified output. It ties together verify, review, report, preflight, handoff,
+triage, report-readiness, and the review/report/export flow as a safe metadata
+checklist. It does not add forms, POST actions, state-changing buttons, report
+body previews, new downloads, raw viewers, or submission decisions.
 The dashboard also includes a read-only settings/status page. It shows only
 safe metadata such as root alias, localhost-only mode, safe file allowlist,
 report profile names, draft-only risk mode, audit schema version, HMAC
@@ -298,7 +305,8 @@ secret values, environment variable values, raw HTTP data, or full local paths.
 The dashboard also includes a read-only operations index at `/help` and
 `/operations`. It summarizes quickstart flow, Windows launcher guidance, safe
 files, blocked raw-data boundaries, GUI user flow, AI-safe preflight, audit
-handoff index, finding triage index, report readiness index, audit operations, GUI audit panel
+handoff index, finding triage index, report readiness index, workflow status
+index, audit operations, GUI audit panel
 interpretation, and risk rating guide entry points without adding form, POST,
 archive/HMAC action, risk profile action, replay, active scan, delete, or edit
 controls.

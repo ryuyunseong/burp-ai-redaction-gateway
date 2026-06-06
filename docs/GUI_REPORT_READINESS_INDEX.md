@@ -6,6 +6,9 @@ read-only draft report checklist for a selected verified output.
 Use it before manually reviewing `report_draft.md` for customer-facing report
 work. It is not a report submission gate and it does not confirm severity.
 
+For the full read-only workflow checklist, see
+[GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md).
+
 Open it from a verified output:
 
 ```text
