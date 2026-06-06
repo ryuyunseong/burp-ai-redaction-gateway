@@ -115,6 +115,12 @@ draft generation, and safe file export. It does not show raw request or response
 values, replay traffic, run active scans, delete files, edit findings, or expose
 unverified output.
 
+Dashboard state-changing actions write raw-free `dashboard_action` audit events
+to `out/.audit/mcp_audit.jsonl`. The event may include action name, sanitized
+output id, result status, blocked reason, report profile, and the safe exported
+file allowlist. It must not include CSRF token values, raw HTTP values, stack
+traces, real domains, internal IPs, or personal data.
+
 ## AI-Safe Files
 
 The following files may be used with ChatGPT, Codex, or another AI only after

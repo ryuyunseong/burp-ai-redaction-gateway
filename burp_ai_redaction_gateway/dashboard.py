@@ -5,6 +5,7 @@ import json
 import os
 import secrets
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -13,7 +14,17 @@ from urllib.parse import parse_qs, quote, urlsplit
 
 from .audit_hmac import AuditHmacError, load_hmac_secret, verify_audit_hmac_manifest
 from .audit_review import review_audit_path
-from .mcp_server import AUDIT_DIR_NAME, AUDIT_FILE_NAME, FORBIDDEN_PATH_PARTS
+from .mcp_server import (
+    AUDIT_DIR_NAME,
+    AUDIT_FILE_NAME,
+    DEFAULT_AUDIT_MAX_BYTES,
+    DEFAULT_AUDIT_MAX_ROTATED_FILES,
+    FORBIDDEN_PATH_PARTS,
+    _append_audit_event,
+    _safe_identifier,
+    _safe_output_id,
+    _safe_status,
+)
 from .policy import RedactionPolicy, load_policy
 from .report import DEFAULT_REPORT_PROFILE, REPORT_PROFILE_NAMES, write_report_draft
 from .review import build_review, render_review_summary
@@ -60,6 +71,9 @@ class DashboardActionResult:
     output: DashboardOutput | None
     summary_lines: list[str]
     details: str | None = None
+    blocked_reason: str = ""
+    exported_files: tuple[str, ...] = ()
+    report_profile: str = ""
 
 
 class DashboardError(ValueError):
@@ -114,23 +128,79 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self._send_error("dashboard_request_failed", HTTPStatus.BAD_REQUEST)
 
     def do_POST(self) -> None:
+        action_for_audit = "unknown_action"
+        output_for_audit = "unknown_output"
+        audit_written = False
         try:
             parsed = urlsplit(self.path)
             if parsed.path != "/action":
                 self._send_error("not_found", HTTPStatus.NOT_FOUND)
                 return
             form = self._read_form()
-            _validate_csrf(_required_form_value(form, "csrf_token"), self.server.csrf_token)
+            action_for_audit = _audit_form_action(form)
+            output_for_audit = _audit_form_output(form)
+            csrf_token = _optional_form_value(form, "csrf_token")
+            if not csrf_token:
+                self._write_dashboard_audit_event(
+                    action_for_audit,
+                    output_for_audit,
+                    result_status="blocked",
+                    blocked_reason="csrf_missing",
+                )
+                audit_written = True
+                raise DashboardError("csrf_token_missing", HTTPStatus.BAD_REQUEST)
+            try:
+                _validate_csrf(csrf_token, self.server.csrf_token)
+            except DashboardError:
+                self._write_dashboard_audit_event(
+                    action_for_audit,
+                    output_for_audit,
+                    result_status="blocked",
+                    blocked_reason="csrf_invalid",
+                )
+                audit_written = True
+                raise
             output_id = _required_form_value(form, "project")
             action = _safe_action_name(_required_form_value(form, "action"))
             profile = form.get("profile", [DEFAULT_REPORT_PROFILE])[0]
             result = run_dashboard_action(self.server.config.root, self.server.policy, output_id, action, profile)
+            self._write_dashboard_audit_event(
+                action,
+                output_id,
+                result_status=_dashboard_result_status(result),
+                blocked_reason=result.blocked_reason,
+                exported_files=result.exported_files,
+                report_profile=result.report_profile,
+            )
+            audit_written = True
             self._send_html(render_action_result(result, self.server.csrf_token))
         except DashboardError as error:
+            if not audit_written and self.path.startswith("/action"):
+                self._write_dashboard_audit_event(
+                    action_for_audit,
+                    output_for_audit,
+                    result_status=_dashboard_error_status(error.error_type),
+                    blocked_reason=_dashboard_error_blocked_reason(error.error_type),
+                    error_type=error.error_type,
+                )
             self._send_error(error.error_type, error.status)
         except OSError:
+            if not audit_written and self.path.startswith("/action"):
+                self._write_dashboard_audit_event(
+                    action_for_audit,
+                    output_for_audit,
+                    result_status="error",
+                    error_type="dashboard_action_file_access_failed",
+                )
             self._send_error("dashboard_action_file_access_failed", HTTPStatus.INTERNAL_SERVER_ERROR)
         except ValueError:
+            if not audit_written and self.path.startswith("/action"):
+                self._write_dashboard_audit_event(
+                    action_for_audit,
+                    output_for_audit,
+                    result_status="error",
+                    error_type="dashboard_action_failed",
+                )
             self._send_error("dashboard_action_failed", HTTPStatus.BAD_REQUEST)
 
     def log_message(self, format: str, *args: Any) -> None:
@@ -178,6 +248,28 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         body = self.rfile.read(length).decode("utf-8", errors="replace")
         return parse_qs(body, keep_blank_values=False)
 
+    def _write_dashboard_audit_event(
+        self,
+        action_name: str,
+        output_id: str,
+        *,
+        result_status: str,
+        blocked_reason: str = "",
+        error_type: str = "",
+        exported_files: tuple[str, ...] = (),
+        report_profile: str = "",
+    ) -> None:
+        write_dashboard_action_audit_event(
+            self.server.config.root,
+            action_name=action_name,
+            output_id=output_id,
+            result_status=result_status,
+            blocked_reason=blocked_reason,
+            error_type=error_type,
+            exported_files=exported_files,
+            report_profile=report_profile,
+        )
+
 
 def create_dashboard_server(host: str, port: int, config: DashboardConfig) -> DashboardHttpServer:
     if host != DEFAULT_DASHBOARD_HOST:
@@ -207,25 +299,26 @@ def run_dashboard_action(
         verification = verify_path(output_dir, policy)
         if not verification.passed:
             return DashboardActionResult(
-                title="Verify output",
+                title="산출물 검증",
                 status="failed",
                 output=None,
                 summary_lines=[
-                    "Verification failed.",
-                    f"Files checked: {verification.files_checked}.",
-                    f"Findings: {len(verification.findings)}.",
-                    "Raw finding values are not displayed.",
+                    "검증에 실패했습니다.",
+                    f"검사한 파일 수: {verification.files_checked}.",
+                    f"탐지 항목 수: {len(verification.findings)}.",
+                    "원문 탐지 값은 표시하지 않습니다.",
                 ],
+                blocked_reason="verify_failed",
             )
         output = _verified_output(root, policy, output_id)
         return DashboardActionResult(
-            title="Verify output",
+            title="산출물 검증",
             status="passed",
             output=output,
             summary_lines=[
-                "Verification passed.",
-                f"Files checked: {verification.files_checked}.",
-                "Raw data included: false.",
+                "검증을 통과했습니다.",
+                f"검사한 파일 수: {verification.files_checked}.",
+                "원문 데이터 포함 여부: false.",
             ],
         )
 
@@ -233,13 +326,13 @@ def run_dashboard_action(
     if action_name == "review":
         result = build_review(output.path, policy)
         return DashboardActionResult(
-            title="Review summary",
+            title="리뷰 요약",
             status="passed",
             output=output,
             summary_lines=[
-                f"Candidate count: {result.candidate_count}.",
-                f"Prompt files: {len(result.prompt_files)}.",
-                "Raw data included: false.",
+                f"후보 항목 수: {result.candidate_count}.",
+                f"프롬프트 파일 수: {len(result.prompt_files)}.",
+                "원문 데이터 포함 여부: false.",
             ],
             details=render_review_summary(result),
         )
@@ -248,74 +341,114 @@ def run_dashboard_action(
         result = write_report_draft(output.path, None, policy, profile)
         refreshed = _verified_output(root, policy, output_id)
         return DashboardActionResult(
-            title="Report draft",
+            title="보고서 초안",
             status="passed",
             output=refreshed,
             summary_lines=[
-                "Report draft generated.",
-                f"Profile: {result.profile}.",
-                f"Candidate count: {result.candidate_count}.",
-                "Raw data included: false.",
+                "보고서 초안을 생성했습니다.",
+                f"프로필: {result.profile}.",
+                f"후보 항목 수: {result.candidate_count}.",
+                "원문 데이터 포함 여부: false.",
             ],
+            report_profile=result.profile,
         )
     if action_name == "export":
         export_dir = _dashboard_export_dir(root, output.output_id)
         exported = _export_safe_files(output, export_dir)
         return DashboardActionResult(
-            title="Safe file export",
+            title="안전 파일 내보내기",
             status="passed",
             output=output,
             summary_lines=[
-                "Safe files exported.",
-                "Export directory: <safe_export_dir>.",
-                f"Files exported: {len(exported)}.",
-                "Raw data included: false.",
+                "안전 파일을 내보냈습니다.",
+                "내보내기 디렉터리: <safe_export_dir>.",
+                f"내보낸 파일 수: {len(exported)}.",
+                "원문 데이터 포함 여부: false.",
             ],
             details="\n".join(f"- {name}" for name in exported) + "\n",
+            exported_files=tuple(exported),
         )
     raise DashboardError("unsupported_dashboard_action", HTTPStatus.BAD_REQUEST)
+
+
+def write_dashboard_action_audit_event(
+    root: Path,
+    *,
+    action_name: str,
+    output_id: str,
+    result_status: str,
+    blocked_reason: str = "",
+    error_type: str = "",
+    exported_files: tuple[str, ...] = (),
+    report_profile: str = "",
+) -> None:
+    event: dict[str, Any] = {
+        "timestamp_utc": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        "event_type": "dashboard_action",
+        "action_name": _safe_dashboard_audit_action(action_name),
+        "tool_name": _safe_identifier(f"dashboard_{_safe_dashboard_audit_action(action_name)}", "dashboard_action"),
+        "output_id": _safe_dashboard_audit_output(output_id),
+        "result_status": _safe_status(result_status),
+        "response_class": "dashboard_action_result",
+        "raw_data_included": False,
+    }
+    if blocked_reason:
+        event["blocked_reason"] = _safe_identifier(blocked_reason, "blocked")
+    if error_type:
+        event["error_type"] = _safe_identifier(error_type, "error")
+    safe_exported = _safe_exported_files(exported_files)
+    if safe_exported:
+        event["exported_files"] = list(safe_exported)
+    if report_profile:
+        event["report_profile"] = _safe_identifier(report_profile, DEFAULT_REPORT_PROFILE)
+    _append_audit_event(
+        root / AUDIT_DIR_NAME / AUDIT_FILE_NAME,
+        event,
+        max_bytes=DEFAULT_AUDIT_MAX_BYTES,
+        max_rotated_files=DEFAULT_AUDIT_MAX_ROTATED_FILES,
+    )
 
 
 def render_home(root: Path, policy: RedactionPolicy) -> str:
     outputs, blocked_count = _discover_outputs(root, policy)
     audit_status = _audit_status(root)
     rows = "\n".join(_output_row(output) for output in outputs) or (
-        '<tr><td colspan="6" class="empty">No verified output directories found.</td></tr>'
+        '<tr><td colspan="6" class="empty">검증을 통과한 산출물 디렉터리가 없습니다.</td></tr>'
     )
     return _page(
-        "Local Review Dashboard",
+        "로컬 리뷰 대시보드",
         f"""
         <section class="topbar">
           <div>
             <h1>Burp AI Redaction Gateway</h1>
-            <p class="subtitle">Verified sanitized output only. Raw HTTP viewing and replay are unavailable.</p>
+            <p class="subtitle">검증을 통과한 정제 산출물만 표시합니다. 원문 HTTP 보기와 재전송 기능은 제공하지 않습니다.</p>
           </div>
           <div class="status-stack">
-            <span class="badge good">Loopback only</span>
-            <span class="badge neutral">Read-only preview</span>
+            <span class="badge good">로컬 전용</span>
+            <span class="badge neutral">안전 미리보기</span>
           </div>
         </section>
         {_safety_strip()}
         <section class="metrics">
-          <div class="metric"><span class="metric-value">{len(outputs)}</span><span>Verified outputs</span></div>
-          <div class="metric"><span class="metric-value">{blocked_count}</span><span>Blocked or hidden outputs</span></div>
-          <div class="metric"><span class="metric-value">{_h(audit_status["review_status"])}</span><span>Audit review</span></div>
-          <div class="metric"><span class="metric-value">false</span><span>Raw data displayed</span></div>
+          <div class="metric"><span class="metric-value">{len(outputs)}</span><span>검증 통과 산출물</span></div>
+          <div class="metric"><span class="metric-value">{blocked_count}</span><span>차단 또는 숨김</span></div>
+          <div class="metric"><span class="metric-value">{_h(_status_label(audit_status["review_status"]))}</span><span>감사 로그 검토</span></div>
+          <div class="metric"><span class="metric-value">false</span><span>원문 표시 여부</span></div>
         </section>
         <section class="panel">
           <div class="panel-head">
-            <h2>Outputs</h2>
-            <span class="muted">Selection is allowed only after verify passes.</span>
+            <h2>산출물</h2>
+            <span class="muted">검증을 통과한 산출물만 선택할 수 있습니다.</span>
           </div>
           <table>
             <thead>
               <tr>
-                <th>Output</th>
-                <th>Candidates</th>
-                <th>Prompt files</th>
-                <th>Report</th>
-                <th>Status</th>
-                <th>Action</th>
+                <th>산출물</th>
+                <th>후보</th>
+                <th>프롬프트 파일</th>
+                <th>보고서</th>
+                <th>상태</th>
+                <th>작업</th>
               </tr>
             </thead>
             <tbody>{rows}</tbody>
@@ -323,8 +456,8 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
         </section>
         <section class="panel">
           <div class="panel-head">
-            <h2>Audit</h2>
-            <span class="muted">Metadata only; audit rows are not displayed.</span>
+            <h2>감사 로그</h2>
+            <span class="muted">메타데이터만 표시하며 감사 로그 원문 row는 표시하지 않습니다.</span>
           </div>
           {_audit_panel(audit_status)}
         </section>
@@ -335,37 +468,37 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
 def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
     candidates = _load_candidates(output.path)
     candidate_cards = "\n".join(_candidate_card(candidate) for candidate in candidates[:40]) or (
-        '<div class="empty">No finding candidates were present.</div>'
+        '<div class="empty">표시할 finding 후보가 없습니다.</div>'
     )
     file_cards = "\n".join(_safe_file_card(output, name) for name in SAFE_PREVIEW_FILES)
     return _page(
-        f"Output {output.label}",
+        f"산출물 {output.label}",
         f"""
         <section class="topbar">
           <div>
-            <a class="back" href="/">Back to outputs</a>
+            <a class="back" href="/">산출물 목록으로</a>
             <h1>{_h(output.label)}</h1>
-            <p class="subtitle">Candidate findings require manual verification. Confidence is evidence confidence, not severity.</p>
+            <p class="subtitle">탐지 후보는 수동 검증이 필요합니다. 신뢰도는 증거 신뢰도이며 심각도가 아닙니다.</p>
           </div>
-          <span class="badge good">Verification passed</span>
+          <span class="badge good">검증 통과</span>
         </section>
         <section class="safety-strip">
-          <div class="rail"><span>Verify</span><strong>passed</strong></div>
-          <div class="rail"><span>Display mode</span><strong>raw-free</strong></div>
-          <div class="rail"><span>Finding status</span><strong>candidate only</strong></div>
-          <div class="rail"><span>Severity</span><strong>separate rating required</strong></div>
+          <div class="rail"><span>검증</span><strong>통과</strong></div>
+          <div class="rail"><span>표시 모드</span><strong>원문 없음</strong></div>
+          <div class="rail"><span>탐지 상태</span><strong>후보만 표시</strong></div>
+          <div class="rail"><span>심각도</span><strong>별도 산정 필요</strong></div>
         </section>
         <section class="grid">
           <div class="panel">
-            <div class="panel-head"><h2>Safe Files</h2><span class="muted">Only AI-safe files are exposed.</span></div>
+            <div class="panel-head"><h2>안전 파일</h2><span class="muted">AI에 넣어도 되는 안전 파일만 표시합니다.</span></div>
             <div class="file-grid">{file_cards}</div>
           </div>
           <div class="panel">
-            <div class="panel-head"><h2>Dashboard Actions</h2><span class="muted">POST actions require CSRF protection.</span></div>
+            <div class="panel-head"><h2>대시보드 실행</h2><span class="muted">POST 실행은 CSRF 보호를 사용합니다.</span></div>
             {_action_panel(output, csrf_token)}
           </div>
           <div class="panel">
-            <div class="panel-head"><h2>Finding Candidates</h2><span class="muted">{len(candidates)} total</span></div>
+            <div class="panel-head"><h2>탐지 후보</h2><span class="muted">총 {len(candidates)}개</span></div>
             <div class="candidate-list">{candidate_cards}</div>
           </div>
         </section>
@@ -382,23 +515,23 @@ def render_action_result(result: DashboardActionResult, csrf_token: str) -> str:
         f"""
         <section class="topbar">
           <div>
-            <a class="back" href="{output_link}">Back to output</a>
+            <a class="back" href="{output_link}">산출물로 돌아가기</a>
             <h1>{_h(result.title)}</h1>
-            <p class="subtitle">Safe action summary only. Raw request, response, cookie, token, domain, and personal data values are not printed.</p>
+            <p class="subtitle">안전한 실행 요약만 표시합니다. 원문 요청/응답, 쿠키, 토큰, 도메인, 개인정보 값은 출력하지 않습니다.</p>
           </div>
-          <span class="badge good">{_h(result.status)}</span>
+          <span class="badge good">{_h(_status_label(result.status))}</span>
         </section>
         <section class="panel">
           <dl class="facts">
-            <div><dt>Action status</dt><dd>{_h(result.status)}</dd></div>
-            <div><dt>CSRF protected</dt><dd>true</dd></div>
-            <div><dt>Raw data included</dt><dd>false</dd></div>
-            <div><dt>State boundary</dt><dd>safe files only</dd></div>
+            <div><dt>실행 상태</dt><dd>{_h(_status_label(result.status))}</dd></div>
+            <div><dt>CSRF 보호</dt><dd>true</dd></div>
+            <div><dt>원문 데이터 포함</dt><dd>false</dd></div>
+            <div><dt>상태 변경 범위</dt><dd>안전 파일만</dd></div>
           </dl>
           <ul>{summary}</ul>
         </section>
         {details}
-        {f'<section class="panel"><div class="panel-head"><h2>Run another action</h2><span class="muted">Same output, safe action controls.</span></div>{_action_panel(result.output, csrf_token)}</section>' if result.output else ''}
+        {f'<section class="panel"><div class="panel-head"><h2>다른 실행</h2><span class="muted">같은 산출물에 대해 안전한 실행만 제공합니다.</span></div>{_action_panel(result.output, csrf_token)}</section>' if result.output else ''}
         """,
     )
 
@@ -406,15 +539,15 @@ def render_action_result(result: DashboardActionResult, csrf_token: str) -> str:
 def render_preview(output: DashboardOutput, file_name: str, text: str) -> str:
     display = _format_preview(file_name, text)
     return _page(
-        f"Preview {file_name}",
+        f"미리보기 {file_name}",
         f"""
         <section class="topbar">
           <div>
-            <a class="back" href="{_output_href(output.output_id)}">Back to output</a>
+            <a class="back" href="{_output_href(output.output_id)}">산출물로 돌아가기</a>
             <h1>{_h(file_name)}</h1>
-            <p class="subtitle">{_h(output.label)} - verified sanitized file</p>
+            <p class="subtitle">{_h(output.label)} - 검증된 정제 파일</p>
           </div>
-          <a class="button" href="{_download_href(output.output_id, file_name)}">Download</a>
+          <a class="button" href="{_download_href(output.output_id, file_name)}">다운로드</a>
         </section>
         <section class="panel">
           <pre class="preview">{_h(display)}</pre>
@@ -425,20 +558,20 @@ def render_preview(output: DashboardOutput, file_name: str, text: str) -> str:
 
 def render_error(error_type: str, status: HTTPStatus) -> str:
     return _page(
-        "Request blocked",
+        "요청 차단",
         f"""
         <section class="topbar">
           <div>
-            <a class="back" href="/">Back to outputs</a>
-            <h1>Request blocked</h1>
-            <p class="subtitle">Safe error only. No raw request, response, cookie, token, domain, or personal data is printed.</p>
+            <a class="back" href="/">산출물 목록으로</a>
+            <h1>요청이 차단되었습니다</h1>
+            <p class="subtitle">안전한 오류 요약만 표시합니다. 원문 요청/응답, 쿠키, 토큰, 도메인, 개인정보는 출력하지 않습니다.</p>
           </div>
           <span class="badge danger">{status.value}</span>
         </section>
         <section class="panel">
           <dl class="facts">
-            <div><dt>Error type</dt><dd>{_h(error_type)}</dd></div>
-            <div><dt>Raw data included</dt><dd>false</dd></div>
+            <div><dt>오류 유형</dt><dd>{_h(error_type)}</dd></div>
+            <div><dt>원문 데이터 포함</dt><dd>false</dd></div>
           </dl>
         </section>
         """,
@@ -603,21 +736,21 @@ def _output_row(output: DashboardOutput) -> str:
       <td><span class="output-label">{_h(output.label)}</span></td>
       <td>{output.candidate_count}</td>
       <td>{file_count}</td>
-      <td>{'available' if output.report_available else 'missing'}</td>
-      <td><span class="badge good">verify passed</span></td>
-      <td><a class="button small" href="{_output_href(output.output_id)}">Open</a></td>
+      <td>{'있음' if output.report_available else '없음'}</td>
+      <td><span class="badge good">검증 통과</span></td>
+      <td><a class="button small" href="{_output_href(output.output_id)}">열기</a></td>
     </tr>
     """
 
 
 def _safe_file_card(output: DashboardOutput, file_name: str) -> str:
     exists = (output.path / file_name).is_file()
-    status = "available" if exists else "missing"
+    status = "사용 가능" if exists else "없음"
     actions = (
-        f'<a class="button small" href="{_preview_href(output.output_id, file_name)}">Preview</a>'
-        f'<a class="button small secondary" href="{_download_href(output.output_id, file_name)}">Download</a>'
+        f'<a class="button small" href="{_preview_href(output.output_id, file_name)}">미리보기</a>'
+        f'<a class="button small secondary" href="{_download_href(output.output_id, file_name)}">다운로드</a>'
         if exists
-        else '<span class="muted">Not generated</span>'
+        else '<span class="muted">생성되지 않음</span>'
     )
     return f"""
     <div class="file-card">
@@ -640,20 +773,20 @@ def _action_panel(output: DashboardOutput, csrf_token: str) -> str:
     )
     return f"""
     <div class="action-grid">
-      {_action_form(project, token, "verify", "Verify", "Re-run fail-closed output verification.")}
-      {_action_form(project, token, "review", "Review", "Generate a safe review summary.")}
+      {_action_form(project, token, "verify", "검증", "fail-closed 산출물 검증을 다시 실행합니다.")}
+      {_action_form(project, token, "review", "리뷰", "안전한 리뷰 요약을 생성합니다.")}
       <form class="action-card" method="post" action="/action">
         <input type="hidden" name="csrf_token" value="{token}">
         <input type="hidden" name="project" value="{project}">
         <input type="hidden" name="action" value="report">
-        <label>Report profile<select name="profile">{profile_options}</select></label>
-        <button type="submit">Report</button>
-        <small>Write or refresh report_draft.md after verify passes.</small>
+        <label>보고서 프로필<select name="profile">{profile_options}</select></label>
+        <button type="submit">보고서</button>
+        <small>검증 통과 후 report_draft.md를 생성하거나 갱신합니다.</small>
       </form>
-      {_action_form(project, token, "export", "Export", "Copy safe preview files only.")}
+      {_action_form(project, token, "export", "내보내기", "안전 미리보기 파일만 복사합니다.")}
       <a class="action-card refresh-card" href="{_output_href(output.output_id)}">
-        <strong>Refresh</strong>
-        <small>Reload this output view with a read-only GET request.</small>
+        <strong>새로고침</strong>
+        <small>읽기 전용 GET 요청으로 이 산출물 화면을 다시 불러옵니다.</small>
       </a>
     </div>
     """
@@ -673,7 +806,7 @@ def _action_form(project: str, token: str, action: str, label: str, description:
 
 def _candidate_card(candidate: dict[str, Any]) -> str:
     finding_id = _safe_value(candidate.get("finding_id"), "candidate")
-    title = _safe_value(candidate.get("title"), "Finding candidate")
+    title = _safe_value(candidate.get("title"), "탐지 후보")
     kind = _safe_value(candidate.get("type"), "unknown_type")
     endpoint = _safe_value(candidate.get("affected_endpoint"), "unknown_endpoint")
     confidence = _safe_value(candidate.get("confidence"), "unknown")
@@ -687,22 +820,22 @@ def _candidate_card(candidate: dict[str, Any]) -> str:
     <article class="candidate">
       <div class="candidate-head">
         <div>
-          <span class="kicker">Candidate finding</span>
+          <span class="kicker">탐지 후보</span>
           <h3>{_h(finding_id)} - {_h(title)}</h3>
-          <p>{_h(kind)} on {_h(endpoint)}</p>
+          <p>{_h(kind)} / {_h(endpoint)}</p>
         </div>
         <div class="status-stack">
-          <span class="badge neutral">evidence confidence: {_h(confidence)}</span>
-          <span class="badge warning">manual check required</span>
+          <span class="badge neutral">증거 신뢰도: {_h(confidence)}</span>
+          <span class="badge warning">수동 확인 필요</span>
         </div>
       </div>
       <dl class="facts compact">
-        <div><dt>Manual verification</dt><dd>{manual_required}</dd></div>
-        <div><dt>Risk rating draft</dt><dd>{risk_summary}</dd></div>
-        <div><dt>Rationale</dt><dd>{_bullets(rationale)}</dd></div>
-        <div><dt>Confidence basis</dt><dd>{_bullets(confidence_rationale)}</dd></div>
-        <div><dt>Manual tests</dt><dd>{_bullets(manual_tests)}</dd></div>
-        <div><dt>Do not claim</dt><dd>{_bullets(do_not_claim)}</dd></div>
+        <div><dt>수동 검증</dt><dd>{manual_required}</dd></div>
+        <div><dt>위험도 초안</dt><dd>{risk_summary}</dd></div>
+        <div><dt>판단 근거</dt><dd>{_bullets(rationale)}</dd></div>
+        <div><dt>신뢰도 근거</dt><dd>{_bullets(confidence_rationale)}</dd></div>
+        <div><dt>수동 테스트</dt><dd>{_bullets(manual_tests)}</dd></div>
+        <div><dt>확정 전 금지 표현</dt><dd>{_bullets(do_not_claim)}</dd></div>
       </dl>
     </article>
     """
@@ -710,60 +843,74 @@ def _candidate_card(candidate: dict[str, Any]) -> str:
 
 def _risk_rating_summary(value: Any) -> str:
     if not isinstance(value, dict):
-        return "Manual risk rating required before severity assignment."
+        return "심각도 산정 전 수동 위험도 평가가 필요합니다."
     severity = _safe_value(value.get("severity_draft"), "unknown")
     likelihood = _safe_value(value.get("likelihood_draft"), "unknown")
     impact = _safe_value(value.get("impact_draft"), "unknown")
     finalized = str(bool(value.get("risk_rating_finalized", False))).lower()
     return (
-        f"Severity draft: {_h(severity)}; "
-        f"likelihood draft: {_h(likelihood)}; "
-        f"impact draft: {_h(impact)}; "
-        f"finalized: {_h(finalized)}"
+        f"심각도 초안: {_h(severity)}; "
+        f"likelihood 초안: {_h(likelihood)}; "
+        f"impact 초안: {_h(impact)}; "
+        f"확정 여부: {_h(finalized)}"
     )
 
 
 def _audit_panel(status: dict[str, str]) -> str:
     return f"""
     <dl class="facts">
-      <div><dt>Review status</dt><dd>{_status_badge(status["review_status"])}</dd></div>
-      <div><dt>Events checked</dt><dd>{_h(status["events"])}</dd></div>
-      <div><dt>Files checked</dt><dd>{_h(status["files"])}</dd></div>
-      <div><dt>Retained JSONL</dt><dd>{_status_badge(status["retained_status"])}</dd></div>
+      <div><dt>검토 상태</dt><dd>{_status_badge(status["review_status"])}</dd></div>
+      <div><dt>검사한 이벤트</dt><dd>{_h(status["events"])}</dd></div>
+      <div><dt>검사한 파일</dt><dd>{_h(status["files"])}</dd></div>
+      <div><dt>보존 JSONL</dt><dd>{_status_badge(status["retained_status"])}</dd></div>
       <div><dt>HMAC manifest</dt><dd>{_status_badge(status["hmac_status"])}</dd></div>
-      <div><dt>Displayed content</dt><dd>metadata only</dd></div>
+      <div><dt>표시 내용</dt><dd>메타데이터만</dd></div>
     </dl>
     """
 
 
 def _safety_strip() -> str:
     return """
-    <section class="safety-strip" aria-label="Dashboard safety boundary">
-      <div class="rail"><span>Input gate</span><strong>verify passed only</strong></div>
-      <div class="rail"><span>Display mode</span><strong>raw-free</strong></div>
-      <div class="rail"><span>Report stance</span><strong>candidate only</strong></div>
-      <div class="rail"><span>Actions</span><strong>CSRF-protected</strong></div>
+    <section class="safety-strip" aria-label="대시보드 안전 경계">
+      <div class="rail"><span>입력 게이트</span><strong>검증 통과만</strong></div>
+      <div class="rail"><span>표시 모드</span><strong>원문 없음</strong></div>
+      <div class="rail"><span>보고서 표현</span><strong>후보만 표시</strong></div>
+      <div class="rail"><span>실행</span><strong>CSRF 보호</strong></div>
     </section>
     """
 
 
 def _safe_file_description(file_name: str) -> str:
     descriptions = {
-        "analysis_packet.json": "Structured candidate evidence packet.",
-        "chatgpt_prompt.md": "Safe ChatGPT review prompt.",
-        "codex_task_prompt.md": "Safe Codex task prompt.",
-        "report_draft.md": "Candidate report draft.",
+        "analysis_packet.json": "구조화된 후보 증거 패킷입니다.",
+        "chatgpt_prompt.md": "ChatGPT 검토용 안전 프롬프트입니다.",
+        "codex_task_prompt.md": "Codex 작업용 안전 프롬프트입니다.",
+        "report_draft.md": "탐지 후보 보고서 초안입니다.",
     }
-    return descriptions.get(file_name, "Safe generated file.")
+    return descriptions.get(file_name, "안전하게 생성된 파일입니다.")
 
 
 def _status_badge(value: str) -> str:
-    safe = _h(value)
+    safe = _h(_status_label(value))
     if value == "passed":
         return f'<span class="badge good">{safe}</span>'
     if value in {"failed", "input_missing"} or value.endswith("_missing"):
         return f'<span class="badge danger">{safe}</span>'
     return f'<span class="badge neutral">{safe}</span>'
+
+
+def _status_label(value: str) -> str:
+    labels = {
+        "passed": "통과",
+        "failed": "실패",
+        "success": "성공",
+        "blocked": "차단",
+        "error": "오류",
+        "not found": "없음",
+        "not configured": "설정 안 됨",
+        "input_missing": "입력 없음",
+    }
+    return labels.get(value, value)
 
 
 def _format_preview(file_name: str, text: str) -> str:
@@ -790,6 +937,13 @@ def _required_form_value(form: dict[str, list[str]], name: str) -> str:
     return str(values[0])
 
 
+def _optional_form_value(form: dict[str, list[str]], name: str) -> str:
+    values = form.get(name)
+    if not values or not str(values[0]).strip():
+        return ""
+    return str(values[0])
+
+
 def _validate_csrf(value: str, expected: str) -> None:
     if not secrets.compare_digest(value, expected):
         raise DashboardError("csrf_token_invalid", HTTPStatus.FORBIDDEN)
@@ -807,6 +961,63 @@ def _safe_report_profile(value: str) -> str:
     if profile not in REPORT_PROFILE_NAMES:
         raise DashboardError("invalid_report_profile", HTTPStatus.BAD_REQUEST)
     return profile
+
+
+def _audit_form_action(form: dict[str, list[str]]) -> str:
+    value = _optional_form_value(form, "action")
+    try:
+        return _safe_action_name(value)
+    except DashboardError:
+        return "unknown_action"
+
+
+def _audit_form_output(form: dict[str, list[str]]) -> str:
+    value = _optional_form_value(form, "project")
+    return value if value else "unknown_output"
+
+
+def _dashboard_result_status(result: DashboardActionResult) -> str:
+    if result.status == "passed":
+        return "success"
+    if result.blocked_reason:
+        return "blocked"
+    return "error"
+
+
+def _dashboard_error_status(error_type: str) -> str:
+    return "blocked" if _dashboard_error_blocked_reason(error_type) else "error"
+
+
+def _dashboard_error_blocked_reason(error_type: str) -> str:
+    reasons = {
+        "csrf_token_missing": "csrf_missing",
+        "csrf_token_invalid": "csrf_invalid",
+        "verification_failed": "verify_failed",
+        "safe_file_not_allowed": "unsafe_export",
+        "path_traversal_forbidden": "path_traversal",
+        "absolute_output_path_forbidden": "path_traversal",
+        "forbidden_directory": "forbidden_directory",
+        "unsupported_dashboard_action": "unsupported_action",
+    }
+    return reasons.get(error_type, "")
+
+
+def _safe_dashboard_audit_action(value: str) -> str:
+    action = str(value).strip().lower()
+    return action if action in ACTION_NAMES else "unknown_action"
+
+
+def _safe_dashboard_audit_output(value: str) -> str:
+    safe = _safe_output_id(value)
+    return "redacted_output" if scan_text(safe) else safe
+
+
+def _safe_exported_files(file_names: tuple[str, ...]) -> tuple[str, ...]:
+    safe = []
+    for name in file_names:
+        if name in SAFE_PREVIEW_FILES:
+            safe.append(name)
+    return tuple(safe)
 
 
 def _validated_root(root: Path) -> Path:
@@ -881,7 +1092,7 @@ def _h(value: Any) -> str:
 
 def _page(title: str, body: str) -> str:
     return f"""<!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

@@ -24,7 +24,12 @@ from burp_ai_redaction_gateway.audit_hmac import (
 from burp_ai_redaction_gateway.audit_retention import AuditRetentionError, apply_audit_retention
 from burp_ai_redaction_gateway.audit_review import review_audit_path
 from burp_ai_redaction_gateway.cli import main
-from burp_ai_redaction_gateway.dashboard import DashboardConfig, DashboardError, create_dashboard_server
+from burp_ai_redaction_gateway.dashboard import (
+    DashboardConfig,
+    DashboardError,
+    create_dashboard_server,
+    write_dashboard_action_audit_event,
+)
 from burp_ai_redaction_gateway.findings import build_finding_candidates
 from burp_ai_redaction_gateway.mcp_server import ReadOnlyMcpGateway, ReadOnlyMcpServer, _next_rotated_audit_path
 from burp_ai_redaction_gateway.models import SanitizedEvent
@@ -623,11 +628,11 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertEqual(response.status, 200)
                 self.assertIn("Burp AI Redaction Gateway", body)
                 self.assertIn("generated", body)
-                self.assertIn("Verified outputs", body)
-                self.assertIn("verify passed only", body)
-                self.assertIn("raw-free", body)
-                self.assertIn("Raw data displayed", body)
-                self.assertIn("CSRF-protected", body)
+                self.assertIn("검증 통과 산출물", body)
+                self.assertIn("검증 통과만", body)
+                self.assertIn("원문 없음", body)
+                self.assertIn("원문 표시 여부", body)
+                self.assertIn("CSRF 보호", body)
                 self.assertNotIn("raw_request", body)
                 self.assertNotIn("raw_response", body)
                 connection.close()
@@ -637,25 +642,24 @@ class RedactionGatewayTests(unittest.TestCase):
                 response = connection.getresponse()
                 detail = response.read().decode("utf-8")
                 self.assertEqual(response.status, 200)
-                self.assertIn("Finding Candidates", detail)
-                self.assertIn("Dashboard Actions", detail)
-                self.assertIn("POST actions require CSRF protection", detail)
-                self.assertIn("Verify", detail)
-                self.assertIn("Review", detail)
-                self.assertIn("Report", detail)
-                self.assertIn("Export", detail)
-                self.assertIn("Refresh", detail)
-                self.assertIn("Only AI-safe files are exposed", detail)
-                self.assertIn("Candidate finding", detail)
-                self.assertIn("evidence confidence", detail)
-                self.assertIn("manual check required", detail)
-                self.assertIn("Rationale", detail)
-                self.assertIn("Risk rating draft", detail)
-                self.assertIn("Severity draft", detail)
-                self.assertIn("finalized: false", detail)
-                self.assertIn("Confidence basis", detail)
-                self.assertIn("Manual verification", detail)
-                self.assertIn("Severity", detail)
+                self.assertIn("탐지 후보", detail)
+                self.assertIn("대시보드 실행", detail)
+                self.assertIn("POST 실행은 CSRF 보호를 사용합니다", detail)
+                self.assertIn("검증", detail)
+                self.assertIn("리뷰", detail)
+                self.assertIn("보고서", detail)
+                self.assertIn("내보내기", detail)
+                self.assertIn("새로고침", detail)
+                self.assertIn("AI에 넣어도 되는 안전 파일만 표시합니다", detail)
+                self.assertIn("증거 신뢰도", detail)
+                self.assertIn("수동 확인 필요", detail)
+                self.assertIn("판단 근거", detail)
+                self.assertIn("위험도 초안", detail)
+                self.assertIn("심각도 초안", detail)
+                self.assertIn("확정 여부: false", detail)
+                self.assertIn("신뢰도 근거", detail)
+                self.assertIn("수동 검증", detail)
+                self.assertIn("심각도", detail)
                 self.assertNotIn("Confirmed vulnerability", detail)
                 connection.close()
 
@@ -748,6 +752,21 @@ class RedactionGatewayTests(unittest.TestCase):
                 connection.close()
 
                 connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                missing_body = urlencode({"project": "generated", "action": "verify"})
+                connection.request(
+                    "POST",
+                    "/action",
+                    body=missing_body,
+                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                )
+                response = connection.getresponse()
+                missing_csrf = response.read().decode("utf-8")
+                self.assertEqual(response.status, 400)
+                self.assertIn("csrf_token_missing", missing_csrf)
+                self.assertNotIn("raw_request", missing_csrf)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
                 invalid_body = urlencode({"project": "generated", "action": "verify", "csrf_token": "invalid"})
                 connection.request(
                     "POST",
@@ -774,7 +793,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     response = connection.getresponse()
                     result = response.read().decode("utf-8")
                     self.assertEqual(response.status, 200)
-                    self.assertIn("Raw data included", result)
+                    self.assertIn("원문 데이터 포함", result)
                     self.assertIn("false", result)
                     self.assertNotIn("raw_request", result)
                     self.assertNotIn("raw_response", result)
@@ -798,8 +817,8 @@ class RedactionGatewayTests(unittest.TestCase):
                 response = connection.getresponse()
                 report_result = response.read().decode("utf-8")
                 self.assertEqual(response.status, 200)
-                self.assertIn("Report draft generated", report_result)
-                self.assertIn("Profile: consultant", report_result)
+                self.assertIn("보고서 초안을 생성했습니다", report_result)
+                self.assertIn("프로필: consultant", report_result)
                 self.assertTrue((output / "report_draft.md").is_file())
                 report_text = (output / "report_draft.md").read_text(encoding="utf-8")
                 self.assertIn("# Sanitized Consultant Report Draft", report_text)
@@ -817,14 +836,50 @@ class RedactionGatewayTests(unittest.TestCase):
                 response = connection.getresponse()
                 export_result = response.read().decode("utf-8")
                 self.assertEqual(response.status, 200)
-                self.assertIn("Safe files exported", export_result)
-                self.assertIn("Export directory: &lt;safe_export_dir&gt;", export_result)
+                self.assertIn("안전 파일을 내보냈습니다", export_result)
+                self.assertIn("내보내기 디렉터리: &lt;safe_export_dir&gt;", export_result)
                 export_dir = Path(temp_dir) / "exports" / "dashboard" / "generated"
                 for name in ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"]:
                     exported = export_dir / name
                     self.assertTrue(exported.is_file())
                     assert_no_sensitive_text(exported.read_text(encoding="utf-8"))
                 connection.close()
+
+                audit_path = root / ".audit" / "mcp_audit.jsonl"
+                self.assertTrue(audit_path.is_file())
+                audit_text = audit_path.read_text(encoding="utf-8")
+                assert_no_sensitive_text(audit_text)
+                audit_events = [json.loads(line) for line in audit_text.splitlines() if line.strip()]
+                self.assertEqual(len(audit_events), 6)
+                self.assert_audit_hash_chain(audit_events)
+                self.assertTrue(all(event["event_type"] == "dashboard_action" for event in audit_events))
+                self.assertTrue(all(event["raw_data_included"] is False for event in audit_events))
+                self.assertEqual(
+                    [(event["action_name"], event["result_status"]) for event in audit_events],
+                    [
+                        ("verify", "blocked"),
+                        ("verify", "blocked"),
+                        ("verify", "success"),
+                        ("review", "success"),
+                        ("report", "success"),
+                        ("export", "success"),
+                    ],
+                )
+                self.assertEqual(
+                    [event.get("blocked_reason", "") for event in audit_events[:2]],
+                    ["csrf_missing", "csrf_invalid"],
+                )
+                self.assertEqual(audit_events[4]["report_profile"], "consultant")
+                self.assertEqual(
+                    audit_events[5]["exported_files"],
+                    ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"],
+                )
+                self.assertNotIn(csrf_token, audit_text)
+                self.assertNotIn("csrf_token", audit_text)
+                self.assertNotIn("raw_request", audit_text)
+                self.assertNotIn("raw_response", audit_text)
+                audit_review = review_audit_path(audit_path)
+                self.assertTrue(audit_review.passed, audit_review.findings)
             finally:
                 server.shutdown()
                 server.server_close()
@@ -845,10 +900,10 @@ class RedactionGatewayTests(unittest.TestCase):
                 response = connection.getresponse()
                 body = response.read().decode("utf-8")
                 self.assertEqual(response.status, 200)
-                self.assertIn("Audit", body)
-                self.assertIn("Events checked", body)
-                self.assertIn("passed", body)
-                self.assertIn("metadata only", body)
+                self.assertIn("감사 로그", body)
+                self.assertIn("검사한 이벤트", body)
+                self.assertIn("통과", body)
+                self.assertIn("메타데이터만", body)
                 self.assertNotIn("list_prompt_files", body)
                 self.assertNotIn("mcp_tool_call", body)
                 connection.close()
@@ -856,6 +911,26 @@ class RedactionGatewayTests(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
                 thread.join(timeout=5)
+
+    def test_dashboard_action_audit_redacts_sensitive_output_id(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            write_dashboard_action_audit_event(
+                root,
+                action_name="verify",
+                output_id="customer.example.test",
+                result_status="success",
+            )
+            audit_path = root / ".audit" / "mcp_audit.jsonl"
+            audit_text = audit_path.read_text(encoding="utf-8")
+            self.assertNotIn("customer.example.test", audit_text)
+            assert_no_sensitive_text(audit_text)
+            audit_events = [json.loads(line) for line in audit_text.splitlines() if line.strip()]
+            self.assertEqual(audit_events[0]["event_type"], "dashboard_action")
+            self.assertEqual(audit_events[0]["output_id"], "redacted_output")
+            self.assert_audit_hash_chain(audit_events)
+            audit_review = review_audit_path(audit_path)
+            self.assertTrue(audit_review.passed, audit_review.findings)
 
     def test_dashboard_escapes_preview_html_special_characters(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

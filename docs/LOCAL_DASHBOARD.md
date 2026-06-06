@@ -73,6 +73,14 @@ Every POST action requires a per-server CSRF token. Missing or invalid tokens
 return a safe error page without raw request, response, cookie, token, domain, or
 personal data values. `Refresh` remains a read-only GET reload.
 
+State-changing POST actions append raw-free audit events under
+`<root>/.audit/mcp_audit.jsonl` using audit schema `1.1` and
+`event_type: dashboard_action`. Events record only metadata such as action name,
+sanitized output id, result status, blocked reason, safe report profile, and the
+safe exported file allowlist. CSRF token values, raw request or response data,
+cookies, authorization values, tokens, real domains, internal IPs, personal
+data, and stack traces are not written to dashboard action audit events.
+
 The following paths are rejected:
 
 - `local_only/`
