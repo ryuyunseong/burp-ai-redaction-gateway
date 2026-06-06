@@ -794,6 +794,10 @@ class RedactionGatewayTests(unittest.TestCase):
                     self.assertIn("1.1", body)
                     self.assertIn("HMAC configured", body)
                     self.assertIn("configured", body)
+                    self.assertIn("compressed archive", body)
+                    self.assertIn("compressed archive verify", body)
+                    self.assertIn("compressed archive HMAC manifest", body)
+                    self.assertIn("compressed archive HMAC verify", body)
                     self.assertNotIn(secret_value, body)
                     self.assertNotIn("BURP_AI_AUDIT_HMAC_KEY", body)
                     self.assertNotIn(str(root), body)
@@ -1036,6 +1040,55 @@ class RedactionGatewayTests(unittest.TestCase):
                 server.shutdown()
                 server.server_close()
                 thread.join(timeout=5)
+
+    def test_dashboard_shows_audit_archive_status_without_archive_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            audit_dir = self.generated_audit_dir(root, request_count=2)
+            retained = audit_dir / "mcp_audit.retained.jsonl"
+            retained_manifest = audit_dir / "mcp_audit.retained.manifest.json"
+            archive = audit_dir / "mcp_audit.retained.jsonl.gz"
+            archive_manifest = audit_dir / "mcp_audit.retained.jsonl.gz.manifest.json"
+            secret_value = "DUMMY_HMAC_SECRET_FOR_ARCHIVE_PANEL_1234567890"
+            secret = secret_value.encode("utf-8")
+
+            self.write_audit_events(
+                retained,
+                self.audit_event_chain(["2026-06-04T00:00:00Z", "2026-06-05T00:00:00Z"]),
+            )
+            create_audit_hmac_manifest(retained, retained_manifest, secret=secret)
+            compress_audit_jsonl(retained, archive)
+            create_compressed_audit_hmac_manifest(archive, archive_manifest, secret=secret)
+
+            with patch.dict("os.environ", {"BURP_AI_AUDIT_HMAC_KEY": secret_value}, clear=False):
+                server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+                thread = threading.Thread(target=server.serve_forever, daemon=True)
+                thread.start()
+                try:
+                    port = server.server_address[1]
+                    for path in ("/", "/settings"):
+                        connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                        connection.request("GET", path)
+                        response = connection.getresponse()
+                        body = response.read().decode("utf-8")
+                        self.assertEqual(response.status, 200)
+                        self.assertIn("compressed archive", body)
+                        self.assertIn("compressed archive verify", body)
+                        self.assertIn("compressed archive HMAC manifest", body)
+                        self.assertIn("compressed archive HMAC verify", body)
+                        self.assertIn("present", body)
+                        self.assertIn("badge good", body)
+                        self.assertNotIn(secret_value, body)
+                        self.assertNotIn(str(root), body)
+                        self.assertNotIn("list_prompt_files", body)
+                        self.assertNotIn("mcp_tool_call", body)
+                        self.assertNotIn("raw_request", body)
+                        self.assertNotIn("raw_response", body)
+                        connection.close()
+                finally:
+                    server.shutdown()
+                    server.server_close()
+                    thread.join(timeout=5)
 
     def test_dashboard_action_audit_redacts_sensitive_output_id(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1754,6 +1807,7 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertEqual(archive_error.exception.error_type, "manifest_compressed_size_mismatch")
 
             compress_audit_jsonl(audit_file, compressed_file)
+            create_compressed_audit_hmac_manifest(compressed_file, manifest_file, secret=secret)
             manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
             manifest["hmac"] = "0" * 64
             manifest_file.write_text(json.dumps(manifest, ensure_ascii=True, sort_keys=True) + "\n", encoding="utf-8")
