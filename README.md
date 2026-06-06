@@ -11,6 +11,9 @@ basic Burp XML export shape.
 
 ## Usage
 
+For a short CLI and dashboard walkthrough, see
+[docs/USER_QUICKSTART.md](C:/coding/burp-ai-redaction-gateway/docs/USER_QUICKSTART.md).
+
 ```powershell
 python -m burp_ai_redaction_gateway generate `
   --input samples/synthetic_burp_history.json `
