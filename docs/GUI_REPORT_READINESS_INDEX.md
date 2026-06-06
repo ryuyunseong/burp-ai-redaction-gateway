@@ -9,6 +9,8 @@
 
 전체 조회 전용 workflow 체크리스트는
 [GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
+참조하세요. prompt 파일 투입 전 점검은
+[GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
 참조하세요.
 
 검증된 output에서 다음 주소를 엽니다.
@@ -31,6 +33,7 @@
 | `triage link` | finding triage 인덱스 링크 |
 | `preflight link` | AI 안전 사전 점검 체크리스트 링크 |
 | `handoff link` | AI 핸드오프 인덱스 링크 |
+| `prompt readiness link` | prompt 파일 점검 인덱스 링크 |
 | `export/review/report flow link` | 검증된 output 상세 화면으로 돌아가는 링크 |
 
 파일 metadata 섹션은 `report_draft.md`와 `analysis_packet.json`에 대해 다음

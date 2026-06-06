@@ -154,6 +154,8 @@ HMAC verification, 실패 처리까지 포함한 전체 안전 운영 흐름은
 [docs/GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
 참조하세요. 조회 전용 GUI 핸드오프 파일 인덱스는
 [docs/GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md)를
+참조하세요. 조회 전용 prompt readiness 체크리스트는
+[docs/GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
 참조하세요. 조회 전용 GUI finding triage 체크리스트는
 [docs/GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 조회 전용 GUI 보고서 초안 준비 체크리스트는
@@ -275,6 +277,7 @@ dashboard에는 다음 조회 전용 화면도 포함됩니다.
 
 - `/preflight?project=<alias>`: AI 안전 사전 점검
 - `/handoff?project=<alias>`: AI 핸드오프 인덱스
+- `/prompt-readiness?project=<alias>`: prompt readiness 인덱스
 - `/triage?project=<alias>`: finding triage 인덱스
 - `/report-readiness?project=<alias>`: 보고서 초안 준비 상태 인덱스
 - `/workflow?project=<alias>`: workflow 상태 인덱스
