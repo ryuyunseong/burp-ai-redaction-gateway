@@ -148,6 +148,8 @@ For the full safe operating flow, including Burp collection, receiver usage,
 verification, AI-safe files, audit retention, HMAC verification, and failure
 handling, see
 [docs/OPERATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/OPERATING_GUIDE.md).
+For the v0.4 dashboard release baseline, see
+[docs/RELEASE_NOTES_v0.4.md](C:/coding/burp-ai-redaction-gateway/docs/RELEASE_NOTES_v0.4.md).
 
 ## Burp Montoya Collector
 
