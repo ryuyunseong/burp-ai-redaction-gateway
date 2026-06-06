@@ -19,6 +19,9 @@ The page is a read-only GET page. It does not submit data, create files,
 download files, delete files, or run review, report, export, archive, HMAC,
 replay, or active scan actions.
 
+For draft report readiness metadata and manual review boundaries, see
+[GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md).
+
 ## What It Shows
 
 The triage index displays only safe candidate metadata:
@@ -35,7 +38,7 @@ The triage index displays only safe candidate metadata:
 - manual review required status
 - `analysis_packet.json` presence
 - `report_draft.md` presence
-- links back to preflight, handoff, and output detail flow
+- links back to preflight, handoff, report readiness, and output detail flow
 
 The sanitized summary may include a method and path template. It must not include
 real domains, real URLs, real IP addresses, Cookie values, Authorization values,

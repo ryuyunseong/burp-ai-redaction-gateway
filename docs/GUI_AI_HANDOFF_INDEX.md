@@ -6,6 +6,8 @@ passes and after manual review planning is clear.
 
 For the candidate triage checklist, see
 [GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md).
+For the draft report readiness checklist, see
+[GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md).
 
 Use it as a read-only checklist only.
 
@@ -54,6 +56,7 @@ verify first
 -> check AI-safe preflight
 -> read analysis_packet.json
 -> choose chatgpt_prompt.md or codex_task_prompt.md for the target AI tool
+-> check report readiness index before report review
 -> review report_draft.md manually
 -> decide what, if anything, can be shared
 ```

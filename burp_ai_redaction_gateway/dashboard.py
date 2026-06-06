@@ -56,6 +56,7 @@ OPERATIONS_GUIDES = (
     ("AI-safe preflight", "docs/GUI_AI_SAFE_PREFLIGHT.md", "AI 투입 전 read-only 상태 확인"),
     ("AI handoff index", "docs/GUI_AI_HANDOFF_INDEX.md", "AI 투입 파일 순서와 주의사항"),
     ("Finding triage index", "docs/GUI_FINDING_TRIAGE_INDEX.md", "finding 후보 검토 순서와 수동 판단 경계"),
+    ("Report readiness index", "docs/GUI_REPORT_READINESS_INDEX.md", "report_draft 초안 검토 상태와 수동 제출 경계"),
     ("Windows 실행기", "docs/WINDOWS_LAUNCHER_GUIDE.md", "start/stop 스크립트와 포트 충돌 처리"),
     ("감사 운영", "docs/AUDIT_OPERATIONS_GUIDE.md", "review-audit, retention, HMAC, archive 순서"),
     ("GUI 감사 패널", "docs/GUI_AUDIT_PANEL_GUIDE.md", "감사/보관 상태 표시 해석"),
@@ -159,6 +160,25 @@ class FindingTriageIndex:
     report_draft_status: str
 
 
+@dataclass(frozen=True)
+class ReportReadinessFile:
+    name: str
+    purpose: str
+    status: str
+    size_bytes: int | None
+    modified_utc: str
+    sha256: str
+
+
+@dataclass(frozen=True)
+class ReportReadinessIndex:
+    output: DashboardOutput
+    files: list[ReportReadinessFile]
+    candidate_count: int
+    report_status: str
+    analysis_status: str
+
+
 class DashboardError(ValueError):
     def __init__(self, error_type: str, status: HTTPStatus = HTTPStatus.BAD_REQUEST) -> None:
         super().__init__(error_type)
@@ -209,6 +229,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
                 self._send_html(render_finding_triage_index(_build_finding_triage_index(output)))
+                return
+            if parsed.path == "/report-readiness":
+                output_id = _required_query_value(parsed.query, "project")
+                output = _verified_output(self.server.config.root, self.server.policy, output_id)
+                self._send_html(render_report_readiness_index(_build_report_readiness_index(output)))
                 return
             if parsed.path == "/preview":
                 output_id = _required_query_value(parsed.query, "project")
@@ -767,6 +792,7 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
             <a class="button small secondary" href="{_preflight_href(output.output_id)}">preflight detail</a>
             <a class="button small secondary" href="{_handoff_href(output.output_id)}">handoff index</a>
             <a class="button small secondary" href="{_triage_href(output.output_id)}">triage index</a>
+            <a class="button small secondary" href="{_report_readiness_href(output.output_id)}">report readiness</a>
           </div>
           <div class="panel">
             <div class="panel-head"><h2>탐지 후보</h2><span class="muted">총 {len(candidates)}개</span></div>
@@ -895,6 +921,7 @@ def render_finding_triage_index(index: FindingTriageIndex) -> str:
             <dl class="facts">
               <div><dt>preflight</dt><dd><a href="{_preflight_href(output.output_id)}">open AI-safe preflight</a></dd></div>
               <div><dt>handoff</dt><dd><a href="{_handoff_href(output.output_id)}">open AI handoff index</a></dd></div>
+              <div><dt>report readiness</dt><dd><a href="{_report_readiness_href(output.output_id)}">open report readiness index</a></dd></div>
               <div><dt>review/report/export flow</dt><dd><a href="{_output_href(output.output_id)}">return to verified output detail</a></dd></div>
               <div><dt>boundary</dt><dd>read-only triage checklist; no form or POST action</dd></div>
             </dl>
@@ -915,6 +942,104 @@ def render_finding_triage_index(index: FindingTriageIndex) -> str:
           <div class="panel">
             <div class="panel-head"><h2>Candidate checklist</h2><span class="muted">sanitized metadata only</span></div>
             <div class="candidate-list">{candidate_rows}</div>
+          </div>
+        </section>
+        """,
+    )
+
+
+def render_report_readiness_index(index: ReportReadinessIndex) -> str:
+    output = index.output
+    file_rows = "\n".join(_report_readiness_file_card(file) for file in index.files)
+    checklist_items = "".join(
+        f"<li>{_h(item)}</li>"
+        for item in (
+            "scope confirmation",
+            "affected endpoint confirmation",
+            "evidence quality confirmation",
+            "false positive possibility",
+            "impact statement review",
+            "remediation wording review",
+            "final severity manual decision",
+            "customer submission sensitive-info review",
+        )
+    )
+    forbidden_items = "".join(
+        f"<li>{_h(item)}</li>"
+        for item in (
+            "raw request/response",
+            "raw audit row body",
+            "Cookie or Authorization values",
+            "token, JWT, or session values",
+            "real domain, URL, or IP values",
+            "personal data",
+            "HMAC secret or CSRF token values",
+            "full local path",
+            "local_only/, raw/, raw_vault/, unverified out/, or out/.audit artifacts",
+        )
+    )
+    return _page(
+        f"Report readiness index {output.label}",
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="{_output_href(output.output_id)}">산출물로 돌아가기</a>
+            <h1>Report readiness index</h1>
+            <p class="subtitle">Read-only draft report checklist before manual review. report_draft.md is a draft report, not a submission report.</p>
+          </div>
+          <span class="badge good">read-only</span>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>project alias</span><strong>{_h(output.label)}</strong></div>
+          <div class="rail"><span>draft report status</span><strong>{_h(index.report_status)}</strong></div>
+          <div class="rail"><span>finding candidates</span><strong>{index.candidate_count}</strong></div>
+          <div class="rail"><span>severity decision</span><strong>manual review required</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>Readiness summary</h2><span class="muted">safe metadata only</span></div>
+            <dl class="facts">
+              <div><dt>project alias</dt><dd>{_h(output.label)}</dd></div>
+              <div><dt>report_draft.md</dt><dd>{_status_badge(index.report_status)}</dd></div>
+              <div><dt>analysis_packet.json</dt><dd>{_status_badge(index.analysis_status)}</dd></div>
+              <div><dt>finding candidate count</dt><dd>{index.candidate_count}</dd></div>
+              <div><dt>draft report status summary</dt><dd>{_h(_report_readiness_status_summary(index))}</dd></div>
+              <div><dt>raw_data_included</dt><dd>false</dd></div>
+              <div><dt>file paths shown</dt><dd>false</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Related flow</h2><span class="muted">read-only navigation</span></div>
+            <dl class="facts">
+              <div><dt>triage link</dt><dd><a href="{_triage_href(output.output_id)}">open finding triage index</a></dd></div>
+              <div><dt>preflight link</dt><dd><a href="{_preflight_href(output.output_id)}">open AI-safe preflight</a></dd></div>
+              <div><dt>handoff link</dt><dd><a href="{_handoff_href(output.output_id)}">open AI handoff index</a></dd></div>
+              <div><dt>export/review/report flow link</dt><dd><a href="{_output_href(output.output_id)}">return to verified output detail</a></dd></div>
+              <div><dt>boundary</dt><dd>read-only draft report checklist; no form or POST action</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>File metadata</h2><span class="muted">no body preview</span></div>
+            <div class="file-grid">{file_rows}</div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Operator checklist</h2><span class="muted">manual review required</span></div>
+            <ul class="safe-list">{checklist_items}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Interpretation boundary</h2><span class="muted">candidate and draft only</span></div>
+            <dl class="facts">
+              <div><dt>findings</dt><dd>finding candidates until manual verification is complete</dd></div>
+              <div><dt>risk</dt><dd>risk is draft, not severity confirmation</dd></div>
+              <div><dt>confidence</dt><dd>evidence confidence, not severity</dd></div>
+              <div><dt>report draft</dt><dd>report_draft.md is a draft report, not a submission report</dd></div>
+              <div><dt>severity decision</dt><dd>final severity is a manual decision</dd></div>
+              <div><dt>hash type</dt><dd>SHA-256 file fingerprint, not HMAC</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Do not use in report readiness</h2><span class="muted">categories only; no values are shown</span></div>
+            <ul class="safe-list">{forbidden_items}</ul>
           </div>
         </section>
         """,
@@ -1177,6 +1302,52 @@ def _build_finding_triage_index(output: DashboardOutput) -> FindingTriageIndex:
     )
 
 
+def _build_report_readiness_index(output: DashboardOutput) -> ReportReadinessIndex:
+    files = [
+        _report_readiness_file(output.path, "report_draft.md", "Draft report text for manual review."),
+        _report_readiness_file(output.path, "analysis_packet.json", "Structured sanitized candidate evidence packet."),
+    ]
+    report_status = "present" if (output.path / "report_draft.md").is_file() else "missing"
+    analysis_status = "present" if (output.path / "analysis_packet.json").is_file() else "missing"
+    return ReportReadinessIndex(
+        output=output,
+        files=files,
+        candidate_count=output.candidate_count,
+        report_status=report_status,
+        analysis_status=analysis_status,
+    )
+
+
+def _report_readiness_file(output_dir: Path, name: str, purpose: str) -> ReportReadinessFile:
+    path = output_dir / name
+    if not path.is_file():
+        return ReportReadinessFile(
+            name=name,
+            purpose=purpose,
+            status="missing",
+            size_bytes=None,
+            modified_utc="missing",
+            sha256="missing",
+        )
+    stat = path.stat()
+    return ReportReadinessFile(
+        name=name,
+        purpose=purpose,
+        status="present",
+        size_bytes=stat.st_size,
+        modified_utc=datetime.fromtimestamp(stat.st_mtime, UTC).replace(microsecond=0).isoformat(),
+        sha256=_sha256_file(path),
+    )
+
+
+def _report_readiness_status_summary(index: ReportReadinessIndex) -> str:
+    if index.report_status == "present" and index.analysis_status == "present":
+        return "draft present; manual review required before customer submission"
+    if index.report_status == "missing":
+        return "draft missing; run Report after verified review output"
+    return "analysis packet missing; regenerate verified output before report review"
+
+
 def _triage_candidate_from_json(index: int, candidate: dict[str, Any]) -> TriageCandidate:
     risk_rating = candidate.get("risk_rating_draft")
     risk = risk_rating if isinstance(risk_rating, dict) else {}
@@ -1231,6 +1402,27 @@ def _handoff_file_card(file: HandoffFile) -> str:
         <div><dt>size bytes</dt><dd>{_h(size)}</dd></div>
         <div><dt>modified UTC</dt><dd>{_h(file.modified_utc)}</dd></div>
         <div><dt>SHA-256</dt><dd>{_h(file.sha256)}</dd></div>
+      </dl>
+    </article>
+    """
+
+
+def _report_readiness_file_card(file: ReportReadinessFile) -> str:
+    size = str(file.size_bytes) if file.size_bytes is not None else "missing"
+    return f"""
+    <article class="file-card">
+      <div>
+        <span class="kicker">report readiness metadata</span>
+        <strong>{_h(file.name)}</strong>
+        <span>{_status_badge(file.status)}</span>
+        <small>{_h(file.purpose)}</small>
+      </div>
+      <dl class="facts compact">
+        <div><dt>purpose</dt><dd>{_h(file.purpose)}</dd></div>
+        <div><dt>exists or missing</dt><dd>{_h(file.status)}</dd></div>
+        <div><dt>file size in bytes</dt><dd>{_h(size)}</dd></div>
+        <div><dt>modified UTC timestamp</dt><dd>{_h(file.modified_utc)}</dd></div>
+        <div><dt>SHA-256 file fingerprint</dt><dd>{_h(file.sha256)}</dd></div>
       </dl>
     </article>
     """
@@ -1858,6 +2050,10 @@ def _handoff_href(output_id: str) -> str:
 
 def _triage_href(output_id: str) -> str:
     return "/triage?project=" + quote(output_id, safe="")
+
+
+def _report_readiness_href(output_id: str) -> str:
+    return "/report-readiness?project=" + quote(output_id, safe="")
 
 
 def _preview_href(output_id: str, file_name: str) -> str:
