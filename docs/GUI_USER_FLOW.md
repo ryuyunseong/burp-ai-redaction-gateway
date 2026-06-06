@@ -17,6 +17,7 @@ start receiver and dashboard
 -> generate sanitized output
 -> verify the selected output
 -> review candidate findings
+-> check finding triage index
 -> generate report_draft.md
 -> check AI-safe preflight
 -> check AI handoff index
@@ -49,6 +50,7 @@ http://127.0.0.1:8766/
 | --- | --- | --- |
 | `/` | Select verified outputs and inspect audit/archive status. | Shows verified sanitized metadata only. |
 | `/output?project=<alias>` | Review safe files, finding candidates, and allowed dashboard actions for one verified output. | Requires verify to pass before display. |
+| `/triage?project=<alias>` | Review sanitized finding candidate metadata before drafting report language. | Read-only; no finding body preview, form, POST action, or severity decision. |
 | `/preflight?project=<alias>` | Check whether the selected verified output is an AI-safe handoff candidate. | Read-only; no form, POST action, or external transmission. |
 | `/handoff?project=<alias>` | Review the four AI-safe candidate file aliases, purpose, order, and metadata. | Read-only; no file body preview, download, form, or POST action. |
 | `/settings` | Show dashboard settings and security status. | Read-only; no configuration edits. |
@@ -64,15 +66,16 @@ Use the output detail actions in this order:
 
 1. `Verify`: re-run fail-closed verification for the selected output.
 2. `Review`: create a safe summary of candidate findings.
-3. `Report`: write or refresh `report_draft.md`.
-4. `AI-safe preflight`: check the read-only handoff checklist.
-5. `AI handoff index`: check the four AI-safe candidate files and their order.
-6. `Export`: copy only the four safe files to the dashboard export directory.
+3. `Finding triage index`: check candidate metadata and manual review boundaries.
+4. `Report`: write or refresh `report_draft.md`.
+5. `AI-safe preflight`: check the read-only handoff checklist.
+6. `AI handoff index`: check the four AI-safe candidate files and their order.
+7. `Export`: copy only the four safe files to the dashboard export directory.
 
 `Refresh` is a read-only GET reload. `Verify`, `Review`, `Report`, and `Export`
 are state-changing POST actions and require a CSRF token.
-`AI-safe preflight` and `AI handoff index` are read-only GET pages and do not
-submit data.
+`Finding triage index`, `AI-safe preflight`, and `AI handoff index` are
+read-only GET pages and do not submit data.
 
 ## Safe Files For AI
 
@@ -91,6 +94,8 @@ For the preflight status fields and troubleshooting, see
 [GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md).
 For the handoff file order and metadata fields, see
 [GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md).
+For finding candidate triage fields and boundaries, see
+[GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md).
 
 ## Never Send Or Document
 
@@ -126,6 +131,7 @@ dashboard. The operations index is intentionally read-only. It does not add:
 - raw viewers
 - replay or active scan
 - archive or HMAC execution buttons
+- finding triage execution buttons
 - AI-safe preflight execution buttons
 - AI handoff execution buttons
 - risk profile change buttons
