@@ -1,311 +1,232 @@
 # Local Dashboard
 
-The local dashboard is a loopback-only browser surface for verified sanitized
-output. It is intended to make the existing safe workflow easier to inspect
-without exposing raw Burp traffic.
+local dashboard는 검증된 sanitization output을 브라우저에서 확인하기 위한
+loopback 전용 화면입니다. production web application이 아니며
+`127.0.0.1` 밖으로 노출하지 않습니다.
 
-## Run
+## 실행
 
 ```powershell
 python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out
 ```
 
-Only `127.0.0.1` is accepted as the bind host. Non-loopback hosts are rejected.
-Use an explicit root such as `out`; the dashboard discovers output directories
-under that root that contain `analysis_packet.json`.
+`out`처럼 명시적인 root를 사용합니다. dashboard는 root 아래의 output
+directory만 찾고, path traversal과 금지 directory 접근을 차단합니다.
 
-The dashboard includes a read-only operations index:
+dashboard에는 조회 전용 운영 인덱스가 있습니다.
 
 ```text
-http://127.0.0.1:8766/help
-http://127.0.0.1:8766/operations
+/help
+/operations
 ```
 
-The operations index is a guide hub, not an action surface. It links the
-quickstart, GUI user flow guide, GUI AI-safe preflight guide, GUI AI handoff
-index guide, GUI finding triage index guide, GUI report readiness index guide,
-GUI workflow status index guide, Windows launcher guide, audit
-operations guide, GUI audit panel guide, risk rating guide, and v0.4 release
-notes by repository-relative path. It also lists the four AI-safe files, blocked
-raw-data categories, and the candidate/draft interpretation boundary.
+운영 인덱스는 quickstart, GUI 사용자 흐름, AI 안전 사전 점검, AI 핸드오프
+인덱스, finding triage, 보고서 준비 상태, workflow 상태, audit 운영, audit
+panel 해석, risk rating 문서로 이동하는 진입점입니다. 또한 안전 파일 4개,
+차단되는 raw-data 범위, candidate/draft 해석 경계를 요약합니다.
 
-For the screen-by-screen operator sequence, see
-[GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md).
-For the AI handoff checklist, see
-[GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md).
-For the AI-safe candidate file index, see
-[GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md).
-For the finding candidate triage checklist, see
-[GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md).
-For the draft report readiness checklist, see
-[GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md).
-For the full read-only workflow status checklist, see
-[GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md).
+화면별 운영 순서는
+[GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md)를
+참조하세요. AI 핸드오프 체크리스트는
+[GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md)를
+참조하세요. AI 안전 후보 파일 인덱스는
+[GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
+참조하세요. finding 후보 triage 체크리스트는
+[GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
+참조하세요. 보고서 초안 준비 체크리스트는
+[GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md)를
+참조하세요. 전체 workflow 상태 체크리스트는
+[GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
+참조하세요.
 
-## Allowed Scope
+## Verify-first 경계
 
-The dashboard applies the same verify-first boundary as the CLI and read-only
-MCP server. A selected output directory must pass `verify` before any preview or
-download is allowed.
+dashboard는 CLI와 같은 verify-first 경계를 적용합니다. 선택한 output이
+`verify`를 통과한 뒤에만 preview, download, 안전 action을 허용합니다.
 
-The only preview and download files are:
+허용되는 안전 파일은 다음 4개뿐입니다.
 
 - `analysis_packet.json`
 - `chatgpt_prompt.md`
 - `codex_task_prompt.md`
 - `report_draft.md`
 
-All file content is scanned before it is rendered or returned. JSON and Markdown
-are HTML-escaped in browser previews.
+## Finding 표시 경계
 
-## Review Surface
+dashboard는 검토 화면이며 확정 판정 화면이 아닙니다. 표시되는 finding은
+candidate 또는 suspected finding 문구를 유지해야 합니다.
 
-The dashboard is designed as a review surface with a small set of safe workflow
-actions. It highlights the safe workflow state directly in the UI:
+finding card에는 sanitization 완료 후보 metadata, rationale, confidence
+basis, `risk_rating_draft`, 권장 수동 테스트, `do_not_claim` guidance가
+표시될 수 있습니다. risk rating draft는 확정되지 않은 상태로 유지되며 별도
+수동 risk review 전에 severity 결정으로 취급하지 않습니다.
 
-- verify passed output only
-- raw-free display mode
-- candidate or suspected finding language
-- manual verification required before confirmation
-- confidence as evidence confidence, not severity
-- draft likelihood, impact, and severity requiring a separate risk rating step
-- CSRF-protected POST actions
+## AI 안전 사전 점검
 
-Finding cards may show sanitized candidate metadata, rationale, confidence
-basis, risk rating draft metadata, recommended manual tests, and `do_not_claim`
-guidance. The risk rating draft must remain unfinalized and must not be treated
-as a severity decision. Finding cards must not show raw request or response
-data.
-
-## AI-Safe Preflight
-
-The dashboard provides a read-only AI-safe preflight view for a selected
-verified output:
+선택한 검증 output에 대해 조회 전용 AI 안전 사전 점검 화면을 제공합니다.
 
 ```text
 /preflight?project=<alias>
 ```
 
-The preflight view summarizes only safe metadata:
+사전 점검 화면은 다음 metadata만 요약합니다.
 
-- whether each of the four AI-safe candidate files is present
-- verify-passed status and verifier file count
+- 안전 파일 4개 존재 여부
+- `verify` 통과 여부
+- 검증한 파일 수
 - finding candidate count
-- `report_draft.md` presence
-- forbidden marker scan summary for the four safe files
-- `raw_data_included=false`
-- reminder that findings are candidates, risk is draft, and final severity is a
-  manual decision
+- `report_draft.md` 존재 여부
+- 안전 파일 4개에 대한 금지 마커 스캔 요약
+- finding은 candidate, risk는 draft, severity는 사람이 수동 결정한다는 경계
 
-The preflight view does not add forms, POST actions, state-changing buttons, raw
-viewers, HMAC secret inputs, CSRF token display, replay, active scan, delete,
-edit, retention changes, or risk profile changes.
+사전 점검 화면은 form, POST action, 상태 변경 버튼, raw viewer, HMAC secret
+입력, CSRF token 표시, replay, active scan, delete, edit, retention control을
+추가하지 않습니다.
 
-## AI Handoff Index
+## AI 핸드오프 인덱스
 
-The dashboard provides a read-only AI handoff index for a selected verified
-output:
+선택한 검증 output에 대해 조회 전용 AI 핸드오프 인덱스를 제공합니다.
 
 ```text
 /handoff?project=<alias>
 ```
 
-The handoff index summarizes only safe metadata for the four AI-safe candidate
-files:
+핸드오프 인덱스는 안전 파일 4개의 alias, 목적, 권장 순서, 존재 여부,
+크기(bytes), 수정 시각(UTC), SHA-256 파일 fingerprint만 표시합니다.
+파일 본문, full local path, HMAC secret, CSRF token은 표시하지 않고 새
+download action이나 상태 변경 action을 추가하지 않습니다.
 
-- file alias
-- purpose
-- recommended reading order
-- exists or missing status
-- file size in bytes
-- modified UTC timestamp
-- SHA-256 file fingerprint
+## Finding Triage 인덱스
 
-The handoff index does not show full local paths or safe file body previews. It
-does not add download buttons, forms, POST actions, state-changing buttons, raw
-viewers, HMAC secret inputs, CSRF token display, replay, active scan, delete,
-edit, retention changes, or risk profile changes.
-
-## Finding Triage Index
-
-The dashboard provides a read-only finding triage index for a selected verified
-output:
+선택한 검증 output에 대해 조회 전용 finding triage 인덱스를 제공합니다.
 
 ```text
 /triage?project=<alias>
 ```
 
-The triage index summarizes only safe metadata for sanitized finding
-candidates:
+triage 인덱스는 다음 후보 metadata만 표시합니다.
 
 - project alias
 - finding candidate count
-- candidate index and stable candidate id
+- candidate index와 stable candidate id
 - category/type
-- title and sanitized summary
+- title과 sanitized summary
 - evidence confidence
-- draft risk profile, likelihood, impact, and severity
-- manual review required status
-- `analysis_packet.json` and `report_draft.md` presence
-- links to preflight, handoff, and the verified output detail flow
+- draft risk profile, likelihood, impact, severity
+- manual review required 상태
+- `analysis_packet.json`과 `report_draft.md` 존재 여부
+- preflight, handoff, report readiness, output 상세 flow 링크
 
-The triage index does not show raw request or response data, finding body
-previews, request previews, response previews, full local paths, HMAC secrets,
-CSRF token values, real domains, real URLs, real IP addresses, or personal data.
-It does not add forms, POST actions, state-changing buttons, download buttons,
-archive/HMAC actions, replay, active scan, delete, edit, retention changes, or
-risk profile changes.
+이 화면은 form, POST action, 상태 변경 버튼, download button, finding body
+preview, request/response preview, raw viewer, replay, active scan,
+archive/HMAC 실행, HMAC secret 입력, CSRF token 표시, 파일 삭제, retention
+변경, risk profile 변경을 추가하지 않습니다.
 
-## Report Readiness Index
+## 보고서 준비 상태 인덱스
 
-The dashboard provides a read-only report readiness index for a selected
-verified output:
+선택한 검증 output에 대해 조회 전용 보고서 준비 상태 인덱스를 제공합니다.
 
 ```text
 /report-readiness?project=<alias>
 ```
 
-The report readiness index summarizes only safe metadata for draft report manual
-review:
+보고서 준비 상태 인덱스는 수동 보고서 검토를 위한 안전 metadata만 표시합니다.
 
-- project alias
-- `report_draft.md` exists or missing status
-- `analysis_packet.json` exists or missing status
+- `report_draft.md` 존재 여부
+- `analysis_packet.json` 존재 여부
+- 안전 파일 metadata
 - finding candidate count
-- draft report status summary
-- links to triage, preflight, handoff, and verified output detail flow
-- operator checklist for scope, endpoint, evidence quality, false positive,
-  impact, remediation, final severity manual decision, and sensitive-info review
-- file size in bytes, modified UTC timestamp, and SHA-256 file fingerprint for
-  `report_draft.md` and `analysis_packet.json`
+- triage, preflight, handoff, output 상세 flow 링크
+- scope, endpoint, evidence quality, false positive, impact, remediation,
+  severity 수동 결정, 민감정보 검토를 위한 운영자 체크리스트
+- `report_draft.md`와 `analysis_packet.json`의 SHA-256 파일 fingerprint
 
-The SHA-256 fingerprint is not HMAC. The report readiness index does not show
-report body previews, raw request or response data, raw audit row bodies, full
-local paths, HMAC secrets, CSRF token values, real domains, real URLs, real IP
-addresses, or personal data. It does not add forms, POST actions,
-state-changing buttons, new download actions, archive/HMAC actions, replay,
-active scan, delete, edit, retention changes, or risk profile changes.
+보고서 본문 preview, raw data, full local path, form, POST action, 새
+download action, archive/HMAC action, replay, active scan, HMAC secret 입력,
+CSRF token 값, 제출 control은 표시하지 않습니다.
 
-## Workflow Status Index
+## Workflow 상태 인덱스
 
-The dashboard provides a read-only workflow status index for a selected
-verified output:
+선택한 검증 output에 대해 조회 전용 workflow 상태 인덱스를 제공합니다.
 
 ```text
 /workflow?project=<alias>
 ```
 
-The workflow status index summarizes only safe metadata across the operator
-sequence:
+workflow 상태 인덱스는 verify, review, report, preflight, handoff, triage,
+report-readiness, review/report/export flow를 안전 metadata 체크리스트로
+묶어 보여줍니다.
 
-- project alias
 - verify status summary
 - review status summary
 - finding candidate count
-- `analysis_packet.json`, `chatgpt_prompt.md`, `codex_task_prompt.md`, and
-  `report_draft.md` present or missing status
-- links to preflight, handoff, triage, report-readiness, and the verified
-  output review/report/export flow
-- reminder that finding is candidate, risk is draft, final severity is a
-  manual decision, and `report_draft.md` is a draft report, not a submission
-  report
+- `analysis_packet.json`과 `report_draft.md` 존재 여부
+- safe file status
+- 관련 index link
+- finding은 candidate, risk는 draft, severity는 수동 결정이라는 reminder
 
-The workflow status index is a read-only workflow checklist. It does not show
-report body previews, raw request or response data, raw audit row bodies, full
-local paths, HMAC secrets, CSRF token values, real domains, real URLs, real IP
-addresses, or personal data. It does not add forms, POST actions,
-state-changing buttons, new download actions, archive/HMAC actions, replay,
-active scan, delete, edit, retention changes, or risk profile changes.
+이 화면은 form, POST action, 상태 변경 버튼, report body preview, 새
+download, raw viewer, 제출 판단을 추가하지 않습니다.
 
-## Blocked Scope
+## 제공하지 않는 기능
 
-The dashboard does not implement:
+dashboard는 다음 기능을 구현하지 않습니다.
 
-- raw request or response viewers
-- replay or active scan actions
-- arbitrary file writes
-- delete or edit actions
-- automatic exploit confirmation
-- severity assignment
-- archive or HMAC generation buttons on the operations index
-- finding triage execution buttons
-- report readiness execution buttons
-- workflow status execution buttons
-- risk profile change buttons on the operations index
+- raw request/response viewer
+- replay 또는 active scan
+- 임의 파일 write
+- delete 또는 edit operation
+- archive/HMAC 실행 버튼
+- finding triage 실행 버튼
+- report readiness 실행 버튼
+- workflow status 실행 버튼
 
-## Dashboard Actions
+## 허용된 상태 변경 action
 
-The dashboard supports only these state-changing POST actions:
+dashboard가 지원하는 상태 변경 POST action은 다음으로 제한됩니다.
 
-- `Verify`: re-runs fail-closed verification for the selected output.
-- `Review`: renders a safe review summary without exporting raw data.
-- `Report`: writes or refreshes `report_draft.md` after verify passes.
-- `Export`: copies only the four safe preview files to `exports/dashboard/`.
+- `Verify`: 선택한 output에 fail-closed 검증을 다시 실행합니다.
+- `Review`: raw data를 export하지 않고 안전 review summary를 만듭니다.
+- `Report`: `verify` 통과 후 `report_draft.md`를 작성하거나 갱신합니다.
+- `Export`: 안전 preview 파일 4개만 `exports/dashboard/`로 복사합니다.
 
-Every POST action requires a per-server CSRF token. Missing or invalid tokens
-return a safe error page without raw request, response, cookie, token, domain, or
-personal data values. `Refresh` remains a read-only GET reload.
+모든 POST action은 CSRF token을 요구합니다. CSRF token 값, HMAC secret,
+raw HTTP 값, cookie, authorization 값, token, 실제 domain, 내부 IP,
+개인정보는 화면과 action audit event에 기록하지 않습니다. `Refresh`는 조회
+전용 GET reload입니다.
 
-State-changing POST actions append raw-free audit events under
-`<root>/.audit/mcp_audit.jsonl` using audit schema `1.1` and
-`event_type: dashboard_action`. Events record only metadata such as action name,
-sanitized output id, result status, blocked reason, safe report profile, and the
-safe exported file allowlist. CSRF token values, raw request or response data,
-cookies, authorization values, tokens, real domains, internal IPs, personal
-data, and stack traces are not written to dashboard action audit events.
+## Dashboard action audit
 
-The following paths are rejected:
+상태 변경 dashboard action은 `event_type: dashboard_action` audit event를
+추가합니다. event는 action name, sanitization output id, result status,
+blocked reason, 안전 export file name 같은 metadata만 기록합니다.
 
-- `local_only/`
-- `raw/`
-- `raw_vault/`
-- `build/`
-- `.gradle/`
+CSRF token 값, raw HTTP 값, stack trace, domain, 내부 IP, 개인정보는
+dashboard action audit event에 쓰지 않습니다.
 
-Path traversal and absolute output paths are rejected.
+## Settings/status 화면
 
-## Settings Page
+dashboard는 `/settings`에 조회 전용 설정/상태 page를 제공합니다. 이 화면은
+보안 상태 확인용이며 설정 변경 화면이 아닙니다.
 
-The dashboard provides a read-only settings/status page at `/settings`. It is a
-safe status surface, not a configuration editor. It may show:
+표시 가능한 값:
 
-- root alias, not the full local path
-- localhost-only bind mode
-- the safe preview/download file allowlist
+- root alias
+- localhost-only mode
+- safe file allowlist
 - report profile names
-- risk rating profile names
-- draft-only risk rating mode and `confidence_is_severity: false`
-- audit schema version and audit path alias
-- HMAC configured/not configured status
-- retained JSONL, compressed archive, and archive HMAC status
-- CSRF enabled status without the CSRF value
+- draft-only risk mode와 `confidence_is_severity: false`
+- audit schema version
+- HMAC configured status
+- CSRF enabled status
+- audit/archive 상태 요약
 
-The settings page must not print HMAC secret values, CSRF values, environment
-variable values, raw request or response data, cookies, authorization values,
-tokens, real domains, internal IPs, personal data, or stack traces. It does not
-add raw viewing, replay, active scan, delete, edit, or settings-write actions.
+CSRF 값, HMAC secret 값, 환경변수 값, raw HTTP data, full local path는
+표시하지 않습니다.
 
-## Audit Panel
+## 결과 해석
 
-The audit panel summarizes local audit and archive status only. It may show
-review status, event counts, retained JSONL status, retained HMAC manifest
-status, compressed archive status, archive verification status, and compressed
-archive HMAC manifest status. It does not print audit rows, HMAC secrets, raw
-request or response values, cookies, authorization values, tokens, real domains,
-internal IPs, personal data, or stack traces.
-
-If `BURP_AI_AUDIT_HMAC_KEY` is not set, HMAC status is reported as a safe error
-type rather than printing the secret configuration.
-
-For status interpretation and troubleshooting, see
-[GUI_AUDIT_PANEL_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AUDIT_PANEL_GUIDE.md).
-
-## Finding Language
-
-Dashboard findings remain candidate or suspected findings. `confidence` is
-evidence confidence, not severity. `risk_rating_draft` is a separate draft-only
-workflow for likelihood, impact, and severity. Supported risk profiles are
-`conservative`, `consultant`, and `strict`; the settings page lists them as
-read-only status. Manual verification is required before any finding is
-reported as completed or assigned as a severity decision.
-
+dashboard finding은 candidate 또는 suspected finding 상태를 유지합니다.
+`confidence`는 evidence confidence이며 severity가 아닙니다.
+`risk_rating_draft`는 별도 draft-only workflow입니다. 수동 검증 전 finding을
+확정하거나 severity를 결정하지 않습니다.

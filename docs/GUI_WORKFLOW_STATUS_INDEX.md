@@ -1,15 +1,15 @@
-# GUI Workflow Status Index
+# GUI Workflow 상태 인덱스
 
-This guide explains the dashboard workflow status index. The index is a
-read-only workflow checklist for a selected verified output.
+이 문서는 dashboard의 workflow 상태 인덱스를 설명합니다. 인덱스는 검증된
+output 하나에 대한 조회 전용 workflow 체크리스트입니다.
 
-Open it from a verified output:
+검증된 output에서 다음 주소를 엽니다.
 
 ```text
 /workflow?project=<alias>
 ```
 
-The page ties together the safe dashboard sequence:
+이 화면은 안전 dashboard 순서를 한곳에 묶어 보여줍니다.
 
 ```text
 verify
@@ -21,24 +21,24 @@ verify
 -> report-readiness
 ```
 
-It is a status and navigation page only. It does not run the workflow.
+상태와 이동 링크만 제공하며 workflow를 실행하지 않습니다.
 
-## Displayed Metadata
+## 표시 metadata
 
-The workflow status index displays only safe metadata:
+workflow 상태 인덱스는 안전 metadata만 표시합니다.
 
-| Field | Meaning |
+| 필드 | 의미 |
 | --- | --- |
-| `project alias` | The selected dashboard output alias. |
-| `verify status summary` | Whether the selected output has passed verify. |
-| `review status summary` | Whether finding candidate metadata is available or missing. |
-| `finding candidate count` | Number of finding candidates in the verified output. |
-| `analysis_packet.json` | Whether the sanitized candidate packet is available or missing. |
-| `report_draft.md` | Whether the report draft is available or missing. |
-| safe file status | Present or missing status for the four AI-safe files. |
-| related indexes | Links to preflight, handoff, triage, report-readiness, and the review/report/export flow. |
+| `project alias` | 선택한 dashboard output alias |
+| `verify status summary` | 선택한 output이 `verify`를 통과했는지 여부 |
+| `review status summary` | finding 후보 metadata가 있는지 여부 |
+| `finding candidate count` | 검증된 output 안의 finding 후보 수 |
+| `analysis_packet.json` | sanitization 완료 후보 packet 존재 여부 |
+| `report_draft.md` | 보고서 초안 존재 여부 |
+| safe file status | AI 안전 파일 4개의 존재 여부 |
+| related indexes | preflight, handoff, triage, report-readiness, review/report/export flow 링크 |
 
-Possible status labels include:
+표시될 수 있는 상태 label 예시는 다음과 같습니다.
 
 - `missing`
 - `needs verify`
@@ -46,77 +46,76 @@ Possible status labels include:
 - `draft available`
 - `manual review required`
 
-## Safe Files
+## AI 안전 파일
 
-The workflow status index may list only these four AI-safe files:
+workflow 상태 인덱스는 다음 네 파일만 나열할 수 있습니다.
 
 - `analysis_packet.json`
 - `chatgpt_prompt.md`
 - `codex_task_prompt.md`
 - `report_draft.md`
 
-Do not use the files until verify has passed and manual review has confirmed the
-planned AI handoff.
+`verify`를 통과하고 사람이 계획한 AI 핸드오프를 검토하기 전에는 파일을
+사용하지 않습니다.
 
-## Interpretation Boundary
+## 해석 경계
 
-- finding is candidate until manual verification is complete.
-- risk is draft and requires separate review.
-- final severity is a manual decision.
-- `report_draft.md` is a draft report, not a submission report.
-- report_draft.md is a draft report, not a submission report.
-- Evidence confidence is not severity.
-- CVSS is a separate calculation scope.
+- finding은 수동 검증이 끝날 때까지 candidate입니다.
+- risk는 draft이며 별도 검토가 필요합니다.
+- 심각도는 사람이 수동으로 결정합니다.
+- `report_draft.md`는 보고서 초안이며 제출용 보고서가 아닙니다.
+- Evidence confidence는 severity가 아닙니다.
+- CVSS는 별도 산정 범위입니다.
 
-## Related Pages
+## 관련 화면
 
-Use the workflow status index as a read-only navigation checklist:
+workflow 상태 인덱스는 조회 전용 이동 체크리스트로 사용합니다.
 
-| Link | Purpose |
+| 링크 | 목적 |
 | --- | --- |
-| preflight | Check AI-safe file readiness. |
-| handoff | Check safe file order, purpose, and metadata. |
-| triage | Review sanitized finding candidate metadata. |
-| report-readiness | Check draft report readiness boundaries. |
-| review/report/export flow | Return to the verified output detail page. |
+| preflight | AI 안전 파일 준비 상태 확인 |
+| handoff | 안전 파일 순서, 목적, metadata 확인 |
+| triage | sanitization 완료 finding 후보 metadata 검토 |
+| report-readiness | 보고서 초안 준비 경계 확인 |
+| review/report/export flow | 검증된 output 상세 화면으로 돌아가기 |
 
-## Do Not Use In Workflow Status
+## Workflow 상태에서 쓰지 않을 값
 
-Do not paste, display, record, or use these values in the workflow status index,
-docs, PRs, issues, or AI tools:
+다음 값은 workflow 상태 인덱스, 문서, PR, 이슈, AI 도구에 붙여넣거나
+표시하거나 기록하거나 사용하지 않습니다.
 
-- raw request or response data
-- raw audit row body
-- Cookie or Authorization values
-- token, JWT, or session values
-- real domain, URL, or IP values
-- personal data
-- HMAC secret or CSRF token values
+- raw request 또는 raw response 데이터
+- raw audit row 본문
+- Cookie 또는 Authorization 값
+- token, JWT, session 값
+- 실제 domain, URL, IP 값
+- 개인정보
+- HMAC secret 또는 CSRF token 값
 - full local path
-- `local_only/`, `raw/`, `raw_vault/`, unverified `out/`, or `out/.audit` artifacts
+- `local_only/`, `raw/`, `raw_vault/`, 검증 전 `out/`, `out/.audit` 산출물
 
-## Read-Only Boundary
+## 조회 전용 경계
 
-The workflow status index does not provide:
+workflow 상태 인덱스는 다음 기능을 제공하지 않습니다.
 
-- form or POST action
-- state-changing button
+- form 또는 POST action
+- 상태 변경 버튼
 - report body preview
 - request preview
 - response preview
-- new download action
+- 새 download action
 - raw viewer
-- replay or active scan
+- replay 또는 active scan
 - HMAC secret input UI
-- retention or delete action
+- retention 또는 delete action
 - risk profile change action
 
-## Troubleshooting
+## 문제 해결
 
-| Symptom | Meaning | Next step |
+| 증상 | 의미 | 다음 조치 |
 | --- | --- | --- |
-| Output does not open | The selected alias is missing, unverified, or forbidden. | Run `verify` on the selected output and use the dashboard alias only. |
-| Safe file status is `missing` | The related step has not generated that file. | Run the relevant safe CLI or dashboard action after verify passes. |
-| Review status is `missing` | No finding candidates are available. | Check scope and input coverage locally before report work. |
-| Report status is `missing` | `report_draft.md` has not been generated. | Run Report after review, then manually inspect the draft. |
-| Operator needs archive/HMAC state | The workflow page does not execute audit operations. | Use the audit operations guide and the read-only audit panel. |
+| Output이 열리지 않음 | 선택한 alias가 없거나, 검증되지 않았거나, 금지됨 | 선택한 output에 `verify`를 실행하고 dashboard alias만 사용합니다. |
+| Safe file status가 `missing` | 관련 단계가 아직 파일을 생성하지 않음 | `verify` 통과 후 관련 안전 CLI 또는 dashboard action을 실행합니다. |
+| Review status가 `missing` | finding 후보가 없음 | 보고서 작업 전 scope와 input coverage를 로컬에서 확인합니다. |
+| Report status가 `missing` | `report_draft.md`가 아직 생성되지 않음 | Review 뒤 Report를 실행하고 초안을 사람이 검토합니다. |
+| 운영자가 archive/HMAC 상태를 확인해야 함 | workflow 화면은 audit 작업을 실행하지 않음 | audit 운영 가이드와 조회 전용 audit panel을 사용합니다. |
