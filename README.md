@@ -1,18 +1,18 @@
 # Burp AI Redaction Gateway
 
-Local CLI for turning Burp HTTP history exports into sanitized evidence packets
-and prompt files. Raw HTTP values are parsed locally, sensitive values are
-redacted, and generated output is blocked if the final safety scan finds likely
-secrets or personal data.
+Burp HTTP history export를 sanitization 완료 evidence packet과 prompt file로
+바꾸는 로컬 CLI/GUI 도구입니다. raw HTTP 값은 로컬에서 파싱하고 민감값은
+redaction하며, 마지막 safety scan에서 token, 개인정보, raw HTTP marker가
+남아 있으면 output 생성을 차단합니다.
 
-This first MVP uses only the Python standard library so it can run without
-installing packages. It supports synthetic JSON fixtures, HAR-style JSON, and a
-basic Burp XML export shape.
+현재 MVP는 Python 표준 라이브러리만 사용합니다. synthetic JSON fixture,
+HAR-style JSON, 기본 Burp XML export 형태를 지원합니다.
 
 ## Usage
 
-For a short CLI and dashboard walkthrough, see
-[docs/USER_QUICKSTART.md](C:/coding/burp-ai-redaction-gateway/docs/USER_QUICKSTART.md).
+짧은 CLI와 dashboard walkthrough는
+[docs/USER_QUICKSTART.md](C:/coding/burp-ai-redaction-gateway/docs/USER_QUICKSTART.md)를
+참조하세요.
 
 ```powershell
 python -m burp_ai_redaction_gateway generate `
@@ -23,40 +23,39 @@ python -m burp_ai_redaction_gateway generate `
   --policy policy.json
 ```
 
-Verify generated output:
+생성 output 검증:
 
 ```powershell
 python -m burp_ai_redaction_gateway verify --input out/demo --policy policy.json
 ```
 
-Review verified analysis packet output and optionally export safe prompt files:
+검증된 analysis packet을 review하고 필요한 경우 안전 prompt file을 export:
 
 ```powershell
 python -m burp_ai_redaction_gateway review --input out/demo --export-dir exports/demo_review
 ```
 
-The review command runs `verify` first and refuses to export files if verification
-fails.
+`review` 명령은 먼저 `verify`를 실행하며, 검증 실패 시 export를 거부합니다.
 
-Generate a cautious report draft from verified analysis packets:
+검증된 analysis packet에서 보수적인 보고서 초안 생성:
 
 ```powershell
 python -m burp_ai_redaction_gateway report --input out/demo --output out/demo/report_draft.md --profile conservative
 ```
 
-The report draft keeps every item in candidate or suspected finding status and
-includes rationale, impact draft, additional verification steps, remediation
-draft, and claims that must not be made before proof. The `confidence` value is
-evidence confidence, not severity. Risk rating appears only as a separate draft
-with likelihood, impact, and severity draft values that require manual review.
+보고서 초안은 모든 항목을 candidate 또는 suspected finding 상태로 유지합니다.
+rationale, impact draft, 추가 검증 단계, remediation draft, 증명 전 주장하지
+않을 항목을 포함합니다. `confidence`는 evidence confidence이며 severity가
+아닙니다. risk rating은 likelihood, impact, severity draft 값을 가진 별도
+초안으로만 표시되며 수동 검토가 필요합니다.
 
-Report wording profiles:
+Report wording profile:
 
-- `conservative`: most cautious wording; all findings remain candidates.
-- `consultant`: consultant report draft wording; manual verification remains
-  required and confirmed vulnerability claims remain blocked.
+- `conservative`: 가장 보수적인 문구. 모든 finding은 후보로 유지합니다.
+- `consultant`: consultant 보고서 초안 문구. 수동 검증은 계속 필요하며 확정
+  취약점 주장은 차단합니다.
 
-Generated files:
+생성 파일:
 
 - `endpoint_inventory.md`
 - `sanitized_events.jsonl`
@@ -67,69 +66,65 @@ Generated files:
 - `redaction_audit.json`
 - `redaction_audit.db`
 
-Each generated text artifact includes metadata such as `sanitizer_version`,
-`policy_hash`, `raw_data_included: false`, `generated_at`,
-`source_event_count`, aggregate `redaction_counts`, and `scanner_result`.
+각 생성 text artifact에는 `sanitizer_version`, `policy_hash`,
+`raw_data_included: false`, `generated_at`, `source_event_count`, aggregate
+`redaction_counts`, `scanner_result` 같은 metadata가 포함됩니다.
 
-`finding_candidates.json` is built only from sanitized events. Each candidate
-uses a `finding_id`, passive rule `type`, confidence, templated
-`affected_endpoint`, `evidence_ids`, rationale, confidence rationale, a
-`risk_rating_draft`, manual test guidance, and a `do_not_claim` list to prevent
-over-claiming before manual verification. `risk_rating_draft` records the risk
-profile used for draft likelihood, impact, and severity values. Supported risk
-profiles are `conservative`, `consultant`, and `strict`; the default is
-`conservative`. The values remain draft-only and explicitly mark the rating as
-not finalized.
-`analysis_packet.json`, `chatgpt_prompt.md`, and `codex_task_prompt.md` are
-derived from those candidates and must be used only after `verify` passes.
+`finding_candidates.json`은 sanitization 완료 event만 사용해 만들어집니다.
+각 후보는 `finding_id`, passive rule `type`, confidence, templated
+`affected_endpoint`, `evidence_ids`, rationale, confidence rationale,
+`risk_rating_draft`, manual test guidance, `do_not_claim` list를 포함해 수동
+검증 전 과장된 주장을 방지합니다. `risk_rating_draft`는 draft likelihood,
+impact, severity 값에 사용한 risk profile을 기록합니다. 지원 profile은
+`conservative`, `consultant`, `strict`이고 기본값은 `conservative`입니다.
+값은 draft-only이며 rating이 finalized가 아님을 명시합니다.
+`analysis_packet.json`, `chatgpt_prompt.md`, `codex_task_prompt.md`는 이 후보
+metadata에서 만들어지며 `verify` 통과 후에만 사용합니다.
 
 ## Policy
 
-The default policy is [policy.json](C:/coding/burp-ai-redaction-gateway/policy.json).
-It is fail-closed, disables raw request/response output, and disables response
-snippets by default. Verification scans `.json`, `.jsonl`, `.md`, and `.txt`
-files for raw tokens, cookie values, JWTs, PII, internal IPs, domains, high
-entropy strings, and raw HTTP markers.
+기본 policy는 [policy.json](C:/coding/burp-ai-redaction-gateway/policy.json)입니다.
+fail-closed 방식이며 raw request/response output과 response snippet은 기본적으로
+비활성화됩니다. 검증은 `.json`, `.jsonl`, `.md`, `.txt` 파일에서 raw token,
+cookie value, JWT, PII, internal IP, domain, high entropy string, raw HTTP
+marker를 스캔합니다.
 
-Allowed false positives must be documented in `verification.allowlist_notes`.
-The built-in allowlist only permits network buckets such as `10.0.0.0/8`, not
-raw internal host IP addresses.
+허용된 false positive는 `verification.allowlist_notes`에 기록해야 합니다.
+내장 allowlist는 `10.0.0.0/8` 같은 network bucket만 허용하며 raw internal
+host IP address는 허용하지 않습니다.
 
 ## Fixtures
 
-Repository fixtures are synthetic only:
+Repository fixture는 synthetic data만 포함합니다.
 
 - `samples/synthetic_burp_history.json`
 - `samples/synthetic_burp_variants.json`
 - `samples/burp_xml_base64_history.xml`
 
-They cover JSON APIs, URL-encoded forms, multipart upload shape, GraphQL,
-HTML forms with hidden input, JWT in multiple locations, Korean PII, internal
-IP/host aliasing, high entropy strings, and Burp XML base64 request/response.
+fixture는 JSON API, URL-encoded form, multipart upload shape, GraphQL,
+hidden input이 있는 HTML form, 여러 위치의 JWT, 한국어 PII, internal IP/host
+aliasing, high entropy string, Burp XML base64 request/response를 다룹니다.
 
 ## Real-Like Smoke Test
 
-When a real Burp export is not available, generate a safe real-like smoke test
-sample:
+실제 Burp export가 없을 때는 안전한 real-like smoke test sample을 생성합니다.
 
 ```powershell
 python scripts\make_safe_burp_export_sample.py
 scripts\run_safe_sample_smoke_test.bat
 ```
 
-This writes `local_only\real_burp_history_sample.xml` with synthetic data only
-and then runs `generate`, `verify`, and the Git safety gate. The generated sample
-is useful for parser and redaction smoke testing, but it is not a substitute for
-compatibility testing with an export saved directly from Burp.
+이 명령은 synthetic data만 포함한 `local_only\real_burp_history_sample.xml`을
+만든 뒤 `generate`, `verify`, Git safety gate를 실행합니다. 생성 sample은
+parser와 redaction smoke test에 유용하지만, Burp에서 직접 저장한 export와의
+compatibility testing을 대체하지 않습니다.
 
-Real Burp exports must still be tested separately under `local_only/`. Raw real
-exports must never be committed, pasted into prompts, copied into issues, or
-added to documentation.
+실제 Burp export는 별도로 `local_only/` 아래에서만 테스트합니다. raw real
+export는 커밋, prompt 붙여넣기, issue 복사, 문서 추가 대상이 아닙니다.
 
 ## Verification
 
-The tests are written with `unittest`, so they also run under pytest when pytest
-is installed.
+테스트는 `unittest` 기반이며 pytest가 설치된 환경에서도 실행할 수 있습니다.
 
 ```powershell
 python -m compileall burp_ai_redaction_gateway tests
@@ -138,204 +133,191 @@ python -m burp_ai_redaction_gateway generate --input samples\synthetic_burp_hist
 python -m burp_ai_redaction_gateway verify --input out\demo
 ```
 
-Before committing, run:
+커밋 전에는 다음을 실행합니다.
 
 ```powershell
 scripts\pre_commit_check.bat
 scripts\git_safety_check.bat
 ```
 
-`git_safety_check` is safe to run before `git init`; in that case it skips the
-tracked/staged file check and still runs the pre-commit verification.
+`git_safety_check`는 `git init` 전에도 실행 가능합니다. 이 경우 tracked/staged
+file check는 건너뛰지만 pre-commit verification은 실행합니다.
 
 ## Operating Guide
 
-For the full safe operating flow, including Burp collection, receiver usage,
-verification, AI-safe files, audit retention, HMAC verification, and failure
-handling, see
-[docs/OPERATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/OPERATING_GUIDE.md).
-For the operator-facing GUI sequence from first run through safe AI handoff, see
-[docs/GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md).
-For the read-only GUI checklist before AI handoff, see
-[docs/GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md).
-For the read-only GUI handoff file index, see
-[docs/GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md).
-For the read-only GUI finding triage checklist, see
-[docs/GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md).
-For the read-only GUI draft report readiness checklist, see
-[docs/GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md).
-For the focused audit review, retention, HMAC, compression, and archive HMAC
-runbook, see
-[docs/AUDIT_OPERATIONS_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/AUDIT_OPERATIONS_GUIDE.md).
-For interpreting the dashboard audit/archive status panel, see
-[docs/GUI_AUDIT_PANEL_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AUDIT_PANEL_GUIDE.md).
-For risk rating draft concepts and profile interpretation, see
-[docs/RISK_RATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/RISK_RATING_GUIDE.md).
-For the v0.4 dashboard release baseline, see
-[docs/RELEASE_NOTES_v0.4.md](C:/coding/burp-ai-redaction-gateway/docs/RELEASE_NOTES_v0.4.md).
+Burp 수집, receiver 사용, verification, AI 안전 파일, audit retention,
+HMAC verification, 실패 처리까지 포함한 전체 안전 운영 흐름은
+[docs/OPERATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/OPERATING_GUIDE.md)를
+참조하세요. 처음 실행부터 안전 AI 핸드오프까지의 GUI 운영자 흐름은
+[docs/GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md)를
+참조하세요. AI 핸드오프 전 조회 전용 GUI 체크리스트는
+[docs/GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
+참조하세요. 조회 전용 GUI 핸드오프 파일 인덱스는
+[docs/GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md)를
+참조하세요. 조회 전용 GUI finding triage 체크리스트는
+[docs/GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
+참조하세요. 조회 전용 GUI 보고서 초안 준비 체크리스트는
+[docs/GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md)를
+참조하세요. 조회 전용 GUI workflow 상태 체크리스트는
+[docs/GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
+참조하세요. audit review, retention, HMAC, compression, archive HMAC runbook은
+[docs/AUDIT_OPERATIONS_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/AUDIT_OPERATIONS_GUIDE.md)를
+참조하세요. dashboard audit/archive status panel 해석은
+[docs/GUI_AUDIT_PANEL_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AUDIT_PANEL_GUIDE.md)를
+참조하세요. risk rating draft 개념과 profile 해석은
+[docs/RISK_RATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/RISK_RATING_GUIDE.md)를
+참조하세요. v0.4 dashboard release baseline은
+[docs/RELEASE_NOTES_v0.4.md](C:/coding/burp-ai-redaction-gateway/docs/RELEASE_NOTES_v0.4.md)를
+참조하세요.
 
 ## Burp Montoya Collector
 
-The Burp-side collector skeleton lives under
-[extensions/montoya-collector](C:/coding/burp-ai-redaction-gateway/extensions/montoya-collector).
-It is a Java/Gradle Montoya extension that collects only in-scope Proxy HTTP
-history items and hands them off to a loopback-only local gateway endpoint. It
-does not log raw request or response values, and any generated output must still
-pass the existing Python `verify` gate before use.
+Burp-side collector skeleton은
+[extensions/montoya-collector](C:/coding/burp-ai-redaction-gateway/extensions/montoya-collector)
+아래에 있습니다. Java/Gradle Montoya extension이며 in-scope Proxy HTTP
+history item만 수집해 loopback 전용 local gateway endpoint로 전달합니다.
+raw request/response 값은 log에 쓰지 않으며, 생성 output은 사용 전 기존
+Python `verify` gate를 계속 통과해야 합니다.
 
-See [docs/MONTOYA_COLLECTOR.md](C:/coding/burp-ai-redaction-gateway/docs/MONTOYA_COLLECTOR.md).
+[docs/MONTOYA_COLLECTOR.md](C:/coding/burp-ai-redaction-gateway/docs/MONTOYA_COLLECTOR.md)를
+참조하세요.
 
 ## Windows Local Launcher
 
-On Windows, start the receiver and dashboard together:
+Windows에서는 receiver와 dashboard를 함께 시작합니다.
 
 ```powershell
 scripts\start_gateway.ps1
 ```
 
-The launcher starts the receiver on loopback port `8765`, starts the dashboard
-on loopback port `8766`, opens the local dashboard in a browser, and writes only
-safe launcher metadata under ignored `out\.launcher\` files. Console output
-includes `raw_data_included=false`. Stop the launcher managed processes with:
+launcher는 receiver를 loopback port `8765`에서 시작하고, dashboard를 loopback
+port `8766`에서 시작하며, 로컬 dashboard를 브라우저에서 엽니다.
+ignored `out\.launcher\` file 아래에 안전 launcher metadata만 기록합니다.
+console output에는 `raw_data_included=false`가 포함됩니다. launcher가 관리하는
+process를 종료하려면 다음을 실행합니다.
 
 ```powershell
 scripts\stop_gateway.ps1
 ```
 
-The launcher does not print raw request or response values, cookies,
-authorization values, tokens, real target domains, personal data, HMAC secrets,
-or CSRF values. See
-[docs/USER_QUICKSTART.md](C:/coding/burp-ai-redaction-gateway/docs/USER_QUICKSTART.md).
-For Windows launcher troubleshooting and execution policy notes, see
-[docs/WINDOWS_LAUNCHER_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/WINDOWS_LAUNCHER_GUIDE.md).
+launcher는 raw request/response 값, cookie, authorization 값, token, 실제
+target domain, 개인정보, HMAC secret, CSRF 값을 출력하지 않습니다.
+[docs/USER_QUICKSTART.md](C:/coding/burp-ai-redaction-gateway/docs/USER_QUICKSTART.md)를
+참조하세요. Windows launcher troubleshooting과 execution policy note는
+[docs/WINDOWS_LAUNCHER_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/WINDOWS_LAUNCHER_GUIDE.md)를
+참조하세요.
 
 ## Localhost Receiver
 
-Run the loopback-only receiver for Montoya collector handoff payloads:
+Montoya collector handoff payload용 loopback receiver 실행:
 
 ```powershell
 python -m burp_ai_redaction_gateway serve --host 127.0.0.1 --port 8765 --output out\receiver --project montoya_receiver_alias
 ```
 
-The receiver accepts `POST /ingest/burp-history`, applies redaction immediately,
-and writes only verified sanitized output. See
-[docs/LOCALHOST_RECEIVER.md](C:/coding/burp-ai-redaction-gateway/docs/LOCALHOST_RECEIVER.md).
+receiver는 `POST /ingest/burp-history`를 받고 즉시 redaction을 적용한 뒤 검증
+가능한 sanitization output만 기록합니다.
+[docs/LOCALHOST_RECEIVER.md](C:/coding/burp-ai-redaction-gateway/docs/LOCALHOST_RECEIVER.md)를
+참조하세요.
 
 ## Read-Only MCP Server
 
-Run the read-only MCP server over stdio for verified sanitized output:
+검증된 sanitization output용 read-only MCP server를 stdio로 실행:
 
 ```powershell
 python -m burp_ai_redaction_gateway mcp --root out
 ```
 
-The MCP server exposes only read-only tools for verified output directories and
-does not implement raw exchange lookup, replay, file writes, or external
-transmission. See
-[docs/READ_ONLY_MCP.md](C:/coding/burp-ai-redaction-gateway/docs/READ_ONLY_MCP.md).
+MCP server는 검증된 output directory에 대한 read-only tool만 제공합니다.
+raw exchange lookup, replay, file write, external transmission은 구현하지
+않습니다.
+[docs/READ_ONLY_MCP.md](C:/coding/burp-ai-redaction-gateway/docs/READ_ONLY_MCP.md)를
+참조하세요.
 
 ## Local Dashboard
 
-Run the local read-only dashboard for verified output:
+검증된 output용 local read-only dashboard 실행:
 
 ```powershell
 python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out
 ```
 
-The dashboard binds only to `127.0.0.1`, discovers output directories under the
-configured root, and allows preview, download, and protected safe actions only
-after the selected output passes `verify`. It exposes only these safe files:
+dashboard는 `127.0.0.1`에만 bind합니다. 설정된 root 아래 output directory를
+찾고, 선택한 output이 `verify`를 통과한 뒤에만 preview, download, 보호된
+안전 action을 허용합니다. 노출되는 안전 파일은 다음 4개뿐입니다.
 
 - `analysis_packet.json`
 - `chatgpt_prompt.md`
 - `codex_task_prompt.md`
 - `report_draft.md`
 
-The dashboard does not implement raw request or response viewing, replay, active
-scan actions, arbitrary file writes, delete, or edit operations. State-changing
-dashboard actions use POST with a CSRF token. Supported actions are limited to
-verify, review summary, report draft generation, and safe file export. It
-rejects path traversal and blocks `local_only/`, `raw/`, `raw_vault/`, `build/`,
-and `.gradle/` paths. Audit status is summarized without printing audit rows,
-cookies, authorization values, tokens, domains, internal IPs, personal data, or
-HMAC secrets.
-Dashboard state-changing actions also append raw-free audit events with
-`event_type: dashboard_action`. The event records metadata such as action name,
-sanitized output id, result status, blocked reason, and safe exported file names
-only. CSRF token values, raw HTTP values, stack traces, domains, internal IPs,
-and personal data are never written to the dashboard action audit event.
-The dashboard highlights verify-passed status, raw-free display mode, candidate
-finding language, manual verification requirements, and the rule that evidence
-confidence is not severity. Finding cards may show the separate risk rating
-draft, but the draft remains unfinalized until manual risk review.
-The dashboard also includes a read-only AI-safe preflight view for a selected
-verified output. It summarizes whether the four AI-safe candidate files exist,
-whether verify passed, candidate count, report draft presence, forbidden marker
-scan status, and the manual severity boundary. It does not add form, POST,
-state-changing button, raw viewer, HMAC secret input, CSRF token display, replay,
-active scan, delete, edit, or retention controls.
-The dashboard also includes a read-only AI handoff index for a selected verified
-output. It shows the four AI-safe candidate file aliases, purpose, recommended
-order, exists/missing status, file size, modified UTC timestamp, and SHA-256 file
-fingerprint without showing file bodies, full local paths, HMAC secrets, CSRF
-tokens, or adding new download or state-changing actions.
-The dashboard also includes a read-only finding triage index for a selected
-verified output. It shows sanitized candidate metadata, candidate count,
-category/type, title, evidence confidence, draft risk, manual review boundaries,
-and related flow links without showing raw bodies, full local paths, secrets, or
-adding POST actions.
-The dashboard also includes a read-only report readiness index for a selected
-verified output. It shows `report_draft.md` and `analysis_packet.json` presence,
-safe file metadata, finding candidate count, related triage/preflight/handoff
-links, and an operator checklist for manual report review. It does not show
-report body previews, raw data, full local paths, forms, POST actions, new
-download actions, HMAC secret inputs, CSRF token values, or submission controls.
-The dashboard also includes a read-only settings/status page. It shows only
-safe metadata such as root alias, localhost-only mode, safe file allowlist,
-report profile names, draft-only risk mode, audit schema version, HMAC
-configured status, and CSRF enabled status. It does not show CSRF values, HMAC
-secret values, environment variable values, raw HTTP data, or full local paths.
-The dashboard also includes a read-only operations index at `/help` and
-`/operations`. It summarizes quickstart flow, Windows launcher guidance, safe
-files, blocked raw-data boundaries, GUI user flow, AI-safe preflight, audit
-handoff index, finding triage index, report readiness index, audit operations, GUI audit panel
-interpretation, and risk rating guide entry points without adding form, POST,
-archive/HMAC action, risk profile action, replay, active scan, delete, or edit
-controls.
+dashboard는 raw request/response viewing, replay, active scan action, 임의
+file write, delete, edit operation을 구현하지 않습니다. 상태 변경 dashboard
+action은 CSRF token이 있는 POST를 사용합니다. 지원 action은 verify, review
+summary, report draft generation, safe file export로 제한됩니다.
+path traversal을 거부하고 `local_only/`, `raw/`, `raw_vault/`, `build/`,
+`.gradle/` path를 차단합니다. Audit 상태는 audit row, cookie, authorization
+값, token, domain, internal IP, 개인정보, HMAC secret을 출력하지 않고
+요약합니다.
 
-See
-[docs/LOCAL_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/LOCAL_DASHBOARD.md).
+Dashboard 상태 변경 action은 `event_type: dashboard_action` raw-free audit
+event도 추가합니다. event에는 action name, sanitization output id, result
+status, blocked reason, 안전 exported file name 같은 metadata만 기록됩니다.
+CSRF token 값, raw HTTP 값, stack trace, domain, internal IP, 개인정보는
+dashboard action audit event에 쓰지 않습니다.
+
+dashboard는 verify-passed status, raw-free display mode, candidate finding
+language, manual verification requirement, evidence confidence는 severity가
+아니라는 경계를 강조합니다. finding card는 별도 `risk_rating_draft`를
+표시할 수 있지만, draft는 수동 risk review 전 unfinalized 상태로 유지됩니다.
+
+dashboard에는 다음 조회 전용 화면도 포함됩니다.
+
+- `/preflight?project=<alias>`: AI 안전 사전 점검
+- `/handoff?project=<alias>`: AI 핸드오프 인덱스
+- `/triage?project=<alias>`: finding triage 인덱스
+- `/report-readiness?project=<alias>`: 보고서 초안 준비 상태 인덱스
+- `/workflow?project=<alias>`: workflow 상태 인덱스
+- `/settings`: 설정/보안 상태
+- `/help` and `/operations`: 운영 인덱스
+
+이 조회 전용 화면들은 form, POST action, 상태 변경 버튼, report body preview,
+새 download, raw viewer, HMAC secret input, CSRF token display, replay,
+active scan, delete, edit, retention control, risk profile action을 추가하지
+않습니다.
+
+[docs/LOCAL_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/LOCAL_DASHBOARD.md)를
+참조하세요.
 
 ## MCP Audit Records
 
-Tool-call and dashboard action audit records are written under
-`<root>/.audit/mcp_audit.jsonl` with raw-free metadata only. Audit schema `1.1`
-also records an event id, sequence number, and SHA-256 hash chain fields for
-each new MCP tool-call or dashboard action event.
-`event_id` is stored as a standard UUID string. The active audit file rotates
-to deterministic names such as `mcp_audit.000001.jsonl` when the next event
-would exceed the size limit. The suffix is derived from the chain-wide sequence
-number at the start of the rotated segment, so retained rotation names do not
-restart at `000001` while the audit chain continues. Retention keeps rotated
-files only and never deletes the active file. Hash chain verification is
-guaranteed across retained rotated files and the active file only; history
-before the retained boundary is outside the verification scope after older
-rotated files are removed.
+Tool-call과 dashboard action audit record는 `<root>/.audit/mcp_audit.jsonl`
+아래에 raw-free metadata only로 기록됩니다. Audit schema `1.1`은 새 MCP
+tool-call 또는 dashboard action event마다 event id, sequence number,
+SHA-256 hash chain field도 기록합니다.
+`event_id`는 표준 UUID string입니다. active audit file은 다음 event가 size
+limit을 넘길 때 `mcp_audit.000001.jsonl` 같은 deterministic name으로
+rotate됩니다. suffix는 rotated segment 시작 시점의 chain-wide sequence
+number에서 오므로, audit chain이 계속되는 동안 retained rotation name은
+`000001`로 다시 시작하지 않습니다. Retention은 rotated file만 유지하며
+active file을 삭제하지 않습니다. Hash chain verification은 retained rotated
+file과 active file에 대해서만 보장됩니다. retained boundary 이전 history는
+older rotated file 제거 후 검증 범위 밖입니다.
 
-Review retained audit logs with the dedicated audit command:
+retained audit log review:
 
 ```powershell
 python -m burp_ai_redaction_gateway review-audit --input out\.audit
 python -m burp_ai_redaction_gateway review-audit --input out\.audit --format json
 ```
 
-`review-audit` checks JSONL parsing, required schema fields, UUID event ids,
-sequence continuity, hash chain integrity, rotated suffix order, and raw-free
-scanner results across retained rotated files and the active audit file. It is
-strict about audit schema `1.1`, so pre-schema local audit rows from older runs
-fail review.
+`review-audit`는 JSONL parsing, required schema field, UUID event id,
+sequence continuity, hash chain integrity, rotated suffix order, retained
+rotated file과 active audit file의 raw-free scanner result를 확인합니다.
+audit schema `1.1`에 엄격하므로 older run의 pre-schema local audit row는
+review 실패로 처리됩니다.
 
-Create an explicit retained audit file with `audit-retention`:
+`audit-retention`으로 명시적인 retained audit file 생성:
 
 ```powershell
 python -m burp_ai_redaction_gateway audit-retention --input out\.audit\mcp_audit.jsonl --output out\.audit\mcp_audit.retained.jsonl --retention-days 30 --dry-run
@@ -343,11 +325,11 @@ python -m burp_ai_redaction_gateway audit-retention --input out\.audit\mcp_audit
 python -m burp_ai_redaction_gateway review-audit --input out\.audit\mcp_audit.retained.jsonl
 ```
 
-`audit-retention` validates the input with strict `review-audit` first, rejects
-legacy or malformed rows, forbids in-place modification, and prints only
-raw-free summary metadata.
+`audit-retention`은 먼저 strict `review-audit`로 input을 검증하고, legacy 또는
+malformed row를 거부하며, in-place modification을 금지하고 raw-free summary
+metadata만 출력합니다.
 
-Create and verify a raw-free HMAC manifest for a retained audit file:
+retained audit file용 raw-free HMAC manifest 생성/검증:
 
 ```powershell
 $env:BURP_AI_AUDIT_HMAC_KEY = "<LOCAL_ONLY_HMAC_SECRET>"
@@ -355,28 +337,28 @@ python -m burp_ai_redaction_gateway audit-hmac --input out\.audit\mcp_audit.reta
 python -m burp_ai_redaction_gateway audit-hmac-verify --input out\.audit\mcp_audit.retained.jsonl --manifest out\.audit\mcp_audit.retained.manifest.json
 ```
 
-`audit-hmac` accepts only audit JSONL files that pass strict `review-audit`.
-The manifest stores file alias, row count, SHA-256, HMAC-SHA256, creation time,
-and `raw_data_included: false`; it does not store raw audit rows or the HMAC
-secret. HMAC provides tamper detection, not encryption. Store the HMAC secret in
-an environment variable or ignored local secret file only.
+`audit-hmac`는 strict `review-audit`를 통과한 audit JSONL file만 받습니다.
+manifest는 file alias, row count, SHA-256, HMAC-SHA256, creation time,
+`raw_data_included: false`를 저장합니다. raw audit row나 HMAC secret은
+저장하지 않습니다. HMAC은 tamper detection이며 encryption이 아닙니다.
+HMAC secret은 environment variable 또는 ignored local secret file에만
+저장합니다.
 
-Package a reviewed audit JSONL file for local long-term storage with gzip:
+검토된 audit JSONL file을 gzip으로 local long-term storage용 packaging:
 
 ```powershell
 python -m burp_ai_redaction_gateway audit-compress --input out\.audit\mcp_audit.retained.jsonl --output out\.audit\mcp_audit.retained.jsonl.gz
 python -m burp_ai_redaction_gateway audit-compress-verify --input out\.audit\mcp_audit.retained.jsonl.gz
 ```
 
-`audit-compress` accepts only audit JSONL files that pass strict
-`review-audit`, writes a separate `.jsonl.gz` file, and does not delete or
-modify the source JSONL. `audit-compress-verify` decompresses the package in a
-temporary location and requires the decompressed JSONL to pass `review-audit`.
-Compression is archival packaging. HMAC verification remains defined for the
-retained JSONL file, and compressed archive HMAC is available as a separate
-archive-level check.
+`audit-compress`는 strict `review-audit` 통과 audit JSONL file만 받으며 별도
+`.jsonl.gz` file을 쓰고 source JSONL을 삭제하거나 수정하지 않습니다.
+`audit-compress-verify`는 package를 temporary location에 decompress하고
+decompressed JSONL이 `review-audit`를 통과해야 합니다. Compression은 archival
+packaging입니다. HMAC verification은 retained JSONL file 기준으로 유지되며,
+compressed archive HMAC은 별도 archive-level check입니다.
 
-Create and verify a raw-free HMAC manifest for the compressed archive:
+compressed archive용 raw-free HMAC manifest 생성/검증:
 
 ```powershell
 $env:BURP_AI_AUDIT_HMAC_KEY = "<LOCAL_ONLY_HMAC_SECRET>"
@@ -384,46 +366,47 @@ python -m burp_ai_redaction_gateway audit-compressed-hmac --input out\.audit\mcp
 python -m burp_ai_redaction_gateway audit-compressed-hmac-verify --input out\.audit\mcp_audit.retained.jsonl.gz --manifest out\.audit\mcp_audit.retained.jsonl.gz.manifest.json
 ```
 
-`audit-compressed-hmac` first verifies the archive with
-`audit-compress-verify`, then computes SHA-256 and HMAC-SHA256 over the
-compressed bytes. The manifest stores safe archive alias, compressed size,
-SHA-256, HMAC-SHA256, creation time, and `raw_data_included: false`. It does
-not store decompressed audit rows or the HMAC secret. Compressed archive HMAC is
-tamper detection for the gzip package bytes, not encryption, and it does not
-replace `review-audit` or retained JSONL HMAC.
+`audit-compressed-hmac`는 먼저 `audit-compress-verify`로 archive를 검증한 뒤
+compressed bytes에 대해 SHA-256과 HMAC-SHA256을 계산합니다. manifest는 안전
+archive alias, compressed size, SHA-256, HMAC-SHA256, creation time,
+`raw_data_included: false`를 저장합니다. decompressed audit row나 HMAC secret은
+저장하지 않습니다. Compressed archive HMAC은 gzip package bytes의 tamper
+detection이며 encryption이 아니고 `review-audit` 또는 retained JSONL HMAC을
+대체하지 않습니다.
 
 ## Security Notes
 
-- Do not commit real Burp exports, raw HTTP history, tokens, cookies, customer
-  domains, internal IPs, or local audit databases.
-- Fixtures in this repository must remain synthetic.
-- Use `review` only on output directories that should pass `verify`; it prints
-  summary counts and safe prompt file names, not raw HTTP content.
-- Use `report` only after verification. Report drafts must keep candidate
-  wording until manual reproduction is complete. Use `--profile conservative`
-  for the most cautious wording or `--profile consultant` for consultant draft
-  language that still requires manual verification.
-- Use `mcp` only with an explicit sanitized output root. MCP tools are read-only
-  and must not be used to access local raw data or real Burp exports.
-- MCP audit logs must remain raw-free and store only metadata such as tool name,
-  sanitized output id, status, blocked reason, event id, sequence number, and
-  hash chain fields.
-- Use `review-audit` to inspect retained audit logs without printing raw values.
-- Use `audit-retention` only with a separate `--output` file; do not modify
-  audit logs in place.
-- Use `audit-hmac` and `audit-hmac-verify` only with a local HMAC secret from
-  `BURP_AI_AUDIT_HMAC_KEY` or an ignored secret file. Do not commit HMAC
-  secrets or generated manifests.
-- Use `audit-compress` only after strict `review-audit` succeeds. Keep the
-  original JSONL; compressed packages are local archival output and are not a
-  replacement for HMAC verification of retained JSONL.
-- Use `audit-compressed-hmac` and `audit-compressed-hmac-verify` only with a
-  local HMAC secret. The compressed archive manifest must not include raw audit
-  rows, secret values, or real environment values.
-- The audit database stores evidence references and redaction counters only. It
-  does not store raw request or response values.
-- Output generation is fail-closed. If a likely token, JWT, email, phone number,
-  Korean RRN, financial identifier, or high-entropy secret remains in generated
-  text, the CLI raises an error before writing output files.
-- Real Burp exports must be tested only under `local_only/` and must never be
-  moved into `samples/`, committed, pasted into prompts, or copied into issues.
+- 실제 Burp export, raw HTTP history, token, cookie, customer domain,
+  internal IP, local audit database를 커밋하지 않습니다.
+- 이 repository의 fixture는 synthetic 상태를 유지해야 합니다.
+- `review`는 `verify`를 통과해야 하는 output directory에만 사용합니다.
+  raw HTTP content가 아니라 summary count와 안전 prompt file name만 출력합니다.
+- `report`는 verification 뒤에만 사용합니다. Report draft는 수동 재현 전
+  candidate wording을 유지해야 합니다. 가장 보수적인 문구에는
+  `--profile conservative`, consultant draft 문구에는 `--profile consultant`를
+  사용하되 수동 검증은 계속 필요합니다.
+- `mcp`는 명시적인 sanitization output root와 함께만 사용합니다. MCP tool은
+  read-only이며 local raw data나 실제 Burp export 접근에 사용하지 않습니다.
+- MCP audit log는 raw-free 상태를 유지하고 tool name, sanitization output id,
+  status, blocked reason, event id, sequence number, hash chain field 같은
+  metadata만 저장합니다.
+- retained audit log를 raw value 출력 없이 확인하려면 `review-audit`를
+  사용합니다.
+- `audit-retention`은 별도 `--output` file과 함께만 사용합니다. audit log를
+  in-place로 수정하지 않습니다.
+- `audit-hmac`와 `audit-hmac-verify`는 `BURP_AI_AUDIT_HMAC_KEY` 또는 ignored
+  secret file의 local HMAC secret으로만 사용합니다. HMAC secret이나 생성된
+  manifest를 커밋하지 않습니다.
+- `audit-compress`는 strict `review-audit` 성공 뒤에만 사용합니다. 원본 JSONL은
+  유지합니다. compressed package는 local archival output이며 retained JSONL
+  HMAC verification의 대체물이 아닙니다.
+- `audit-compressed-hmac`와 `audit-compressed-hmac-verify`는 local HMAC secret과
+  함께만 사용합니다. compressed archive manifest에는 raw audit row, secret
+  value, real environment value를 포함하지 않습니다.
+- audit database는 evidence reference와 redaction counter만 저장합니다. raw
+  request/response 값은 저장하지 않습니다.
+- output generation은 fail-closed입니다. likely token, JWT, email, phone
+  number, Korean RRN, financial identifier, high-entropy secret이 generated
+  text에 남아 있으면 CLI는 output file 쓰기 전에 error를 발생시킵니다.
+- 실제 Burp export는 `local_only/` 아래에서만 테스트하고, `samples/`로
+  이동하거나 커밋하거나 prompt에 붙여넣거나 issue로 복사하지 않습니다.

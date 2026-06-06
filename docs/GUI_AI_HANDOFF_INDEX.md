@@ -1,55 +1,58 @@
-# GUI AI Handoff Index
+# GUI AI 핸드오프 인덱스
 
-This guide explains the dashboard AI handoff index. The index is a read-only
-checklist for the four AI-safe candidate files that may be used after verify
-passes and after manual review planning is clear.
+이 문서는 dashboard의 AI 핸드오프 인덱스를 설명합니다. 인덱스는
+`verify`를 통과하고 수동 검토 계획이 명확할 때 확인하는 안전 파일 4개의
+조회 전용 체크리스트입니다.
 
-For the candidate triage checklist, see
-[GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md).
-For the draft report readiness checklist, see
-[GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md).
+finding 후보 triage 체크리스트는
+[GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
+참조하세요. 보고서 초안 준비 체크리스트는
+[GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md)를
+참조하세요. 전체 조회 전용 workflow 체크리스트는
+[GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
+참조하세요.
 
-Use it as a read-only checklist only.
+이 화면은 조회 전용 체크리스트로만 사용합니다.
 
-The index is not an approval screen. It does not say that a file is safe to
-publish, that a finding is confirmed, or that severity is decided.
+인덱스는 승인 화면이 아닙니다. 파일 공개 판단, finding 확정, 심각도
+결정을 의미하지 않습니다.
 
-## Open the View
+## 화면 열기
 
-From a verified output detail page, open:
+검증된 output 상세 화면에서 다음 주소를 엽니다.
 
 ```text
 /handoff?project=<alias>
 ```
 
-The page is a read-only GET page. It does not submit data, create files, delete
-files, download files, change settings, or run archive or HMAC actions.
+이 화면은 조회 전용 GET 페이지입니다. 데이터를 제출하거나, 파일을 만들거나,
+삭제하거나, 다운로드하거나, 설정을 바꾸거나, archive/HMAC action을
+실행하지 않습니다.
 
-## What It Shows
+## 표시 항목
 
-The index displays only aliases and safe metadata for the four AI-safe
-candidate files:
+인덱스는 안전 파일 4개의 alias와 metadata만 표시합니다.
 
-| File | Recommended order | Purpose |
+| 파일 | 권장 순서 | 목적 |
 | --- | ---: | --- |
-| `analysis_packet.json` | 1 | Read first for structured sanitized candidate evidence. |
-| `chatgpt_prompt.md` | 2 | Use when asking ChatGPT for manual-review assistance. |
-| `codex_task_prompt.md` | 3 | Use when asking Codex for implementation or review assistance. |
-| `report_draft.md` | 4 | Read last as a candidate report draft for human review. |
+| `analysis_packet.json` | 1 | 구조화된 sanitization 완료 후보 증거를 먼저 확인 |
+| `chatgpt_prompt.md` | 2 | ChatGPT에 수동 검토 보조를 요청할 때 사용 |
+| `codex_task_prompt.md` | 3 | Codex에 구현 또는 검토 보조를 요청할 때 사용 |
+| `report_draft.md` | 4 | 사람이 검토할 보고서 초안으로 마지막에 확인 |
 
-For each file, the index may show:
+각 파일에는 다음 정보가 표시될 수 있습니다.
 
-- exists or missing
-- file size in bytes
-- modified UTC timestamp
-- SHA-256 file fingerprint
+- 존재 여부
+- 크기(bytes)
+- 수정 시각(UTC)
+- SHA-256 파일 fingerprint
 
-The SHA-256 value is a normal file fingerprint. It is not HMAC, does not use a
-secret, and does not replace audit HMAC verification.
+SHA-256 값은 일반 파일 fingerprint입니다. HMAC이 아니며 secret을 사용하지
+않고, audit HMAC 검증을 대체하지 않습니다.
 
-## Required Reading Order
+## 권장 확인 순서
 
-Use this order for AI-assisted review:
+AI 보조 검토는 다음 순서로 진행합니다.
 
 ```text
 verify first
@@ -61,47 +64,48 @@ verify first
 -> decide what, if anything, can be shared
 ```
 
-Manual review is required before treating any candidate finding as confirmed.
+finding 후보를 확정된 finding으로 해석하려면 먼저 수동 검토가 필요합니다.
 
-## Interpretation Boundary
+## 해석 경계
 
-- Findings are candidate finding records until manual verification is complete.
-- Risk is draft risk and must not be treated as a severity decision.
-- Final severity requires human decision after authorized reproduction, role
-  comparison, and impact review.
-- Treat `final severity requires human decision` as the operative boundary.
-- CVSS is a separate calculation scope.
+- finding은 수동 검증이 끝날 때까지 candidate finding record입니다.
+- risk는 draft risk이며 severity 결정으로 취급하지 않습니다.
+- 심각도 결정은 권한 있는 재현, 역할별 비교, 영향 검토 후 사람이 별도로
+  수행합니다.
+- `final severity requires human decision` 문구는 사람이 결정해야 한다는
+  경계를 나타내는 고정 문구입니다.
+- CVSS는 별도 산정 범위입니다.
 
-## Do Not Send
+## 넣거나 기록하지 않을 값
 
-Do not paste, upload, commit, or document any of the following:
+다음 값은 붙여넣기, 업로드, 커밋, 문서화 대상이 아닙니다.
 
-| Category | Reason |
+| 분류 | 이유 |
 | --- | --- |
-| raw request or response data | May contain sensitive values. |
-| Cookie or Authorization values | Authentication material. |
-| token, JWT, or session values | Session or credential material. |
-| real domain, URL, or IP values | Environment details. |
-| personal data | Identity or privacy-sensitive data. |
-| HMAC secret or CSRF token values | Local security controls. |
-| local-only raw storage or unverified output artifacts | Not AI input material. |
-| audit logs, archives, or manifests | Operational evidence, not AI prompt material. |
+| raw request 또는 raw response 데이터 | 민감값이 포함될 수 있음 |
+| Cookie 또는 Authorization 값 | 인증 자료 |
+| token, JWT, session 값 | 세션 또는 인증정보 |
+| 실제 domain, URL, IP 값 | 환경 식별 정보 |
+| 개인정보 | 식별 또는 프라이버시 민감 정보 |
+| HMAC secret 또는 CSRF token 값 | 로컬 보안 제어값 |
+| local-only raw 저장소 또는 검증 전 output 산출물 | AI 입력 자료가 아님 |
+| audit log, archive, manifest | 운영 증거 자료이며 AI 입력 자료가 아님 |
 
-## Read-Only Boundary
+## 조회 전용 경계
 
-The handoff index does not provide:
+핸드오프 인덱스는 다음 기능을 제공하지 않습니다.
 
-- form submission
+- form 제출
 - POST action
-- state-changing button
-- new download action
-- safe file body preview
+- 상태 변경 버튼
+- 새 download action
+- 안전 파일 본문 preview
 - raw viewer
-- replay or active scan
-- archive or HMAC execution
-- HMAC secret input
-- CSRF token display
-- file deletion or retention changes
-- risk profile changes
+- replay 또는 active scan
+- archive 또는 HMAC 실행
+- HMAC secret 입력
+- CSRF token 표시
+- 파일 삭제 또는 retention 변경
+- risk profile 변경
 
-Use it as a read-only handoff checklist only.
+이 화면은 조회 전용 핸드오프 체크리스트로만 사용합니다.

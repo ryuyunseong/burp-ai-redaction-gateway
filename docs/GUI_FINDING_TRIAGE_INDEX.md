@@ -1,101 +1,103 @@
-# GUI Finding Triage Index
+# GUI Finding Triage 인덱스
 
-This guide explains the dashboard finding triage index. The index is a
-read-only triage checklist for sanitized finding candidates after a selected
-output passes verification.
+이 문서는 dashboard의 finding triage 인덱스를 설명합니다. 인덱스는
+선택한 output이 검증을 통과한 뒤 sanitization 완료 finding 후보를 확인하는
+조회 전용 triage 체크리스트입니다.
 
-The index is not a confirmation screen. It does not decide severity, prove
-impact, create files, change settings, or run any dashboard action.
+인덱스는 확정 화면이 아닙니다. 심각도를 결정하거나, 영향을 증명하거나,
+파일을 만들거나, 설정을 바꾸거나, dashboard action을 실행하지 않습니다.
 
-## Open the View
+## 화면 열기
 
-From a verified output detail page, open:
+검증된 output 상세 화면에서 다음 주소를 엽니다.
 
 ```text
 /triage?project=<alias>
 ```
 
-The page is a read-only GET page. It does not submit data, create files,
-download files, delete files, or run review, report, export, archive, HMAC,
-replay, or active scan actions.
+이 화면은 조회 전용 GET 페이지입니다. 데이터를 제출하거나, 파일을 만들거나,
+다운로드하거나, 삭제하거나, review/report/export/archive/HMAC/replay/
+active scan action을 실행하지 않습니다.
 
-For draft report readiness metadata and manual review boundaries, see
-[GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md).
+보고서 초안 준비 metadata와 수동 검토 경계는
+[GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md)를
+참조하세요. 전체 조회 전용 workflow 체크리스트는
+[GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
+참조하세요.
 
-## What It Shows
+## 표시 항목
 
-The triage index displays only safe candidate metadata:
+triage 인덱스는 안전한 후보 metadata만 표시합니다.
 
 - project alias
 - finding candidate count
-- candidate index and stable candidate id
+- candidate index와 stable candidate id
 - category/type
 - title
 - sanitized summary
 - evidence confidence
 - draft risk profile
-- severity draft, likelihood draft, and impact draft
-- manual review required status
-- `analysis_packet.json` presence
-- `report_draft.md` presence
-- links back to preflight, handoff, report readiness, and output detail flow
+- severity draft, likelihood draft, impact draft
+- manual review required 상태
+- `analysis_packet.json` 존재 여부
+- `report_draft.md` 존재 여부
+- preflight, handoff, report readiness, output 상세 flow 링크
 
-The sanitized summary may include a method and path template. It must not include
-real domains, real URLs, real IP addresses, Cookie values, Authorization values,
-tokens, sessions, or personal data.
+sanitized summary에는 method와 path template이 포함될 수 있습니다. 실제
+domain, 실제 URL, 실제 IP 주소, Cookie 값, Authorization 값, token,
+session, 개인정보를 포함하면 안 됩니다.
 
-## Interpretation Boundary
+## 해석 경계
 
-- Every item is a candidate finding until manual verification is complete.
-- Evidence confidence is not severity.
-- Draft risk is an operator aid and is not a severity decision.
-- Final severity requires manual decision after authorized reproduction, role
-  comparison, impact review, and separate risk review.
-- CVSS is a separate calculation scope.
+- 모든 항목은 수동 검증이 끝날 때까지 candidate finding입니다.
+- evidence confidence는 severity가 아닙니다.
+- draft risk는 운영자 보조 정보이며 severity 결정이 아닙니다.
+- 심각도 결정은 권한 있는 재현, 역할별 비교, 영향 검토, 별도 risk review
+  후 사람이 수행합니다.
+- CVSS는 별도 산정 범위입니다.
 
-## Do Not Use In Triage
+## Triage에서 쓰지 않을 값
 
-Do not paste, upload, commit, or document any of the following:
+다음 값은 붙여넣기, 업로드, 커밋, 문서화 대상이 아닙니다.
 
-| Category | Reason |
+| 분류 | 이유 |
 | --- | --- |
-| raw request or response data | May contain sensitive values. |
-| Cookie or Authorization values | Authentication material. |
-| token, JWT, or session values | Session or credential material. |
-| real domain, URL, or IP values | Environment details. |
-| personal data | Identity or privacy-sensitive data. |
-| HMAC secret or CSRF token values | Local security controls. |
-| full local path | Local environment detail. |
-| `local_only/`, `raw/`, `raw_vault/`, unverified `out/`, or `out/.audit` artifacts | Not AI or triage input material. |
+| raw request 또는 raw response 데이터 | 민감값이 포함될 수 있음 |
+| Cookie 또는 Authorization 값 | 인증 자료 |
+| token, JWT, session 값 | 세션 또는 인증정보 |
+| 실제 domain, URL, IP 값 | 환경 식별 정보 |
+| 개인정보 | 식별 또는 프라이버시 민감 정보 |
+| HMAC secret 또는 CSRF token 값 | 로컬 보안 제어값 |
+| full local path | 로컬 환경 식별 정보 |
+| `local_only/`, `raw/`, `raw_vault/`, 검증 전 `out/`, `out/.audit` 산출물 | AI 또는 triage 입력 자료가 아님 |
 
-## Read-Only Boundary
+## 조회 전용 경계
 
-The triage index does not provide:
+triage 인덱스는 다음 기능을 제공하지 않습니다.
 
-- form submission
+- form 제출
 - POST action
-- state-changing button
+- 상태 변경 버튼
 - file body preview
 - finding body preview
 - request preview
 - response preview
-- new download action
+- 새 download action
 - raw viewer
-- replay or active scan
-- archive or HMAC execution
-- HMAC secret input
-- CSRF token display
-- file deletion or retention changes
-- risk profile changes
+- replay 또는 active scan
+- archive 또는 HMAC 실행
+- HMAC secret 입력
+- CSRF token 표시
+- 파일 삭제 또는 retention 변경
+- risk profile 변경
 
-Use it as a read-only triage checklist only.
+이 화면은 조회 전용 triage 체크리스트로만 사용합니다.
 
-## Troubleshooting
+## 문제 해결
 
-| Symptom | Meaning | Next step |
+| 증상 | 의미 | 다음 조치 |
 | --- | --- | --- |
-| Candidate count is zero | The selected output has no finding candidates. | Review `analysis_packet.json` locally after verification if needed. |
-| `analysis_packet.json` is missing | The selected output is incomplete. | Regenerate or rerun the safe dashboard flow. |
-| `report_draft.md` is missing | The report action has not been run for this output. | Run report from the verified output detail page if a draft is needed. |
-| Triage page is blocked | The output failed verification or the alias is forbidden. | Run `verify` and use only dashboard-listed output aliases. |
-
+| Candidate count가 0 | 선택한 output에 finding 후보가 없음 | 필요하면 검증 후 `analysis_packet.json`을 로컬에서 검토합니다. |
+| `analysis_packet.json` 없음 | 선택한 output이 불완전함 | 다시 생성하거나 안전 dashboard flow를 다시 실행합니다. |
+| `report_draft.md` 없음 | 이 output에 대해 report action이 아직 실행되지 않음 | 초안이 필요하면 검증된 output 상세 화면에서 Report를 실행합니다. |
+| Triage page가 차단됨 | output 검증 실패 또는 금지 alias | `verify`를 실행하고 dashboard에 표시된 output alias만 사용합니다. |
