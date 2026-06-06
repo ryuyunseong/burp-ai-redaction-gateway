@@ -23,7 +23,7 @@ http://127.0.0.1:8766/operations
 
 The operations index is a guide hub, not an action surface. It links the
 quickstart, GUI user flow guide, GUI AI-safe preflight guide, GUI AI handoff
-index guide, GUI finding triage index guide, Windows launcher guide, audit
+index guide, GUI finding triage index guide, GUI report readiness index guide, Windows launcher guide, audit
 operations guide, GUI audit panel guide, risk rating guide, and v0.4 release
 notes by repository-relative path. It also lists the four AI-safe files, blocked
 raw-data categories, and the candidate/draft interpretation boundary.
@@ -36,6 +36,8 @@ For the AI-safe candidate file index, see
 [GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md).
 For the finding candidate triage checklist, see
 [GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md).
+For the draft report readiness checklist, see
+[GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md).
 
 ## Allowed Scope
 
@@ -151,6 +153,36 @@ It does not add forms, POST actions, state-changing buttons, download buttons,
 archive/HMAC actions, replay, active scan, delete, edit, retention changes, or
 risk profile changes.
 
+## Report Readiness Index
+
+The dashboard provides a read-only report readiness index for a selected
+verified output:
+
+```text
+/report-readiness?project=<alias>
+```
+
+The report readiness index summarizes only safe metadata for draft report manual
+review:
+
+- project alias
+- `report_draft.md` exists or missing status
+- `analysis_packet.json` exists or missing status
+- finding candidate count
+- draft report status summary
+- links to triage, preflight, handoff, and verified output detail flow
+- operator checklist for scope, endpoint, evidence quality, false positive,
+  impact, remediation, final severity manual decision, and sensitive-info review
+- file size in bytes, modified UTC timestamp, and SHA-256 file fingerprint for
+  `report_draft.md` and `analysis_packet.json`
+
+The SHA-256 fingerprint is not HMAC. The report readiness index does not show
+report body previews, raw request or response data, raw audit row bodies, full
+local paths, HMAC secrets, CSRF token values, real domains, real URLs, real IP
+addresses, or personal data. It does not add forms, POST actions,
+state-changing buttons, new download actions, archive/HMAC actions, replay,
+active scan, delete, edit, retention changes, or risk profile changes.
+
 ## Blocked Scope
 
 The dashboard does not implement:
@@ -163,6 +195,7 @@ The dashboard does not implement:
 - severity assignment
 - archive or HMAC generation buttons on the operations index
 - finding triage execution buttons
+- report readiness execution buttons
 - risk profile change buttons on the operations index
 
 ## Dashboard Actions

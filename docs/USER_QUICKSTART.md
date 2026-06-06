@@ -103,6 +103,8 @@ For the read-only AI-safe candidate file index, see
 [GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md).
 For the read-only finding candidate triage checklist, see
 [GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md).
+For the read-only draft report readiness checklist, see
+[GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md).
 The dashboard operations index is also available at:
 
 ```text
@@ -119,15 +121,17 @@ Use the dashboard actions in this order:
 3. Run `Review`.
 4. Open `Finding triage index`.
 5. Run `Report`.
-6. Open `AI-safe preflight`.
-7. Open `AI handoff index`.
-8. Run `Export`.
+6. Open `Report readiness index`.
+7. Open `AI-safe preflight`.
+8. Open `AI handoff index`.
+9. Run `Export`.
 
 Dashboard action boundaries:
 
 - State-changing actions use POST with CSRF protection.
 - `Refresh` is a read-only GET action.
 - `Finding triage index` is a read-only GET checklist for candidate metadata.
+- `Report readiness index` is a read-only GET checklist before manual report review.
 - `AI-safe preflight` is a read-only GET checklist before AI handoff.
 - `AI handoff index` is a read-only GET checklist for safe file purpose and order.
 - Export is limited to the safe file allowlist.

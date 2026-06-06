@@ -733,6 +733,8 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("handoff index", detail)
                 self.assertIn("/triage?project=generated", detail)
                 self.assertIn("triage index", detail)
+                self.assertIn("/report-readiness?project=generated", detail)
+                self.assertIn("report readiness", detail)
                 self.assertNotIn("Confirmed vulnerability", detail)
                 connection.close()
 
@@ -840,6 +842,8 @@ class RedactionGatewayTests(unittest.TestCase):
                     self.assertIn(name, triage)
                 self.assertIn("open AI-safe preflight", triage)
                 self.assertIn("open AI handoff index", triage)
+                self.assertIn("open report readiness index", triage)
+                self.assertIn("/report-readiness?project=generated", triage)
                 self.assertIn("review/report/export flow", triage)
                 self.assertIn("candidate finding", triage)
                 self.assertIn("draft risk", triage)
@@ -873,6 +877,70 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn("guaranteed safe", triage)
                 self.assertNotIn("severity confirmed", triage)
                 self.assertNotIn(str(root), triage)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/report-readiness?project=generated")
+                response = connection.getresponse()
+                readiness = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("Report readiness index", readiness)
+                self.assertIn("read-only", readiness)
+                self.assertIn("Read-only draft report checklist", readiness)
+                self.assertIn("project alias", readiness)
+                self.assertIn("draft report status", readiness)
+                self.assertIn("finding candidate count", readiness)
+                self.assertIn(">22<", readiness)
+                self.assertIn("report_draft.md", readiness)
+                self.assertIn("analysis_packet.json", readiness)
+                self.assertIn("draft report status summary", readiness)
+                self.assertIn("open finding triage index", readiness)
+                self.assertIn("open AI-safe preflight", readiness)
+                self.assertIn("open AI handoff index", readiness)
+                self.assertIn("export/review/report flow link", readiness)
+                self.assertIn("return to verified output detail", readiness)
+                self.assertIn("scope confirmation", readiness)
+                self.assertIn("affected endpoint confirmation", readiness)
+                self.assertIn("evidence quality confirmation", readiness)
+                self.assertIn("false positive possibility", readiness)
+                self.assertIn("impact statement review", readiness)
+                self.assertIn("remediation wording review", readiness)
+                self.assertIn("final severity manual decision", readiness)
+                self.assertIn("customer submission sensitive-info review", readiness)
+                self.assertIn("finding candidates until manual verification is complete", readiness)
+                self.assertIn("risk is draft, not severity confirmation", readiness)
+                self.assertIn("evidence confidence, not severity", readiness)
+                self.assertIn("report_draft.md is a draft report, not a submission report", readiness)
+                self.assertIn("final severity is a manual decision", readiness)
+                self.assertIn("exists or missing", readiness)
+                self.assertIn("file size in bytes", readiness)
+                self.assertIn("modified UTC timestamp", readiness)
+                self.assertIn("SHA-256 file fingerprint", readiness)
+                self.assertIn("SHA-256 file fingerprint, not HMAC", readiness)
+                for label in [
+                    "raw request/response",
+                    "raw audit row body",
+                    "Cookie or Authorization values",
+                    "token, JWT, or session values",
+                    "real domain, URL, or IP values",
+                    "personal data",
+                    "HMAC secret or CSRF token values",
+                    "full local path",
+                ]:
+                    self.assertIn(label, readiness)
+                self.assertNotIn('name="csrf_token"', readiness)
+                self.assertNotIn("<form", readiness)
+                self.assertNotIn("<button", readiness)
+                self.assertNotIn("raw_request", readiness)
+                self.assertNotIn("raw_response", readiness)
+                self.assertNotIn("DUMMY_COOKIE_VALUE", readiness)
+                self.assertNotIn("DUMMY_BEARER_TOKEN", readiness)
+                self.assertNotIn("approved", readiness)
+                self.assertNotIn("guaranteed safe", readiness)
+                self.assertNotIn("safe to share", readiness)
+                self.assertNotIn("severity confirmed", readiness)
+                self.assertNotIn("ready to submit", readiness)
+                self.assertNotIn(str(root), readiness)
                 connection.close()
 
                 connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
@@ -997,6 +1065,7 @@ class RedactionGatewayTests(unittest.TestCase):
                         self.assertIn("docs/GUI_AI_SAFE_PREFLIGHT.md", body)
                         self.assertIn("docs/GUI_AI_HANDOFF_INDEX.md", body)
                         self.assertIn("docs/GUI_FINDING_TRIAGE_INDEX.md", body)
+                        self.assertIn("docs/GUI_REPORT_READINESS_INDEX.md", body)
                         self.assertIn("docs/WINDOWS_LAUNCHER_GUIDE.md", body)
                         self.assertIn("docs/AUDIT_OPERATIONS_GUIDE.md", body)
                         self.assertIn("docs/GUI_AUDIT_PANEL_GUIDE.md", body)
@@ -1095,6 +1164,15 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertEqual(response.status, 403)
                 self.assertIn("forbidden_directory", triage_traversal)
                 self.assertNotIn("rawBearerToken", triage_traversal)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/report-readiness?project=..%2Flocal_only")
+                response = connection.getresponse()
+                readiness_traversal = response.read().decode("utf-8")
+                self.assertEqual(response.status, 403)
+                self.assertIn("forbidden_directory", readiness_traversal)
+                self.assertNotIn("rawBearerToken", readiness_traversal)
                 connection.close()
             finally:
                 server.shutdown()
@@ -2725,6 +2803,7 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("GUI_AI_SAFE_PREFLIGHT.md", text)
             self.assertIn("GUI_AI_HANDOFF_INDEX.md", text)
             self.assertIn("GUI_FINDING_TRIAGE_INDEX.md", text)
+            self.assertIn("GUI_REPORT_READINESS_INDEX.md", text)
 
         required = [
             "start receiver and dashboard",
@@ -2733,12 +2812,14 @@ class RedactionGatewayTests(unittest.TestCase):
             "review candidate findings",
             "check finding triage index",
             "generate report_draft.md",
+            "check report readiness index",
             "check AI-safe preflight",
             "check AI handoff index",
             "export safe files",
             "send only verified safe files to AI",
             "http://127.0.0.1:8766/",
             "/triage?project=<alias>",
+            "/report-readiness?project=<alias>",
             "/preflight?project=<alias>",
             "/handoff?project=<alias>",
             "/help",
@@ -2748,6 +2829,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "Review",
             "Report",
             "Finding triage index",
+            "Report readiness index",
             "AI-safe preflight",
             "AI handoff index",
             "Export",
@@ -2772,6 +2854,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "replay or active scan",
             "archive or HMAC execution buttons",
             "finding triage execution buttons",
+            "report readiness execution buttons",
             "AI-safe preflight execution buttons",
             "AI handoff execution buttons",
             "risk profile change buttons",
@@ -2876,6 +2959,69 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("approved", guide)
         self.assertNotIn("guaranteed safe", guide)
         self.assertNotIn("severity confirmed", guide)
+
+    def test_gui_report_readiness_index_guide_documents_read_only_boundary(self) -> None:
+        guide = (ROOT / "docs" / "GUI_REPORT_READINESS_INDEX.md").read_text(encoding="utf-8")
+        required = [
+            "read-only draft report checklist",
+            "/report-readiness?project=<alias>",
+            "project alias",
+            "draft report status",
+            "analysis_packet.json",
+            "report_draft.md",
+            "finding candidate count",
+            "draft report status summary",
+            "triage link",
+            "preflight link",
+            "handoff link",
+            "export/review/report flow link",
+            "exists or missing",
+            "file size in bytes",
+            "modified UTC timestamp",
+            "SHA-256 file fingerprint",
+            "not HMAC",
+            "scope confirmation",
+            "affected endpoint confirmation",
+            "evidence quality confirmation",
+            "false positive possibility",
+            "impact statement review",
+            "remediation wording review",
+            "final severity manual decision",
+            "customer submission sensitive-info review",
+            "finding candidates",
+            "Risk is draft",
+            "Evidence confidence is not severity",
+            "report_draft.md is a draft report, not a submission report",
+            "Final severity is a manual decision",
+            "raw request or response data",
+            "raw audit row body",
+            "Cookie or Authorization values",
+            "token, JWT, or session values",
+            "real domain, URL, or IP values",
+            "personal data",
+            "HMAC secret or CSRF token values",
+            "full local path",
+            "form or POST action",
+            "state-changing button",
+            "report body preview",
+            "request preview",
+            "response preview",
+            "new download action",
+            "raw viewer",
+            "replay or active scan",
+        ]
+        for item in required:
+            self.assertIn(item, guide)
+
+        self.assertNotIn("raw_request", guide)
+        self.assertNotIn("raw_response", guide)
+        self.assertNotIn("DUMMY_COOKIE_VALUE", guide)
+        self.assertNotIn("DUMMY_BEARER_TOKEN", guide)
+        self.assertNotIn("safe to share", guide)
+        self.assertNotIn("approved", guide)
+        self.assertNotIn("guaranteed safe", guide)
+        self.assertNotIn("severity confirmed", guide)
+        self.assertNotIn("ready to submit", guide)
 
     def test_gui_ai_handoff_index_guide_documents_read_only_boundary(self) -> None:
         guide = (ROOT / "docs" / "GUI_AI_HANDOFF_INDEX.md").read_text(encoding="utf-8")
