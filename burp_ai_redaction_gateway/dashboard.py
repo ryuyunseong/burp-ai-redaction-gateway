@@ -49,6 +49,26 @@ FINDINGS_FILE = "finding_candidates.json"
 MAX_PREVIEW_BYTES = 1024 * 1024
 MAX_FORM_BYTES = 16 * 1024
 ACTION_NAMES = {"verify", "review", "report", "export"}
+OPERATIONS_GUIDES = (
+    ("빠른 시작", "docs/USER_QUICKSTART.md", "receiver, Burp 전송, dashboard 실행 흐름"),
+    ("Windows 실행기", "docs/WINDOWS_LAUNCHER_GUIDE.md", "start/stop 스크립트와 포트 충돌 처리"),
+    ("감사 운영", "docs/AUDIT_OPERATIONS_GUIDE.md", "review-audit, retention, HMAC, archive 순서"),
+    ("GUI 감사 패널", "docs/GUI_AUDIT_PANEL_GUIDE.md", "감사/보관 상태 표시 해석"),
+    ("위험도 초안", "docs/RISK_RATING_GUIDE.md", "risk profile과 수동 severity 결정"),
+    ("v0.4 릴리스", "docs/RELEASE_NOTES_v0.4.md", "dashboard 계열 변경 기준선"),
+)
+FORBIDDEN_AI_ITEMS = (
+    "raw request/response",
+    "Cookie",
+    "Authorization",
+    "token/JWT/session",
+    "실제 도메인/IP",
+    "개인정보",
+    "local_only/",
+    "raw/",
+    "raw_vault/",
+    "검증 실패 out/",
+)
 
 
 @dataclass(frozen=True)
@@ -107,6 +127,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/settings":
                 self._send_html(render_settings(self.server.config.root))
+                return
+            if parsed.path in {"/help", "/operations"}:
+                self._send_html(render_operations_help())
                 return
             if parsed.path == "/output":
                 output_id = _required_query_value(parsed.query, "project")
@@ -433,6 +456,7 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
           <div class="status-stack">
             <span class="badge good">로컬 전용</span>
             <span class="badge neutral">안전 미리보기</span>
+            <a class="button secondary" href="/help">운영 가이드</a>
             <a class="button secondary" href="/settings">설정/상태</a>
           </div>
         </section>
@@ -490,6 +514,7 @@ def render_settings(root: Path) -> str:
           <div class="status-stack">
             <span class="badge good">조회 전용</span>
             <span class="badge neutral">메타데이터만</span>
+            <a class="button secondary" href="/help">운영 가이드</a>
           </div>
         </section>
         <section class="safety-strip">
@@ -549,6 +574,78 @@ def render_settings(root: Path) -> str:
               <li>delete/edit 기능 없음</li>
               <li>비밀값 또는 환경변수 값 표시 없음</li>
               <li>검증 실패 산출물 사용 금지</li>
+            </ul>
+          </div>
+        </section>
+        """,
+    )
+
+
+def render_operations_help() -> str:
+    guide_cards = "".join(_guide_card(title, path, description) for title, path, description in OPERATIONS_GUIDES)
+    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
+    forbidden_items = "".join(f"<li>{_h(name)}</li>" for name in FORBIDDEN_AI_ITEMS)
+    return _page(
+        "운영 인덱스",
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="/">산출물 목록으로</a>
+            <h1>운영 인덱스</h1>
+            <p class="subtitle">GUI에서 자주 필요한 사용 흐름, 문서 위치, 안전 경계를 한 화면에 모아 둔 read-only 안내입니다.</p>
+          </div>
+          <div class="status-stack">
+            <span class="badge good">조회 전용</span>
+            <span class="badge neutral">실행 버튼 없음</span>
+            <a class="button secondary" href="/settings">설정/상태</a>
+          </div>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>접속</span><strong>127.0.0.1 전용</strong></div>
+          <div class="rail"><span>표시</span><strong>HTML escaped</strong></div>
+          <div class="rail"><span>finding</span><strong>candidate</strong></div>
+          <div class="rail"><span>risk rating</span><strong>draft</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>빠른 흐름</h2><span class="muted">CLI와 GUI 병행 사용 순서입니다.</span></div>
+            <ol class="safe-list">
+              <li>receiver를 127.0.0.1에서 실행합니다.</li>
+              <li>Burp scoped HTTP history를 로컬 receiver로 전송합니다.</li>
+              <li>dashboard를 열고 산출물을 선택합니다.</li>
+              <li>검증, 리뷰, 보고서, 내보내기를 safe output에만 실행합니다.</li>
+              <li>AI에는 아래 안전 파일 4개만 넣습니다.</li>
+            </ol>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>문서 진입점</h2><span class="muted">repository-relative 경로만 표시합니다.</span></div>
+            <div class="file-grid">{guide_cards}</div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>AI 사용 가능 파일</h2><span class="muted">검증 통과 후에만 사용합니다.</span></div>
+            <ul class="safe-list">{safe_files}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>AI/문서/PR 금지 항목</h2><span class="muted">원문 또는 민감값은 옮기지 않습니다.</span></div>
+            <ul class="safe-list">{forbidden_items}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>결과 해석</h2><span class="muted">확정 표현을 피합니다.</span></div>
+            <dl class="facts">
+              <div><dt>finding</dt><dd>candidate이며 수동 검증 전 확정 취약점이 아닙니다.</dd></div>
+              <div><dt>risk rating</dt><dd>draft이며 final severity가 아닙니다.</dd></div>
+              <div><dt>confidence</dt><dd>증거 신뢰도이며 severity가 아닙니다.</dd></div>
+              <div><dt>final severity</dt><dd>Burp 재현, 권한별 비교, 영향도 판단 후 수동 결정합니다.</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>이번 화면의 경계</h2><span class="muted">상태 안내만 제공합니다.</span></div>
+            <ul class="safe-list">
+              <li>raw viewer를 제공하지 않습니다.</li>
+              <li>재전송 또는 active scan을 제공하지 않습니다.</li>
+              <li>archive/HMAC 생성 또는 검증 실행 버튼을 제공하지 않습니다.</li>
+              <li>risk profile 변경 버튼을 제공하지 않습니다.</li>
+              <li>form, POST action, delete/edit 기능을 추가하지 않습니다.</li>
             </ul>
           </div>
         </section>
@@ -875,6 +972,18 @@ def _output_row(output: DashboardOutput) -> str:
       <td><span class="badge good">검증 통과</span></td>
       <td><a class="button small" href="{_output_href(output.output_id)}">열기</a></td>
     </tr>
+    """
+
+
+def _guide_card(title: str, path: str, description: str) -> str:
+    return f"""
+    <div class="file-card">
+      <div>
+        <strong>{_h(title)}</strong>
+        <span>{_h(path)}</span>
+        <small>{_h(description)}</small>
+      </div>
+    </div>
     """
 
 

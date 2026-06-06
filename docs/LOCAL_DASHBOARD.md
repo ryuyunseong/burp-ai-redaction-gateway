@@ -14,6 +14,19 @@ Only `127.0.0.1` is accepted as the bind host. Non-loopback hosts are rejected.
 Use an explicit root such as `out`; the dashboard discovers output directories
 under that root that contain `analysis_packet.json`.
 
+The dashboard includes a read-only operations index:
+
+```text
+http://127.0.0.1:8766/help
+http://127.0.0.1:8766/operations
+```
+
+The operations index is a guide hub, not an action surface. It links the
+quickstart, Windows launcher guide, audit operations guide, GUI audit panel
+guide, risk rating guide, and v0.4 release notes by repository-relative path.
+It also lists the four AI-safe files, blocked raw-data categories, and the
+candidate/draft interpretation boundary.
+
 ## Allowed Scope
 
 The dashboard applies the same verify-first boundary as the CLI and read-only
@@ -59,6 +72,8 @@ The dashboard does not implement:
 - delete or edit actions
 - automatic exploit confirmation
 - severity assignment
+- archive or HMAC generation buttons on the operations index
+- risk profile change buttons on the operations index
 
 ## Dashboard Actions
 

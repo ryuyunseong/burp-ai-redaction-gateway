@@ -263,6 +263,12 @@ safe metadata such as root alias, localhost-only mode, safe file allowlist,
 report profile names, draft-only risk mode, audit schema version, HMAC
 configured status, and CSRF enabled status. It does not show CSRF values, HMAC
 secret values, environment variable values, raw HTTP data, or full local paths.
+The dashboard also includes a read-only operations index at `/help` and
+`/operations`. It summarizes quickstart flow, Windows launcher guidance, safe
+files, blocked raw-data boundaries, audit operations, GUI audit panel
+interpretation, and risk rating guide entry points without adding form, POST,
+archive/HMAC action, risk profile action, replay, active scan, delete, or edit
+controls.
 
 See
 [docs/LOCAL_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/LOCAL_DASHBOARD.md).
