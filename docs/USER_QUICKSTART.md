@@ -95,6 +95,15 @@ http://127.0.0.1:8766/
 The dashboard is a `127.0.0.1` local review tool. It is not a production web
 application and should not be exposed to a network.
 
+For the complete GUI screen-by-screen sequence, see
+[GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md).
+The dashboard operations index is also available at:
+
+```text
+http://127.0.0.1:8766/help
+http://127.0.0.1:8766/operations
+```
+
 ## 4. Use the Dashboard Flow
 
 Use the dashboard actions in this order:
@@ -111,6 +120,7 @@ Dashboard action boundaries:
 - `Refresh` is a read-only GET action.
 - Export is limited to the safe file allowlist.
 - Raw viewer, replay, active scan, delete, and edit actions are not provided.
+- `/help`, `/operations`, and `/settings` are read-only status or guide pages.
 
 ## 5. Safe Files for AI
 

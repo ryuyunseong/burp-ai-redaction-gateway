@@ -5,6 +5,10 @@ dashboard. The panel is an operator aid for checking whether local audit
 artifacts exist and whether archive verification can be performed. It is not a
 configuration editor and it does not run archive or HMAC actions.
 
+For the broader dashboard sequence around verify, review, report, export, and
+safe AI handoff, see
+[GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md).
+
 ## Scope
 
 The GUI audit/archive panel may appear on the dashboard home page and on the

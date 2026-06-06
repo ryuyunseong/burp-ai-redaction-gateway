@@ -51,6 +51,7 @@ MAX_FORM_BYTES = 16 * 1024
 ACTION_NAMES = {"verify", "review", "report", "export"}
 OPERATIONS_GUIDES = (
     ("빠른 시작", "docs/USER_QUICKSTART.md", "receiver, Burp 전송, dashboard 실행 흐름"),
+    ("GUI 사용자 흐름", "docs/GUI_USER_FLOW.md", "처음 실행부터 AI 투입 전까지의 화면 흐름"),
     ("Windows 실행기", "docs/WINDOWS_LAUNCHER_GUIDE.md", "start/stop 스크립트와 포트 충돌 처리"),
     ("감사 운영", "docs/AUDIT_OPERATIONS_GUIDE.md", "review-audit, retention, HMAC, archive 순서"),
     ("GUI 감사 패널", "docs/GUI_AUDIT_PANEL_GUIDE.md", "감사/보관 상태 표시 해석"),
@@ -612,8 +613,9 @@ def render_operations_help() -> str:
             <ol class="safe-list">
               <li>receiver를 127.0.0.1에서 실행합니다.</li>
               <li>Burp scoped HTTP history를 로컬 receiver로 전송합니다.</li>
-              <li>dashboard를 열고 산출물을 선택합니다.</li>
-              <li>검증, 리뷰, 보고서, 내보내기를 safe output에만 실행합니다.</li>
+              <li>정제 산출물이 생성되고 verify를 통과했는지 확인합니다.</li>
+              <li>dashboard에서 산출물을 선택합니다.</li>
+              <li>검증, 리뷰, 보고서, 내보내기를 verified safe output에만 실행합니다.</li>
               <li>AI에는 아래 안전 파일 4개만 넣습니다.</li>
             </ol>
           </div>

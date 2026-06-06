@@ -22,10 +22,13 @@ http://127.0.0.1:8766/operations
 ```
 
 The operations index is a guide hub, not an action surface. It links the
-quickstart, Windows launcher guide, audit operations guide, GUI audit panel
-guide, risk rating guide, and v0.4 release notes by repository-relative path.
-It also lists the four AI-safe files, blocked raw-data categories, and the
-candidate/draft interpretation boundary.
+quickstart, GUI user flow guide, Windows launcher guide, audit operations
+guide, GUI audit panel guide, risk rating guide, and v0.4 release notes by
+repository-relative path. It also lists the four AI-safe files, blocked
+raw-data categories, and the candidate/draft interpretation boundary.
+
+For the screen-by-screen operator sequence, see
+[GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md).
 
 ## Allowed Scope
 

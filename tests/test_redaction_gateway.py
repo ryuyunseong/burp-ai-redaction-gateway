@@ -847,6 +847,7 @@ class RedactionGatewayTests(unittest.TestCase):
                         self.assertIn("조회 전용", body)
                         self.assertIn("실행 버튼 없음", body)
                         self.assertIn("docs/USER_QUICKSTART.md", body)
+                        self.assertIn("docs/GUI_USER_FLOW.md", body)
                         self.assertIn("docs/WINDOWS_LAUNCHER_GUIDE.md", body)
                         self.assertIn("docs/AUDIT_OPERATIONS_GUIDE.md", body)
                         self.assertIn("docs/GUI_AUDIT_PANEL_GUIDE.md", body)
@@ -2534,6 +2535,64 @@ class RedactionGatewayTests(unittest.TestCase):
         ]
         for value in blocked_values:
             self.assertIn(value, guide)
+
+    def test_gui_user_flow_guide_documents_safe_dashboard_sequence(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        quickstart = (ROOT / "docs" / "USER_QUICKSTART.md").read_text(encoding="utf-8")
+        local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
+        audit_panel_guide = (ROOT / "docs" / "GUI_AUDIT_PANEL_GUIDE.md").read_text(encoding="utf-8")
+        user_flow = (ROOT / "docs" / "GUI_USER_FLOW.md").read_text(encoding="utf-8")
+
+        for text in [readme, quickstart, local_dashboard, audit_panel_guide]:
+            self.assertIn("GUI_USER_FLOW.md", text)
+
+        required = [
+            "start receiver and dashboard",
+            "send scoped Burp history",
+            "verify the selected output",
+            "review candidate findings",
+            "generate report_draft.md",
+            "export safe files",
+            "send only verified safe files to AI",
+            "http://127.0.0.1:8766/",
+            "/help",
+            "/operations",
+            "/settings",
+            "Verify",
+            "Review",
+            "Report",
+            "Export",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "is evidence confidence, not severity",
+            "risk_rating_draft",
+            "Final severity requires",
+            "CVSS is a separate calculation scope",
+        ]
+        for item in required:
+            self.assertIn(item, user_flow)
+
+        blocked_items = [
+            "Raw request or response data",
+            "Cookie, Authorization, token, JWT, or session values",
+            "Real domains, customer names, internal IPs, or personal data",
+            "HMAC secrets, CSRF values, or local secret files",
+            "raw viewers",
+            "replay or active scan",
+            "archive or HMAC execution buttons",
+            "risk profile change buttons",
+            "delete or edit actions",
+            "settings-write actions",
+        ]
+        for item in blocked_items:
+            self.assertIn(item, user_flow)
+
+        self.assertNotIn("raw_request", user_flow)
+        self.assertNotIn("raw_response", user_flow)
+        self.assertNotIn("DUMMY_COOKIE_VALUE", user_flow)
+        self.assertNotIn("DUMMY_BEARER_TOKEN", user_flow)
 
 
 if __name__ == "__main__":
