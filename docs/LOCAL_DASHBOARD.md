@@ -128,5 +128,5 @@ evidence confidence, not severity. `risk_rating_draft` is a separate draft-only
 workflow for likelihood, impact, and severity. Supported risk profiles are
 `conservative`, `consultant`, and `strict`; the settings page lists them as
 read-only status. Manual verification is required before any finding is
-reported as confirmed or assigned final severity.
+reported as completed or assigned as a severity decision.
 

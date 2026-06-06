@@ -8,9 +8,9 @@ RISK_DRAFT_SCHEMA_VERSION = "risk-rating-draft-v1"
 RISK_DRAFT_STATUS = "draft_requires_manual_verification"
 DEFAULT_RISK_RATING_PROFILE = "conservative"
 RISK_DRAFT_DO_NOT_CLAIM = [
-    "Final severity assigned",
-    "Risk rating confirmed",
-    "Exploitability confirmed",
+    "Severity decision made",
+    "Risk rating completed",
+    "Exploitability proven",
 ]
 
 
@@ -129,7 +129,7 @@ def build_risk_rating_draft(
             "Draft severity uses likelihood and impact placeholders, not evidence confidence.",
             baseline.basis,
             rating_profile.basis,
-            "Manual verification and a separate risk rating review are required before assigning final severity.",
+            "Manual verification and a separate risk rating review are required before using the severity draft.",
         ],
         "evidence_confidence": confidence,
         "confidence_is_severity": False,

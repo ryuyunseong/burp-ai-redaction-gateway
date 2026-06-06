@@ -382,7 +382,7 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertFalse(draft["confidence_is_severity"])
             self.assertFalse(draft["risk_rating_finalized"])
             self.assertTrue(draft["manual_verification_required"])
-            self.assertIn("Final severity assigned", draft["do_not_claim"])
+            self.assertIn("Severity decision made", draft["do_not_claim"])
 
     def test_generate_accepts_risk_rating_profile_option(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

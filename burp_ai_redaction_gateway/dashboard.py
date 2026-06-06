@@ -520,7 +520,7 @@ def render_settings(root: Path) -> str:
               <div><dt>default risk profile</dt><dd>{_h(DEFAULT_RISK_RATING_PROFILE)}</dd></div>
               <div><dt>risk rating mode</dt><dd>draft only</dd></div>
               <div><dt>confidence_is_severity</dt><dd>false</dd></div>
-              <div><dt>final severity</dt><dd>manual review required</dd></div>
+              <div><dt>severity decision</dt><dd>manual review required</dd></div>
             </dl>
           </div>
           <div class="panel">

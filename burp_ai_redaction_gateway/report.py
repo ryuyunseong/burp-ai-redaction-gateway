@@ -342,7 +342,7 @@ def _risk_rating_draft_lines(value: Any) -> list[str]:
         f"Risk rating finalized: {finalized}.",
         f"Confidence is severity: {confidence_is_severity}.",
     ]
-    lines.extend(basis or ["Manual verification is required before assigning final severity."])
+    lines.extend(basis or ["Manual verification is required before using the severity draft."])
     return lines
 
 

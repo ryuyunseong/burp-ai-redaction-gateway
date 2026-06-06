@@ -115,7 +115,7 @@ Finding output is not a confirmed vulnerability report.
 - Findings are candidates or suspected findings.
 - `confidence` is evidence confidence, not severity.
 - `risk_rating_draft` is a draft based on likelihood and impact.
-- Final severity requires manual verification and manual risk review.
+- Severity decisions require manual verification and manual risk review.
 - Do not claim exploitation, data breach, or privilege escalation without proof.
 
 Use the report draft as review material, not as a final customer report.

@@ -192,7 +192,7 @@ The server is intended for sanitized files such as:
 
 Finding candidates may include `risk_rating_draft` metadata. It is draft-only
 likelihood, impact, severity, and risk profile guidance and must not be treated
-as final severity until manual verification and separate risk review are
+as a severity decision until manual verification and separate risk review are
 complete.
 
 Do not expose real Burp exports, local raw vaults, tokens, cookies, real
