@@ -219,6 +219,11 @@ The dashboard highlights verify-passed status, raw-free display mode, candidate
 finding language, manual verification requirements, and the rule that evidence
 confidence is not severity. Finding cards may show the separate risk rating
 draft, but the draft remains unfinalized until manual risk review.
+The dashboard also includes a read-only settings/status page. It shows only
+safe metadata such as root alias, localhost-only mode, safe file allowlist,
+report profile names, draft-only risk mode, audit schema version, HMAC
+configured status, and CSRF enabled status. It does not show CSRF values, HMAC
+secret values, environment variable values, raw HTTP data, or full local paths.
 
 See
 [docs/LOCAL_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/LOCAL_DASHBOARD.md).

@@ -121,6 +121,12 @@ output id, result status, blocked reason, report profile, and the safe exported
 file allowlist. It must not include CSRF token values, raw HTTP values, stack
 traces, real domains, internal IPs, or personal data.
 
+The settings/status page is read-only. It shows only safe metadata such as root
+alias, localhost-only mode, safe file allowlist, report profile names,
+draft-only risk mode, audit schema version, HMAC configured status, and CSRF
+enabled status. It must not display HMAC secrets, CSRF values, environment
+variable values, full local paths, raw traffic, or personal data.
+
 ## AI-Safe Files
 
 The following files may be used with ChatGPT, Codex, or another AI only after

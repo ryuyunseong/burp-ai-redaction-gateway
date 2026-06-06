@@ -91,6 +91,25 @@ The following paths are rejected:
 
 Path traversal and absolute output paths are rejected.
 
+## Settings Page
+
+The dashboard provides a read-only settings/status page at `/settings`. It is a
+safe status surface, not a configuration editor. It may show:
+
+- root alias, not the full local path
+- localhost-only bind mode
+- the safe preview/download file allowlist
+- report profile names
+- draft-only risk rating mode and `confidence_is_severity: false`
+- audit schema version and audit path alias
+- HMAC configured/not configured status
+- CSRF enabled status without the CSRF value
+
+The settings page must not print HMAC secret values, CSRF values, environment
+variable values, raw request or response data, cookies, authorization values,
+tokens, real domains, internal IPs, personal data, or stack traces. It does not
+add raw viewing, replay, active scan, delete, edit, or settings-write actions.
+
 ## Audit Panel
 
 The audit panel summarizes local audit status only. It may show review status,
