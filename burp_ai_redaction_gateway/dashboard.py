@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, quote, urlsplit
 
+from .audit_compressed_hmac import AuditCompressedHmacError, verify_compressed_audit_hmac_manifest
+from .audit_compression import AuditCompressionError, verify_compressed_audit_jsonl
 from .audit_hmac import DEFAULT_HMAC_ENV_VAR, AuditHmacError, load_hmac_secret, verify_audit_hmac_manifest
 from .audit_review import review_audit_path
 from .mcp_server import (
@@ -529,9 +531,14 @@ def render_settings(root: Path) -> str:
               <div><dt>audit schema</dt><dd>{_h(AUDIT_SCHEMA_VERSION)}</dd></div>
               <div><dt>audit path alias</dt><dd>&lt;root&gt;/.audit/{_h(AUDIT_FILE_NAME)}</dd></div>
               <div><dt>audit review</dt><dd>{_status_badge(audit_status["review_status"])}</dd></div>
+              <div><dt>audit log</dt><dd>{_status_badge(audit_status["audit_log_status"])}</dd></div>
               <div><dt>HMAC configured</dt><dd>{_h(_hmac_configured_label())}</dd></div>
               <div><dt>HMAC manifest</dt><dd>{_status_badge(audit_status["hmac_status"])}</dd></div>
               <div><dt>retained JSONL</dt><dd>{_status_badge(audit_status["retained_status"])}</dd></div>
+              <div><dt>compressed archive</dt><dd>{_status_badge(audit_status["archive_status"])}</dd></div>
+              <div><dt>compressed archive verify</dt><dd>{_status_badge(audit_status["archive_verify_status"])}</dd></div>
+              <div><dt>compressed archive HMAC manifest</dt><dd>{_status_badge(audit_status["archive_hmac_manifest_status"])}</dd></div>
+              <div><dt>compressed archive HMAC verify</dt><dd>{_status_badge(audit_status["archive_hmac_status"])}</dd></div>
             </dl>
           </div>
           <div class="panel">
@@ -772,23 +779,34 @@ def _load_candidates(output_dir: Path) -> list[dict[str, Any]]:
 
 def _audit_status(root: Path) -> dict[str, str]:
     audit_dir = root / AUDIT_DIR_NAME
+    audit_log = audit_dir / AUDIT_FILE_NAME if audit_dir.is_dir() else root / AUDIT_FILE_NAME
+    retained = audit_dir / "mcp_audit.retained.jsonl"
+    retained_manifest = audit_dir / "mcp_audit.retained.manifest.json"
+    archive = audit_dir / "mcp_audit.retained.jsonl.gz"
+    archive_manifest = audit_dir / "mcp_audit.retained.jsonl.gz.manifest.json"
     status = {
         "review_status": "not found",
+        "audit_log_status": "not found",
         "events": "0",
         "files": "0",
         "retained_status": "not found",
         "hmac_status": "not configured",
+        "archive_status": "not found",
+        "archive_verify_status": "not found",
+        "archive_hmac_manifest_status": "not found",
+        "archive_hmac_status": "not configured",
     }
-    if audit_dir.is_dir() or (root / AUDIT_FILE_NAME).is_file():
+    if audit_log.is_file():
+        status["audit_log_status"] = "present"
+    if audit_dir.is_dir() or audit_log.is_file():
         try:
-            review = review_audit_path(audit_dir if audit_dir.is_dir() else root / AUDIT_FILE_NAME)
+            review = review_audit_path(audit_log if audit_log.is_file() else audit_dir)
             status["review_status"] = "passed" if review.passed else "failed"
             status["events"] = str(review.events_checked)
             status["files"] = str(review.files_checked)
         except ValueError:
             status["review_status"] = "failed"
 
-    retained = audit_dir / "mcp_audit.retained.jsonl"
     if retained.is_file():
         try:
             retained_review = review_audit_path(retained)
@@ -796,9 +814,14 @@ def _audit_status(root: Path) -> dict[str, str]:
         except ValueError:
             status["retained_status"] = "failed"
 
-    manifest = audit_dir / "mcp_audit.retained.manifest.json"
-    if manifest.is_file():
-        status["hmac_status"] = _hmac_status(retained, manifest)
+    if retained_manifest.is_file():
+        status["hmac_status"] = _hmac_status(retained, retained_manifest)
+    if archive.is_file():
+        status["archive_status"] = "present"
+        status["archive_verify_status"] = _compressed_archive_status(archive)
+    if archive_manifest.is_file():
+        status["archive_hmac_manifest_status"] = "present"
+        status["archive_hmac_status"] = _compressed_archive_hmac_status(archive, archive_manifest)
     return status
 
 
@@ -809,6 +832,25 @@ def _hmac_status(input_file: Path, manifest_file: Path) -> str:
         secret = load_hmac_secret()
         verify_audit_hmac_manifest(input_file, manifest_file, secret=secret)
     except AuditHmacError as error:
+        return _safe_error_type(error.error_type)
+    return "passed"
+
+
+def _compressed_archive_status(archive_file: Path) -> str:
+    try:
+        verify_compressed_audit_jsonl(archive_file)
+    except AuditCompressionError as error:
+        return _safe_error_type(error.error_type)
+    return "passed"
+
+
+def _compressed_archive_hmac_status(archive_file: Path, manifest_file: Path) -> str:
+    if not archive_file.is_file():
+        return "input_missing"
+    try:
+        secret = load_hmac_secret()
+        verify_compressed_audit_hmac_manifest(archive_file, manifest_file, secret=secret)
+    except (AuditCompressedHmacError, AuditHmacError) as error:
         return _safe_error_type(error.error_type)
     return "passed"
 
@@ -959,6 +1001,10 @@ def _audit_panel(status: dict[str, str]) -> str:
       <div><dt>검사한 파일</dt><dd>{_h(status["files"])}</dd></div>
       <div><dt>보존 JSONL</dt><dd>{_status_badge(status["retained_status"])}</dd></div>
       <div><dt>HMAC manifest</dt><dd>{_status_badge(status["hmac_status"])}</dd></div>
+      <div><dt>compressed archive</dt><dd>{_status_badge(status["archive_status"])}</dd></div>
+      <div><dt>compressed archive verify</dt><dd>{_status_badge(status["archive_verify_status"])}</dd></div>
+      <div><dt>compressed archive HMAC manifest</dt><dd>{_status_badge(status["archive_hmac_manifest_status"])}</dd></div>
+      <div><dt>compressed archive HMAC verify</dt><dd>{_status_badge(status["archive_hmac_status"])}</dd></div>
       <div><dt>표시 내용</dt><dd>메타데이터만</dd></div>
     </dl>
     """
@@ -989,9 +1035,22 @@ def _status_badge(value: str) -> str:
     safe = _h(_status_label(value))
     if value == "passed":
         return f'<span class="badge good">{safe}</span>'
-    if value in {"failed", "input_missing"} or value.endswith("_missing"):
+    if _is_error_status(value):
         return f'<span class="badge danger">{safe}</span>'
     return f'<span class="badge neutral">{safe}</span>'
+
+
+def _is_error_status(value: str) -> bool:
+    return (
+        value in {"failed", "input_missing"}
+        or value.endswith("_missing")
+        or value.endswith("_failed")
+        or value.endswith("_mismatch")
+        or value.endswith("_forbidden")
+        or value.startswith("invalid_")
+        or value.startswith("compressed_")
+        or value.startswith("manifest_")
+    )
 
 
 def _status_label(value: str) -> str:

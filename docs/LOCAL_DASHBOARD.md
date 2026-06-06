@@ -104,6 +104,7 @@ safe status surface, not a configuration editor. It may show:
 - draft-only risk rating mode and `confidence_is_severity: false`
 - audit schema version and audit path alias
 - HMAC configured/not configured status
+- retained JSONL, compressed archive, and archive HMAC status
 - CSRF enabled status without the CSRF value
 
 The settings page must not print HMAC secret values, CSRF values, environment
@@ -113,10 +114,12 @@ add raw viewing, replay, active scan, delete, edit, or settings-write actions.
 
 ## Audit Panel
 
-The audit panel summarizes local audit status only. It may show review status,
-event counts, retained JSONL status, and HMAC manifest status. It does not print
-audit rows, HMAC secrets, raw request or response values, cookies, authorization
-values, tokens, real domains, internal IPs, personal data, or stack traces.
+The audit panel summarizes local audit and archive status only. It may show
+review status, event counts, retained JSONL status, retained HMAC manifest
+status, compressed archive status, archive verification status, and compressed
+archive HMAC manifest status. It does not print audit rows, HMAC secrets, raw
+request or response values, cookies, authorization values, tokens, real domains,
+internal IPs, personal data, or stack traces.
 
 If `BURP_AI_AUDIT_HMAC_KEY` is not set, HMAC status is reported as a safe error
 type rather than printing the secret configuration.
