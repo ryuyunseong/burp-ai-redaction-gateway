@@ -258,7 +258,8 @@ python -m burp_ai_redaction_gateway audit-compressed-hmac-verify `
 computes SHA-256 and HMAC-SHA256 over the compressed archive bytes. The
 manifest contains only safe metadata such as archive alias, compressed size,
 digest, HMAC, creation time, and `raw_data_included: false`. It must not contain
-decompressed audit rows or the HMAC secret.
+decompressed audit rows or the HMAC secret. Compressed archive HMAC is not
+encryption and does not replace `review-audit` or retained JSONL HMAC.
 
 ## Failure Handling
 

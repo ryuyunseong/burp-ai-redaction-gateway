@@ -320,7 +320,9 @@ python -m burp_ai_redaction_gateway audit-compressed-hmac-verify --input out\.au
 `audit-compress-verify`, then computes SHA-256 and HMAC-SHA256 over the
 compressed bytes. The manifest stores safe archive alias, compressed size,
 SHA-256, HMAC-SHA256, creation time, and `raw_data_included: false`. It does
-not store decompressed audit rows or the HMAC secret.
+not store decompressed audit rows or the HMAC secret. Compressed archive HMAC is
+tamper detection for the gzip package bytes, not encryption, and it does not
+replace `review-audit` or retained JSONL HMAC.
 
 ## Security Notes
 
