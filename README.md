@@ -154,6 +154,9 @@ For the full safe operating flow, including Burp collection, receiver usage,
 verification, AI-safe files, audit retention, HMAC verification, and failure
 handling, see
 [docs/OPERATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/OPERATING_GUIDE.md).
+For the focused audit review, retention, HMAC, compression, and archive HMAC
+runbook, see
+[docs/AUDIT_OPERATIONS_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/AUDIT_OPERATIONS_GUIDE.md).
 For risk rating draft concepts and profile interpretation, see
 [docs/RISK_RATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/RISK_RATING_GUIDE.md).
 For the v0.4 dashboard release baseline, see
