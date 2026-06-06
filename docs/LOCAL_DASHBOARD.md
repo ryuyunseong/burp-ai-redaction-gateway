@@ -100,6 +100,7 @@ safe status surface, not a configuration editor. It may show:
 - localhost-only bind mode
 - the safe preview/download file allowlist
 - report profile names
+- risk rating profile names
 - draft-only risk rating mode and `confidence_is_severity: false`
 - audit schema version and audit path alias
 - HMAC configured/not configured status
@@ -124,6 +125,8 @@ type rather than printing the secret configuration.
 
 Dashboard findings remain candidate or suspected findings. `confidence` is
 evidence confidence, not severity. `risk_rating_draft` is a separate draft-only
-workflow for likelihood, impact, and severity. Manual verification is required
-before any finding is reported as confirmed or assigned final severity.
+workflow for likelihood, impact, and severity. Supported risk profiles are
+`conservative`, `consultant`, and `strict`; the settings page lists them as
+read-only status. Manual verification is required before any finding is
+reported as confirmed or assigned final severity.
 

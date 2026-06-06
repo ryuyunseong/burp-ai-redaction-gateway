@@ -37,6 +37,7 @@ from burp_ai_redaction_gateway.parser import load_events
 from burp_ai_redaction_gateway.policy import load_policy
 from burp_ai_redaction_gateway.receiver import ReceiverConfig, ReceiverError, create_server, ingest_montoya_payload
 from burp_ai_redaction_gateway.redaction import Redactor
+from burp_ai_redaction_gateway.risk import RISK_RATING_PROFILE_NAMES, build_risk_rating_draft
 from burp_ai_redaction_gateway.scanner import assert_no_sensitive_text, scan_text
 from burp_ai_redaction_gateway.verifier import verify_path
 
@@ -314,6 +315,7 @@ class RedactionGatewayTests(unittest.TestCase):
             output = Path(temp_dir)
             main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
             findings = json.loads((output / "finding_candidates.json").read_text(encoding="utf-8"))
+            self.assertEqual(findings["risk_rating_profile"], "conservative")
             candidates = findings["finding_candidates"]
             candidate_types = {item["type"] for item in candidates}
             self.assertEqual(candidate_types, EXPECTED_PASSIVE_FINDING_TYPES)
@@ -341,6 +343,9 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("Vulnerability confirmed", item["do_not_claim"])
                 risk_draft = item["risk_rating_draft"]
                 self.assertEqual(risk_draft["schema_version"], "risk-rating-draft-v1")
+                self.assertEqual(risk_draft["risk_profile"], "conservative")
+                self.assertIn(risk_draft["risk_profile"], RISK_RATING_PROFILE_NAMES)
+                self.assertIn("risk_profile_conservatism", risk_draft)
                 self.assertIn(risk_draft["likelihood_draft"], {"low", "medium", "unknown"})
                 self.assertIn(risk_draft["impact_draft"], {"low", "medium", "unknown"})
                 self.assertIn(risk_draft["severity_draft"], {"low", "medium", "unknown"})
@@ -360,6 +365,49 @@ class RedactionGatewayTests(unittest.TestCase):
             idor_candidate = next(item for item in candidates if item["type"] == "idor_candidate")
             self.assertEqual(idor_candidate["confidence"], "medium")
             self.assertEqual(idor_candidate["risk_rating_draft"]["severity_draft"], "medium")
+
+    def test_risk_rating_profiles_remain_draft_and_adjust_conservatism(self) -> None:
+        conservative = build_risk_rating_draft("idor_candidate", "medium", "conservative")
+        consultant = build_risk_rating_draft("idor_candidate", "medium", "consultant")
+        strict = build_risk_rating_draft("idor_candidate", "medium", "strict")
+
+        self.assertEqual(conservative["risk_profile"], "conservative")
+        self.assertEqual(consultant["risk_profile"], "consultant")
+        self.assertEqual(strict["risk_profile"], "strict")
+        self.assertEqual(conservative["severity_draft"], "medium")
+        self.assertEqual(consultant["severity_draft"], "medium")
+        self.assertEqual(strict["likelihood_draft"], "high")
+        self.assertEqual(strict["severity_draft"], "high")
+        for draft in [conservative, consultant, strict]:
+            self.assertFalse(draft["confidence_is_severity"])
+            self.assertFalse(draft["risk_rating_finalized"])
+            self.assertTrue(draft["manual_verification_required"])
+            self.assertIn("Final severity assigned", draft["do_not_claim"])
+
+    def test_generate_accepts_risk_rating_profile_option(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir)
+            main(
+                [
+                    "generate",
+                    "--input",
+                    str(SAMPLE),
+                    "--output",
+                    str(output),
+                    "--project",
+                    "client_alias_demo",
+                    "--risk-profile",
+                    "strict",
+                ]
+            )
+            findings = json.loads((output / "finding_candidates.json").read_text(encoding="utf-8"))
+            packet = json.loads((output / "analysis_packet.json").read_text(encoding="utf-8"))
+            self.assertEqual(findings["risk_rating_profile"], "strict")
+            self.assertEqual(packet["risk_rating_profile"], "strict")
+            idor_candidate = next(item for item in findings["finding_candidates"] if item["type"] == "idor_candidate")
+            self.assertEqual(idor_candidate["risk_rating_draft"]["risk_profile"], "strict")
+            self.assertEqual(idor_candidate["risk_rating_draft"]["severity_draft"], "high")
+            self.assertFalse(idor_candidate["risk_rating_draft"]["risk_rating_finalized"])
 
     def test_schema_only_sensitive_data_candidate_stays_low_confidence(self) -> None:
         event = SanitizedEvent(
@@ -421,6 +469,7 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertEqual(packet["source"], "finding_candidates.json")
             self.assertFalse(packet["raw_data_included"])
             self.assertTrue(packet["use_only_after_verify_passed"])
+            self.assertEqual(packet["risk_rating_profile"], "conservative")
             self.assertEqual(packet["candidate_count"], len(packet["finding_candidates"]))
 
             for candidate in packet["finding_candidates"]:
@@ -440,6 +489,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 ]:
                     self.assertIn(field, candidate)
                 self.assertIn("candidate", candidate["summary"])
+                self.assertEqual(candidate["risk_rating_draft"]["risk_profile"], "conservative")
                 self.assertNotIn("raw_request", json.dumps(candidate))
                 self.assertNotIn("raw_response", json.dumps(candidate))
 
@@ -453,6 +503,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("confidence", prompt)
                 self.assertIn("confidence_rationale", prompt)
                 self.assertIn("risk_rating_draft", prompt)
+                self.assertIn("risk_profile", prompt)
                 self.assertIn("draft-only", prompt)
                 self.assertIn("manual_verification_required", prompt)
                 self.assertIn("rationale", prompt)
@@ -533,6 +584,8 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("### Rationale", text)
             self.assertIn("### Confidence Rationale", text)
             self.assertIn("### Risk Rating Draft", text)
+            self.assertIn("Risk profile: conservative", text)
+            self.assertIn("Profile conservatism: most_cautious", text)
             self.assertIn("Severity draft:", text)
             self.assertIn("Risk rating finalized: false", text)
             self.assertIn("Confidence is severity: false", text)
@@ -580,6 +633,7 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("Suspected finding status: candidate only, manual verification required", text)
             self.assertIn("Evidence confidence:", text)
             self.assertIn("### Risk Rating Draft", text)
+            self.assertIn("Risk profile: conservative", text)
             self.assertIn("Severity draft:", text)
             self.assertIn("Risk rating finalized: false", text)
             self.assertIn("Manual verification required: true", text)
@@ -719,6 +773,9 @@ class RedactionGatewayTests(unittest.TestCase):
                     self.assertIn("report_draft.md", body)
                     self.assertIn("conservative", body)
                     self.assertIn("consultant", body)
+                    self.assertIn("strict", body)
+                    self.assertIn("risk profiles", body)
+                    self.assertIn("default risk profile", body)
                     self.assertIn("draft only", body)
                     self.assertIn("confidence_is_severity", body)
                     self.assertIn("false", body)
@@ -1052,6 +1109,10 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn("raw_request", list_text)
             self.assertNotIn("raw_response", list_text)
             assert_no_sensitive_text(list_text)
+            risk_draft = list_response["result"]["structuredContent"]["findings"][0]["risk_rating_draft"]
+            self.assertEqual(risk_draft["risk_profile"], "conservative")
+            self.assertFalse(risk_draft["risk_rating_finalized"])
+            self.assertFalse(risk_draft["confidence_is_severity"])
 
             first_finding = list_response["result"]["structuredContent"]["findings"][0]["finding_id"]
             detail_response = server.handle_message(

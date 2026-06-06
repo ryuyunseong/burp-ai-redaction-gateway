@@ -50,6 +50,8 @@ def build_analysis_packet(findings: dict[str, Any]) -> dict[str, Any]:
         "report_draft_requests": REPORT_DRAFT_REQUESTS,
         "finding_candidates": candidates,
     }
+    if "risk_rating_profile" in findings:
+        packet["risk_rating_profile"] = deepcopy(findings["risk_rating_profile"])
     if "metadata" in findings:
         packet["metadata"] = deepcopy(findings["metadata"])
     return packet
