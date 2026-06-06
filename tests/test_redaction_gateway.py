@@ -835,8 +835,9 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("project alias", triage)
                 self.assertIn("finding candidate count", triage)
                 self.assertIn(">22<", triage)
-                self.assertIn("analysis_packet.json", triage)
-                self.assertIn("report_draft.md", triage)
+                self.assertIn("AI-safe file allowlist", triage)
+                for name in ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"]:
+                    self.assertIn(name, triage)
                 self.assertIn("open AI-safe preflight", triage)
                 self.assertIn("open AI handoff index", triage)
                 self.assertIn("review/report/export flow", triage)

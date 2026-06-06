@@ -843,6 +843,7 @@ def render_finding_triage_index(index: FindingTriageIndex) -> str:
     candidate_rows = "\n".join(_triage_candidate_card(candidate) for candidate in index.candidates) or (
         '<div class="empty">No finding candidates are available for triage.</div>'
     )
+    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
     forbidden_items = "".join(
         f"<li>{_h(item)}</li>"
         for item in (
@@ -884,6 +885,10 @@ def render_finding_triage_index(index: FindingTriageIndex) -> str:
               <div><dt>raw_data_included</dt><dd>false</dd></div>
               <div><dt>file paths shown</dt><dd>false</dd></div>
             </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>AI-safe file allowlist</h2><span class="muted">verified files only</span></div>
+            <ul class="safe-list">{safe_files}</ul>
           </div>
           <div class="panel">
             <div class="panel-head"><h2>Related flow</h2><span class="muted">read-only navigation</span></div>
