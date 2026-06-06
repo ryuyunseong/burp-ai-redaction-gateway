@@ -75,7 +75,7 @@ finding 후보를 확정된 finding으로 해석하려면 먼저 수동 검토�
 - risk는 draft risk이며 severity 결정으로 취급하지 않습니다.
 - 심각도 결정은 권한 있는 재현, 역할별 비교, 영향 검토 후 사람이 별도로
   수행합니다.
-- `final severity requires human decision` 문구는 사람이 결정해야 한다는
+- `최종 심각도 수동 결정` 문구는 사람이 결정해야 한다는
   경계를 나타내는 고정 문구입니다.
 - CVSS는 별도 산정 범위입니다.
 

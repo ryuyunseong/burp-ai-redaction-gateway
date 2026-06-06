@@ -1177,7 +1177,7 @@ def render_prompt_readiness_index(index: PromptReadinessIndex) -> str:
               <div><dt>Codex용 prompt</dt><dd>구현, 리뷰, 테스트 보강 같은 작업 보조에 사용하되 금지 범위를 함께 확인합니다.</dd></div>
               <div><dt>finding</dt><dd>수동 검증이 끝날 때까지 후보입니다.</dd></div>
               <div><dt>risk</dt><dd>초안이며 심각도 확정이 아닙니다.</dd></div>
-              <div><dt>final severity</dt><dd>Burp 재현, 권한별 비교, 영향도 판단 후 사람이 결정합니다.</dd></div>
+              <div><dt>최종 심각도 결정</dt><dd>Burp 재현, 권한별 비교, 영향도 판단 후 사람이 결정합니다.</dd></div>
               <div><dt>prompt 파일</dt><dd>검증된 산출물이더라도 AI 투입 전 사람이 직접 검토해야 합니다.</dd></div>
             </dl>
           </div>
@@ -1601,7 +1601,7 @@ def _build_prompt_readiness_index(output: DashboardOutput) -> PromptReadinessInd
             summary="finding은 후보, risk는 초안, 수동 검토가 필요하다는 경계가 있는지 봅니다.",
         ),
         PromptReadinessCheck(
-            name="final severity manual decision warning",
+            name="최종 심각도 수동 결정 경고",
             status=(
                 "present"
                 if _contains_any(combined_text, ("severity decision", "manual-review severity draft"))

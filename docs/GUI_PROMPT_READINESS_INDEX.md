@@ -44,7 +44,7 @@ secret 처리, audit HMAC 검증, compressed archive HMAC 검증을 바꾸지
 - forbidden data warning 존재 여부
 - verify-first warning 존재 여부
 - candidate/draft/manual review boundary 존재 여부
-- final severity manual decision warning 존재 여부
+- 최종 심각도 수동 결정 경고 존재 여부
 - raw data prohibition warning 존재 여부
 - Codex prompt에 작업 범위와 금지 범위가 구분되어 있는지
 - ChatGPT prompt에 분석 목적과 수동 검토 경계가 구분되어 있는지
@@ -82,7 +82,7 @@ verify
 - finding은 수동 검증이 끝날 때까지 candidate입니다.
 - risk는 draft이며 severity 결정으로 취급하지 않습니다.
 - evidence confidence는 severity가 아닙니다.
-- final severity는 Burp 재현, 권한별 비교, 영향도 판단 후 사람이 결정합니다.
+- 최종 심각도는 Burp 재현, 권한별 비교, 영향도 판단 후 사람이 결정합니다.
 - `report_draft.md`는 초안이며 고객-facing 최종 보고서가 아닙니다.
 - prompt 파일도 사람이 수동 검토한 뒤 필요한 내용만 사용해야 합니다.
 - CVSS는 별도 산정 범위입니다.

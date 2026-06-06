@@ -146,7 +146,7 @@ AI에 넣기 전에 운영자가 상태와 경계를 점검하기 위한 화면�
 - SHA-256 파일 fingerprint
 - verify 선행 필요 reminder
 - preflight, handoff, workflow, triage, report-readiness 링크
-- finding은 후보, risk는 초안, final severity는 수동 결정이라는 reminder
+- finding은 후보, risk는 초안, 최종 심각도는 수동 결정이라는 reminder
 - prompt 본문을 표시하지 않는 내부 점검 결과
 
 이 화면은 prompt 본문 preview, report 본문 preview, raw data, full local

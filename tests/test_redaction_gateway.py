@@ -1057,7 +1057,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("forbidden data warning", prompt_readiness)
                 self.assertIn("verify-first warning", prompt_readiness)
                 self.assertIn("candidate/draft/manual review boundary", prompt_readiness)
-                self.assertIn("final severity manual decision warning", prompt_readiness)
+                self.assertIn("최종 심각도 수동 결정 경고", prompt_readiness)
                 self.assertIn("raw data prohibition warning", prompt_readiness)
                 self.assertIn("Codex prompt 범위 구분", prompt_readiness)
                 self.assertIn("ChatGPT prompt 분석 경계", prompt_readiness)
@@ -1066,7 +1066,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("Codex용 prompt", prompt_readiness)
                 self.assertIn("수동 검증이 끝날 때까지 후보입니다", prompt_readiness)
                 self.assertIn("초안이며 심각도 확정이 아닙니다", prompt_readiness)
-                self.assertIn("final severity", prompt_readiness)
+                self.assertIn("최종 심각도 결정", prompt_readiness)
                 self.assertIn("사람이 결정합니다", prompt_readiness)
                 self.assertIn("사람이 직접 검토해야 합니다", prompt_readiness)
                 for link in [
@@ -3323,7 +3323,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "forbidden data warning",
             "verify-first warning",
             "candidate/draft/manual review boundary",
-            "final severity manual decision warning",
+            "최종 심각도 수동 결정 경고",
             "raw data prohibition warning",
             "Codex prompt",
             "ChatGPT prompt",
@@ -3335,7 +3335,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "finding은 수동 검증이 끝날 때까지 candidate",
             "risk는 draft",
             "evidence confidence는 severity가 아닙니다",
-            "final severity는 Burp 재현",
+            "최종 심각도는 Burp 재현",
             "prompt 파일도 사람이 수동 검토",
             "raw request 또는 raw response 데이터",
             "raw audit row 본문",
@@ -3392,7 +3392,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "수동 검토가 필요합니다",
             "candidate finding",
             "draft risk",
-            "final severity requires human decision",
+            "최종 심각도 수동 결정",
             "raw request 또는 raw response 데이터",
             "Cookie 또는 Authorization 값",
             "token, JWT, session 값",
