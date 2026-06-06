@@ -2343,6 +2343,42 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("Raw request and response values are not logged", doc)
         self.assertIn("Oversized payloads are rejected", doc)
 
+    def test_windows_launcher_scripts_are_documented_and_raw_free(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        quickstart = (ROOT / "docs" / "USER_QUICKSTART.md").read_text(encoding="utf-8")
+        start_ps1 = (ROOT / "scripts" / "start_gateway.ps1").read_text(encoding="utf-8")
+        start_bat = (ROOT / "scripts" / "start_gateway.bat").read_text(encoding="utf-8")
+        stop_ps1 = (ROOT / "scripts" / "stop_gateway.ps1").read_text(encoding="utf-8")
+
+        for text in [readme, quickstart]:
+            self.assertIn("scripts\\start_gateway.ps1", text)
+            self.assertIn("scripts\\stop_gateway.ps1", text)
+            self.assertIn("out\\.launcher", text)
+            self.assertIn("raw_data_included=false", text)
+
+        self.assertIn("serve", start_ps1)
+        self.assertIn("dashboard", start_ps1)
+        self.assertIn("--host", start_ps1)
+        self.assertIn("127.0.0.1", start_ps1)
+        self.assertIn("8765", start_ps1)
+        self.assertIn("8766", start_ps1)
+        self.assertIn("out\\.launcher", start_ps1)
+        self.assertIn("receiver.pid", start_ps1)
+        self.assertIn("dashboard.pid", start_ps1)
+        self.assertIn("-WindowStyle Hidden", start_ps1)
+        self.assertIn("raw_data_included", start_ps1)
+        self.assertIn("Stop-Process", stop_ps1)
+        self.assertIn("Win32_Process", stop_ps1)
+        self.assertIn("unexpected_process", stop_ps1)
+        self.assertIn("start_gateway.ps1", start_bat)
+
+        self.assertNotIn("raw request", start_ps1.lower())
+        self.assertNotIn("raw response", start_ps1.lower())
+        self.assertNotIn("cookie", start_ps1.lower())
+        self.assertNotIn("authorization", start_ps1.lower())
+        self.assertNotIn("hmac", start_ps1.lower())
+        self.assertNotIn("csrf", start_ps1.lower())
+
 
 if __name__ == "__main__":
     unittest.main()
