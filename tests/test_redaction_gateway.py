@@ -737,6 +737,8 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("보고서 준비", detail)
                 self.assertIn("/prompt-readiness?project=generated", detail)
                 self.assertIn("Prompt readiness", detail)
+                self.assertIn("/evidence-boundary?project=generated", detail)
+                self.assertIn("증거 경계", detail)
                 self.assertIn("/workflow?project=generated", detail)
                 self.assertIn("작업 흐름 상태", detail)
                 self.assertNotIn("AI-safe preflight", detail)
@@ -988,6 +990,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "AI 안전 사전 점검",
                     "AI 핸드오프 인덱스",
                     "Prompt readiness 인덱스",
+                    "Evidence boundary 인덱스",
                     "Finding 후보 분류 인덱스",
                     "보고서 준비 인덱스",
                     "리뷰/보고서/내보내기 흐름",
@@ -1073,6 +1076,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "/preflight?project=generated",
                     "/handoff?project=generated",
                     "/workflow?project=generated",
+                    "/evidence-boundary?project=generated",
                     "/triage?project=generated",
                     "/report-readiness?project=generated",
                 ]:
@@ -1107,6 +1111,65 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn("승인 완료", prompt_readiness)
                 self.assertNotIn("안전 보장", prompt_readiness)
                 self.assertNotIn(str(root), prompt_readiness)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/evidence-boundary?project=generated")
+                response = connection.getresponse()
+                evidence_boundary = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("Evidence boundary 인덱스", evidence_boundary)
+                self.assertIn("조회 전용 evidence boundary checklist", evidence_boundary)
+                self.assertIn("조회 전용 증거 경계 요약", evidence_boundary)
+                self.assertIn("정제 evidence", evidence_boundary)
+                self.assertIn("finding candidate", evidence_boundary)
+                self.assertIn("candidate count", evidence_boundary)
+                self.assertIn(">22<", evidence_boundary)
+                self.assertIn("analysis_packet.json", evidence_boundary)
+                self.assertIn("report_draft.md", evidence_boundary)
+                self.assertIn("chatgpt_prompt.md", evidence_boundary)
+                self.assertIn("codex_task_prompt.md", evidence_boundary)
+                self.assertIn("정제 증거 파일 메타데이터", evidence_boundary)
+                self.assertIn("SHA-256 fingerprint", evidence_boundary)
+                self.assertIn("허용되는 evidence 범위", evidence_boundary)
+                self.assertIn("금지되는 raw evidence 범위", evidence_boundary)
+                self.assertIn("수동 검증이 끝날 때까지 candidate입니다", evidence_boundary)
+                self.assertIn("draft이며 severity 결정으로 취급하지 않습니다", evidence_boundary)
+                self.assertIn("증거 신뢰도이며 severity가 아닙니다", evidence_boundary)
+                self.assertIn("최종 심각도", evidence_boundary)
+                self.assertIn("CVSS", evidence_boundary)
+                for link in [
+                    "/preflight?project=generated",
+                    "/handoff?project=generated",
+                    "/prompt-readiness?project=generated",
+                    "/evidence-boundary?project=generated",
+                    "/triage?project=generated",
+                    "/report-readiness?project=generated",
+                    "/workflow?project=generated",
+                ]:
+                    self.assertIn(link, evidence_boundary)
+                for label in [
+                    "raw 요청/응답 본문",
+                    "raw 감사 row 전문",
+                    "Cookie 또는 Authorization 값",
+                    "token, JWT, session 값",
+                    "실제 도메인, URL, IP 값",
+                    "개인정보",
+                    "HMAC secret 또는 CSRF token 값",
+                    "전체 로컬 경로",
+                ]:
+                    self.assertIn(label, evidence_boundary)
+                self.assertNotIn("<pre", evidence_boundary)
+                self.assertNotIn('name="csrf_token"', evidence_boundary)
+                self.assertNotIn("<form", evidence_boundary)
+                self.assertNotIn("<button", evidence_boundary)
+                self.assertNotIn('method="post"', evidence_boundary)
+                self.assertNotIn("download?project=generated", evidence_boundary)
+                self.assertNotIn("raw_request", evidence_boundary)
+                self.assertNotIn("raw_response", evidence_boundary)
+                self.assertNotIn("DUMMY_COOKIE_VALUE", evidence_boundary)
+                self.assertNotIn("DUMMY_BEARER_TOKEN", evidence_boundary)
+                self.assertNotIn(str(root), evidence_boundary)
                 connection.close()
 
                 connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
@@ -1358,6 +1421,15 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertEqual(response.status, 403)
                 self.assertIn("forbidden_directory", prompt_traversal)
                 self.assertNotIn("rawBearerToken", prompt_traversal)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/evidence-boundary?project=..%2Flocal_only")
+                response = connection.getresponse()
+                evidence_traversal = response.read().decode("utf-8")
+                self.assertEqual(response.status, 403)
+                self.assertIn("forbidden_directory", evidence_traversal)
+                self.assertNotIn("rawBearerToken", evidence_traversal)
                 connection.close()
             finally:
                 server.shutdown()
@@ -2988,6 +3060,7 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("GUI_AI_SAFE_PREFLIGHT.md", text)
             self.assertIn("GUI_AI_HANDOFF_INDEX.md", text)
             self.assertIn("GUI_PROMPT_READINESS_INDEX.md", text)
+            self.assertIn("GUI_EVIDENCE_BOUNDARY_INDEX.md", text)
             self.assertIn("GUI_FINDING_TRIAGE_INDEX.md", text)
             self.assertIn("GUI_REPORT_READINESS_INDEX.md", text)
             self.assertIn("GUI_WORKFLOW_STATUS_INDEX.md", text)
@@ -3004,6 +3077,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "check AI-safe preflight",
             "check AI handoff index",
             "check prompt readiness index",
+            "check evidence boundary index",
             "export safe files",
             "send only verified safe files to AI",
             "http://127.0.0.1:8766/",
@@ -3011,6 +3085,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "/report-readiness?project=<alias>",
             "/workflow?project=<alias>",
             "/prompt-readiness?project=<alias>",
+            "/evidence-boundary?project=<alias>",
             "/preflight?project=<alias>",
             "/handoff?project=<alias>",
             "/help",
@@ -3262,10 +3337,12 @@ class RedactionGatewayTests(unittest.TestCase):
             "preflight",
             "handoff",
             "prompt-readiness",
+            "evidence-boundary",
             "triage",
             "report-readiness",
             "review/report/export flow",
             "safe file status",
+            "evidence-boundary",
             "candidate available",
             "draft available",
             "manual review required",
@@ -3330,6 +3407,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "AI-safe preflight",
             "AI handoff index",
             "workflow status index",
+            "evidence boundary index",
             "finding triage index",
             "report readiness index",
             "finding은 수동 검증이 끝날 때까지 candidate",
@@ -3353,6 +3431,69 @@ class RedactionGatewayTests(unittest.TestCase):
             "response preview",
             "새 download action",
             "raw viewer",
+            "replay 또는 active scan",
+        ]
+        for item in required:
+            self.assertIn(item, guide)
+
+        self.assertNotIn("raw_request", guide)
+        self.assertNotIn("raw_response", guide)
+        self.assertNotIn("DUMMY_COOKIE_VALUE", guide)
+        self.assertNotIn("DUMMY_BEARER_TOKEN", guide)
+        self.assertNotIn("safe to share", guide)
+        self.assertNotIn("approved", guide)
+        self.assertNotIn("guaranteed safe", guide)
+        self.assertNotIn("severity confirmed", guide)
+        self.assertNotIn("ready to submit", guide)
+        self.assertNotIn("제출 가능", guide)
+        self.assertNotIn("승인 완료", guide)
+        self.assertNotIn("안전 보장", guide)
+        self.assertNotIn("This guide explains", guide)
+
+    def test_gui_evidence_boundary_index_guide_documents_read_only_boundary(self) -> None:
+        guide = (ROOT / "docs" / "GUI_EVIDENCE_BOUNDARY_INDEX.md").read_text(encoding="utf-8")
+        required = [
+            "조회 전용 체크리스트",
+            "/evidence-boundary?project=<alias>",
+            "sanitized evidence",
+            "finding candidate",
+            "candidate count",
+            "analysis_packet.json",
+            "report_draft.md",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "safe files 4개",
+            "파일 크기(bytes)",
+            "수정 시각(UTC)",
+            "SHA-256 fingerprint",
+            "HMAC이 아닌 일반 파일 fingerprint",
+            "허용되는 evidence 범위",
+            "금지되는 raw evidence 범위",
+            "/preflight?project=<alias>",
+            "/handoff?project=<alias>",
+            "/prompt-readiness?project=<alias>",
+            "/triage?project=<alias>",
+            "/report-readiness?project=<alias>",
+            "/workflow?project=<alias>",
+            "finding은 수동 검증이 끝날 때까지 candidate",
+            "risk는 draft",
+            "evidence confidence는 severity가 아닙니다",
+            "최종 심각도는 Burp 재현",
+            "CVSS는 별도 산정 범위",
+            "raw request 또는 raw response body",
+            "raw audit row 전문",
+            "Cookie 또는 Authorization 값",
+            "token, JWT, session 값",
+            "실제 domain, URL, IP 값",
+            "개인정보",
+            "HMAC secret 또는 CSRF token 값",
+            "full local path",
+            "form 또는 POST action",
+            "상태 변경 버튼",
+            "raw body preview",
+            "raw audit row preview",
+            "download action",
+            "archive 또는 HMAC 생성/검증 실행 버튼",
             "replay 또는 active scan",
         ]
         for item in required:

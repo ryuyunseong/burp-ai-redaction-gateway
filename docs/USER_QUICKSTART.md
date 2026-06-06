@@ -103,6 +103,8 @@ dashboard는 `127.0.0.1` 로컬 검토 도구입니다. production web applicati
 [GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md)를
 참조하세요. 조회 전용 prompt readiness 체크리스트는
 [GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
+참조하세요. 조회 전용 evidence boundary 체크리스트는
+[GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
 참조하세요. 조회 전용 finding 후보 triage 체크리스트는
 [GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 조회 전용 보고서 초안 준비 체크리스트는

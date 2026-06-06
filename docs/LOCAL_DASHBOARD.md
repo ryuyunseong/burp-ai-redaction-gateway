@@ -21,8 +21,8 @@ dashboard에는 조회 전용 운영 인덱스가 있습니다.
 ```
 
 운영 인덱스는 quickstart, GUI 사용자 흐름, AI 안전 사전 점검, AI 핸드오프
-인덱스, prompt readiness, finding triage, 보고서 준비 상태, workflow 상태,
-audit 운영, audit panel 해석, risk rating 문서로 이동하는 진입점입니다.
+인덱스, prompt readiness, evidence boundary, finding triage, 보고서 준비 상태,
+workflow 상태, audit 운영, audit panel 해석, risk rating 문서로 이동하는 진입점입니다.
 또한 안전 파일 4개, 차단되는 raw-data 범위, candidate/draft 해석 경계를
 요약합니다.
 
@@ -34,6 +34,8 @@ audit 운영, audit panel 해석, risk rating 문서로 이동하는 진입점�
 [GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
 참조하세요. Prompt readiness 체크리스트는
 [GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
+참조하세요. Evidence boundary 체크리스트는
+[GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
 참조하세요. finding 후보 triage 체크리스트는
 [GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 보고서 초안 준비 체크리스트는
@@ -153,6 +155,33 @@ AI에 넣기 전에 운영자가 상태와 경계를 점검하기 위한 화면�
 path, form, POST action, 새 download action, archive/HMAC action, replay,
 active scan, HMAC secret 입력, CSRF token 값, 제출 control을 표시하지
 않습니다.
+
+## Evidence Boundary 인덱스
+
+선택한 검증 output에 대해 조회 전용 evidence boundary 인덱스를 제공합니다.
+
+```text
+/evidence-boundary?project=<alias>
+```
+
+이 화면은 report/AI 검토에 사용할 정제 evidence와 절대 노출하지 않을 raw
+evidence 범위를 분리해 보여줍니다.
+
+표시 가능한 값:
+
+- project alias
+- 정제 evidence 존재 여부
+- finding candidate 존재 여부와 candidate count
+- safe files 4개 존재 여부
+- 파일 크기(bytes)
+- 수정 시각(UTC)
+- SHA-256 파일 fingerprint
+- preflight, handoff, prompt-readiness, triage, report-readiness, workflow 링크
+- finding은 후보, risk는 draft, 최종 심각도는 수동 결정이라는 reminder
+
+이 화면은 raw row 전문, request/response body, token, secret, full local
+path, form, POST action, download action, archive/HMAC 실행, replay,
+active scan, delete/retention action을 제공하지 않습니다.
 
 ## 보고서 준비 상태 인덱스
 

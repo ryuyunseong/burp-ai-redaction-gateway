@@ -56,6 +56,7 @@ OPERATIONS_GUIDES = (
     ("AI 안전 사전 점검", "docs/GUI_AI_SAFE_PREFLIGHT.md", "AI 투입 전 조회 전용 상태 확인"),
     ("AI 핸드오프 인덱스", "docs/GUI_AI_HANDOFF_INDEX.md", "AI 투입 파일 순서와 주의사항"),
     ("Prompt readiness 인덱스", "docs/GUI_PROMPT_READINESS_INDEX.md", "prompt 파일 투입 전 조회 전용 점검"),
+    ("Evidence boundary 인덱스", "docs/GUI_EVIDENCE_BOUNDARY_INDEX.md", "정제 증거와 raw 금지 범위의 조회 전용 경계"),
     ("Finding 후보 분류 인덱스", "docs/GUI_FINDING_TRIAGE_INDEX.md", "finding 후보 검토 순서와 수동 판단 경계"),
     ("보고서 준비 인덱스", "docs/GUI_REPORT_READINESS_INDEX.md", "report_draft 초안 검토 상태와 수동 제출 경계"),
     ("작업 흐름 상태 인덱스", "docs/GUI_WORKFLOW_STATUS_INDEX.md", "검증된 산출물의 조회 전용 작업 흐름 점검"),
@@ -210,6 +211,30 @@ class PromptReadinessIndex:
 
 
 @dataclass(frozen=True)
+class EvidenceBoundaryFile:
+    name: str
+    purpose: str
+    status: str
+    size_bytes: int | None
+    modified_utc: str
+    sha256: str
+
+
+@dataclass(frozen=True)
+class EvidenceBoundaryIndex:
+    output: DashboardOutput
+    files: list[EvidenceBoundaryFile]
+    candidate_count: int
+    sanitized_evidence_status: str
+    finding_candidate_status: str
+    analysis_status: str
+    report_status: str
+    chatgpt_status: str
+    codex_status: str
+    safe_file_count: int
+
+
+@dataclass(frozen=True)
 class WorkflowStep:
     name: str
     status: str
@@ -288,6 +313,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
                 self._send_html(render_prompt_readiness_index(_build_prompt_readiness_index(output)))
+                return
+            if parsed.path == "/evidence-boundary":
+                output_id = _required_query_value(parsed.query, "project")
+                output = _verified_output(self.server.config.root, self.server.policy, output_id)
+                self._send_html(render_evidence_boundary_index(_build_evidence_boundary_index(output)))
                 return
             if parsed.path == "/workflow":
                 output_id = _required_query_value(parsed.query, "project")
@@ -853,6 +883,7 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
             <a class="button small secondary" href="{_triage_href(output.output_id)}">후보 분류 인덱스</a>
             <a class="button small secondary" href="{_report_readiness_href(output.output_id)}">보고서 준비</a>
             <a class="button small secondary" href="{_prompt_readiness_href(output.output_id)}">Prompt readiness</a>
+            <a class="button small secondary" href="{_evidence_boundary_href(output.output_id)}">증거 경계</a>
             <a class="button small secondary" href="{_workflow_href(output.output_id)}">작업 흐름 상태</a>
           </div>
           <div class="panel">
@@ -1187,6 +1218,7 @@ def render_prompt_readiness_index(index: PromptReadinessIndex) -> str:
               <li><a href="{_preflight_href(output.output_id)}">AI 안전 사전 점검</a>에서 safe files 상태를 봅니다.</li>
               <li><a href="{_handoff_href(output.output_id)}">AI 핸드오프 인덱스</a>에서 파일 목적과 순서를 봅니다.</li>
               <li><a href="{_workflow_href(output.output_id)}">작업 흐름 상태 인덱스</a>에서 전체 흐름을 봅니다.</li>
+              <li><a href="{_evidence_boundary_href(output.output_id)}">Evidence boundary 인덱스</a>에서 정제 증거와 raw 금지 범위를 봅니다.</li>
               <li><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스</a>와 <a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스</a>에서 후보/초안 경계를 봅니다.</li>
               <li>prompt 파일을 사람이 검토한 뒤 필요한 안전 파일만 AI에 입력합니다.</li>
             </ol>
@@ -1194,6 +1226,110 @@ def render_prompt_readiness_index(index: PromptReadinessIndex) -> str:
           <div class="panel">
             <div class="panel-head"><h2>Prompt에 넣으면 안 되는 항목</h2><span class="muted">분류명만 표시하고 실제 값은 표시하지 않습니다.</span></div>
             <ul class="safe-list">{forbidden_items}</ul>
+          </div>
+        </section>
+        """,
+    )
+
+
+def render_evidence_boundary_index(index: EvidenceBoundaryIndex) -> str:
+    output = index.output
+    file_rows = "\n".join(_evidence_boundary_file_card(file) for file in index.files)
+    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
+    allowed_items = "".join(
+        f"<li>{_h(item)}</li>"
+        for item in (
+            "검증 통과 후 생성된 safe files 4개",
+            "analysis_packet.json의 정제 finding 후보 구조",
+            "report_draft.md의 보고서 초안",
+            "chatgpt_prompt.md와 codex_task_prompt.md의 AI 작업 안내",
+            "후보 수, 파일 크기, 수정 시각, SHA-256 fingerprint 같은 안전 메타데이터",
+        )
+    )
+    forbidden_items = "".join(
+        f"<li>{_h(item)}</li>"
+        for item in (
+            "raw 요청/응답 본문",
+            "raw 감사 row 전문",
+            "Cookie 또는 Authorization 값",
+            "token, JWT, session 값",
+            "실제 도메인, URL, IP 값",
+            "개인정보",
+            "HMAC secret 또는 CSRF token 값",
+            "전체 로컬 경로",
+            "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
+        )
+    )
+    return _page(
+        f"Evidence boundary 인덱스 {output.label}",
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="{_output_href(output.output_id)}">검증된 산출물 상세</a>
+            <h1>Evidence boundary 인덱스</h1>
+            <p class="subtitle">보고서와 AI 검토에 사용할 정제 증거와 절대 노출하지 않을 raw 증거 범위를 구분하는 조회 전용 evidence boundary checklist입니다.</p>
+          </div>
+          <span class="badge good">조회 전용</span>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>프로젝트 별칭</span><strong>{_h(output.label)}</strong></div>
+          <div class="rail"><span>정제 증거</span><strong>{_h(_status_label(index.sanitized_evidence_status))}</strong></div>
+          <div class="rail"><span>finding 후보 수</span><strong>{index.candidate_count}</strong></div>
+          <div class="rail"><span>raw 표시</span><strong>false</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>조회 전용 증거 경계 요약</h2><span class="muted">본문 없이 안전 메타데이터만 표시합니다.</span></div>
+            <dl class="facts">
+              <div><dt>프로젝트 별칭</dt><dd>{_h(output.label)}</dd></div>
+              <div><dt>정제 evidence</dt><dd>{_status_badge(index.sanitized_evidence_status)}</dd></div>
+              <div><dt>finding candidate</dt><dd>{_status_badge(index.finding_candidate_status)}</dd></div>
+              <div><dt>candidate count</dt><dd>{index.candidate_count}</dd></div>
+              <div><dt>analysis_packet.json</dt><dd>{_status_badge(index.analysis_status)}</dd></div>
+              <div><dt>report_draft.md</dt><dd>{_status_badge(index.report_status)}</dd></div>
+              <div><dt>chatgpt_prompt.md</dt><dd>{_status_badge(index.chatgpt_status)}</dd></div>
+              <div><dt>codex_task_prompt.md</dt><dd>{_status_badge(index.codex_status)}</dd></div>
+              <div><dt>safe files</dt><dd>{index.safe_file_count}/{len(SAFE_PREVIEW_FILES)}</dd></div>
+              <div><dt>raw_data_included</dt><dd>false</dd></div>
+              <div><dt>본문 preview</dt><dd>false</dd></div>
+              <div><dt>전체 로컬 경로 표시</dt><dd>false</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>정제 증거 파일 메타데이터</h2><span class="muted">safe files allowlist만 표시합니다.</span></div>
+            <div class="file-grid">{file_rows}</div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>허용되는 evidence 범위</h2><span class="muted">검증 통과 후 사람이 검토해야 합니다.</span></div>
+            <ul class="safe-list">{allowed_items}</ul>
+            <ul class="safe-list">{safe_files}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>금지되는 raw evidence 범위</h2><span class="muted">분류명만 표시하고 실제 값은 표시하지 않습니다.</span></div>
+            <ul class="safe-list">{forbidden_items}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>후보와 초안 경계</h2><span class="muted">확정 판단을 대신하지 않습니다.</span></div>
+            <dl class="facts">
+              <div><dt>finding</dt><dd>수동 검증이 끝날 때까지 candidate입니다.</dd></div>
+              <div><dt>risk</dt><dd>draft이며 severity 결정으로 취급하지 않습니다.</dd></div>
+              <div><dt>evidence confidence</dt><dd>증거 신뢰도이며 severity가 아닙니다.</dd></div>
+              <div><dt>최종 심각도</dt><dd>Burp 재현, 권한별 비교, 영향도 판단 후 사람이 결정합니다.</dd></div>
+              <div><dt>CVSS</dt><dd>별도 산정 범위입니다.</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>관련 조회 전용 인덱스</h2><span class="muted">GET 링크만 제공합니다.</span></div>
+            <dl class="facts">
+              <div><dt>사전 점검</dt><dd><a href="{_preflight_href(output.output_id)}">AI 안전 사전 점검 열기</a></dd></div>
+              <div><dt>핸드오프</dt><dd><a href="{_handoff_href(output.output_id)}">AI 핸드오프 인덱스 열기</a></dd></div>
+              <div><dt>Prompt readiness</dt><dd><a href="{_prompt_readiness_href(output.output_id)}">Prompt readiness 인덱스 열기</a></dd></div>
+              <div><dt>Evidence boundary</dt><dd><a href="{_evidence_boundary_href(output.output_id)}">Evidence boundary 인덱스 열기</a></dd></div>
+              <div><dt>후보 분류</dt><dd><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스 열기</a></dd></div>
+              <div><dt>보고서 준비</dt><dd><a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스 열기</a></dd></div>
+              <div><dt>작업 흐름</dt><dd><a href="{_workflow_href(output.output_id)}">작업 흐름 상태 인덱스 열기</a></dd></div>
+              <div><dt>경계</dt><dd>read-only evidence boundary checklist이며 form, POST action, download action이 없습니다.</dd></div>
+            </dl>
           </div>
         </section>
         """,
@@ -1649,6 +1785,33 @@ def _build_prompt_readiness_index(output: DashboardOutput) -> PromptReadinessInd
     )
 
 
+def _build_evidence_boundary_index(output: DashboardOutput) -> EvidenceBoundaryIndex:
+    files = [_evidence_boundary_file(output.path, name) for name in SAFE_PREVIEW_FILES]
+    analysis_status = _file_status(output.path, "analysis_packet.json")
+    report_status = _file_status(output.path, "report_draft.md")
+    chatgpt_status = _file_status(output.path, "chatgpt_prompt.md")
+    codex_status = _file_status(output.path, "codex_task_prompt.md")
+    safe_file_count = sum(1 for file in files if file.status == "present")
+    finding_candidate_status = "present" if output.candidate_count else "missing"
+    sanitized_evidence_status = (
+        "present"
+        if analysis_status == "present" and finding_candidate_status == "present" and safe_file_count
+        else "needs_manual_review"
+    )
+    return EvidenceBoundaryIndex(
+        output=output,
+        files=files,
+        candidate_count=output.candidate_count,
+        sanitized_evidence_status=sanitized_evidence_status,
+        finding_candidate_status=finding_candidate_status,
+        analysis_status=analysis_status,
+        report_status=report_status,
+        chatgpt_status=chatgpt_status,
+        codex_status=codex_status,
+        safe_file_count=safe_file_count,
+    )
+
+
 def _build_workflow_status_index(output: DashboardOutput) -> WorkflowStatusIndex:
     file_statuses = [
         (name, "present" if (output.path / name).is_file() else "missing")
@@ -1693,6 +1856,12 @@ def _build_workflow_status_index(output: DashboardOutput) -> WorkflowStatusIndex
             status="manual review required",
             summary="prompt 파일 본문을 표시하지 않고 투입 전 점검 결과만 확인합니다.",
             href=_prompt_readiness_href(output.output_id),
+        ),
+        WorkflowStep(
+            name="Evidence boundary 인덱스",
+            status="manual review required",
+            summary="정제 증거와 raw 금지 범위의 조회 전용 경계를 확인합니다.",
+            href=_evidence_boundary_href(output.output_id),
         ),
         WorkflowStep(
             name="Finding 후보 분류 인덱스",
@@ -1766,6 +1935,38 @@ def _prompt_readiness_file(output_dir: Path, name: str) -> PromptReadinessFile:
         modified_utc=datetime.fromtimestamp(stat.st_mtime, UTC).replace(microsecond=0).isoformat(),
         sha256=_sha256_file(path),
     )
+
+
+def _evidence_boundary_file(output_dir: Path, name: str) -> EvidenceBoundaryFile:
+    path = output_dir / name
+    if not path.is_file():
+        return EvidenceBoundaryFile(
+            name=name,
+            purpose=_evidence_boundary_purpose(name),
+            status="missing",
+            size_bytes=None,
+            modified_utc="missing",
+            sha256="missing",
+        )
+    stat = path.stat()
+    return EvidenceBoundaryFile(
+        name=name,
+        purpose=_evidence_boundary_purpose(name),
+        status="present",
+        size_bytes=stat.st_size,
+        modified_utc=datetime.fromtimestamp(stat.st_mtime, UTC).replace(microsecond=0).isoformat(),
+        sha256=_sha256_file(path),
+    )
+
+
+def _evidence_boundary_purpose(file_name: str) -> str:
+    purposes = {
+        "analysis_packet.json": "정제된 finding candidate 구조와 수동 검토 경계를 담습니다.",
+        "chatgpt_prompt.md": "AI 분석 보조에 사용할 정제 prompt 파일입니다.",
+        "codex_task_prompt.md": "구현, 리뷰, 테스트 보조에 사용할 정제 prompt 파일입니다.",
+        "report_draft.md": "사람이 검토할 보고서 초안이며 제출용 최종본이 아닙니다.",
+    }
+    return purposes.get(file_name, "검증된 정제 evidence 후보 파일입니다.")
 
 
 def _prompt_readiness_purpose(file_name: str) -> str:
@@ -1926,6 +2127,27 @@ def _prompt_readiness_check_card(check: PromptReadinessCheck) -> str:
         <div><dt>상태</dt><dd>{_h(_status_label(check.status))}</dd></div>
         <div><dt>점검 방식</dt><dd>prompt 본문을 표시하지 않고 키워드 존재 여부만 요약합니다.</dd></div>
         <div><dt>수동 검토</dt><dd>필요</dd></div>
+      </dl>
+    </article>
+    """
+
+
+def _evidence_boundary_file_card(file: EvidenceBoundaryFile) -> str:
+    size = str(file.size_bytes) if file.size_bytes is not None else "missing"
+    return f"""
+    <article class="file-card">
+      <div>
+        <span class="kicker">evidence boundary</span>
+        <strong>{_h(file.name)}</strong>
+        <span>{_status_badge(file.status)}</span>
+        <small>{_h(file.purpose)}</small>
+      </div>
+      <dl class="facts compact">
+        <div><dt>목적</dt><dd>{_h(file.purpose)}</dd></div>
+        <div><dt>존재 여부</dt><dd>{_h(_status_label(file.status))}</dd></div>
+        <div><dt>파일 크기(bytes)</dt><dd>{_h(size)}</dd></div>
+        <div><dt>수정 시각(UTC)</dt><dd>{_h(file.modified_utc)}</dd></div>
+        <div><dt>SHA-256 fingerprint</dt><dd>{_h(file.sha256)}</dd></div>
       </dl>
     </article>
     """
@@ -2582,6 +2804,10 @@ def _report_readiness_href(output_id: str) -> str:
 
 def _prompt_readiness_href(output_id: str) -> str:
     return "/prompt-readiness?project=" + quote(output_id, safe="")
+
+
+def _evidence_boundary_href(output_id: str) -> str:
+    return "/evidence-boundary?project=" + quote(output_id, safe="")
 
 
 def _workflow_href(output_id: str) -> str:
