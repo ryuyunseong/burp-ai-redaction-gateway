@@ -726,7 +726,49 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("신뢰도 근거", detail)
                 self.assertIn("수동 검증", detail)
                 self.assertIn("심각도", detail)
+                self.assertIn("AI-safe preflight", detail)
+                self.assertIn("/preflight?project=generated", detail)
+                self.assertIn("preflight detail", detail)
                 self.assertNotIn("Confirmed vulnerability", detail)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/preflight?project=generated")
+                response = connection.getresponse()
+                preflight = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("AI-safe preflight", preflight)
+                self.assertIn("read-only", preflight)
+                self.assertIn("preflight status", preflight)
+                self.assertIn("ready candidate", preflight)
+                self.assertIn("verify status", preflight)
+                self.assertIn("verify files checked", preflight)
+                self.assertIn("finding candidate count", preflight)
+                self.assertIn("report_draft.md", preflight)
+                self.assertIn("forbidden marker scan", preflight)
+                self.assertIn("raw_data_included", preflight)
+                self.assertIn("false", preflight)
+                for name in ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"]:
+                    self.assertIn(name, preflight)
+                for label in [
+                    "raw request/response",
+                    "Cookie or Authorization values",
+                    "token, JWT, or session values",
+                    "real domain, URL, or IP values",
+                    "personal data",
+                    "HMAC secret or CSRF token values",
+                    "audit logs, archives, or manifests",
+                ]:
+                    self.assertIn(label, preflight)
+                self.assertIn("candidate until manual verification is complete", preflight)
+                self.assertIn("draft, not final severity", preflight)
+                self.assertIn("manual decision", preflight)
+                self.assertNotIn('name="csrf_token"', preflight)
+                self.assertNotIn("<form", preflight)
+                self.assertNotIn("<button", preflight)
+                self.assertNotIn("raw_request", preflight)
+                self.assertNotIn("raw_response", preflight)
+                self.assertNotIn(str(root), preflight)
                 connection.close()
 
                 connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
@@ -848,6 +890,7 @@ class RedactionGatewayTests(unittest.TestCase):
                         self.assertIn("실행 버튼 없음", body)
                         self.assertIn("docs/USER_QUICKSTART.md", body)
                         self.assertIn("docs/GUI_USER_FLOW.md", body)
+                        self.assertIn("docs/GUI_AI_SAFE_PREFLIGHT.md", body)
                         self.assertIn("docs/WINDOWS_LAUNCHER_GUIDE.md", body)
                         self.assertIn("docs/AUDIT_OPERATIONS_GUIDE.md", body)
                         self.assertIn("docs/GUI_AUDIT_PANEL_GUIDE.md", body)
@@ -919,6 +962,15 @@ class RedactionGatewayTests(unittest.TestCase):
                 traversal = response.read().decode("utf-8")
                 self.assertEqual(response.status, 403)
                 self.assertIn("forbidden_directory", traversal)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/preflight?project=..%2Flocal_only")
+                response = connection.getresponse()
+                preflight_traversal = response.read().decode("utf-8")
+                self.assertEqual(response.status, 403)
+                self.assertIn("forbidden_directory", preflight_traversal)
+                self.assertNotIn("rawBearerToken", preflight_traversal)
                 connection.close()
             finally:
                 server.shutdown()
@@ -2545,6 +2597,8 @@ class RedactionGatewayTests(unittest.TestCase):
 
         for text in [readme, quickstart, local_dashboard, audit_panel_guide]:
             self.assertIn("GUI_USER_FLOW.md", text)
+        for text in [readme, quickstart, local_dashboard, user_flow]:
+            self.assertIn("GUI_AI_SAFE_PREFLIGHT.md", text)
 
         required = [
             "start receiver and dashboard",
@@ -2552,15 +2606,18 @@ class RedactionGatewayTests(unittest.TestCase):
             "verify the selected output",
             "review candidate findings",
             "generate report_draft.md",
+            "check AI-safe preflight",
             "export safe files",
             "send only verified safe files to AI",
             "http://127.0.0.1:8766/",
+            "/preflight?project=<alias>",
             "/help",
             "/operations",
             "/settings",
             "Verify",
             "Review",
             "Report",
+            "AI-safe preflight",
             "Export",
             "analysis_packet.json",
             "chatgpt_prompt.md",
@@ -2582,6 +2639,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "raw viewers",
             "replay or active scan",
             "archive or HMAC execution buttons",
+            "AI-safe preflight execution buttons",
             "risk profile change buttons",
             "delete or edit actions",
             "settings-write actions",
@@ -2593,6 +2651,46 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("raw_response", user_flow)
         self.assertNotIn("DUMMY_COOKIE_VALUE", user_flow)
         self.assertNotIn("DUMMY_BEARER_TOKEN", user_flow)
+
+    def test_gui_ai_safe_preflight_guide_documents_read_only_boundary(self) -> None:
+        guide = (ROOT / "docs" / "GUI_AI_SAFE_PREFLIGHT.md").read_text(encoding="utf-8")
+        required = [
+            "read-only checklist",
+            "/preflight?project=<alias>",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "verify status",
+            "verify files checked",
+            "finding candidate count",
+            "forbidden marker scan",
+            "raw_data_included",
+            "ready candidate",
+            "Verify first",
+            "Manual review is required",
+            "raw request or response data",
+            "Cookie or Authorization values",
+            "token, JWT, or session values",
+            "real domain, URL, or IP values",
+            "personal data",
+            "HMAC secret or CSRF token values",
+            "candidate",
+            "risk_rating_draft",
+            "final severity",
+            "CVSS is a separate calculation scope",
+            "POST action",
+            "state-changing button",
+            "raw viewer",
+            "replay or active scan",
+        ]
+        for item in required:
+            self.assertIn(item, guide)
+
+        self.assertNotIn("raw_request", guide)
+        self.assertNotIn("raw_response", guide)
+        self.assertNotIn("DUMMY_COOKIE_VALUE", guide)
+        self.assertNotIn("DUMMY_BEARER_TOKEN", guide)
 
 
 if __name__ == "__main__":

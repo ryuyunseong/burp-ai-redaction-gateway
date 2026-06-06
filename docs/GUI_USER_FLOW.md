@@ -18,6 +18,7 @@ start receiver and dashboard
 -> verify the selected output
 -> review candidate findings
 -> generate report_draft.md
+-> check AI-safe preflight
 -> export safe files
 -> send only verified safe files to AI
 ```
@@ -47,6 +48,7 @@ http://127.0.0.1:8766/
 | --- | --- | --- |
 | `/` | Select verified outputs and inspect audit/archive status. | Shows verified sanitized metadata only. |
 | `/output?project=<alias>` | Review safe files, finding candidates, and allowed dashboard actions for one verified output. | Requires verify to pass before display. |
+| `/preflight?project=<alias>` | Check whether the selected verified output is an AI-safe handoff candidate. | Read-only; no form, POST action, or external transmission. |
 | `/settings` | Show dashboard settings and security status. | Read-only; no configuration edits. |
 | `/help` and `/operations` | Show the operations index and documentation entry points. | Read-only guide hub; no form or POST action. |
 | `/preview` and `/download` | Preview or download one allowlisted safe file. | Only the four safe files are allowed. |
@@ -61,10 +63,12 @@ Use the output detail actions in this order:
 1. `Verify`: re-run fail-closed verification for the selected output.
 2. `Review`: create a safe summary of candidate findings.
 3. `Report`: write or refresh `report_draft.md`.
-4. `Export`: copy only the four safe files to the dashboard export directory.
+4. `AI-safe preflight`: check the read-only handoff checklist.
+5. `Export`: copy only the four safe files to the dashboard export directory.
 
 `Refresh` is a read-only GET reload. `Verify`, `Review`, `Report`, and `Export`
 are state-changing POST actions and require a CSRF token.
+`AI-safe preflight` is a read-only GET page and does not submit data.
 
 ## Safe Files For AI
 
@@ -78,6 +82,9 @@ Only use these files with AI after the selected output passes `verify`:
 | `report_draft.md` | Candidate report draft for manual review. |
 
 Do not use safe files from an output that fails verification.
+
+For the preflight status fields and troubleshooting, see
+[GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md).
 
 ## Never Send Or Document
 
@@ -113,6 +120,7 @@ dashboard. The operations index is intentionally read-only. It does not add:
 - raw viewers
 - replay or active scan
 - archive or HMAC execution buttons
+- AI-safe preflight execution buttons
 - risk profile change buttons
 - delete or edit actions
 - settings-write actions
