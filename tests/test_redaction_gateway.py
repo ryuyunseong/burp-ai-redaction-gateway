@@ -17,6 +17,11 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import urlencode
 
+from burp_ai_redaction_gateway.audit_compressed_hmac import (
+    AuditCompressedHmacError,
+    create_compressed_audit_hmac_manifest,
+    verify_compressed_audit_hmac_manifest,
+)
 from burp_ai_redaction_gateway.audit_compression import (
     AuditCompressionError,
     compress_audit_jsonl,
@@ -1675,6 +1680,128 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertEqual(gzip_exit, 1)
             self.assertIn("Audit compression verification failed: gzip_read_failed", gzip_stdout.getvalue())
             assert_no_sensitive_text(gzip_stdout.getvalue())
+
+    def test_audit_compressed_hmac_cli_creates_and_verifies_raw_free_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_file = Path(temp_dir) / "mcp_audit.retained.jsonl"
+            compressed_file = Path(temp_dir) / "mcp_audit.retained.jsonl.gz"
+            manifest_file = Path(temp_dir) / "mcp_audit.retained.jsonl.gz.manifest.json"
+            self.write_audit_events(
+                audit_file,
+                self.audit_event_chain(["2026-06-04T00:00:00Z", "2026-06-05T00:00:00Z"]),
+            )
+            compress_audit_jsonl(audit_file, compressed_file)
+
+            with patch.dict("os.environ", {"BURP_AI_AUDIT_HMAC_KEY": "DUMMY_HMAC_SECRET_1234567890"}, clear=False):
+                with redirect_stdout(io.StringIO()) as create_stdout:
+                    create_exit = main(
+                        [
+                            "audit-compressed-hmac",
+                            "--input",
+                            str(compressed_file),
+                            "--manifest",
+                            str(manifest_file),
+                        ]
+                    )
+                with redirect_stdout(io.StringIO()) as verify_stdout:
+                    verify_exit = main(
+                        [
+                            "audit-compressed-hmac-verify",
+                            "--input",
+                            str(compressed_file),
+                            "--manifest",
+                            str(manifest_file),
+                        ]
+                    )
+
+            manifest_text = manifest_file.read_text(encoding="utf-8")
+            manifest = json.loads(manifest_text)
+            self.assertEqual(create_exit, 0)
+            self.assertEqual(verify_exit, 0)
+            self.assertEqual(manifest["manifest_schema_version"], "1.0")
+            self.assertEqual(manifest["archive_alias"], "<compressed_audit_file>")
+            self.assertEqual(manifest["compressed_size_bytes"], compressed_file.stat().st_size)
+            self.assertEqual(manifest["hmac_algorithm"], "HMAC-SHA256")
+            self.assertFalse(manifest["raw_data_included"])
+            self.assertEqual(len(manifest["sha256"]), 64)
+            self.assertEqual(len(manifest["hmac"]), 64)
+            self.assertIn("Compressed audit HMAC manifest written.", create_stdout.getvalue())
+            self.assertIn("Compressed audit HMAC verification passed.", verify_stdout.getvalue())
+            self.assertNotIn(str(manifest["hmac"]), create_stdout.getvalue())
+            self.assertNotIn(str(manifest["hmac"]), verify_stdout.getvalue())
+            assert_no_sensitive_text(manifest_text)
+            assert_no_sensitive_text(create_stdout.getvalue())
+            assert_no_sensitive_text(verify_stdout.getvalue())
+
+    def test_audit_compressed_hmac_verify_detects_archive_and_manifest_tampering(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_file = Path(temp_dir) / "mcp_audit.retained.jsonl"
+            compressed_file = Path(temp_dir) / "mcp_audit.retained.jsonl.gz"
+            manifest_file = Path(temp_dir) / "mcp_audit.retained.jsonl.gz.manifest.json"
+            secret = b"DUMMY_HMAC_SECRET_1234567890"
+            self.write_audit_events(
+                audit_file,
+                self.audit_event_chain(["2026-06-04T00:00:00Z", "2026-06-05T00:00:00Z"]),
+            )
+            original_text = audit_file.read_text(encoding="utf-8")
+            compress_audit_jsonl(audit_file, compressed_file)
+            create_compressed_audit_hmac_manifest(compressed_file, manifest_file, secret=secret)
+
+            with gzip.open(compressed_file, "wt", encoding="utf-8", compresslevel=1) as gzip_file:
+                gzip_file.write(original_text)
+            with self.assertRaises(AuditCompressedHmacError) as archive_error:
+                verify_compressed_audit_hmac_manifest(compressed_file, manifest_file, secret=secret)
+            self.assertEqual(archive_error.exception.error_type, "manifest_compressed_size_mismatch")
+
+            compress_audit_jsonl(audit_file, compressed_file)
+            manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
+            manifest["hmac"] = "0" * 64
+            manifest_file.write_text(json.dumps(manifest, ensure_ascii=True, sort_keys=True) + "\n", encoding="utf-8")
+            with self.assertRaises(AuditCompressedHmacError) as manifest_error:
+                verify_compressed_audit_hmac_manifest(compressed_file, manifest_file, secret=secret)
+            self.assertEqual(manifest_error.exception.error_type, "hmac_mismatch")
+
+    def test_audit_compressed_hmac_rejects_missing_secret_and_bad_archive_safely(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_file = Path(temp_dir) / "mcp_audit.retained.jsonl"
+            compressed_file = Path(temp_dir) / "mcp_audit.retained.jsonl.gz"
+            manifest_file = Path(temp_dir) / "mcp_audit.retained.jsonl.gz.manifest.json"
+            self.write_audit_events(audit_file, self.audit_event_chain(["2026-06-05T00:00:00Z"]))
+            compress_audit_jsonl(audit_file, compressed_file)
+
+            with patch.dict("os.environ", {}, clear=True):
+                with redirect_stdout(io.StringIO()) as missing_stdout:
+                    missing_exit = main(
+                        [
+                            "audit-compressed-hmac",
+                            "--input",
+                            str(compressed_file),
+                            "--manifest",
+                            str(manifest_file),
+                        ]
+                    )
+            self.assertEqual(missing_exit, 1)
+            self.assertIn("Compressed audit HMAC failed: hmac_secret_missing", missing_stdout.getvalue())
+            self.assertFalse(manifest_file.exists())
+
+            bad_gzip = Path(temp_dir) / "mcp_audit.bad.jsonl.gz"
+            bad_gzip.write_text("Authorization: Bearer rawBearerToken1234567890\n", encoding="utf-8")
+            with patch.dict("os.environ", {"BURP_AI_AUDIT_HMAC_KEY": "DUMMY_HMAC_SECRET_1234567890"}, clear=False):
+                with redirect_stdout(io.StringIO()) as bad_stdout:
+                    bad_exit = main(
+                        [
+                            "audit-compressed-hmac",
+                            "--input",
+                            str(bad_gzip),
+                            "--manifest",
+                            str(manifest_file),
+                        ]
+                    )
+            text = bad_stdout.getvalue()
+            self.assertEqual(bad_exit, 1)
+            self.assertIn("Compressed audit HMAC failed: compressed_gzip_read_failed", text)
+            self.assertNotIn("rawBearerToken1234567890", text)
+            self.assertFalse(manifest_file.exists())
 
     def test_audit_hmac_cli_creates_and_verifies_raw_free_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

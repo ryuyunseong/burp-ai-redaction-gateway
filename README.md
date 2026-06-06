@@ -305,7 +305,22 @@ python -m burp_ai_redaction_gateway audit-compress-verify --input out\.audit\mcp
 modify the source JSONL. `audit-compress-verify` decompresses the package in a
 temporary location and requires the decompressed JSONL to pass `review-audit`.
 Compression is archival packaging. HMAC verification remains defined for the
-retained JSONL file; HMAC over compressed packages is follow-up scope.
+retained JSONL file, and compressed archive HMAC is available as a separate
+archive-level check.
+
+Create and verify a raw-free HMAC manifest for the compressed archive:
+
+```powershell
+$env:BURP_AI_AUDIT_HMAC_KEY = "<LOCAL_ONLY_HMAC_SECRET>"
+python -m burp_ai_redaction_gateway audit-compressed-hmac --input out\.audit\mcp_audit.retained.jsonl.gz --manifest out\.audit\mcp_audit.retained.jsonl.gz.manifest.json
+python -m burp_ai_redaction_gateway audit-compressed-hmac-verify --input out\.audit\mcp_audit.retained.jsonl.gz --manifest out\.audit\mcp_audit.retained.jsonl.gz.manifest.json
+```
+
+`audit-compressed-hmac` first verifies the archive with
+`audit-compress-verify`, then computes SHA-256 and HMAC-SHA256 over the
+compressed bytes. The manifest stores safe archive alias, compressed size,
+SHA-256, HMAC-SHA256, creation time, and `raw_data_included: false`. It does
+not store decompressed audit rows or the HMAC secret.
 
 ## Security Notes
 
@@ -332,6 +347,9 @@ retained JSONL file; HMAC over compressed packages is follow-up scope.
 - Use `audit-compress` only after strict `review-audit` succeeds. Keep the
   original JSONL; compressed packages are local archival output and are not a
   replacement for HMAC verification of retained JSONL.
+- Use `audit-compressed-hmac` and `audit-compressed-hmac-verify` only with a
+  local HMAC secret. The compressed archive manifest must not include raw audit
+  rows, secret values, or real environment values.
 - The audit database stores evidence references and redaction counters only. It
   does not store raw request or response values.
 - Output generation is fail-closed. If a likely token, JWT, email, phone number,

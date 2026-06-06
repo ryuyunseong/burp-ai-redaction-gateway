@@ -235,10 +235,30 @@ separate `.jsonl.gz` package, and leaves the source JSONL in place.
 `audit-compress-verify` decompresses the package in a temporary location and
 requires the decompressed JSONL to pass `review-audit`.
 
-Compression is for archival packaging. HMAC remains the integrity check for the
-retained JSONL file. HMAC over compressed packages is follow-up scope. The
-compression summary prints only safe aliases, size counts, row count,
-compression ratio, and `raw_data_included: false`.
+Compression is for archival packaging. HMAC for the retained JSONL file remains
+separate from HMAC for the compressed archive. The compression summary prints
+only safe aliases, size counts, row count, compression ratio, and
+`raw_data_included: false`.
+
+### Create and Verify a Compressed Archive HMAC Manifest
+
+```powershell
+$env:BURP_AI_AUDIT_HMAC_KEY = "<LOCAL_ONLY_HMAC_SECRET>"
+
+python -m burp_ai_redaction_gateway audit-compressed-hmac `
+  --input out\.audit\mcp_audit.retained.jsonl.gz `
+  --manifest out\.audit\mcp_audit.retained.jsonl.gz.manifest.json
+
+python -m burp_ai_redaction_gateway audit-compressed-hmac-verify `
+  --input out\.audit\mcp_audit.retained.jsonl.gz `
+  --manifest out\.audit\mcp_audit.retained.jsonl.gz.manifest.json
+```
+
+`audit-compressed-hmac` first requires `audit-compress-verify` to pass, then
+computes SHA-256 and HMAC-SHA256 over the compressed archive bytes. The
+manifest contains only safe metadata such as archive alias, compressed size,
+digest, HMAC, creation time, and `raw_data_included: false`. It must not contain
+decompressed audit rows or the HMAC secret.
 
 ## Failure Handling
 
@@ -251,12 +271,14 @@ compression ratio, and `raw_data_included: false`.
 | `audit-hmac-verify` fails | Treat the file, manifest, or secret as mismatched. Do not use the manifest as integrity evidence. |
 | `audit-compress` fails | Do not create or use the compressed package. Check that input passes strict `review-audit` and output uses `.jsonl.gz`. |
 | `audit-compress-verify` fails | Treat the compressed package as invalid. Use the original retained JSONL and regenerate the package if needed. |
+| `audit-compressed-hmac` fails | Do not create a compressed archive manifest. Check archive verification status and secret availability. |
+| `audit-compressed-hmac-verify` fails | Treat the compressed archive, manifest, or secret as mismatched. Regenerate from the retained JSONL if needed. |
 | Gitleaks fails | Do not commit or push. Remove or replace the detected value with synthetic placeholder data. |
 | receiver fails | Keep raw payload local. Share only safe error type, not raw traffic. |
 
 Failure messages must stay raw-free. Share only error types such as
 `audit_review_failed`, `hmac_mismatch`, `hmac_secret_missing`, or
-`gzip_read_failed`.
+`compressed_gzip_read_failed`.
 
 ## Customer Report Checklist
 

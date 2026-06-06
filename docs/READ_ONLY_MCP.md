@@ -148,9 +148,8 @@ retained timestamp range, and dry-run status.
 Retention is based on each row's `timestamp_utc` value. The output file must
 also pass `review-audit`. If retention removes an older prefix of the chain,
 review remains limited to the retained boundary. Retention days are now
-supported for explicit output files; policy configuration, HMAC over compressed
-packages, external signatures, and external storage remain follow-up hardening
-work.
+supported for explicit output files; policy configuration, external signatures,
+and external storage remain follow-up hardening work.
 
 ## Audit HMAC
 
@@ -201,10 +200,37 @@ decompresses the package in a temporary location and requires the decompressed
 JSONL to pass `review-audit`.
 
 Compression is archival packaging, not tamper detection and not encryption.
-HMAC remains defined for the retained JSONL file. HMAC over compressed packages
-is intentionally left as follow-up scope. Compression summaries contain only
-safe file aliases, byte counts, row count, compression ratio, and
-`raw_data_included: false`.
+HMAC for the retained JSONL file remains separate from HMAC for compressed
+archives. Compression summaries contain only safe file aliases, byte counts,
+row count, compression ratio, and `raw_data_included: false`.
+
+## Compressed Archive HMAC
+
+Use `audit-compressed-hmac` to create a tamper-detection manifest for a verified
+compressed audit archive:
+
+```powershell
+$env:BURP_AI_AUDIT_HMAC_KEY = "<LOCAL_ONLY_HMAC_SECRET>"
+
+python -m burp_ai_redaction_gateway audit-compressed-hmac `
+  --input out\.audit\mcp_audit.retained.jsonl.gz `
+  --manifest out\.audit\mcp_audit.retained.jsonl.gz.manifest.json
+
+python -m burp_ai_redaction_gateway audit-compressed-hmac-verify `
+  --input out\.audit\mcp_audit.retained.jsonl.gz `
+  --manifest out\.audit\mcp_audit.retained.jsonl.gz.manifest.json
+```
+
+The archive must pass `audit-compress-verify` before any compressed archive
+manifest is written or verified. The manifest contains only metadata:
+manifest schema version, safe archive alias, compressed size, SHA-256,
+HMAC-SHA256, creation time, and `raw_data_included: false`. It does not contain
+decompressed audit rows, request or response data, cookies, tokens, domains,
+PII, stack traces, or the HMAC secret.
+
+Compressed archive HMAC is tamper detection for the gzip package bytes. It is
+not encryption and it does not replace `review-audit` or retained JSONL HMAC
+when those checks are needed.
 
 ## Allowed Output Scope
 
