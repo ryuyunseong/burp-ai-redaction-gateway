@@ -2379,6 +2379,40 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("hmac", start_ps1.lower())
         self.assertNotIn("csrf", start_ps1.lower())
 
+    def test_windows_launcher_guide_documents_safe_troubleshooting(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        quickstart = (ROOT / "docs" / "USER_QUICKSTART.md").read_text(encoding="utf-8")
+        guide = (ROOT / "docs" / "WINDOWS_LAUNCHER_GUIDE.md").read_text(encoding="utf-8")
+
+        self.assertIn("WINDOWS_LAUNCHER_GUIDE.md", readme)
+        self.assertIn("WINDOWS_LAUNCHER_GUIDE.md", quickstart)
+        self.assertIn("scripts\\start_gateway.ps1", guide)
+        self.assertIn("scripts\\start_gateway.bat", guide)
+        self.assertIn("scripts\\stop_gateway.ps1", guide)
+        self.assertIn("http://127.0.0.1:8766/", guide)
+        self.assertIn("Receiver port", guide)
+        self.assertIn("Dashboard port", guide)
+        self.assertIn("Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass", guide)
+        self.assertIn("receiver_port_in_use", guide)
+        self.assertIn("dashboard_port_in_use", guide)
+        self.assertIn("unexpected_process", guide)
+        self.assertIn("raw-free metadata only", guide)
+        self.assertIn("raw_data_included=false", guide)
+        self.assertIn("out\\.launcher", guide)
+
+        blocked_values = [
+            "real Burp data",
+            "customer domains",
+            "tokens",
+            "cookies",
+            "session values",
+            "personal data",
+            "HMAC secrets",
+            "CSRF values",
+        ]
+        for value in blocked_values:
+            self.assertIn(value, guide)
+
 
 if __name__ == "__main__":
     unittest.main()

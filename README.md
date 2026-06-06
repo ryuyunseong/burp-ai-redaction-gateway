@@ -194,6 +194,8 @@ The launcher does not print raw request or response values, cookies,
 authorization values, tokens, real target domains, personal data, HMAC secrets,
 or CSRF values. See
 [docs/USER_QUICKSTART.md](C:/coding/burp-ai-redaction-gateway/docs/USER_QUICKSTART.md).
+For Windows launcher troubleshooting and execution policy notes, see
+[docs/WINDOWS_LAUNCHER_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/WINDOWS_LAUNCHER_GUIDE.md).
 
 ## Localhost Receiver
 
