@@ -19,6 +19,35 @@ documentation.
 
 ## 1. Start the Receiver
 
+On Windows, the shortest path is to start the receiver and dashboard together:
+
+```powershell
+scripts\start_gateway.ps1
+```
+
+Default launcher settings:
+
+| Setting | Default |
+| --- | --- |
+| Receiver | loopback port `8765` |
+| Dashboard | loopback port `8766` |
+| Output alias | `out\receiver` |
+| Project alias | `receiver_alias` |
+| PID and launcher logs | ignored `out\.launcher\` files |
+
+The launcher opens the dashboard in a browser and prints only safe metadata such
+as ports, output alias, project alias, process ids, and `raw_data_included=false`.
+It does not print raw request or response values, cookies, authorization values,
+tokens, real target domains, personal data, HMAC secrets, or CSRF values.
+
+Stop the launcher-managed receiver and dashboard with:
+
+```powershell
+scripts\stop_gateway.ps1
+```
+
+If you prefer separate terminal windows, start the receiver manually.
+
 Start the loopback receiver:
 
 ```powershell

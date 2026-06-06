@@ -173,6 +173,28 @@ pass the existing Python `verify` gate before use.
 
 See [docs/MONTOYA_COLLECTOR.md](C:/coding/burp-ai-redaction-gateway/docs/MONTOYA_COLLECTOR.md).
 
+## Windows Local Launcher
+
+On Windows, start the receiver and dashboard together:
+
+```powershell
+scripts\start_gateway.ps1
+```
+
+The launcher starts the receiver on loopback port `8765`, starts the dashboard
+on loopback port `8766`, opens the local dashboard in a browser, and writes only
+safe launcher metadata under ignored `out\.launcher\` files. Console output
+includes `raw_data_included=false`. Stop the launcher managed processes with:
+
+```powershell
+scripts\stop_gateway.ps1
+```
+
+The launcher does not print raw request or response values, cookies,
+authorization values, tokens, real target domains, personal data, HMAC secrets,
+or CSRF values. See
+[docs/USER_QUICKSTART.md](C:/coding/burp-ai-redaction-gateway/docs/USER_QUICKSTART.md).
+
 ## Localhost Receiver
 
 Run the loopback-only receiver for Montoya collector handoff payloads:
