@@ -166,6 +166,9 @@ Never send these to ChatGPT, Codex, PRs, issues, reports, or documentation:
 Audit operations prove the sanitized workflow is observable without recording
 raw HTTP values.
 
+For a focused command-by-command audit operations runbook, see
+[AUDIT_OPERATIONS_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/AUDIT_OPERATIONS_GUIDE.md).
+
 ### Review Audit Logs
 
 ```powershell
