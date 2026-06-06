@@ -124,6 +124,9 @@ internal IPs, personal data, or stack traces.
 If `BURP_AI_AUDIT_HMAC_KEY` is not set, HMAC status is reported as a safe error
 type rather than printing the secret configuration.
 
+For status interpretation and troubleshooting, see
+[GUI_AUDIT_PANEL_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AUDIT_PANEL_GUIDE.md).
+
 ## Finding Language
 
 Dashboard findings remain candidate or suspected findings. `confidence` is
