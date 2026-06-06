@@ -148,8 +148,9 @@ retained timestamp range, and dry-run status.
 Retention is based on each row's `timestamp_utc` value. The output file must
 also pass `review-audit`. If retention removes an older prefix of the chain,
 review remains limited to the retained boundary. Retention days are now
-supported for explicit output files; policy configuration, compression,
-external signatures, and external storage remain follow-up hardening work.
+supported for explicit output files; policy configuration, HMAC over compressed
+packages, external signatures, and external storage remain follow-up hardening
+work.
 
 ## Audit HMAC
 
@@ -179,6 +180,31 @@ available for verification. Load the secret from `BURP_AI_AUDIT_HMAC_KEY` or an
 ignored local secret file via `--key-file`; never commit the secret or print it
 in logs. Manifest output under `out/.audit` is ignored by Git and should remain
 local unless explicitly exported through a separate safe process.
+
+## Audit Compression
+
+Use `audit-compress` to package a reviewed audit JSONL file for local archival
+storage:
+
+```powershell
+python -m burp_ai_redaction_gateway audit-compress `
+  --input out\.audit\mcp_audit.retained.jsonl `
+  --output out\.audit\mcp_audit.retained.jsonl.gz
+
+python -m burp_ai_redaction_gateway audit-compress-verify `
+  --input out\.audit\mcp_audit.retained.jsonl.gz
+```
+
+The input must pass strict `review-audit` before a `.jsonl.gz` package is
+written. The original audit JSONL is not deleted or modified. Verification
+decompresses the package in a temporary location and requires the decompressed
+JSONL to pass `review-audit`.
+
+Compression is archival packaging, not tamper detection and not encryption.
+HMAC remains defined for the retained JSONL file. HMAC over compressed packages
+is intentionally left as follow-up scope. Compression summaries contain only
+safe file aliases, byte counts, row count, compression ratio, and
+`raw_data_included: false`.
 
 ## Allowed Output Scope
 

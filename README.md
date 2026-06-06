@@ -293,6 +293,20 @@ and `raw_data_included: false`; it does not store raw audit rows or the HMAC
 secret. HMAC provides tamper detection, not encryption. Store the HMAC secret in
 an environment variable or ignored local secret file only.
 
+Package a reviewed audit JSONL file for local long-term storage with gzip:
+
+```powershell
+python -m burp_ai_redaction_gateway audit-compress --input out\.audit\mcp_audit.retained.jsonl --output out\.audit\mcp_audit.retained.jsonl.gz
+python -m burp_ai_redaction_gateway audit-compress-verify --input out\.audit\mcp_audit.retained.jsonl.gz
+```
+
+`audit-compress` accepts only audit JSONL files that pass strict
+`review-audit`, writes a separate `.jsonl.gz` file, and does not delete or
+modify the source JSONL. `audit-compress-verify` decompresses the package in a
+temporary location and requires the decompressed JSONL to pass `review-audit`.
+Compression is archival packaging. HMAC verification remains defined for the
+retained JSONL file; HMAC over compressed packages is follow-up scope.
+
 ## Security Notes
 
 - Do not commit real Burp exports, raw HTTP history, tokens, cookies, customer
@@ -315,6 +329,9 @@ an environment variable or ignored local secret file only.
 - Use `audit-hmac` and `audit-hmac-verify` only with a local HMAC secret from
   `BURP_AI_AUDIT_HMAC_KEY` or an ignored secret file. Do not commit HMAC
   secrets or generated manifests.
+- Use `audit-compress` only after strict `review-audit` succeeds. Keep the
+  original JSONL; compressed packages are local archival output and are not a
+  replacement for HMAC verification of retained JSONL.
 - The audit database stores evidence references and redaction counters only. It
   does not store raw request or response values.
 - Output generation is fail-closed. If a likely token, JWT, email, phone number,

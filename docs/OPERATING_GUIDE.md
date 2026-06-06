@@ -219,6 +219,27 @@ contain raw audit rows or the HMAC secret.
 Manage the HMAC secret with `BURP_AI_AUDIT_HMAC_KEY` or an ignored local
 `--key-file`. Do not commit, log, paste, or document the secret.
 
+### Compress Audit JSONL for Archival Storage
+
+```powershell
+python -m burp_ai_redaction_gateway audit-compress `
+  --input out\.audit\mcp_audit.retained.jsonl `
+  --output out\.audit\mcp_audit.retained.jsonl.gz
+
+python -m burp_ai_redaction_gateway audit-compress-verify `
+  --input out\.audit\mcp_audit.retained.jsonl.gz
+```
+
+`audit-compress` validates the input with strict `review-audit`, writes a
+separate `.jsonl.gz` package, and leaves the source JSONL in place.
+`audit-compress-verify` decompresses the package in a temporary location and
+requires the decompressed JSONL to pass `review-audit`.
+
+Compression is for archival packaging. HMAC remains the integrity check for the
+retained JSONL file. HMAC over compressed packages is follow-up scope. The
+compression summary prints only safe aliases, size counts, row count,
+compression ratio, and `raw_data_included: false`.
+
 ## Failure Handling
 
 | Failure | Action |
@@ -228,11 +249,14 @@ Manage the HMAC secret with `BURP_AI_AUDIT_HMAC_KEY` or an ignored local
 | `audit-retention` fails | Do not write retained output. Check that input passes strict `review-audit`. |
 | `audit-hmac` fails | Do not create a manifest. Check input review status and secret availability. |
 | `audit-hmac-verify` fails | Treat the file, manifest, or secret as mismatched. Do not use the manifest as integrity evidence. |
+| `audit-compress` fails | Do not create or use the compressed package. Check that input passes strict `review-audit` and output uses `.jsonl.gz`. |
+| `audit-compress-verify` fails | Treat the compressed package as invalid. Use the original retained JSONL and regenerate the package if needed. |
 | Gitleaks fails | Do not commit or push. Remove or replace the detected value with synthetic placeholder data. |
 | receiver fails | Keep raw payload local. Share only safe error type, not raw traffic. |
 
 Failure messages must stay raw-free. Share only error types such as
-`audit_review_failed`, `hmac_mismatch`, or `hmac_secret_missing`.
+`audit_review_failed`, `hmac_mismatch`, `hmac_secret_missing`, or
+`gzip_read_failed`.
 
 ## Customer Report Checklist
 
