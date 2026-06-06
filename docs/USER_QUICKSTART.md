@@ -46,6 +46,10 @@ Stop the launcher-managed receiver and dashboard with:
 scripts\stop_gateway.ps1
 ```
 
+For execution policy, port conflict, output alias, and PID file troubleshooting,
+see
+[WINDOWS_LAUNCHER_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/WINDOWS_LAUNCHER_GUIDE.md).
+
 If you prefer separate terminal windows, start the receiver manually.
 
 Start the loopback receiver:
