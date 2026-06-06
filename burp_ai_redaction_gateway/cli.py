@@ -4,6 +4,13 @@ import argparse
 import json
 from pathlib import Path
 
+from .audit_compressed_hmac import (
+    AuditCompressedHmacError,
+    create_compressed_audit_hmac_manifest,
+    render_compressed_audit_hmac_summary,
+    render_compressed_audit_hmac_verify_summary,
+    verify_compressed_audit_hmac_manifest,
+)
 from .audit_compression import (
     AuditCompressionError,
     compress_audit_jsonl,
@@ -119,6 +126,36 @@ def main(argv: list[str] | None = None) -> int:
     )
     audit_compress_verify.add_argument("--input", required=True, type=Path, help="Compressed .jsonl.gz audit file.")
 
+    audit_compressed_hmac = subparsers.add_parser(
+        "audit-compressed-hmac",
+        help="Write a raw-free HMAC manifest for a verified compressed audit archive.",
+    )
+    audit_compressed_hmac.add_argument("--input", required=True, type=Path, help="Compressed .jsonl.gz audit file.")
+    audit_compressed_hmac.add_argument("--manifest", required=True, type=Path, help="Manifest JSON output path.")
+    audit_compressed_hmac.add_argument("--key-file", type=Path, help="Local HMAC secret file. Do not commit this file.")
+    audit_compressed_hmac.add_argument(
+        "--env-var",
+        default=DEFAULT_HMAC_ENV_VAR,
+        help=f"Environment variable containing the HMAC secret. Defaults to {DEFAULT_HMAC_ENV_VAR}.",
+    )
+
+    audit_compressed_hmac_verify = subparsers.add_parser(
+        "audit-compressed-hmac-verify",
+        help="Verify a raw-free HMAC manifest for a compressed audit archive.",
+    )
+    audit_compressed_hmac_verify.add_argument("--input", required=True, type=Path, help="Compressed .jsonl.gz audit file.")
+    audit_compressed_hmac_verify.add_argument("--manifest", required=True, type=Path, help="Manifest JSON path.")
+    audit_compressed_hmac_verify.add_argument(
+        "--key-file",
+        type=Path,
+        help="Local HMAC secret file. Do not commit this file.",
+    )
+    audit_compressed_hmac_verify.add_argument(
+        "--env-var",
+        default=DEFAULT_HMAC_ENV_VAR,
+        help=f"Environment variable containing the HMAC secret. Defaults to {DEFAULT_HMAC_ENV_VAR}.",
+    )
+
     review = subparsers.add_parser("review", help="Review verified analysis packet output without printing raw data.")
     review.add_argument("--input", required=True, type=Path, help="Verified generated output directory.")
     review.add_argument("--export-dir", type=Path, help="Optional directory for safe prompt packet copies.")
@@ -170,6 +207,10 @@ def main(argv: list[str] | None = None) -> int:
         return _audit_compress(args.input, args.output)
     if args.command == "audit-compress-verify":
         return _audit_compress_verify(args.input)
+    if args.command == "audit-compressed-hmac":
+        return _audit_compressed_hmac(args.input, args.manifest, args.env_var, args.key_file)
+    if args.command == "audit-compressed-hmac-verify":
+        return _audit_compressed_hmac_verify(args.input, args.manifest, args.env_var, args.key_file)
     if args.command == "review":
         return _review(args.input, args.export_dir, args.policy)
     if args.command == "report":
@@ -276,6 +317,28 @@ def _audit_compress_verify(input_path: Path) -> int:
         print(f"Audit compression verification failed: {error.error_type}")
         return 1
     print(render_audit_compression_verify_summary(result), end="")
+    return 0
+
+
+def _audit_compressed_hmac(input_path: Path, manifest_path: Path, env_var: str, key_file: Path | None) -> int:
+    try:
+        secret = load_hmac_secret(env_var=env_var, key_file=key_file)
+        result = create_compressed_audit_hmac_manifest(input_path, manifest_path, secret=secret)
+    except (AuditCompressedHmacError, AuditHmacError) as error:
+        print(f"Compressed audit HMAC failed: {error.error_type}")
+        return 1
+    print(render_compressed_audit_hmac_summary(result), end="")
+    return 0
+
+
+def _audit_compressed_hmac_verify(input_path: Path, manifest_path: Path, env_var: str, key_file: Path | None) -> int:
+    try:
+        secret = load_hmac_secret(env_var=env_var, key_file=key_file)
+        result = verify_compressed_audit_hmac_manifest(input_path, manifest_path, secret=secret)
+    except (AuditCompressedHmacError, AuditHmacError) as error:
+        print(f"Compressed audit HMAC verification failed: {error.error_type}")
+        return 1
+    print(render_compressed_audit_hmac_verify_summary(result), end="")
     return 0
 
 
