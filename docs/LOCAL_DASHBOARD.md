@@ -21,9 +21,10 @@ dashboard에는 조회 전용 운영 인덱스가 있습니다.
 ```
 
 운영 인덱스는 quickstart, GUI 사용자 흐름, AI 안전 사전 점검, AI 핸드오프
-인덱스, finding triage, 보고서 준비 상태, workflow 상태, audit 운영, audit
-panel 해석, risk rating 문서로 이동하는 진입점입니다. 또한 안전 파일 4개,
-차단되는 raw-data 범위, candidate/draft 해석 경계를 요약합니다.
+인덱스, prompt readiness, finding triage, 보고서 준비 상태, workflow 상태,
+audit 운영, audit panel 해석, risk rating 문서로 이동하는 진입점입니다.
+또한 안전 파일 4개, 차단되는 raw-data 범위, candidate/draft 해석 경계를
+요약합니다.
 
 화면별 운영 순서는
 [GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md)를
@@ -31,6 +32,8 @@ panel 해석, risk rating 문서로 이동하는 진입점입니다. 또한 안�
 [GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md)를
 참조하세요. AI 안전 후보 파일 인덱스는
 [GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
+참조하세요. Prompt readiness 체크리스트는
+[GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
 참조하세요. finding 후보 triage 체크리스트는
 [GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 보고서 초안 준비 체크리스트는
@@ -122,6 +125,35 @@ preview, request/response preview, raw viewer, replay, active scan,
 archive/HMAC 실행, HMAC secret 입력, CSRF token 표시, 파일 삭제, retention
 변경, risk profile 변경을 추가하지 않습니다.
 
+## Prompt Readiness 인덱스
+
+선택한 검증 output에 대해 조회 전용 prompt readiness 인덱스를 제공합니다.
+
+```text
+/prompt-readiness?project=<alias>
+```
+
+prompt readiness 인덱스는 `chatgpt_prompt.md`와 `codex_task_prompt.md`를
+AI에 넣기 전에 운영자가 상태와 경계를 점검하기 위한 화면입니다.
+
+표시 가능한 값:
+
+- project alias
+- 안전 파일 4개 존재 여부
+- `chatgpt_prompt.md`와 `codex_task_prompt.md`의 목적
+- 파일 크기(bytes)
+- 수정 시각(UTC)
+- SHA-256 파일 fingerprint
+- verify 선행 필요 reminder
+- preflight, handoff, workflow, triage, report-readiness 링크
+- finding은 후보, risk는 초안, final severity는 수동 결정이라는 reminder
+- prompt 본문을 표시하지 않는 내부 점검 결과
+
+이 화면은 prompt 본문 preview, report 본문 preview, raw data, full local
+path, form, POST action, 새 download action, archive/HMAC action, replay,
+active scan, HMAC secret 입력, CSRF token 값, 제출 control을 표시하지
+않습니다.
+
 ## 보고서 준비 상태 인덱스
 
 선택한 검증 output에 대해 조회 전용 보고서 준비 상태 인덱스를 제공합니다.
@@ -153,9 +185,9 @@ CSRF token 값, 제출 control은 표시하지 않습니다.
 /workflow?project=<alias>
 ```
 
-workflow 상태 인덱스는 verify, review, report, preflight, handoff, triage,
-report-readiness, review/report/export flow를 안전 metadata 체크리스트로
-묶어 보여줍니다.
+workflow 상태 인덱스는 verify, review, report, preflight, handoff,
+prompt-readiness, triage, report-readiness, review/report/export flow를 안전
+metadata 체크리스트로 묶어 보여줍니다.
 
 - verify status summary
 - review status summary
@@ -180,6 +212,7 @@ dashboard는 다음 기능을 구현하지 않습니다.
 - finding triage 실행 버튼
 - report readiness 실행 버튼
 - workflow status 실행 버튼
+- prompt readiness 실행 버튼
 
 ## 허용된 상태 변경 action
 

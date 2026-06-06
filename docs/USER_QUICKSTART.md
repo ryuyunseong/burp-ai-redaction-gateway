@@ -101,6 +101,8 @@ dashboard는 `127.0.0.1` 로컬 검토 도구입니다. production web applicati
 [GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
 참조하세요. 조회 전용 AI 안전 후보 파일 인덱스는
 [GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md)를
+참조하세요. 조회 전용 prompt readiness 체크리스트는
+[GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
 참조하세요. 조회 전용 finding 후보 triage 체크리스트는
 [GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 조회 전용 보고서 초안 준비 체크리스트는
@@ -127,7 +129,8 @@ dashboard action은 다음 순서로 사용합니다.
 7. `Workflow status index`를 엽니다.
 8. `AI-safe preflight`를 엽니다.
 9. `AI handoff index`를 엽니다.
-10. `Export`를 실행합니다.
+10. `Prompt readiness index`를 열어 prompt 파일 상태와 경계를 확인합니다.
+11. `Export`를 실행합니다.
 
 Dashboard action 경계:
 
@@ -140,6 +143,9 @@ Dashboard action 경계:
 - `AI-safe preflight`는 AI 핸드오프 전 조회 전용 GET 체크리스트입니다.
 - `AI handoff index`는 안전 파일 목적과 순서에 대한 조회 전용 GET
   체크리스트입니다.
+- `Prompt readiness index`는 prompt 파일 본문을 표시하지 않고
+  `chatgpt_prompt.md`와 `codex_task_prompt.md`의 점검 결과만 요약하는
+  조회 전용 GET 체크리스트입니다.
 - Export는 안전 파일 allowlist로 제한됩니다.
 - Raw viewer, replay, active scan, delete, edit action은 제공하지 않습니다.
 - `/help`, `/operations`, `/settings`는 조회 전용 상태 또는 안내 page입니다.

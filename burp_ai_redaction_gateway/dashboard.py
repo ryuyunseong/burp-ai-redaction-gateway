@@ -55,6 +55,7 @@ OPERATIONS_GUIDES = (
     ("GUI 사용자 흐름", "docs/GUI_USER_FLOW.md", "처음 실행부터 AI 투입 전까지의 화면 흐름"),
     ("AI 안전 사전 점검", "docs/GUI_AI_SAFE_PREFLIGHT.md", "AI 투입 전 조회 전용 상태 확인"),
     ("AI 핸드오프 인덱스", "docs/GUI_AI_HANDOFF_INDEX.md", "AI 투입 파일 순서와 주의사항"),
+    ("Prompt readiness 인덱스", "docs/GUI_PROMPT_READINESS_INDEX.md", "prompt 파일 투입 전 조회 전용 점검"),
     ("Finding 후보 분류 인덱스", "docs/GUI_FINDING_TRIAGE_INDEX.md", "finding 후보 검토 순서와 수동 판단 경계"),
     ("보고서 준비 인덱스", "docs/GUI_REPORT_READINESS_INDEX.md", "report_draft 초안 검토 상태와 수동 제출 경계"),
     ("작업 흐름 상태 인덱스", "docs/GUI_WORKFLOW_STATUS_INDEX.md", "검증된 산출물의 조회 전용 작업 흐름 점검"),
@@ -181,6 +182,34 @@ class ReportReadinessIndex:
 
 
 @dataclass(frozen=True)
+class PromptReadinessFile:
+    name: str
+    purpose: str
+    status: str
+    size_bytes: int | None
+    modified_utc: str
+    sha256: str
+
+
+@dataclass(frozen=True)
+class PromptReadinessCheck:
+    name: str
+    status: str
+    summary: str
+
+
+@dataclass(frozen=True)
+class PromptReadinessIndex:
+    output: DashboardOutput
+    files: list[PromptReadinessFile]
+    checks: list[PromptReadinessCheck]
+    prompt_status: str
+    chatgpt_status: str
+    codex_status: str
+    safe_file_count: int
+
+
+@dataclass(frozen=True)
 class WorkflowStep:
     name: str
     status: str
@@ -254,6 +283,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
                 self._send_html(render_report_readiness_index(_build_report_readiness_index(output)))
+                return
+            if parsed.path == "/prompt-readiness":
+                output_id = _required_query_value(parsed.query, "project")
+                output = _verified_output(self.server.config.root, self.server.policy, output_id)
+                self._send_html(render_prompt_readiness_index(_build_prompt_readiness_index(output)))
                 return
             if parsed.path == "/workflow":
                 output_id = _required_query_value(parsed.query, "project")
@@ -818,6 +852,7 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
             <a class="button small secondary" href="{_handoff_href(output.output_id)}">핸드오프 인덱스</a>
             <a class="button small secondary" href="{_triage_href(output.output_id)}">후보 분류 인덱스</a>
             <a class="button small secondary" href="{_report_readiness_href(output.output_id)}">보고서 준비</a>
+            <a class="button small secondary" href="{_prompt_readiness_href(output.output_id)}">Prompt readiness</a>
             <a class="button small secondary" href="{_workflow_href(output.output_id)}">작업 흐름 상태</a>
           </div>
           <div class="panel">
@@ -1072,6 +1107,99 @@ def render_report_readiness_index(index: ReportReadinessIndex) -> str:
     )
 
 
+def render_prompt_readiness_index(index: PromptReadinessIndex) -> str:
+    output = index.output
+    file_rows = "\n".join(_prompt_readiness_file_card(file) for file in index.files)
+    check_rows = "\n".join(_prompt_readiness_check_card(check) for check in index.checks)
+    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
+    forbidden_items = "".join(
+        f"<li>{_h(item)}</li>"
+        for item in (
+            "raw 요청/응답",
+            "raw 감사 row body",
+            "Cookie 또는 Authorization 값",
+            "token, JWT, session 값",
+            "실제 도메인, URL, IP 값",
+            "개인정보",
+            "HMAC secret 또는 CSRF token 값",
+            "전체 로컬 경로",
+            "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
+        )
+    )
+    return _page(
+        f"Prompt readiness 인덱스 {output.label}",
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="{_output_href(output.output_id)}">검증된 산출물 상세</a>
+            <h1>Prompt readiness 인덱스</h1>
+            <p class="subtitle">chatgpt_prompt.md와 codex_task_prompt.md를 AI에 넣기 전에 상태를 점검하는 조회 전용 prompt readiness checklist입니다. 이 화면은 판단을 대신하지 않습니다.</p>
+          </div>
+          <span class="badge good">조회 전용</span>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>프로젝트 별칭</span><strong>{_h(output.label)}</strong></div>
+          <div class="rail"><span>prompt 상태</span><strong>{_h(_status_label(index.prompt_status))}</strong></div>
+          <div class="rail"><span>safe files</span><strong>{index.safe_file_count}/{len(SAFE_PREVIEW_FILES)}</strong></div>
+          <div class="rail"><span>본문 preview</span><strong>false</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>준비 상태 요약</h2><span class="muted">본문 없이 메타데이터와 점검 결과만 표시합니다.</span></div>
+            <dl class="facts">
+              <div><dt>프로젝트 별칭</dt><dd>{_h(output.label)}</dd></div>
+              <div><dt>chatgpt_prompt.md</dt><dd>{_status_badge(index.chatgpt_status)}</dd></div>
+              <div><dt>codex_task_prompt.md</dt><dd>{_status_badge(index.codex_status)}</dd></div>
+              <div><dt>analysis_packet.json</dt><dd>{_status_badge(_file_status(output.path, "analysis_packet.json"))}</dd></div>
+              <div><dt>report_draft.md</dt><dd>{_status_badge(_file_status(output.path, "report_draft.md"))}</dd></div>
+              <div><dt>검증 선행</dt><dd>이 화면은 verify를 통과한 산출물에만 표시됩니다.</dd></div>
+              <div><dt>raw_data_included</dt><dd>false</dd></div>
+              <div><dt>파일 본문 preview</dt><dd>false</dd></div>
+              <div><dt>전체 로컬 경로 표시</dt><dd>false</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>safe files 4개</h2><span class="muted">AI 투입 후보 파일 allowlist입니다.</span></div>
+            <ul class="safe-list">{safe_files}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Prompt 파일 메타데이터</h2><span class="muted">SHA-256은 HMAC이 아닌 파일 fingerprint입니다.</span></div>
+            <div class="file-grid">{file_rows}</div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Prompt readiness 점검</h2><span class="muted">본문을 표시하지 않고 검사 결과만 요약합니다.</span></div>
+            <div class="file-grid">{check_rows}</div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Prompt 목적과 차이</h2><span class="muted">사용 전에 사람이 읽고 확인해야 합니다.</span></div>
+            <dl class="facts">
+              <div><dt>ChatGPT용 prompt</dt><dd>정제된 후보 분석, 수동 검토 보조, 조심스러운 보고서 문구 초안에 사용합니다.</dd></div>
+              <div><dt>Codex용 prompt</dt><dd>구현, 리뷰, 테스트 보강 같은 작업 보조에 사용하되 금지 범위를 함께 확인합니다.</dd></div>
+              <div><dt>finding</dt><dd>수동 검증이 끝날 때까지 후보입니다.</dd></div>
+              <div><dt>risk</dt><dd>초안이며 심각도 확정이 아닙니다.</dd></div>
+              <div><dt>final severity</dt><dd>Burp 재현, 권한별 비교, 영향도 판단 후 사람이 결정합니다.</dd></div>
+              <div><dt>prompt 파일</dt><dd>검증된 산출물이더라도 AI 투입 전 사람이 직접 검토해야 합니다.</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>권장 사용 순서</h2><span class="muted">조회 전용 링크입니다.</span></div>
+            <ol class="safe-list">
+              <li><a href="{_preflight_href(output.output_id)}">AI 안전 사전 점검</a>에서 safe files 상태를 봅니다.</li>
+              <li><a href="{_handoff_href(output.output_id)}">AI 핸드오프 인덱스</a>에서 파일 목적과 순서를 봅니다.</li>
+              <li><a href="{_workflow_href(output.output_id)}">작업 흐름 상태 인덱스</a>에서 전체 흐름을 봅니다.</li>
+              <li><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스</a>와 <a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스</a>에서 후보/초안 경계를 봅니다.</li>
+              <li>prompt 파일을 사람이 검토한 뒤 필요한 안전 파일만 AI에 입력합니다.</li>
+            </ol>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Prompt에 넣으면 안 되는 항목</h2><span class="muted">분류명만 표시하고 실제 값은 표시하지 않습니다.</span></div>
+            <ul class="safe-list">{forbidden_items}</ul>
+          </div>
+        </section>
+        """,
+    )
+
+
 def render_workflow_status_index(index: WorkflowStatusIndex) -> str:
     output = index.output
     step_cards = "\n".join(_workflow_step_card(step) for step in index.steps)
@@ -1139,6 +1267,7 @@ def render_workflow_status_index(index: WorkflowStatusIndex) -> str:
             <dl class="facts">
               <div><dt>사전 점검</dt><dd><a href="{_preflight_href(output.output_id)}">AI 안전 사전 점검 열기</a></dd></div>
               <div><dt>핸드오프</dt><dd><a href="{_handoff_href(output.output_id)}">AI 핸드오프 인덱스 열기</a></dd></div>
+              <div><dt>Prompt readiness</dt><dd><a href="{_prompt_readiness_href(output.output_id)}">Prompt readiness 인덱스 열기</a></dd></div>
               <div><dt>후보 분류</dt><dd><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스 열기</a></dd></div>
               <div><dt>보고서 준비</dt><dd><a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스 열기</a></dd></div>
               <div><dt>리뷰/보고서/내보내기 흐름</dt><dd><a href="{_output_href(output.output_id)}">검증된 산출물 상세로 돌아가기</a></dd></div>
@@ -1437,6 +1566,89 @@ def _build_report_readiness_index(output: DashboardOutput) -> ReportReadinessInd
     )
 
 
+def _build_prompt_readiness_index(output: DashboardOutput) -> PromptReadinessIndex:
+    files = [_prompt_readiness_file(output.path, name) for name in SAFE_PREVIEW_FILES]
+    chatgpt_text = _prompt_text_for_checks(output.path, "chatgpt_prompt.md")
+    codex_text = _prompt_text_for_checks(output.path, "codex_task_prompt.md")
+    combined_text = "\n".join(text for text in (chatgpt_text, codex_text) if text)
+    checks = [
+        PromptReadinessCheck(
+            name="safe files 4개 언급",
+            status="present" if _contains_all(combined_text, SAFE_PREVIEW_FILES) else "needs_manual_review",
+            summary="analysis_packet.json, chatgpt_prompt.md, codex_task_prompt.md, report_draft.md가 prompt 본문에 모두 언급되는지 봅니다.",
+        ),
+        PromptReadinessCheck(
+            name="forbidden data warning",
+            status=(
+                "present"
+                if _contains_all(combined_text, ("raw", "Cookie", "Authorization", "token", "domain", "IP"))
+                else "needs_manual_review"
+            ),
+            summary="원문, 인증 헤더, 토큰, 실제 도메인/IP 같은 금지 범위가 prompt에 경고되는지 봅니다.",
+        ),
+        PromptReadinessCheck(
+            name="verify-first warning",
+            status="present" if _contains_any(combined_text, ("verify", "verified")) else "needs_manual_review",
+            summary="AI 투입 전 verify 통과 산출물만 사용한다는 경계가 있는지 봅니다.",
+        ),
+        PromptReadinessCheck(
+            name="candidate/draft/manual review boundary",
+            status=(
+                "present"
+                if _contains_all(combined_text, ("candidate", "draft", "manual"))
+                else "needs_manual_review"
+            ),
+            summary="finding은 후보, risk는 초안, 수동 검토가 필요하다는 경계가 있는지 봅니다.",
+        ),
+        PromptReadinessCheck(
+            name="final severity manual decision warning",
+            status=(
+                "present"
+                if _contains_any(combined_text, ("severity decision", "manual-review severity draft"))
+                else "needs_manual_review"
+            ),
+            summary="심각도 초안이 최종 결정이 아니라는 문구가 있는지 봅니다.",
+        ),
+        PromptReadinessCheck(
+            name="raw data prohibition warning",
+            status=(
+                "present"
+                if _contains_any(combined_text, ("raw request/response", "raw request or response", "raw HTTP"))
+                else "needs_manual_review"
+            ),
+            summary="raw 요청/응답을 요청하거나 재구성하지 말라는 경계가 있는지 봅니다.",
+        ),
+        PromptReadinessCheck(
+            name="Codex prompt 범위 구분",
+            status=(
+                "present"
+                if _contains_all(codex_text, ("Hard requirements", "Do not", "manual verification"))
+                else "needs_manual_review"
+            ),
+            summary="Codex용 prompt에 구현 보조 범위와 금지 범위가 분리되어 있는지 봅니다.",
+        ),
+        PromptReadinessCheck(
+            name="ChatGPT prompt 분석 경계",
+            status=(
+                "present"
+                if _contains_all(chatgpt_text, ("Analyze", "candidate", "manual verification"))
+                else "needs_manual_review"
+            ),
+            summary="ChatGPT용 prompt에 분석 목적과 수동 검토 경계가 분리되어 있는지 봅니다.",
+        ),
+    ]
+    prompt_status = "present" if all(check.status == "present" for check in checks) else "needs_manual_review"
+    return PromptReadinessIndex(
+        output=output,
+        files=files,
+        checks=checks,
+        prompt_status=prompt_status,
+        chatgpt_status=_file_status(output.path, "chatgpt_prompt.md"),
+        codex_status=_file_status(output.path, "codex_task_prompt.md"),
+        safe_file_count=sum(1 for file in files if file.status == "present"),
+    )
+
+
 def _build_workflow_status_index(output: DashboardOutput) -> WorkflowStatusIndex:
     file_statuses = [
         (name, "present" if (output.path / name).is_file() else "missing")
@@ -1475,6 +1687,12 @@ def _build_workflow_status_index(output: DashboardOutput) -> WorkflowStatusIndex
             status="manual review required",
             summary="안전 파일 별칭, 순서, 목적, 메타데이터를 확인합니다.",
             href=_handoff_href(output.output_id),
+        ),
+        WorkflowStep(
+            name="Prompt readiness 인덱스",
+            status="manual review required",
+            summary="prompt 파일 본문을 표시하지 않고 투입 전 점검 결과만 확인합니다.",
+            href=_prompt_readiness_href(output.output_id),
         ),
         WorkflowStep(
             name="Finding 후보 분류 인덱스",
@@ -1526,6 +1744,64 @@ def _report_readiness_file(output_dir: Path, name: str, purpose: str) -> ReportR
         modified_utc=datetime.fromtimestamp(stat.st_mtime, UTC).replace(microsecond=0).isoformat(),
         sha256=_sha256_file(path),
     )
+
+
+def _prompt_readiness_file(output_dir: Path, name: str) -> PromptReadinessFile:
+    path = output_dir / name
+    if not path.is_file():
+        return PromptReadinessFile(
+            name=name,
+            purpose=_prompt_readiness_purpose(name),
+            status="missing",
+            size_bytes=None,
+            modified_utc="missing",
+            sha256="missing",
+        )
+    stat = path.stat()
+    return PromptReadinessFile(
+        name=name,
+        purpose=_prompt_readiness_purpose(name),
+        status="present",
+        size_bytes=stat.st_size,
+        modified_utc=datetime.fromtimestamp(stat.st_mtime, UTC).replace(microsecond=0).isoformat(),
+        sha256=_sha256_file(path),
+    )
+
+
+def _prompt_readiness_purpose(file_name: str) -> str:
+    purposes = {
+        "analysis_packet.json": "정제된 finding 후보 구조와 제약 조건을 담은 기준 packet입니다.",
+        "chatgpt_prompt.md": "ChatGPT에 후보 분석과 수동 검토 보조를 요청할 때 사용합니다.",
+        "codex_task_prompt.md": "Codex에 구현, 리뷰, 테스트 보강 같은 작업 보조를 요청할 때 사용합니다.",
+        "report_draft.md": "사람이 검토할 후보 보고서 초안이며 제출용 최종본이 아닙니다.",
+    }
+    return purposes.get(file_name, "검증된 안전 파일 후보입니다.")
+
+
+def _prompt_text_for_checks(output_dir: Path, file_name: str) -> str:
+    path = output_dir / _safe_file_name(file_name)
+    if not path.is_file() or path.stat().st_size > MAX_PREVIEW_BYTES:
+        return ""
+    try:
+        text = path.read_text(encoding="utf-8")
+        assert_no_sensitive_text(text)
+    except (OSError, UnicodeError, ValueError):
+        return ""
+    return text
+
+
+def _file_status(output_dir: Path, file_name: str) -> str:
+    return "present" if (output_dir / file_name).is_file() else "missing"
+
+
+def _contains_all(text: str, terms: tuple[str, ...]) -> bool:
+    lowered = text.lower()
+    return all(term.lower() in lowered for term in terms)
+
+
+def _contains_any(text: str, terms: tuple[str, ...]) -> bool:
+    lowered = text.lower()
+    return any(term.lower() in lowered for term in terms)
 
 
 def _report_readiness_status_summary(index: ReportReadinessIndex) -> str:
@@ -1611,6 +1887,45 @@ def _report_readiness_file_card(file: ReportReadinessFile) -> str:
         <div><dt>파일 크기(bytes)</dt><dd>{_h(size)}</dd></div>
         <div><dt>수정 시각(UTC)</dt><dd>{_h(file.modified_utc)}</dd></div>
         <div><dt>SHA-256 파일 fingerprint</dt><dd>{_h(file.sha256)}</dd></div>
+      </dl>
+    </article>
+    """
+
+
+def _prompt_readiness_file_card(file: PromptReadinessFile) -> str:
+    size = str(file.size_bytes) if file.size_bytes is not None else "missing"
+    return f"""
+    <article class="file-card">
+      <div>
+        <span class="kicker">prompt readiness</span>
+        <strong>{_h(file.name)}</strong>
+        <span>{_status_badge(file.status)}</span>
+        <small>{_h(file.purpose)}</small>
+      </div>
+      <dl class="facts compact">
+        <div><dt>목적</dt><dd>{_h(file.purpose)}</dd></div>
+        <div><dt>존재 여부</dt><dd>{_h(_status_label(file.status))}</dd></div>
+        <div><dt>파일 크기(bytes)</dt><dd>{_h(size)}</dd></div>
+        <div><dt>수정 시각(UTC)</dt><dd>{_h(file.modified_utc)}</dd></div>
+        <div><dt>SHA-256 fingerprint</dt><dd>{_h(file.sha256)}</dd></div>
+      </dl>
+    </article>
+    """
+
+
+def _prompt_readiness_check_card(check: PromptReadinessCheck) -> str:
+    return f"""
+    <article class="file-card">
+      <div>
+        <span class="kicker">read-only check</span>
+        <strong>{_h(check.name)}</strong>
+        <span>{_status_badge(check.status)}</span>
+        <small>{_h(check.summary)}</small>
+      </div>
+      <dl class="facts compact">
+        <div><dt>상태</dt><dd>{_h(_status_label(check.status))}</dd></div>
+        <div><dt>점검 방식</dt><dd>prompt 본문을 표시하지 않고 키워드 존재 여부만 요약합니다.</dd></div>
+        <div><dt>수동 검토</dt><dd>필요</dd></div>
       </dl>
     </article>
     """
@@ -2263,6 +2578,10 @@ def _triage_href(output_id: str) -> str:
 
 def _report_readiness_href(output_id: str) -> str:
     return "/report-readiness?project=" + quote(output_id, safe="")
+
+
+def _prompt_readiness_href(output_id: str) -> str:
+    return "/prompt-readiness?project=" + quote(output_id, safe="")
 
 
 def _workflow_href(output_id: str) -> str:

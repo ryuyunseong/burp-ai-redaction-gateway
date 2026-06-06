@@ -8,6 +8,8 @@ finding 후보 triage 체크리스트는
 [GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 보고서 초안 준비 체크리스트는
 [GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md)를
+참조하세요. prompt 파일 투입 전 점검은
+[GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
 참조하세요. 전체 조회 전용 workflow 체크리스트는
 [GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
 참조하세요.
@@ -59,6 +61,7 @@ verify first
 -> check AI-safe preflight
 -> read analysis_packet.json
 -> choose chatgpt_prompt.md or codex_task_prompt.md for the target AI tool
+-> check prompt readiness index
 -> check report readiness index before report review
 -> review report_draft.md manually
 -> decide what, if anything, can be shared

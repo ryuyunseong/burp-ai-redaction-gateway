@@ -735,6 +735,8 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("후보 분류 인덱스", detail)
                 self.assertIn("/report-readiness?project=generated", detail)
                 self.assertIn("보고서 준비", detail)
+                self.assertIn("/prompt-readiness?project=generated", detail)
+                self.assertIn("Prompt readiness", detail)
                 self.assertIn("/workflow?project=generated", detail)
                 self.assertIn("작업 흐름 상태", detail)
                 self.assertNotIn("AI-safe preflight", detail)
@@ -985,6 +987,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "보고서",
                     "AI 안전 사전 점검",
                     "AI 핸드오프 인덱스",
+                    "Prompt readiness 인덱스",
                     "Finding 후보 분류 인덱스",
                     "보고서 준비 인덱스",
                     "리뷰/보고서/내보내기 흐름",
@@ -993,6 +996,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 for link in [
                     "/preflight?project=generated",
                     "/handoff?project=generated",
+                    "/prompt-readiness?project=generated",
                     "/triage?project=generated",
                     "/report-readiness?project=generated",
                     "/output?project=generated",
@@ -1029,6 +1033,80 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn("severity confirmed", workflow)
                 self.assertNotIn("ready to submit", workflow)
                 self.assertNotIn(str(root), workflow)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/prompt-readiness?project=generated")
+                response = connection.getresponse()
+                prompt_readiness = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("Prompt readiness 인덱스", prompt_readiness)
+                self.assertIn("조회 전용", prompt_readiness)
+                self.assertIn("조회 전용 prompt readiness checklist", prompt_readiness)
+                self.assertIn("프로젝트 별칭", prompt_readiness)
+                self.assertIn("chatgpt_prompt.md", prompt_readiness)
+                self.assertIn("codex_task_prompt.md", prompt_readiness)
+                self.assertIn("analysis_packet.json", prompt_readiness)
+                self.assertIn("report_draft.md", prompt_readiness)
+                self.assertIn("safe files 4개", prompt_readiness)
+                self.assertIn("Prompt 파일 메타데이터", prompt_readiness)
+                self.assertIn("SHA-256 fingerprint", prompt_readiness)
+                self.assertIn("SHA-256은 HMAC이 아닌 파일 fingerprint입니다", prompt_readiness)
+                self.assertIn("Prompt readiness 점검", prompt_readiness)
+                self.assertIn("safe files 4개 언급", prompt_readiness)
+                self.assertIn("forbidden data warning", prompt_readiness)
+                self.assertIn("verify-first warning", prompt_readiness)
+                self.assertIn("candidate/draft/manual review boundary", prompt_readiness)
+                self.assertIn("final severity manual decision warning", prompt_readiness)
+                self.assertIn("raw data prohibition warning", prompt_readiness)
+                self.assertIn("Codex prompt 범위 구분", prompt_readiness)
+                self.assertIn("ChatGPT prompt 분석 경계", prompt_readiness)
+                self.assertIn("Prompt 목적과 차이", prompt_readiness)
+                self.assertIn("ChatGPT용 prompt", prompt_readiness)
+                self.assertIn("Codex용 prompt", prompt_readiness)
+                self.assertIn("수동 검증이 끝날 때까지 후보입니다", prompt_readiness)
+                self.assertIn("초안이며 심각도 확정이 아닙니다", prompt_readiness)
+                self.assertIn("final severity", prompt_readiness)
+                self.assertIn("사람이 결정합니다", prompt_readiness)
+                self.assertIn("사람이 직접 검토해야 합니다", prompt_readiness)
+                for link in [
+                    "/preflight?project=generated",
+                    "/handoff?project=generated",
+                    "/workflow?project=generated",
+                    "/triage?project=generated",
+                    "/report-readiness?project=generated",
+                ]:
+                    self.assertIn(link, prompt_readiness)
+                for label in [
+                    "raw 요청/응답",
+                    "raw 감사 row body",
+                    "Cookie 또는 Authorization 값",
+                    "token, JWT, session 값",
+                    "실제 도메인, URL, IP 값",
+                    "개인정보",
+                    "HMAC secret 또는 CSRF token 값",
+                    "전체 로컬 경로",
+                ]:
+                    self.assertIn(label, prompt_readiness)
+                self.assertNotIn("<pre", prompt_readiness)
+                self.assertNotIn("analysis-prompt-packet-v1", prompt_readiness)
+                self.assertNotIn('name="csrf_token"', prompt_readiness)
+                self.assertNotIn("<form", prompt_readiness)
+                self.assertNotIn("<button", prompt_readiness)
+                self.assertNotIn('method="post"', prompt_readiness)
+                self.assertNotIn("raw_request", prompt_readiness)
+                self.assertNotIn("raw_response", prompt_readiness)
+                self.assertNotIn("DUMMY_COOKIE_VALUE", prompt_readiness)
+                self.assertNotIn("DUMMY_BEARER_TOKEN", prompt_readiness)
+                self.assertNotIn("approved", prompt_readiness)
+                self.assertNotIn("guaranteed safe", prompt_readiness)
+                self.assertNotIn("safe to share", prompt_readiness)
+                self.assertNotIn("severity confirmed", prompt_readiness)
+                self.assertNotIn("ready to submit", prompt_readiness)
+                self.assertNotIn("제출 가능", prompt_readiness)
+                self.assertNotIn("승인 완료", prompt_readiness)
+                self.assertNotIn("안전 보장", prompt_readiness)
+                self.assertNotIn(str(root), prompt_readiness)
                 connection.close()
 
                 connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
@@ -1271,6 +1349,15 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertEqual(response.status, 403)
                 self.assertIn("forbidden_directory", workflow_traversal)
                 self.assertNotIn("rawBearerToken", workflow_traversal)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/prompt-readiness?project=..%2Flocal_only")
+                response = connection.getresponse()
+                prompt_traversal = response.read().decode("utf-8")
+                self.assertEqual(response.status, 403)
+                self.assertIn("forbidden_directory", prompt_traversal)
+                self.assertNotIn("rawBearerToken", prompt_traversal)
                 connection.close()
             finally:
                 server.shutdown()
@@ -2900,6 +2987,7 @@ class RedactionGatewayTests(unittest.TestCase):
         for text in [readme, quickstart, local_dashboard, user_flow]:
             self.assertIn("GUI_AI_SAFE_PREFLIGHT.md", text)
             self.assertIn("GUI_AI_HANDOFF_INDEX.md", text)
+            self.assertIn("GUI_PROMPT_READINESS_INDEX.md", text)
             self.assertIn("GUI_FINDING_TRIAGE_INDEX.md", text)
             self.assertIn("GUI_REPORT_READINESS_INDEX.md", text)
             self.assertIn("GUI_WORKFLOW_STATUS_INDEX.md", text)
@@ -2915,12 +3003,14 @@ class RedactionGatewayTests(unittest.TestCase):
             "check workflow status index",
             "check AI-safe preflight",
             "check AI handoff index",
+            "check prompt readiness index",
             "export safe files",
             "send only verified safe files to AI",
             "http://127.0.0.1:8766/",
             "/triage?project=<alias>",
             "/report-readiness?project=<alias>",
             "/workflow?project=<alias>",
+            "/prompt-readiness?project=<alias>",
             "/preflight?project=<alias>",
             "/handoff?project=<alias>",
             "/help",
@@ -2932,6 +3022,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "Finding triage index",
             "Report readiness index",
             "Workflow status index",
+            "Prompt readiness index",
             "AI-safe preflight",
             "AI handoff index",
             "Export",
@@ -2958,6 +3049,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "finding triage 실행 버튼",
             "report readiness 실행 버튼",
             "workflow status 실행 버튼",
+            "prompt readiness 실행 버튼",
             "AI-safe preflight 실행 버튼",
             "AI handoff 실행 버튼",
             "risk profile 변경 버튼",
@@ -3100,6 +3192,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "triage link",
             "preflight link",
             "handoff link",
+            "prompt readiness link",
             "export/review/report flow link",
             "존재 여부",
             "크기(bytes)",
@@ -3168,6 +3261,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "codex_task_prompt.md",
             "preflight",
             "handoff",
+            "prompt-readiness",
             "triage",
             "report-readiness",
             "review/report/export flow",
@@ -3210,6 +3304,74 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("안전 보장", guide)
         self.assertNotIn("This guide explains", guide)
 
+    def test_gui_prompt_readiness_index_guide_documents_read_only_boundary(self) -> None:
+        guide = (ROOT / "docs" / "GUI_PROMPT_READINESS_INDEX.md").read_text(encoding="utf-8")
+        required = [
+            "조회 전용 체크리스트",
+            "/prompt-readiness?project=<alias>",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "analysis_packet.json",
+            "report_draft.md",
+            "safe files 4개",
+            "prompt 목적",
+            "크기(bytes)",
+            "수정 시각(UTC)",
+            "SHA-256 fingerprint",
+            "HMAC이 아닌 일반 파일 fingerprint",
+            "safe files 4개 언급 여부",
+            "forbidden data warning",
+            "verify-first warning",
+            "candidate/draft/manual review boundary",
+            "final severity manual decision warning",
+            "raw data prohibition warning",
+            "Codex prompt",
+            "ChatGPT prompt",
+            "AI-safe preflight",
+            "AI handoff index",
+            "workflow status index",
+            "finding triage index",
+            "report readiness index",
+            "finding은 수동 검증이 끝날 때까지 candidate",
+            "risk는 draft",
+            "evidence confidence는 severity가 아닙니다",
+            "final severity는 Burp 재현",
+            "prompt 파일도 사람이 수동 검토",
+            "raw request 또는 raw response 데이터",
+            "raw audit row 본문",
+            "Cookie 또는 Authorization 값",
+            "token, JWT, session 값",
+            "실제 domain, URL, IP 값",
+            "개인정보",
+            "HMAC secret 또는 CSRF token 값",
+            "full local path",
+            "form 또는 POST action",
+            "상태 변경 버튼",
+            "prompt body preview",
+            "report body preview",
+            "request preview",
+            "response preview",
+            "새 download action",
+            "raw viewer",
+            "replay 또는 active scan",
+        ]
+        for item in required:
+            self.assertIn(item, guide)
+
+        self.assertNotIn("raw_request", guide)
+        self.assertNotIn("raw_response", guide)
+        self.assertNotIn("DUMMY_COOKIE_VALUE", guide)
+        self.assertNotIn("DUMMY_BEARER_TOKEN", guide)
+        self.assertNotIn("safe to share", guide)
+        self.assertNotIn("approved", guide)
+        self.assertNotIn("guaranteed safe", guide)
+        self.assertNotIn("severity confirmed", guide)
+        self.assertNotIn("ready to submit", guide)
+        self.assertNotIn("제출 가능", guide)
+        self.assertNotIn("승인 완료", guide)
+        self.assertNotIn("안전 보장", guide)
+        self.assertNotIn("This guide explains", guide)
+
     def test_gui_ai_handoff_index_guide_documents_read_only_boundary(self) -> None:
         guide = (ROOT / "docs" / "GUI_AI_HANDOFF_INDEX.md").read_text(encoding="utf-8")
         required = [
@@ -3226,6 +3388,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "SHA-256 파일 fingerprint",
             "HMAC이 아니며",
             "verify first",
+            "check prompt readiness index",
             "수동 검토가 필요합니다",
             "candidate finding",
             "draft risk",
