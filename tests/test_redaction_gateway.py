@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import hashlib
 import http.client
 import io
@@ -16,6 +17,11 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import urlencode
 
+from burp_ai_redaction_gateway.audit_compression import (
+    AuditCompressionError,
+    compress_audit_jsonl,
+    verify_compressed_audit_jsonl,
+)
 from burp_ai_redaction_gateway.audit_hmac import (
     AuditHmacError,
     create_audit_hmac_manifest,
@@ -1567,6 +1573,108 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("Audit retention failed: audit_review_failed", text)
             self.assertNotIn("rawBearerToken1234567890", text)
             self.assertFalse(output_file.exists())
+
+    def test_audit_compression_cli_creates_and_verifies_raw_free_gzip(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_file = Path(temp_dir) / "mcp_audit.retained.jsonl"
+            compressed_file = Path(temp_dir) / "mcp_audit.retained.jsonl.gz"
+            self.write_audit_events(
+                audit_file,
+                self.audit_event_chain(["2026-06-04T00:00:00Z", "2026-06-05T00:00:00Z"]),
+            )
+            original_text = audit_file.read_text(encoding="utf-8")
+
+            with redirect_stdout(io.StringIO()) as compress_stdout:
+                compress_exit = main(
+                    [
+                        "audit-compress",
+                        "--input",
+                        str(audit_file),
+                        "--output",
+                        str(compressed_file),
+                    ]
+                )
+            with redirect_stdout(io.StringIO()) as verify_stdout:
+                verify_exit = main(["audit-compress-verify", "--input", str(compressed_file)])
+
+            with gzip.open(compressed_file, "rt", encoding="utf-8") as gzip_file:
+                decompressed_text = gzip_file.read()
+            review = review_audit_path(audit_file)
+            verify_result = verify_compressed_audit_jsonl(compressed_file)
+
+            self.assertEqual(compress_exit, 0)
+            self.assertEqual(verify_exit, 0)
+            self.assertTrue(audit_file.is_file())
+            self.assertTrue(compressed_file.is_file())
+            self.assertEqual(decompressed_text, original_text)
+            self.assertTrue(review.passed)
+            self.assertEqual(verify_result.row_count, 2)
+            self.assertGreater(verify_result.original_size_bytes, 0)
+            self.assertGreater(verify_result.compressed_size_bytes, 0)
+            self.assertIn("Audit compression passed.", compress_stdout.getvalue())
+            self.assertIn("Audit compression verification passed.", verify_stdout.getvalue())
+            self.assertIn("Output file: <compressed_audit_file>", compress_stdout.getvalue())
+            self.assertIn("Raw data included: false", compress_stdout.getvalue())
+            self.assertIn("Raw data included: false", verify_stdout.getvalue())
+            assert_no_sensitive_text(compress_stdout.getvalue())
+            assert_no_sensitive_text(verify_stdout.getvalue())
+
+    def test_audit_compression_result_reports_safe_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            audit_file = Path(temp_dir) / "mcp_audit.retained.jsonl"
+            compressed_file = Path(temp_dir) / "mcp_audit.retained.jsonl.gz"
+            self.write_audit_events(
+                audit_file,
+                self.audit_event_chain(["2026-06-04T00:00:00Z", "2026-06-05T00:00:00Z"]),
+            )
+
+            result = compress_audit_jsonl(audit_file, compressed_file)
+
+            self.assertEqual(result.input_file, "mcp_audit.retained.jsonl")
+            self.assertEqual(result.output_file, "<compressed_audit_file>")
+            self.assertEqual(result.row_count, 2)
+            self.assertGreater(result.original_size_bytes, 0)
+            self.assertGreater(result.compressed_size_bytes, 0)
+            self.assertGreater(result.compression_ratio, 0)
+            self.assertFalse(result.raw_data_included)
+            assert_no_sensitive_text(json.dumps(result.to_json(), ensure_ascii=True, sort_keys=True))
+
+    def test_audit_compression_rejects_raw_log_suffix_and_bad_gzip_safely(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            raw_file = Path(temp_dir) / "mcp_audit.raw.jsonl"
+            raw_file.write_text("Authorization: Bearer rawBearerToken1234567890\n", encoding="utf-8")
+            compressed_file = Path(temp_dir) / "mcp_audit.raw.jsonl.gz"
+
+            with redirect_stdout(io.StringIO()) as raw_stdout:
+                raw_exit = main(
+                    [
+                        "audit-compress",
+                        "--input",
+                        str(raw_file),
+                        "--output",
+                        str(compressed_file),
+                    ]
+                )
+            raw_text = raw_stdout.getvalue()
+
+            self.assertEqual(raw_exit, 1)
+            self.assertIn("Audit compression failed: audit_review_failed", raw_text)
+            self.assertNotIn("rawBearerToken1234567890", raw_text)
+            self.assertFalse(compressed_file.exists())
+
+            audit_file = Path(temp_dir) / "mcp_audit.retained.jsonl"
+            self.write_audit_events(audit_file, self.audit_event_chain(["2026-06-05T00:00:00Z"]))
+            with self.assertRaises(AuditCompressionError) as suffix_error:
+                compress_audit_jsonl(audit_file, Path(temp_dir) / "mcp_audit.retained.gz")
+            self.assertEqual(suffix_error.exception.error_type, "invalid_compressed_output_suffix")
+
+            bad_gzip = Path(temp_dir) / "mcp_audit.bad.jsonl.gz"
+            bad_gzip.write_text("not gzip data", encoding="utf-8")
+            with redirect_stdout(io.StringIO()) as gzip_stdout:
+                gzip_exit = main(["audit-compress-verify", "--input", str(bad_gzip)])
+            self.assertEqual(gzip_exit, 1)
+            self.assertIn("Audit compression verification failed: gzip_read_failed", gzip_stdout.getvalue())
+            assert_no_sensitive_text(gzip_stdout.getvalue())
 
     def test_audit_hmac_cli_creates_and_verifies_raw_free_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

@@ -4,6 +4,13 @@ import argparse
 import json
 from pathlib import Path
 
+from .audit_compression import (
+    AuditCompressionError,
+    compress_audit_jsonl,
+    render_audit_compression_summary,
+    render_audit_compression_verify_summary,
+    verify_compressed_audit_jsonl,
+)
 from .audit_hmac import (
     DEFAULT_HMAC_ENV_VAR,
     AuditHmacError,
@@ -99,6 +106,19 @@ def main(argv: list[str] | None = None) -> int:
         help=f"Environment variable containing the HMAC secret. Defaults to {DEFAULT_HMAC_ENV_VAR}.",
     )
 
+    audit_compress = subparsers.add_parser(
+        "audit-compress",
+        help="Write a gzip package for a reviewed MCP audit JSONL file.",
+    )
+    audit_compress.add_argument("--input", required=True, type=Path, help="Reviewed audit JSONL file.")
+    audit_compress.add_argument("--output", required=True, type=Path, help="Compressed .jsonl.gz output path.")
+
+    audit_compress_verify = subparsers.add_parser(
+        "audit-compress-verify",
+        help="Verify a gzip-packaged MCP audit JSONL file without printing raw data.",
+    )
+    audit_compress_verify.add_argument("--input", required=True, type=Path, help="Compressed .jsonl.gz audit file.")
+
     review = subparsers.add_parser("review", help="Review verified analysis packet output without printing raw data.")
     review.add_argument("--input", required=True, type=Path, help="Verified generated output directory.")
     review.add_argument("--export-dir", type=Path, help="Optional directory for safe prompt packet copies.")
@@ -146,6 +166,10 @@ def main(argv: list[str] | None = None) -> int:
         return _audit_hmac(args.input, args.manifest, args.env_var, args.key_file)
     if args.command == "audit-hmac-verify":
         return _audit_hmac_verify(args.input, args.manifest, args.env_var, args.key_file)
+    if args.command == "audit-compress":
+        return _audit_compress(args.input, args.output)
+    if args.command == "audit-compress-verify":
+        return _audit_compress_verify(args.input)
     if args.command == "review":
         return _review(args.input, args.export_dir, args.policy)
     if args.command == "report":
@@ -232,6 +256,26 @@ def _audit_hmac_verify(input_path: Path, manifest_path: Path, env_var: str, key_
         print(f"Audit HMAC verification failed: {error.error_type}")
         return 1
     print(render_audit_hmac_verify_summary(result), end="")
+    return 0
+
+
+def _audit_compress(input_path: Path, output_path: Path) -> int:
+    try:
+        result = compress_audit_jsonl(input_path, output_path)
+    except AuditCompressionError as error:
+        print(f"Audit compression failed: {error.error_type}")
+        return 1
+    print(render_audit_compression_summary(result), end="")
+    return 0
+
+
+def _audit_compress_verify(input_path: Path) -> int:
+    try:
+        result = verify_compressed_audit_jsonl(input_path)
+    except AuditCompressionError as error:
+        print(f"Audit compression verification failed: {error.error_type}")
+        return 1
+    print(render_audit_compression_verify_summary(result), end="")
     return 0
 
 
