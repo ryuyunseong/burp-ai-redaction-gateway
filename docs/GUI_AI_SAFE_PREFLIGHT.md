@@ -10,6 +10,8 @@ ChatGPT, Codex, a PR, an issue, or a document.
 
 For the file order, purpose, size, modified time, and SHA-256 metadata view, see
 [GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md).
+For candidate triage metadata and manual review boundaries, see
+[GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md).
 
 ## Open the View
 

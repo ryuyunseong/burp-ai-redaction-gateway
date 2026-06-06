@@ -23,10 +23,10 @@ http://127.0.0.1:8766/operations
 
 The operations index is a guide hub, not an action surface. It links the
 quickstart, GUI user flow guide, GUI AI-safe preflight guide, GUI AI handoff
-index guide, Windows launcher guide, audit operations guide, GUI audit panel
-guide, risk rating guide, and v0.4 release notes by repository-relative path.
-It also lists the four AI-safe files, blocked raw-data categories, and the
-candidate/draft interpretation boundary.
+index guide, GUI finding triage index guide, Windows launcher guide, audit
+operations guide, GUI audit panel guide, risk rating guide, and v0.4 release
+notes by repository-relative path. It also lists the four AI-safe files, blocked
+raw-data categories, and the candidate/draft interpretation boundary.
 
 For the screen-by-screen operator sequence, see
 [GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md).
@@ -34,6 +34,8 @@ For the AI handoff checklist, see
 [GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md).
 For the AI-safe candidate file index, see
 [GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md).
+For the finding candidate triage checklist, see
+[GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md).
 
 ## Allowed Scope
 
@@ -119,6 +121,36 @@ does not add download buttons, forms, POST actions, state-changing buttons, raw
 viewers, HMAC secret inputs, CSRF token display, replay, active scan, delete,
 edit, retention changes, or risk profile changes.
 
+## Finding Triage Index
+
+The dashboard provides a read-only finding triage index for a selected verified
+output:
+
+```text
+/triage?project=<alias>
+```
+
+The triage index summarizes only safe metadata for sanitized finding
+candidates:
+
+- project alias
+- finding candidate count
+- candidate index and stable candidate id
+- category/type
+- title and sanitized summary
+- evidence confidence
+- draft risk profile, likelihood, impact, and severity
+- manual review required status
+- `analysis_packet.json` and `report_draft.md` presence
+- links to preflight, handoff, and the verified output detail flow
+
+The triage index does not show raw request or response data, finding body
+previews, request previews, response previews, full local paths, HMAC secrets,
+CSRF token values, real domains, real URLs, real IP addresses, or personal data.
+It does not add forms, POST actions, state-changing buttons, download buttons,
+archive/HMAC actions, replay, active scan, delete, edit, retention changes, or
+risk profile changes.
+
 ## Blocked Scope
 
 The dashboard does not implement:
@@ -130,6 +162,7 @@ The dashboard does not implement:
 - automatic exploit confirmation
 - severity assignment
 - archive or HMAC generation buttons on the operations index
+- finding triage execution buttons
 - risk profile change buttons on the operations index
 
 ## Dashboard Actions

@@ -4,6 +4,9 @@ This guide explains the dashboard AI handoff index. The index is a read-only
 checklist for the four AI-safe candidate files that may be used after verify
 passes and after manual review planning is clear.
 
+For the candidate triage checklist, see
+[GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md).
+
 Use it as a read-only checklist only.
 
 The index is not an approval screen. It does not say that a file is safe to

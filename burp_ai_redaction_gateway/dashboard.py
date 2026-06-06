@@ -55,6 +55,7 @@ OPERATIONS_GUIDES = (
     ("GUI 사용자 흐름", "docs/GUI_USER_FLOW.md", "처음 실행부터 AI 투입 전까지의 화면 흐름"),
     ("AI-safe preflight", "docs/GUI_AI_SAFE_PREFLIGHT.md", "AI 투입 전 read-only 상태 확인"),
     ("AI handoff index", "docs/GUI_AI_HANDOFF_INDEX.md", "AI 투입 파일 순서와 주의사항"),
+    ("Finding triage index", "docs/GUI_FINDING_TRIAGE_INDEX.md", "finding 후보 검토 순서와 수동 판단 경계"),
     ("Windows 실행기", "docs/WINDOWS_LAUNCHER_GUIDE.md", "start/stop 스크립트와 포트 충돌 처리"),
     ("감사 운영", "docs/AUDIT_OPERATIONS_GUIDE.md", "review-audit, retention, HMAC, archive 순서"),
     ("GUI 감사 패널", "docs/GUI_AUDIT_PANEL_GUIDE.md", "감사/보관 상태 표시 해석"),
@@ -135,6 +136,29 @@ class AiHandoffIndex:
     files: list[HandoffFile]
 
 
+@dataclass(frozen=True)
+class TriageCandidate:
+    index: int
+    candidate_id: str
+    category: str
+    title: str
+    summary: str
+    confidence: str
+    severity_draft: str
+    likelihood_draft: str
+    impact_draft: str
+    risk_profile: str
+    manual_required: bool
+
+
+@dataclass(frozen=True)
+class FindingTriageIndex:
+    output: DashboardOutput
+    candidates: list[TriageCandidate]
+    analysis_packet_status: str
+    report_draft_status: str
+
+
 class DashboardError(ValueError):
     def __init__(self, error_type: str, status: HTTPStatus = HTTPStatus.BAD_REQUEST) -> None:
         super().__init__(error_type)
@@ -180,6 +204,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
                 self._send_html(render_ai_handoff_index(_build_ai_handoff_index(output)))
+                return
+            if parsed.path == "/triage":
+                output_id = _required_query_value(parsed.query, "project")
+                output = _verified_output(self.server.config.root, self.server.policy, output_id)
+                self._send_html(render_finding_triage_index(_build_finding_triage_index(output)))
                 return
             if parsed.path == "/preview":
                 output_id = _required_query_value(parsed.query, "project")
@@ -737,6 +766,7 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
             {_preflight_summary(preflight)}
             <a class="button small secondary" href="{_preflight_href(output.output_id)}">preflight detail</a>
             <a class="button small secondary" href="{_handoff_href(output.output_id)}">handoff index</a>
+            <a class="button small secondary" href="{_triage_href(output.output_id)}">triage index</a>
           </div>
           <div class="panel">
             <div class="panel-head"><h2>탐지 후보</h2><span class="muted">총 {len(candidates)}개</span></div>
@@ -802,6 +832,84 @@ def render_ai_handoff_index(index: AiHandoffIndex) -> str:
           <div class="panel">
             <div class="panel-head"><h2>Do not send</h2><span class="muted">categories only; no values are shown</span></div>
             <ul class="safe-list">{forbidden_items}</ul>
+          </div>
+        </section>
+        """,
+    )
+
+
+def render_finding_triage_index(index: FindingTriageIndex) -> str:
+    output = index.output
+    candidate_rows = "\n".join(_triage_candidate_card(candidate) for candidate in index.candidates) or (
+        '<div class="empty">No finding candidates are available for triage.</div>'
+    )
+    forbidden_items = "".join(
+        f"<li>{_h(item)}</li>"
+        for item in (
+            "raw request/response",
+            "Cookie or Authorization values",
+            "token, JWT, or session values",
+            "real domain, URL, or IP values",
+            "personal data",
+            "HMAC secret or CSRF token values",
+            "full local path",
+            "local_only/, raw/, raw_vault/, unverified out/, or out/.audit artifacts",
+        )
+    )
+    return _page(
+        f"Finding triage index {output.label}",
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="{_output_href(output.output_id)}">산출물로 돌아가기</a>
+            <h1>Finding triage index</h1>
+            <p class="subtitle">Read-only triage checklist for sanitized finding candidates. Candidate findings and draft risk require manual review.</p>
+          </div>
+          <span class="badge good">read-only</span>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>project alias</span><strong>{_h(output.label)}</strong></div>
+          <div class="rail"><span>finding candidates</span><strong>{len(index.candidates)}</strong></div>
+          <div class="rail"><span>finding status</span><strong>candidate</strong></div>
+          <div class="rail"><span>severity decision</span><strong>manual review required</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>Triage summary</h2><span class="muted">safe metadata only</span></div>
+            <dl class="facts">
+              <div><dt>project alias</dt><dd>{_h(output.label)}</dd></div>
+              <div><dt>finding candidate count</dt><dd>{len(index.candidates)}</dd></div>
+              <div><dt>analysis_packet.json</dt><dd>{_status_badge(index.analysis_packet_status)}</dd></div>
+              <div><dt>report_draft.md</dt><dd>{_status_badge(index.report_draft_status)}</dd></div>
+              <div><dt>raw_data_included</dt><dd>false</dd></div>
+              <div><dt>file paths shown</dt><dd>false</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Related flow</h2><span class="muted">read-only navigation</span></div>
+            <dl class="facts">
+              <div><dt>preflight</dt><dd><a href="{_preflight_href(output.output_id)}">open AI-safe preflight</a></dd></div>
+              <div><dt>handoff</dt><dd><a href="{_handoff_href(output.output_id)}">open AI handoff index</a></dd></div>
+              <div><dt>review/report/export flow</dt><dd><a href="{_output_href(output.output_id)}">return to verified output detail</a></dd></div>
+              <div><dt>boundary</dt><dd>read-only triage checklist; no form or POST action</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Interpretation boundary</h2><span class="muted">candidate and draft only</span></div>
+            <dl class="facts">
+              <div><dt>finding</dt><dd>candidate finding until manual verification is complete</dd></div>
+              <div><dt>risk</dt><dd>draft risk, not severity confirmation</dd></div>
+              <div><dt>confidence</dt><dd>evidence confidence, not severity</dd></div>
+              <div><dt>final severity</dt><dd>final severity requires manual decision</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Do not use in triage</h2><span class="muted">categories only; no values are shown</span></div>
+            <ul class="safe-list">{forbidden_items}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Candidate checklist</h2><span class="muted">sanitized metadata only</span></div>
+            <div class="candidate-list">{candidate_rows}</div>
           </div>
         </section>
         """,
@@ -1051,6 +1159,41 @@ def _build_ai_handoff_index(output: DashboardOutput) -> AiHandoffIndex:
     return AiHandoffIndex(output=output, preflight=preflight, files=files)
 
 
+def _build_finding_triage_index(output: DashboardOutput) -> FindingTriageIndex:
+    candidates = [
+        _triage_candidate_from_json(index, candidate)
+        for index, candidate in enumerate(_load_candidates(output.path), start=1)
+    ]
+    return FindingTriageIndex(
+        output=output,
+        candidates=candidates,
+        analysis_packet_status="present" if (output.path / "analysis_packet.json").is_file() else "missing",
+        report_draft_status="present" if (output.path / "report_draft.md").is_file() else "missing",
+    )
+
+
+def _triage_candidate_from_json(index: int, candidate: dict[str, Any]) -> TriageCandidate:
+    risk_rating = candidate.get("risk_rating_draft")
+    risk = risk_rating if isinstance(risk_rating, dict) else {}
+    title = _safe_value(candidate.get("title"), "Finding candidate")
+    category = _safe_value(candidate.get("type"), "unknown_type")
+    endpoint = _safe_value(candidate.get("affected_endpoint"), "sanitized endpoint unavailable")
+    summary = f"{title}; sanitized endpoint template: {endpoint}"
+    return TriageCandidate(
+        index=index,
+        candidate_id=_safe_value(candidate.get("finding_id") or candidate.get("candidate_id"), f"candidate-{index}"),
+        category=category,
+        title=title,
+        summary=_safe_value(summary, "Sanitized candidate summary unavailable."),
+        confidence=_safe_value(candidate.get("confidence"), "unknown"),
+        severity_draft=_safe_value(risk.get("severity_draft"), "unknown"),
+        likelihood_draft=_safe_value(risk.get("likelihood_draft"), "unknown"),
+        impact_draft=_safe_value(risk.get("impact_draft"), "unknown"),
+        risk_profile=_safe_value(risk.get("risk_profile"), DEFAULT_RISK_RATING_PROFILE),
+        manual_required=bool(candidate.get("manual_verification_required", True)),
+    )
+
+
 def _handoff_summary(index: AiHandoffIndex) -> str:
     present_count = sum(1 for file in index.files if file.status == "present")
     return f"""
@@ -1083,6 +1226,34 @@ def _handoff_file_card(file: HandoffFile) -> str:
         <div><dt>size bytes</dt><dd>{_h(size)}</dd></div>
         <div><dt>modified UTC</dt><dd>{_h(file.modified_utc)}</dd></div>
         <div><dt>SHA-256</dt><dd>{_h(file.sha256)}</dd></div>
+      </dl>
+    </article>
+    """
+
+
+def _triage_candidate_card(candidate: TriageCandidate) -> str:
+    manual_required = str(candidate.manual_required).lower()
+    return f"""
+    <article class="candidate">
+      <div class="candidate-head">
+        <div>
+          <span class="kicker">candidate #{candidate.index}</span>
+          <h3>{_h(candidate.candidate_id)} - {_h(candidate.title)}</h3>
+          <p>{_h(candidate.category)}</p>
+        </div>
+        <div class="status-stack">
+          <span class="badge neutral">confidence: {_h(candidate.confidence)}</span>
+          <span class="badge warning">manual review required</span>
+        </div>
+      </div>
+      <dl class="facts compact">
+        <div><dt>stable id</dt><dd>{_h(candidate.candidate_id)}</dd></div>
+        <div><dt>category/type</dt><dd>{_h(candidate.category)}</dd></div>
+        <div><dt>sanitized summary</dt><dd>{_h(candidate.summary)}</dd></div>
+        <div><dt>draft risk</dt><dd>profile: {_h(candidate.risk_profile)}; severity draft: {_h(candidate.severity_draft)}; likelihood draft: {_h(candidate.likelihood_draft)}; impact draft: {_h(candidate.impact_draft)}</dd></div>
+        <div><dt>confidence</dt><dd>{_h(candidate.confidence)} evidence confidence, not severity</dd></div>
+        <div><dt>manual verification required</dt><dd>{_h(manual_required)}</dd></div>
+        <div><dt>final severity</dt><dd>final severity requires manual decision</dd></div>
       </dl>
     </article>
     """
@@ -1678,6 +1849,10 @@ def _preflight_href(output_id: str) -> str:
 
 def _handoff_href(output_id: str) -> str:
     return "/handoff?project=" + quote(output_id, safe="")
+
+
+def _triage_href(output_id: str) -> str:
+    return "/triage?project=" + quote(output_id, safe="")
 
 
 def _preview_href(output_id: str, file_name: str) -> str:

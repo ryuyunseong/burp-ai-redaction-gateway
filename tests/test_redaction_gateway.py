@@ -731,6 +731,8 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("preflight detail", detail)
                 self.assertIn("/handoff?project=generated", detail)
                 self.assertIn("handoff index", detail)
+                self.assertIn("/triage?project=generated", detail)
+                self.assertIn("triage index", detail)
                 self.assertNotIn("Confirmed vulnerability", detail)
                 connection.close()
 
@@ -820,6 +822,56 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn("raw_request", handoff)
                 self.assertNotIn("raw_response", handoff)
                 self.assertNotIn(str(root), handoff)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/triage?project=generated")
+                response = connection.getresponse()
+                triage = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("Finding triage index", triage)
+                self.assertIn("read-only", triage)
+                self.assertIn("Read-only triage checklist", triage)
+                self.assertIn("project alias", triage)
+                self.assertIn("finding candidate count", triage)
+                self.assertIn(">22<", triage)
+                self.assertIn("analysis_packet.json", triage)
+                self.assertIn("report_draft.md", triage)
+                self.assertIn("open AI-safe preflight", triage)
+                self.assertIn("open AI handoff index", triage)
+                self.assertIn("review/report/export flow", triage)
+                self.assertIn("candidate finding", triage)
+                self.assertIn("draft risk", triage)
+                self.assertIn("evidence confidence, not severity", triage)
+                self.assertIn("manual review required", triage)
+                self.assertIn("final severity requires manual decision", triage)
+                self.assertIn("candidate #1", triage)
+                self.assertIn("FC-0001", triage)
+                self.assertIn("missing_security_headers", triage)
+                self.assertIn("Missing security headers", triage)
+                self.assertIn("sanitized summary", triage)
+                self.assertIn("severity draft", triage)
+                for label in [
+                    "raw request/response",
+                    "Cookie or Authorization values",
+                    "token, JWT, or session values",
+                    "real domain, URL, or IP values",
+                    "personal data",
+                    "HMAC secret or CSRF token values",
+                    "full local path",
+                ]:
+                    self.assertIn(label, triage)
+                self.assertNotIn('name="csrf_token"', triage)
+                self.assertNotIn("<form", triage)
+                self.assertNotIn("<button", triage)
+                self.assertNotIn("raw_request", triage)
+                self.assertNotIn("raw_response", triage)
+                self.assertNotIn("DUMMY_COOKIE_VALUE", triage)
+                self.assertNotIn("DUMMY_BEARER_TOKEN", triage)
+                self.assertNotIn("safe to share", triage)
+                self.assertNotIn("guaranteed safe", triage)
+                self.assertNotIn("severity confirmed", triage)
+                self.assertNotIn(str(root), triage)
                 connection.close()
 
                 connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
@@ -943,6 +995,7 @@ class RedactionGatewayTests(unittest.TestCase):
                         self.assertIn("docs/GUI_USER_FLOW.md", body)
                         self.assertIn("docs/GUI_AI_SAFE_PREFLIGHT.md", body)
                         self.assertIn("docs/GUI_AI_HANDOFF_INDEX.md", body)
+                        self.assertIn("docs/GUI_FINDING_TRIAGE_INDEX.md", body)
                         self.assertIn("docs/WINDOWS_LAUNCHER_GUIDE.md", body)
                         self.assertIn("docs/AUDIT_OPERATIONS_GUIDE.md", body)
                         self.assertIn("docs/GUI_AUDIT_PANEL_GUIDE.md", body)
@@ -1032,6 +1085,15 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertEqual(response.status, 403)
                 self.assertIn("forbidden_directory", handoff_traversal)
                 self.assertNotIn("rawBearerToken", handoff_traversal)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/triage?project=..%2Flocal_only")
+                response = connection.getresponse()
+                triage_traversal = response.read().decode("utf-8")
+                self.assertEqual(response.status, 403)
+                self.assertIn("forbidden_directory", triage_traversal)
+                self.assertNotIn("rawBearerToken", triage_traversal)
                 connection.close()
             finally:
                 server.shutdown()
@@ -2661,18 +2723,21 @@ class RedactionGatewayTests(unittest.TestCase):
         for text in [readme, quickstart, local_dashboard, user_flow]:
             self.assertIn("GUI_AI_SAFE_PREFLIGHT.md", text)
             self.assertIn("GUI_AI_HANDOFF_INDEX.md", text)
+            self.assertIn("GUI_FINDING_TRIAGE_INDEX.md", text)
 
         required = [
             "start receiver and dashboard",
             "send scoped Burp history",
             "verify the selected output",
             "review candidate findings",
+            "check finding triage index",
             "generate report_draft.md",
             "check AI-safe preflight",
             "check AI handoff index",
             "export safe files",
             "send only verified safe files to AI",
             "http://127.0.0.1:8766/",
+            "/triage?project=<alias>",
             "/preflight?project=<alias>",
             "/handoff?project=<alias>",
             "/help",
@@ -2681,6 +2746,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "Verify",
             "Review",
             "Report",
+            "Finding triage index",
             "AI-safe preflight",
             "AI handoff index",
             "Export",
@@ -2704,6 +2770,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "raw viewers",
             "replay or active scan",
             "archive or HMAC execution buttons",
+            "finding triage execution buttons",
             "AI-safe preflight execution buttons",
             "AI handoff execution buttons",
             "risk profile change buttons",
@@ -2757,6 +2824,57 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("raw_response", guide)
         self.assertNotIn("DUMMY_COOKIE_VALUE", guide)
         self.assertNotIn("DUMMY_BEARER_TOKEN", guide)
+
+    def test_gui_finding_triage_index_guide_documents_read_only_boundary(self) -> None:
+        guide = (ROOT / "docs" / "GUI_FINDING_TRIAGE_INDEX.md").read_text(encoding="utf-8")
+        required = [
+            "read-only triage checklist",
+            "/triage?project=<alias>",
+            "project alias",
+            "finding candidate count",
+            "candidate index",
+            "stable candidate id",
+            "category/type",
+            "title",
+            "sanitized summary",
+            "evidence confidence",
+            "draft risk profile",
+            "severity draft",
+            "likelihood draft",
+            "impact draft",
+            "manual review required",
+            "analysis_packet.json",
+            "report_draft.md",
+            "candidate finding",
+            "Draft risk",
+            "Final severity requires manual decision",
+            "CVSS is a separate calculation scope",
+            "raw request or response data",
+            "Cookie or Authorization values",
+            "token, JWT, or session values",
+            "real domain, URL, or IP values",
+            "personal data",
+            "HMAC secret or CSRF token values",
+            "full local path",
+            "POST action",
+            "state-changing button",
+            "finding body preview",
+            "request preview",
+            "response preview",
+            "raw viewer",
+            "replay or active scan",
+        ]
+        for item in required:
+            self.assertIn(item, guide)
+
+        self.assertNotIn("raw_request", guide)
+        self.assertNotIn("raw_response", guide)
+        self.assertNotIn("DUMMY_COOKIE_VALUE", guide)
+        self.assertNotIn("DUMMY_BEARER_TOKEN", guide)
+        self.assertNotIn("safe to share", guide)
+        self.assertNotIn("approved", guide)
+        self.assertNotIn("guaranteed safe", guide)
+        self.assertNotIn("severity confirmed", guide)
 
     def test_gui_ai_handoff_index_guide_documents_read_only_boundary(self) -> None:
         guide = (ROOT / "docs" / "GUI_AI_HANDOFF_INDEX.md").read_text(encoding="utf-8")
