@@ -815,6 +815,74 @@ class RedactionGatewayTests(unittest.TestCase):
                     server.server_close()
                     thread.join(timeout=5)
 
+    def test_dashboard_help_page_shows_operations_index_without_actions_or_sensitive_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "out"
+            output = root / "generated"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+            secret_value = "DUMMY_HELP_PAGE_SECRET_1234567890"
+
+            with patch.dict("os.environ", {"BURP_AI_AUDIT_HMAC_KEY": secret_value}, clear=False):
+                server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+                thread = threading.Thread(target=server.serve_forever, daemon=True)
+                thread.start()
+                try:
+                    port = server.server_address[1]
+                    for linked_path in ("/", "/settings"):
+                        connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                        connection.request("GET", linked_path)
+                        response = connection.getresponse()
+                        linked_body = response.read().decode("utf-8")
+                        self.assertEqual(response.status, 200)
+                        self.assertIn('href="/help"', linked_body)
+                        connection.close()
+
+                    for path in ("/help", "/operations"):
+                        connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                        connection.request("GET", path)
+                        response = connection.getresponse()
+                        body = response.read().decode("utf-8")
+                        self.assertEqual(response.status, 200)
+                        self.assertIn("운영 인덱스", body)
+                        self.assertIn("조회 전용", body)
+                        self.assertIn("실행 버튼 없음", body)
+                        self.assertIn("docs/USER_QUICKSTART.md", body)
+                        self.assertIn("docs/WINDOWS_LAUNCHER_GUIDE.md", body)
+                        self.assertIn("docs/AUDIT_OPERATIONS_GUIDE.md", body)
+                        self.assertIn("docs/GUI_AUDIT_PANEL_GUIDE.md", body)
+                        self.assertIn("docs/RISK_RATING_GUIDE.md", body)
+                        self.assertIn("docs/RELEASE_NOTES_v0.4.md", body)
+                        self.assertIn("analysis_packet.json", body)
+                        self.assertIn("chatgpt_prompt.md", body)
+                        self.assertIn("codex_task_prompt.md", body)
+                        self.assertIn("report_draft.md", body)
+                        self.assertIn("raw request/response", body)
+                        self.assertIn("Cookie", body)
+                        self.assertIn("Authorization", body)
+                        self.assertIn("token/JWT/session", body)
+                        self.assertIn("local_only/", body)
+                        self.assertIn("raw_vault/", body)
+                        self.assertIn("candidate", body)
+                        self.assertIn("draft", body)
+                        self.assertIn("final severity", body)
+                        self.assertIn("127.0.0.1", body)
+                        self.assertIn("HTML escaped", body)
+                        self.assertNotIn(secret_value, body)
+                        self.assertNotIn("BURP_AI_AUDIT_HMAC_KEY", body)
+                        self.assertNotIn(str(root), body)
+                        self.assertNotIn('name="csrf_token"', body)
+                        self.assertNotIn("<form", body)
+                        self.assertNotIn('method="post"', body)
+                        self.assertNotIn("raw_request", body)
+                        self.assertNotIn("raw_response", body)
+                        self.assertNotIn("DUMMY_COOKIE_VALUE", body)
+                        self.assertNotIn("DUMMY_BEARER_TOKEN", body)
+                        connection.close()
+                finally:
+                    server.shutdown()
+                    server.server_close()
+                    thread.join(timeout=5)
+
     def test_dashboard_blocks_unverified_output_forbidden_paths_and_unsafe_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
