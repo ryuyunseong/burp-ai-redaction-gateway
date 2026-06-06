@@ -157,6 +157,8 @@ handling, see
 For the focused audit review, retention, HMAC, compression, and archive HMAC
 runbook, see
 [docs/AUDIT_OPERATIONS_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/AUDIT_OPERATIONS_GUIDE.md).
+For interpreting the dashboard audit/archive status panel, see
+[docs/GUI_AUDIT_PANEL_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AUDIT_PANEL_GUIDE.md).
 For risk rating draft concepts and profile interpretation, see
 [docs/RISK_RATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/RISK_RATING_GUIDE.md).
 For the v0.4 dashboard release baseline, see
