@@ -154,6 +154,8 @@ For the full safe operating flow, including Burp collection, receiver usage,
 verification, AI-safe files, audit retention, HMAC verification, and failure
 handling, see
 [docs/OPERATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/OPERATING_GUIDE.md).
+For the operator-facing GUI sequence from first run through safe AI handoff, see
+[docs/GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md).
 For the focused audit review, retention, HMAC, compression, and archive HMAC
 runbook, see
 [docs/AUDIT_OPERATIONS_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/AUDIT_OPERATIONS_GUIDE.md).
@@ -265,10 +267,10 @@ configured status, and CSRF enabled status. It does not show CSRF values, HMAC
 secret values, environment variable values, raw HTTP data, or full local paths.
 The dashboard also includes a read-only operations index at `/help` and
 `/operations`. It summarizes quickstart flow, Windows launcher guidance, safe
-files, blocked raw-data boundaries, audit operations, GUI audit panel
-interpretation, and risk rating guide entry points without adding form, POST,
-archive/HMAC action, risk profile action, replay, active scan, delete, or edit
-controls.
+files, blocked raw-data boundaries, GUI user flow, audit operations, GUI audit
+panel interpretation, and risk rating guide entry points without adding form,
+POST, archive/HMAC action, risk profile action, replay, active scan, delete, or
+edit controls.
 
 See
 [docs/LOCAL_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/LOCAL_DASHBOARD.md).
