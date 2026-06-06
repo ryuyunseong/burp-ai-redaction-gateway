@@ -210,6 +210,11 @@ rejects path traversal and blocks `local_only/`, `raw/`, `raw_vault/`, `build/`,
 and `.gradle/` paths. Audit status is summarized without printing audit rows,
 cookies, authorization values, tokens, domains, internal IPs, personal data, or
 HMAC secrets.
+Dashboard state-changing actions also append raw-free audit events with
+`event_type: dashboard_action`. The event records metadata such as action name,
+sanitized output id, result status, blocked reason, and safe exported file names
+only. CSRF token values, raw HTTP values, stack traces, domains, internal IPs,
+and personal data are never written to the dashboard action audit event.
 The dashboard highlights verify-passed status, raw-free display mode, candidate
 finding language, manual verification requirements, and the rule that evidence
 confidence is not severity. Finding cards may show the separate risk rating
@@ -220,9 +225,10 @@ See
 
 ## MCP Audit Records
 
-Tool-call audit records are written under `<root>/.audit/mcp_audit.jsonl` with
-raw-free metadata only. Audit schema `1.1` also records an event id, sequence
-number, and SHA-256 hash chain fields for each new MCP tool-call event.
+Tool-call and dashboard action audit records are written under
+`<root>/.audit/mcp_audit.jsonl` with raw-free metadata only. Audit schema `1.1`
+also records an event id, sequence number, and SHA-256 hash chain fields for
+each new MCP tool-call or dashboard action event.
 `event_id` is stored as a standard UUID string. The active audit file rotates
 to deterministic names such as `mcp_audit.000001.jsonl` when the next event
 would exceed the size limit. The suffix is derived from the chain-wide sequence
