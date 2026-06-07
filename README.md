@@ -121,6 +121,10 @@ compatibility testing을 대체하지 않습니다.
 
 실제 Burp export는 별도로 `local_only/` 아래에서만 테스트합니다. raw real
 export는 커밋, prompt 붙여넣기, issue 복사, 문서 추가 대상이 아닙니다.
+v0.4 release 후보 검증에서 실제 export를 다룰 때는
+[docs/REAL_BURP_EXPORT_VALIDATION.md](docs/REAL_BURP_EXPORT_VALIDATION.md)와
+[docs/templates/REAL_BURP_EXPORT_VALIDATION_TEMPLATE.md](docs/templates/REAL_BURP_EXPORT_VALIDATION_TEMPLATE.md)를
+사용해 raw-free metadata만 기록합니다.
 
 ## Verification
 
