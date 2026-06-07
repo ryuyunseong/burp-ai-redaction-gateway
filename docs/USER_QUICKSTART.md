@@ -95,8 +95,20 @@ http://127.0.0.1:8766/
 dashboard는 `127.0.0.1` 로컬 검토 도구입니다. production web application이
 아니며 네트워크에 노출하지 않습니다.
 
+처음 보는 사용자는 output을 선택한 뒤 간단 화면부터 확인합니다.
+
+```text
+http://127.0.0.1:8766/simple?project=<alias>
+```
+
+Simple Dashboard는 현재 상태, AI에 넣을 후보 파일 4개, 다음 행동만 보여주는
+read-only 간단 체크 화면입니다. 파일 본문, 전체 로컬 경로, download, preview,
+POST action은 제공하지 않습니다.
+
 전체 GUI 화면 순서는
 [GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md)를
+참조하세요. Simple Dashboard 세 영역과 경계는
+[GUI_SIMPLE_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SIMPLE_DASHBOARD.md)를
 참조하세요. 조회 전용 AI 핸드오프 체크리스트는
 [GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
 참조하세요. 조회 전용 AI 안전 후보 파일 인덱스는
@@ -126,6 +138,8 @@ http://127.0.0.1:8766/operations
 
 ```text
 http://127.0.0.1:8766/settings
+http://127.0.0.1:8766/simple?project=<alias>
+http://127.0.0.1:8766/dashboard-simple?project=<alias>
 http://127.0.0.1:8766/preflight?project=<alias>
 http://127.0.0.1:8766/handoff?project=<alias>
 http://127.0.0.1:8766/triage?project=<alias>
@@ -146,18 +160,19 @@ report, export POST action을 표시할 수 있습니다. 그 외 인덱스 rout
 dashboard action은 다음 순서로 사용합니다.
 
 1. 검증된 output directory 또는 receiver output을 선택합니다.
-2. `Verify`를 실행합니다.
-3. `Review`를 실행합니다.
-4. `Finding triage index`를 엽니다.
-5. `Report`를 실행합니다.
-6. `Report readiness index`를 엽니다.
-7. `Workflow status index`를 엽니다.
-8. `AI-safe preflight`를 엽니다.
-9. `AI handoff index`를 엽니다.
-10. `Prompt readiness index`를 열어 prompt 파일 상태와 경계를 확인합니다.
-11. `Evidence boundary index`를 열어 정제 evidence와 raw 금지 범위를 확인합니다.
-12. `Operator runbook index`를 열어 수집부터 AI 투입 전 수동 검토까지 운영 순서를 확인합니다.
-13. `Export`를 실행합니다.
+2. `Simple Dashboard`에서 현재 상태, 후보 파일 4개, 다음 행동을 먼저 확인합니다.
+3. `Verify`를 실행합니다.
+4. `Review`를 실행합니다.
+5. `Finding triage index`를 엽니다.
+6. `Report`를 실행합니다.
+7. `Report readiness index`를 엽니다.
+8. `Workflow status index`를 엽니다.
+9. `AI-safe preflight`를 엽니다.
+10. `AI handoff index`를 엽니다.
+11. `Prompt readiness index`를 열어 prompt 파일 상태와 경계를 확인합니다.
+12. `Evidence boundary index`를 열어 정제 evidence와 raw 금지 범위를 확인합니다.
+13. `Operator runbook index`를 열어 수집부터 AI 투입 전 수동 검토까지 운영 순서를 확인합니다.
+14. `Export`를 실행합니다.
 
 Dashboard action 경계:
 

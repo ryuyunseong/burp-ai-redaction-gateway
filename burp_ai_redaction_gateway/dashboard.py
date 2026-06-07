@@ -53,6 +53,7 @@ ACTION_NAMES = {"verify", "review", "report", "export"}
 OPERATIONS_GUIDES = (
     ("빠른 시작", "docs/USER_QUICKSTART.md", "receiver, Burp 전송, dashboard 실행 흐름"),
     ("GUI 사용자 흐름", "docs/GUI_USER_FLOW.md", "처음 실행부터 AI 투입 전까지의 화면 흐름"),
+    ("간단 대시보드", "docs/GUI_SIMPLE_DASHBOARD.md", "처음 보는 사용자를 위한 read-only 상태 요약"),
     ("AI 안전 사전 점검", "docs/GUI_AI_SAFE_PREFLIGHT.md", "AI 투입 전 조회 전용 상태 확인"),
     ("AI 핸드오프 인덱스", "docs/GUI_AI_HANDOFF_INDEX.md", "AI 투입 파일 순서와 주의사항"),
     ("Prompt readiness 인덱스", "docs/GUI_PROMPT_READINESS_INDEX.md", "prompt 파일 투입 전 조회 전용 점검"),
@@ -334,6 +335,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
                 self._send_html(render_output_detail(output, self.server.csrf_token))
+                return
+            if parsed.path in {"/simple", "/dashboard-simple"}:
+                output_id = _required_query_value(parsed.query, "project")
+                output = _verified_output(self.server.config.root, self.server.policy, output_id)
+                self._send_html(render_simple_dashboard(output))
                 return
             if parsed.path == "/preflight":
                 output_id = _required_query_value(parsed.query, "project")
@@ -934,6 +940,7 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
           <div class="panel">
             <div class="panel-head"><h2>AI 안전 사전 점검</h2><span class="muted">AI 핸드오프 전 조회 전용 점검입니다.</span></div>
             {_preflight_summary(preflight)}
+            <a class="button small secondary" href="{_simple_dashboard_href(output.output_id)}">간단 대시보드</a>
             <a class="button small secondary" href="{_preflight_href(output.output_id)}">사전 점검 상세</a>
             <a class="button small secondary" href="{_handoff_href(output.output_id)}">핸드오프 인덱스</a>
             <a class="button small secondary" href="{_triage_href(output.output_id)}">후보 분류 인덱스</a>
@@ -953,6 +960,87 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
     )
 
 
+def render_simple_dashboard(output: DashboardOutput) -> str:
+    safe_rows = "\n".join(_simple_safe_file_row(output, name) for name in SAFE_PREVIEW_FILES)
+    safe_file_count = sum(1 for name in SAFE_PREVIEW_FILES if (output.path / name).is_file())
+    all_safe_files_present = safe_file_count == len(SAFE_PREVIEW_FILES)
+    report_status = "present" if output.report_available else "missing"
+    safe_file_status = "present" if all_safe_files_present else "missing"
+    return _page(
+        f"간단 대시보드 {output.label}",
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="{_output_href(output.output_id)}">상세 화면으로 돌아가기</a>
+            <h1>간단 대시보드</h1>
+            <p class="subtitle">처음 보는 사용자를 위한 read-only 간단 체크 화면입니다. 본문 preview, download, POST action은 제공하지 않습니다.</p>
+          </div>
+          <div class="status-stack">
+            <span class="badge good">read-only</span>
+            <span class="badge neutral">간단 모드</span>
+          </div>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>현재 상태</span><strong>검증 통과</strong></div>
+          <div class="rail"><span>후보 finding</span><strong>{output.candidate_count}</strong></div>
+          <div class="rail"><span>AI 후보 파일</span><strong>{safe_file_count}/4</strong></div>
+          <div class="rail"><span>화면 성격</span><strong>조회 전용</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>현재 상태</h2><span class="muted">검증된 output의 안전 메타데이터만 표시합니다.</span></div>
+            <dl class="facts">
+              <div><dt>project alias</dt><dd>{_h(output.label)}</dd></div>
+              <div><dt>verify 결과</dt><dd>{_status_badge("passed")}</dd></div>
+              <div><dt>후보 finding</dt><dd>{output.candidate_count}</dd></div>
+              <div><dt>report_draft.md</dt><dd>{_status_badge(report_status)}</dd></div>
+              <div><dt>AI 삽입 후보 파일</dt><dd>{_status_badge(safe_file_status)}</dd></div>
+              <div><dt>주의</dt><dd>후보 finding은 확정 취약점이 아니며, 초안 risk와 최종 심각도는 수동 검토가 필요합니다.</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>AI에 넣을 후보 파일</h2><span class="muted">exists 또는 missing만 표시합니다. 파일 본문과 전체 경로는 표시하지 않습니다.</span></div>
+            <table>
+              <thead>
+                <tr><th>파일</th><th>상태</th></tr>
+              </thead>
+              <tbody>{safe_rows}</tbody>
+            </table>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>다음 행동</h2><span class="muted">고급 화면으로 이동하는 조회 링크입니다.</span></div>
+            <ol class="steps">
+              <li><a href="{_safe_files_href(output.output_id)}">/safe-files</a>와 <a href="{_preflight_href(output.output_id)}">/preflight</a>에서 AI 삽입 전 후보 파일을 확인합니다.</li>
+              <li><a href="{_triage_href(output.output_id)}">/triage</a>에서 후보 finding을 수동 검토합니다.</li>
+              <li><a href="{_report_readiness_href(output.output_id)}">/report-readiness</a>에서 보고서 초안을 수동 검토합니다.</li>
+              <li><a href="{_workflow_href(output.output_id)}">/workflow</a>에서 전체 고급 흐름을 확인합니다.</li>
+            </ol>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>고급 화면</h2><span class="muted">필요할 때만 상세 체크리스트를 엽니다.</span></div>
+            <dl class="facts">
+              <div><dt>작업 흐름</dt><dd><a href="{_workflow_href(output.output_id)}">/workflow</a></dd></div>
+              <div><dt>safe files</dt><dd><a href="{_safe_files_href(output.output_id)}">/safe-files</a></dd></div>
+              <div><dt>finding triage</dt><dd><a href="{_triage_href(output.output_id)}">/triage</a></dd></div>
+              <div><dt>evidence boundary</dt><dd><a href="{_evidence_boundary_href(output.output_id)}">/evidence-boundary</a></dd></div>
+              <div><dt>operator runbook</dt><dd><a href="{_operator_runbook_href(output.output_id)}">/operator-runbook</a></dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>보안 경계</h2><span class="muted">간단 화면은 상태 표시만 합니다.</span></div>
+            <ul class="safe-list">
+              <li>raw request/response, Cookie, Authorization, token/JWT/session은 표시하지 않습니다.</li>
+              <li>실제 domain/IP, 개인정보, 무결성 검증 비밀값, 요청 위조 방지 값은 표시하지 않습니다.</li>
+              <li>request body, response body, prompt body, report body preview는 표시하지 않습니다.</li>
+              <li>전체 로컬 경로, local_only, raw, raw_vault, out 원본은 AI 입력 대상으로 표시하지 않습니다.</li>
+              <li>replay, active scan, 파일 삭제, retention 정책 변경, 무결성 검증 비밀값 처리는 제공하지 않습니다.</li>
+            </ul>
+          </div>
+        </section>
+        """,
+    )
+
+
 def render_ai_handoff_index(index: AiHandoffIndex) -> str:
     output = index.output
     file_rows = "\n".join(_handoff_file_card(file) for file in index.files)
@@ -964,7 +1052,7 @@ def render_ai_handoff_index(index: AiHandoffIndex) -> str:
             "token, JWT, session 값",
             "실제 도메인, URL, IP 값",
             "개인정보",
-            "HMAC secret 또는 CSRF token 값",
+            "무결성 검증 비밀값 또는 요청 위조 방지 값",
             "로컬 전용 raw 저장소 또는 검증 전 산출물",
             "감사 로그, 압축 archive, manifest",
         )
@@ -1028,7 +1116,7 @@ def render_finding_triage_index(index: FindingTriageIndex) -> str:
             "token, JWT, session 값",
             "실제 도메인, URL, IP 값",
             "개인정보",
-            "HMAC secret 또는 CSRF token 값",
+            "무결성 검증 비밀값 또는 요청 위조 방지 값",
             "전체 로컬 경로",
             "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
         )
@@ -1123,7 +1211,7 @@ def render_report_readiness_index(index: ReportReadinessIndex) -> str:
             "token, JWT, session 값",
             "실제 도메인, URL, IP 값",
             "개인정보",
-            "HMAC secret 또는 CSRF token 값",
+            "무결성 검증 비밀값 또는 요청 위조 방지 값",
             "전체 로컬 경로",
             "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
         )
@@ -1210,7 +1298,7 @@ def render_prompt_readiness_index(index: PromptReadinessIndex) -> str:
             "token, JWT, session 값",
             "실제 도메인, URL, IP 값",
             "개인정보",
-            "HMAC secret 또는 CSRF token 값",
+            "무결성 검증 비밀값 또는 요청 위조 방지 값",
             "전체 로컬 경로",
             "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
         )
@@ -1313,7 +1401,7 @@ def render_evidence_boundary_index(index: EvidenceBoundaryIndex) -> str:
             "token, JWT, session 값",
             "실제 도메인, URL, IP 값",
             "개인정보",
-            "HMAC secret 또는 CSRF token 값",
+            "무결성 검증 비밀값 또는 요청 위조 방지 값",
             "전체 로컬 경로",
             "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
         )
@@ -1424,9 +1512,9 @@ def render_operator_runbook_index(index: OperatorRunbookIndex) -> str:
             "token/JWT/session 값",
             "실제 URL/도메인/IP",
             "개인정보",
-            "HMAC secret",
-            "CSRF token",
-            "full local path",
+            "무결성 검증 비밀값",
+            "요청 위조 방지 값",
+            "전체 로컬 경로",
             "local_only/, raw/, raw_vault/, verify 전 out/, out/.audit 산출물",
         )
     )
@@ -1459,7 +1547,7 @@ def render_operator_runbook_index(index: OperatorRunbookIndex) -> str:
               <div><dt>report_draft.md</dt><dd>{_status_badge(index.report_status)}</dd></div>
               <div><dt>raw_data_included</dt><dd>false</dd></div>
               <div><dt>body preview</dt><dd>false</dd></div>
-              <div><dt>full local path 표시</dt><dd>false</dd></div>
+              <div><dt>전체 로컬 경로 표시</dt><dd>false</dd></div>
             </dl>
           </div>
           <div class="panel">
@@ -1527,9 +1615,9 @@ def render_safe_file_inventory_index(index: SafeFileInventoryIndex) -> str:
             "token/JWT/session 값",
             "실제 URL/도메인/IP",
             "개인정보",
-            "HMAC secret",
-            "CSRF token",
-            "full local path",
+            "무결성 검증 비밀값",
+            "요청 위조 방지 값",
+            "전체 로컬 경로",
             "local_only/, raw/, raw_vault/, verify 전 out/, out/.audit 산출물",
         )
     )
@@ -1575,7 +1663,7 @@ def render_safe_file_inventory_index(index: SafeFileInventoryIndex) -> str:
               <div><dt>final severity</dt><dd>수동 결정입니다.</dd></div>
               <div><dt>file body preview</dt><dd>false</dd></div>
               <div><dt>download action</dt><dd>false</dd></div>
-              <div><dt>full local path 표시</dt><dd>false</dd></div>
+              <div><dt>전체 로컬 경로 표시</dt><dd>false</dd></div>
             </dl>
           </div>
           <div class="panel">
@@ -1630,7 +1718,7 @@ def render_workflow_status_index(index: WorkflowStatusIndex) -> str:
             "token, JWT, session 값",
             "실제 도메인, URL, IP 값",
             "개인정보",
-            "HMAC secret 또는 CSRF token 값",
+            "무결성 검증 비밀값 또는 요청 위조 방지 값",
             "전체 로컬 경로",
             "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
         )
@@ -1724,7 +1812,7 @@ def render_ai_safe_preflight(preflight: AiSafePreflight) -> str:
             "token, JWT, session 값",
             "실제 도메인, URL, IP 값",
             "개인정보",
-            "HMAC secret 또는 CSRF token 값",
+            "무결성 검증 비밀값 또는 요청 위조 방지 값",
             "로컬 전용 raw 저장소 또는 검증 전 산출물",
             "감사 로그, 압축 archive, manifest",
         )
@@ -2915,7 +3003,10 @@ def _output_row(output: DashboardOutput) -> str:
       <td>{file_count}</td>
       <td>{'있음' if output.report_available else '없음'}</td>
       <td><span class="badge good">검증 통과</span></td>
-      <td><a class="button small" href="{_output_href(output.output_id)}">열기</a></td>
+      <td>
+        <a class="button small" href="{_simple_dashboard_href(output.output_id)}">간단 보기</a>
+        <a class="button small secondary" href="{_output_href(output.output_id)}">상세</a>
+      </td>
     </tr>
     """
 
@@ -2950,6 +3041,16 @@ def _safe_file_card(output: DashboardOutput, file_name: str) -> str:
       </div>
       <div class="actions">{actions}</div>
     </div>
+    """
+
+
+def _simple_safe_file_row(output: DashboardOutput, file_name: str) -> str:
+    status = "exists" if (output.path / file_name).is_file() else "missing"
+    return f"""
+    <tr>
+      <td>{_h(file_name)}</td>
+      <td>{_h(status)}</td>
+    </tr>
     """
 
 
@@ -3293,6 +3394,10 @@ def _bullets(items: list[str]) -> str:
 
 def _output_href(output_id: str) -> str:
     return "/output?project=" + quote(output_id, safe="")
+
+
+def _simple_dashboard_href(output_id: str) -> str:
+    return "/simple?project=" + quote(output_id, safe="")
 
 
 def _preflight_href(output_id: str) -> str:

@@ -755,6 +755,78 @@ class RedactionGatewayTests(unittest.TestCase):
                 connection.close()
 
                 connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/simple?project=generated")
+                response = connection.getresponse()
+                simple = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn('lang="ko"', simple)
+                self.assertIn("간단 대시보드", simple)
+                self.assertIn("read-only 간단 체크 화면", simple)
+                self.assertIn("현재 상태", simple)
+                self.assertIn("AI에 넣을 후보 파일", simple)
+                self.assertIn("다음 행동", simple)
+                self.assertIn("고급 화면", simple)
+                self.assertIn("project alias", simple)
+                self.assertIn("verify 결과", simple)
+                self.assertIn("후보 finding", simple)
+                self.assertIn(">22<", simple)
+                self.assertIn("report_draft.md", simple)
+                self.assertIn("AI 삽입 후보 파일", simple)
+                self.assertIn("초안 risk", simple)
+                self.assertIn("최종 심각도는 수동 검토가 필요합니다", simple)
+                for name in ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"]:
+                    self.assertIn(name, simple)
+                    self.assertIn("exists", simple)
+                for link in [
+                    "/safe-files?project=generated",
+                    "/preflight?project=generated",
+                    "/triage?project=generated",
+                    "/report-readiness?project=generated",
+                    "/workflow?project=generated",
+                    "/evidence-boundary?project=generated",
+                    "/operator-runbook?project=generated",
+                ]:
+                    self.assertIn(link, simple)
+                for label in [
+                    "raw request/response",
+                    "Cookie",
+                    "Authorization",
+                    "token/JWT/session",
+                    "무결성 검증 비밀값",
+                    "요청 위조 방지 값",
+                    "전체 로컬 경로",
+                ]:
+                    self.assertIn(label, simple)
+                self.assertNotIn("<form", simple)
+                self.assertNotIn("<button", simple)
+                self.assertNotIn('method="post"', simple)
+                self.assertNotIn("/download?", simple)
+                self.assertNotIn("/preview?", simple)
+                self.assertNotIn("HMAC secret", simple)
+                self.assertNotIn("CSRF token", simple)
+                self.assertNotIn("full local path", simple)
+                self.assertNotIn("raw_request", simple)
+                self.assertNotIn("raw_response", simple)
+                self.assertNotIn("DUMMY_COOKIE_VALUE", simple)
+                self.assertNotIn("DUMMY_BEARER_TOKEN", simple)
+                self.assertNotIn("safe to share", simple)
+                self.assertNotIn("guaranteed safe", simple)
+                self.assertNotIn("severity confirmed", simple)
+                self.assertNotIn("ready to submit", simple)
+                self.assertNotIn(str(root), simple)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/dashboard-simple?project=generated")
+                response = connection.getresponse()
+                simple_alias = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("간단 대시보드", simple_alias)
+                self.assertNotIn("<form", simple_alias)
+                self.assertNotIn("<button", simple_alias)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
                 connection.request("GET", "/preflight?project=generated")
                 response = connection.getresponse()
                 preflight = response.read().decode("utf-8")
@@ -778,7 +850,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token, JWT, session 값",
                     "실제 도메인, URL, IP 값",
                     "개인정보",
-                    "HMAC secret 또는 CSRF token 값",
+                    "무결성 검증 비밀값 또는 요청 위조 방지 값",
                     "감사 로그, 압축 archive, manifest",
                 ]:
                     self.assertIn(label, preflight)
@@ -832,7 +904,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token, JWT, session 값",
                     "실제 도메인, URL, IP 값",
                     "개인정보",
-                    "HMAC secret 또는 CSRF token 값",
+                    "무결성 검증 비밀값 또는 요청 위조 방지 값",
                     "감사 로그, 압축 archive, manifest",
                 ]:
                     self.assertIn(label, handoff)
@@ -882,7 +954,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token, JWT, session 값",
                     "실제 도메인, URL, IP 값",
                     "개인정보",
-                    "HMAC secret 또는 CSRF token 값",
+                    "무결성 검증 비밀값 또는 요청 위조 방지 값",
                     "전체 로컬 경로",
                 ]:
                     self.assertIn(label, triage)
@@ -946,7 +1018,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token, JWT, session 값",
                     "실제 도메인, URL, IP 값",
                     "개인정보",
-                    "HMAC secret 또는 CSRF token 값",
+                    "무결성 검증 비밀값 또는 요청 위조 방지 값",
                     "전체 로컬 경로",
                 ]:
                     self.assertIn(label, readiness)
@@ -1024,7 +1096,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token, JWT, session 값",
                     "실제 도메인, URL, IP 값",
                     "개인정보",
-                    "HMAC secret 또는 CSRF token 값",
+                    "무결성 검증 비밀값 또는 요청 위조 방지 값",
                     "전체 로컬 경로",
                 ]:
                     self.assertIn(label, workflow)
@@ -1094,7 +1166,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token, JWT, session 값",
                     "실제 도메인, URL, IP 값",
                     "개인정보",
-                    "HMAC secret 또는 CSRF token 값",
+                    "무결성 검증 비밀값 또는 요청 위조 방지 값",
                     "전체 로컬 경로",
                 ]:
                     self.assertIn(label, prompt_readiness)
@@ -1162,7 +1234,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token, JWT, session 값",
                     "실제 도메인, URL, IP 값",
                     "개인정보",
-                    "HMAC secret 또는 CSRF token 값",
+                    "무결성 검증 비밀값 또는 요청 위조 방지 값",
                     "전체 로컬 경로",
                 ]:
                     self.assertIn(label, evidence_boundary)
@@ -1198,7 +1270,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("codex_task_prompt.md", operator_runbook)
                 self.assertIn("raw_data_included", operator_runbook)
                 self.assertIn("body preview", operator_runbook)
-                self.assertIn("full local path 표시", operator_runbook)
+                self.assertIn("전체 로컬 경로 표시", operator_runbook)
                 self.assertIn("safe files 4개", operator_runbook)
                 for step in [
                     "Burp HTTP history 수집",
@@ -1237,9 +1309,9 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token/JWT/session 값",
                     "실제 URL/도메인/IP",
                     "개인정보",
-                    "HMAC secret",
-                    "CSRF token",
-                    "full local path",
+                    "무결성 검증 비밀값",
+                    "요청 위조 방지 값",
+                    "전체 로컬 경로",
                 ]:
                     self.assertIn(label, operator_runbook)
                 self.assertIn("수동 검증이 끝날 때까지 candidate입니다", operator_runbook)
@@ -1322,9 +1394,9 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token/JWT/session 값",
                     "실제 URL/도메인/IP",
                     "개인정보",
-                    "HMAC secret",
-                    "CSRF token",
-                    "full local path",
+                    "무결성 검증 비밀값",
+                    "요청 위조 방지 값",
+                    "전체 로컬 경로",
                 ]:
                     self.assertIn(label, safe_files)
                 self.assertNotIn("<pre", safe_files)
@@ -1465,6 +1537,7 @@ class RedactionGatewayTests(unittest.TestCase):
                         self.assertIn("실행 버튼 없음", body)
                         self.assertIn("docs/USER_QUICKSTART.md", body)
                         self.assertIn("docs/GUI_USER_FLOW.md", body)
+                        self.assertIn("docs/GUI_SIMPLE_DASHBOARD.md", body)
                         self.assertIn("docs/GUI_AI_SAFE_PREFLIGHT.md", body)
                         self.assertIn("docs/GUI_AI_HANDOFF_INDEX.md", body)
                         self.assertIn("docs/GUI_FINDING_TRIAGE_INDEX.md", body)
@@ -1541,6 +1614,15 @@ class RedactionGatewayTests(unittest.TestCase):
                 traversal = response.read().decode("utf-8")
                 self.assertEqual(response.status, 403)
                 self.assertIn("forbidden_directory", traversal)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/simple?project=..%2Flocal_only")
+                response = connection.getresponse()
+                simple_traversal = response.read().decode("utf-8")
+                self.assertEqual(response.status, 403)
+                self.assertIn("forbidden_directory", simple_traversal)
+                self.assertNotIn("rawBearerToken", simple_traversal)
                 connection.close()
 
                 connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
@@ -3448,6 +3530,7 @@ class RedactionGatewayTests(unittest.TestCase):
         for text in [readme, quickstart, local_dashboard, audit_panel_guide]:
             self.assertIn("GUI_USER_FLOW.md", text)
         for text in [readme, quickstart, local_dashboard, user_flow]:
+            self.assertIn("GUI_SIMPLE_DASHBOARD.md", text)
             self.assertIn("GUI_AI_SAFE_PREFLIGHT.md", text)
             self.assertIn("GUI_AI_HANDOFF_INDEX.md", text)
             self.assertIn("GUI_PROMPT_READINESS_INDEX.md", text)
@@ -3462,6 +3545,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "start receiver and dashboard",
             "send scoped Burp history",
             "verify the selected output",
+            "check simple dashboard summary",
             "review candidate findings",
             "check finding triage index",
             "generate report_draft.md",
@@ -3476,6 +3560,8 @@ class RedactionGatewayTests(unittest.TestCase):
             "export safe files",
             "send only verified safe files to AI",
             "http://127.0.0.1:8766/",
+            "/simple?project=<alias>",
+            "/dashboard-simple?project=<alias>",
             "/triage?project=<alias>",
             "/report-readiness?project=<alias>",
             "/workflow?project=<alias>",
@@ -3489,6 +3575,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "/operations",
             "/settings",
             "Verify",
+            "Simple Dashboard",
             "Review",
             "Report",
             "Finding triage index",
@@ -3548,6 +3635,79 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("제출 가능", user_flow)
         self.assertNotIn("승인 완료", user_flow)
         self.assertNotIn("안전 보장", user_flow)
+
+    def test_gui_simple_dashboard_guide_documents_read_only_boundary(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        quickstart = (ROOT / "docs" / "USER_QUICKSTART.md").read_text(encoding="utf-8")
+        local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
+        user_flow = (ROOT / "docs" / "GUI_USER_FLOW.md").read_text(encoding="utf-8")
+        guide = (ROOT / "docs" / "GUI_SIMPLE_DASHBOARD.md").read_text(encoding="utf-8")
+
+        for text in [readme, local_dashboard, user_flow]:
+            self.assertIn("GUI_SIMPLE_DASHBOARD.md", text)
+        for text in [readme, quickstart, local_dashboard, user_flow, guide]:
+            self.assertIn("/simple?project=<alias>", text)
+            self.assertIn("read-only", text)
+            self.assertIn("analysis_packet.json", text)
+            self.assertIn("chatgpt_prompt.md", text)
+            self.assertIn("codex_task_prompt.md", text)
+            self.assertIn("report_draft.md", text)
+
+        required = [
+            "GUI Simple Dashboard",
+            "/dashboard-simple?project=<alias>",
+            "read-only 간단 체크 화면",
+            "현재 상태",
+            "AI에 넣을 후보 파일",
+            "다음 행동",
+            "project alias",
+            "verify 결과",
+            "후보 finding count",
+            "safe files 4개",
+            "exists",
+            "missing",
+            "/safe-files",
+            "/preflight",
+            "/triage",
+            "/report-readiness",
+            "/workflow",
+            "실행 버튼",
+            "POST form",
+            "download",
+            "preview",
+            "raw viewer",
+            "raw request/response",
+            "Cookie, Authorization, token/JWT/session",
+            "HMAC secret, CSRF token",
+            "full local path",
+            "local_only",
+            "raw_vault",
+            "out/.audit",
+            "replay",
+            "active scan",
+            "파일 삭제",
+            "retention 정책 변경",
+            "수동 검토",
+        ]
+        for item in required:
+            self.assertIn(item, guide)
+
+        forbidden = [
+            "raw_request",
+            "raw_response",
+            "DUMMY_COOKIE_VALUE",
+            "DUMMY_BEARER_TOKEN",
+            "Authorization: Bearer",
+            "Cookie:",
+            "safe to share",
+            "approved",
+            "guaranteed safe",
+            "severity confirmed",
+            "ready to submit",
+            "C:\\",
+        ]
+        for item in forbidden:
+            self.assertNotIn(item, guide)
 
     def test_gui_ai_safe_preflight_guide_documents_read_only_boundary(self) -> None:
         guide = (ROOT / "docs" / "GUI_AI_SAFE_PREFLIGHT.md").read_text(encoding="utf-8")
@@ -4124,6 +4284,8 @@ class RedactionGatewayTests(unittest.TestCase):
             "/operations",
             "/settings",
             "/output?project=<alias>",
+            "/simple?project=<alias>",
+            "/dashboard-simple?project=<alias>",
             "/preflight?project=<alias>",
             "/handoff?project=<alias>",
             "/triage?project=<alias>",
@@ -4136,6 +4298,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "formCount=0",
             "postFormCount=0",
             "buttonCount=0",
+            "downloadLinkCount=0",
             "lang=\"ko\"",
             "analysis_packet.json",
             "chatgpt_prompt.md",
