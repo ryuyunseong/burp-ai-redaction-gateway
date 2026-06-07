@@ -295,7 +295,7 @@ class Redactor:
         if scan_text(value) or has_high_entropy_secret(value):
             counters["header_value_redacted"] += 1
             return "<REDACTED:HEADER_VALUE>"
-        return value[:200]
+        return _safe_header_metadata_value(value, counters)[:200]
 
     def _redact_set_cookie(self, value: str, counters: Counter[str]) -> dict[str, Any]:
         parts = [part.strip() for part in value.split(";") if part.strip()]
@@ -315,9 +315,12 @@ class Redactor:
         else:
             samesite_value = "present"
         counters["set_cookie_value"] += 1
-        domain_part = f"; Domain={domain_alias}" if domain_alias else ""
+        domain_part = f"; domain_alias {domain_alias}" if domain_alias else ""
         return {
-            "summary": f"{safe_cookie_name}=<REDACTED>{domain_part}; Secure={secure}; HttpOnly={httponly}; SameSite={samesite_value}",
+            "summary": (
+                f"cookie_name {safe_cookie_name}; value redacted{domain_part}; "
+                f"secure {secure}; httponly {httponly}; samesite {samesite_value}"
+            ),
             "security": {
                 "name": safe_cookie_name,
                 "domain": domain_alias or "not_reported",
@@ -420,7 +423,11 @@ def _template_path(path: str, counters: Counter[str]) -> tuple[str, bool]:
         else:
             parts.append(segment)
     templated = "/".join(parts)
-    return templated if templated.startswith("/") else f"/{templated}", identifier_found
+    normalized = templated if templated.startswith("/") else f"/{templated}"
+    if scan_text(normalized) or has_high_entropy_secret(normalized):
+        counters["path_template_redacted"] += 1
+        return "/{opaque}", True
+    return normalized, identifier_found
 
 
 def _json_schema(
@@ -442,12 +449,12 @@ def _json_schema(
             schema_fields.append(child_path)
             if SENSITIVE_NAME_RE.search(key_text):
                 counters["body_sensitive_field"] += 1
-                sensitive_fields.append(child_path)
+                sensitive_fields.append(_safe_sensitive_field_path(child_path, counters))
                 result[safe_key] = _sensitive_placeholder_for_key(key_text)
                 continue
             if URL_CONTEXT_NAME_RE.search(key_text):
                 counters["body_url_reference_field"] += 1
-                sensitive_fields.append(child_path)
+                sensitive_fields.append(_safe_sensitive_field_path(child_path, counters))
                 result[safe_key] = _url_reference_schema(child)
                 continue
             result[safe_key] = _json_schema(child, counters, sensitive_fields, schema_fields, child_path)
@@ -467,27 +474,27 @@ def _json_schema(
     text = str(value)
     if FINANCIAL_RE.search(text):
         counters["body_financial_id"] += 1
-        sensitive_fields.append(path)
+        sensitive_fields.append(_safe_sensitive_field_path(path, counters))
         return "<FINANCIAL_ID>"
     if EMAIL_RE.search(text):
         counters["body_email"] += 1
-        sensitive_fields.append(path)
+        sensitive_fields.append(_safe_sensitive_field_path(path, counters))
         return "email_redacted"
     if PHONE_RE.search(text):
         counters["body_phone"] += 1
-        sensitive_fields.append(path)
+        sensitive_fields.append(_safe_sensitive_field_path(path, counters))
         return "phone_redacted"
     if KOR_RRN_RE.search(text):
         counters["body_kor_rrn"] += 1
-        sensitive_fields.append(path)
+        sensitive_fields.append(_safe_sensitive_field_path(path, counters))
         return "<KOR_RRN>"
     if JWT_RE.search(text) or has_high_entropy_secret(text):
         counters["body_secret"] += 1
-        sensitive_fields.append(path)
+        sensitive_fields.append(_safe_sensitive_field_path(path, counters))
         return "<REDACTED:SECRET>"
     if DOMAIN_RE.search(text) or _looks_like_url(text):
         counters["body_url_reference_value"] += 1
-        sensitive_fields.append(path)
+        sensitive_fields.append(_safe_sensitive_field_path(path, counters))
         return "url_reference_redacted"
     return "string"
 
@@ -529,7 +536,7 @@ def _urlencoded_form_schema(
             or field_type == "secret_redacted"
         ):
             counters["form_sensitive_field"] += 1
-            sensitive_fields.append(field_path)
+            sensitive_fields.append(_safe_sensitive_field_path(field_path, counters))
             fields[safe_name]["transformation"] = "redacted_sensitive_parameter"
         else:
             fields[safe_name]["transformation"] = "schema_only"
@@ -553,7 +560,7 @@ def _multipart_schema(
         is_sensitive = bool(SENSITIVE_NAME_RE.search(name))
         if is_sensitive:
             counters["multipart_sensitive_field"] += 1
-            sensitive_fields.append(field_path)
+            sensitive_fields.append(_safe_sensitive_field_path(field_path, counters))
         fields.append({"name": safe_name, "sensitive_name": is_sensitive, "value_removed": True})
     return {
         "type": "multipart",
@@ -583,7 +590,7 @@ def _html_schema(
             schema_fields.append(field_path)
             if SENSITIVE_NAME_RE.search(raw_name) or input_type.lower() in {"password", "hidden"}:
                 counters["html_sensitive_input"] += 1
-                sensitive_fields.append(field_path)
+                sensitive_fields.append(_safe_sensitive_field_path(field_path, counters))
         inputs.append({"name": name or "<unnamed>", "type": input_type.lower(), "value_removed": True})
     references = _html_references(text, counters, host_aliaser)
     return {
@@ -648,13 +655,28 @@ def _safe_output_name(name: str, counters: Counter[str], prefix: str) -> str:
     return text
 
 
+def _safe_sensitive_field_path(path: str, counters: Counter[str]) -> str:
+    if scan_text(path) or has_high_entropy_secret(path):
+        counters["sensitive_field_path_redacted"] += 1
+        return f"$.redacted_field_{counters['sensitive_field_path_redacted']:03d}"
+    return path
+
+
+def _safe_header_metadata_value(value: str, counters: Counter[str]) -> str:
+    def replace_pair(match: re.Match[str]) -> str:
+        counters["header_key_value_summarized"] += 1
+        return f"{match.group(1)} {{value}}"
+
+    return re.sub(r"\b([A-Za-z][A-Za-z0-9_.-]{1,63})=([^;,\s\"']+)", replace_pair, value)
+
+
 def _templated_query(query: str, counters: Counter[str]) -> str:
     if not query:
         return ""
     parts: list[str] = []
     for name in parse_qs(query, keep_blank_values=True):
         safe_name = _safe_output_name(name, counters, "query_param")
-        parts.append(f"{safe_name}={{value}}")
+        parts.append(f"{safe_name}:{{value}}")
     return f"?{'&'.join(parts)}" if parts else ""
 
 
@@ -752,19 +774,20 @@ def _redact_plain_text(text: str, counters: Counter[str]) -> str:
 
 
 def _redact_cookie_header(value: str, counters: Counter[str]) -> str:
-    names: list[str] = []
+    count = 0
     for part in value.split(";"):
         name = part.split("=", 1)[0].strip()
         if not name:
             continue
-        names.append(f"{name}=<REDACTED>")
+        count += 1
         counters["cookie_value"] += 1
-    return "; ".join(names) if names else "<REDACTED:COOKIE_PRESENT>"
+    return f"cookie_values_removed count {count}" if count else "cookie_values_removed"
 
 
 def _redact_set_cookie(value: str, counters: Counter[str]) -> dict[str, Any]:
     parts = [part.strip() for part in value.split(";") if part.strip()]
     cookie_name = parts[0].split("=", 1)[0] if parts else "cookie"
+    safe_cookie_name = _safe_output_name(cookie_name, counters, "cookie")
     attrs = {part.split("=", 1)[0].lower(): part for part in parts[1:]}
     secure = "secure" in attrs
     httponly = "httponly" in attrs
@@ -775,9 +798,12 @@ def _redact_set_cookie(value: str, counters: Counter[str]) -> dict[str, Any]:
         samesite_value = "present"
     counters["set_cookie_value"] += 1
     return {
-        "summary": f"{cookie_name}=<REDACTED>; Secure={secure}; HttpOnly={httponly}; SameSite={samesite_value}",
+        "summary": (
+            f"cookie_name {safe_cookie_name}; value redacted; "
+            f"secure {secure}; httponly {httponly}; samesite {samesite_value}"
+        ),
         "security": {
-            "name": cookie_name,
+            "name": safe_cookie_name,
             "secure": secure,
             "httponly": httponly,
             "samesite": samesite_value,
