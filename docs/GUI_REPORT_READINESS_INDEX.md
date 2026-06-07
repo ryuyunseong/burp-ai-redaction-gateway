@@ -15,6 +15,8 @@
 [GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
 참조하세요. 수집부터 AI 투입 전 수동 검토까지 운영 순서는
 [GUI_OPERATOR_RUNBOOK_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_OPERATOR_RUNBOOK_INDEX.md)를
+참조하세요. safe files 4개 inventory는
+[GUI_SAFE_FILE_INVENTORY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SAFE_FILE_INVENTORY_INDEX.md)를
 참조하세요.
 
 검증된 output에서 다음 주소를 엽니다.

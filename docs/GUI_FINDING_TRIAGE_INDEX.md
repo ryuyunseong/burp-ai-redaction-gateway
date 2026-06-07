@@ -29,6 +29,8 @@ active scan action을 실행하지 않습니다.
 [GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
 참조하세요. 수집부터 AI 투입 전 수동 검토까지 운영 순서는
 [GUI_OPERATOR_RUNBOOK_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_OPERATOR_RUNBOOK_INDEX.md)를
+참조하세요. safe files 4개 inventory는
+[GUI_SAFE_FILE_INVENTORY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SAFE_FILE_INVENTORY_INDEX.md)를
 참조하세요.
 
 ## 표시 항목
