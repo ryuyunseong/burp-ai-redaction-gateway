@@ -28,6 +28,8 @@ workflow 상태, audit 운영, audit panel 해석, risk rating 문서로 이동�
 
 화면별 운영 순서는
 [GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md)를
+참조하세요. 처음 보는 사용자를 위한 간단 대시보드는
+[GUI_SIMPLE_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SIMPLE_DASHBOARD.md)를
 참조하세요. AI 핸드오프 체크리스트는
 [GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md)를
 참조하세요. AI 안전 후보 파일 인덱스는
@@ -60,6 +62,8 @@ release 전에는 dashboard를 loopback으로 실행한 뒤 다음 route를 확�
 /operations
 /settings
 /output?project=<alias>
+/simple?project=<alias>
+/dashboard-simple?project=<alias>
 /preflight?project=<alias>
 /handoff?project=<alias>
 /triage?project=<alias>
@@ -75,6 +79,10 @@ release 전에는 dashboard를 loopback으로 실행한 뒤 다음 route를 확�
 않아야 합니다. `/output?project=<alias>`의 상태 변경 action은 CSRF 보호가
 적용된 verify, review, report, export로 제한됩니다.
 
+`/simple?project=<alias>`와 `/dashboard-simple?project=<alias>`는 같은
+read-only 간단 체크 화면입니다. release smoke에서는 `formCount=0`,
+`postFormCount=0`, `buttonCount=0`, `downloadLinkCount=0`을 확인합니다.
+
 ## Verify-first 경계
 
 dashboard는 CLI와 같은 verify-first 경계를 적용합니다. 선택한 output이
@@ -86,6 +94,29 @@ dashboard는 CLI와 같은 verify-first 경계를 적용합니다. 선택한 out
 - `chatgpt_prompt.md`
 - `codex_task_prompt.md`
 - `report_draft.md`
+
+## Simple Dashboard
+
+처음 보는 사용자는 복잡한 운영 인덱스 대신 다음 화면에서 현재 상태를 먼저
+확인할 수 있습니다.
+
+```text
+/simple?project=<alias>
+/dashboard-simple?project=<alias>
+```
+
+Simple Dashboard는 세 영역만 넓게 표시합니다.
+
+- 현재 상태: project alias, verify 통과 여부, 후보 finding 수,
+  `report_draft.md` 존재 여부, safe files 4개 준비 여부.
+- AI에 넣을 후보 파일: `analysis_packet.json`, `chatgpt_prompt.md`,
+  `codex_task_prompt.md`, `report_draft.md`의 exists/missing 상태.
+- 다음 행동: `/safe-files`, `/preflight`, `/triage`, `/report-readiness`,
+  `/workflow`로 이동하는 조회 전용 링크.
+
+이 화면은 파일 본문 preview, prompt/report body preview, full local path,
+download, POST form, 실행 버튼, raw viewer를 제공하지 않습니다. 후보 finding은
+확정 취약점이 아니며, 초안 risk와 최종 심각도는 별도 수동 검토 후 결정합니다.
 
 ## Finding 표시 경계
 

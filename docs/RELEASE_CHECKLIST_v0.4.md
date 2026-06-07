@@ -54,6 +54,8 @@ Browser smoke는 다음 route를 확인합니다.
 /operations
 /settings
 /output?project=<alias>
+/simple?project=<alias>
+/dashboard-simple?project=<alias>
 /preflight?project=<alias>
 /handoff?project=<alias>
 /triage?project=<alias>
@@ -65,9 +67,11 @@ Browser smoke는 다음 route를 확인합니다.
 /safe-files?project=<alias>
 ```
 
-조회 전용 route는 `formCount=0`, `postFormCount=0`, `buttonCount=0`이어야
-합니다. `/output?project=<alias>`는 verify, review, report, export POST
-action을 표시할 수 있지만 모든 POST action은 CSRF 보호를 유지해야 합니다.
+조회 전용 route는 `formCount=0`, `postFormCount=0`, `buttonCount=0`,
+`downloadLinkCount=0`이어야 합니다. `/simple?project=<alias>`와
+`/dashboard-simple?project=<alias>`는 처음 보는 사용자를 위한 read-only 간단
+체크 화면입니다. `/output?project=<alias>`는 verify, review, report, export
+POST action을 표시할 수 있지만 모든 POST action은 CSRF 보호를 유지해야 합니다.
 
 공통 화면 기준:
 

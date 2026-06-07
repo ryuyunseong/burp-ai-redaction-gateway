@@ -189,6 +189,8 @@ HMAC verification, 실패 처리까지 포함한 전체 안전 운영 흐름은
 [docs/AUDIT_OPERATIONS_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/AUDIT_OPERATIONS_GUIDE.md)를
 참조하세요. dashboard audit/archive status panel 해석은
 [docs/GUI_AUDIT_PANEL_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AUDIT_PANEL_GUIDE.md)를
+참조하세요. 처음 보는 사용자를 위한 read-only simple dashboard는
+[docs/GUI_SIMPLE_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SIMPLE_DASHBOARD.md)를
 참조하세요. risk rating draft 개념과 profile 해석은
 [docs/RISK_RATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/RISK_RATING_GUIDE.md)를
 참조하세요. v0.4 dashboard release baseline은
@@ -300,6 +302,7 @@ language, manual verification requirement, evidence confidence는 severity가
 
 dashboard에는 다음 조회 전용 화면도 포함됩니다.
 
+- `/simple?project=<alias>` 또는 `/dashboard-simple?project=<alias>`: read-only 간단 체크 화면
 - `/preflight?project=<alias>`: AI 안전 사전 점검
 - `/handoff?project=<alias>`: AI 핸드오프 인덱스
 - `/prompt-readiness?project=<alias>`: prompt readiness 인덱스
@@ -312,6 +315,7 @@ dashboard에는 다음 조회 전용 화면도 포함됩니다.
 - `/settings`: 설정/보안 상태
 - `/help` and `/operations`: 운영 인덱스
 
+Simple Dashboard는 현재 상태, AI에 넣을 후보 파일 4개, 다음 행동만 요약합니다.
 이 조회 전용 화면들은 form, POST action, 상태 변경 버튼, report body preview,
 새 download, raw viewer, HMAC secret input, CSRF token display, replay,
 active scan, delete, edit, retention control, risk profile action을 추가하지

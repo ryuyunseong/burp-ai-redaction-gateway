@@ -16,6 +16,7 @@ start receiver and dashboard
 -> send scoped Burp history to the local receiver
 -> generate sanitized output
 -> verify the selected output
+-> check simple dashboard summary
 -> review candidate findings
 -> check finding triage index
 -> generate report_draft.md
@@ -55,6 +56,8 @@ http://127.0.0.1:8766/
 | 화면 | 목적 | 경계 |
 | --- | --- | --- |
 | `/` | 검증된 output 선택과 audit/archive 상태 확인 | 검증된 sanitization metadata만 표시 |
+| `/simple?project=<alias>` | 처음 보는 사용자가 현재 상태, AI 후보 파일 4개, 다음 행동을 빠르게 확인 | 조회 전용. 파일 본문 preview, download, form, POST action, button 없음 |
+| `/dashboard-simple?project=<alias>` | `/simple?project=<alias>`와 같은 간단 체크 화면 alias | 조회 전용. full local path, raw viewer, 실행 action 없음 |
 | `/output?project=<alias>` | output 하나의 안전 파일, finding 후보, 허용된 dashboard action 확인 | 표시 전 `verify` 통과 필요 |
 | `/triage?project=<alias>` | 보고서 문구 작성 전 sanitization 완료 finding 후보 metadata 확인 | 조회 전용. finding 본문 preview, form, POST action, severity 결정 없음 |
 | `/report-readiness?project=<alias>` | 수동 보고서 검토 전 초안 metadata와 운영자 확인 항목 점검 | 조회 전용. 보고서 본문 preview, form, POST action, 제출 판단 없음 |
@@ -77,24 +80,26 @@ http://127.0.0.1:8766/
 output 상세 화면의 action은 다음 순서로 사용합니다.
 
 1. `Verify`: 선택한 output에 fail-closed 검증을 다시 실행합니다.
-2. `Review`: finding 후보의 안전 요약을 만듭니다.
-3. `Finding triage index`: 후보 metadata와 수동 검토 경계를 확인합니다.
-4. `Report`: `report_draft.md`를 작성하거나 갱신합니다.
-5. `Report readiness index`: 보고서 초안 metadata와 수동 검토 항목을 확인합니다.
-6. `Workflow status index`: 조회 전용 workflow 체크리스트를 확인합니다.
-7. `AI-safe preflight`: 조회 전용 핸드오프 사전 점검을 확인합니다.
-8. `AI handoff index`: 안전 파일 4개와 권장 순서를 확인합니다.
-9. `Prompt readiness index`: prompt 파일 상태와 수동 검토 경계를 확인합니다.
-10. `Evidence boundary index`: 정제 evidence와 raw 금지 범위 경계를 확인합니다.
-11. `Operator runbook index`: 수집부터 AI 투입 전 수동 검토까지 운영 순서를 다시 확인합니다.
-12. `Safe file inventory index`: safe files 4개의 존재 여부, 크기, 수정 시각, SHA-256 fingerprint를 확인합니다.
-13. `Export`: 안전 파일 4개만 dashboard export directory로 복사합니다.
+2. `Simple Dashboard`: 현재 상태, AI 후보 파일 4개, 다음 행동을 먼저 확인합니다.
+3. `Review`: finding 후보의 안전 요약을 만듭니다.
+4. `Finding triage index`: 후보 metadata와 수동 검토 경계를 확인합니다.
+5. `Report`: `report_draft.md`를 작성하거나 갱신합니다.
+6. `Report readiness index`: 보고서 초안 metadata와 수동 검토 항목을 확인합니다.
+7. `Workflow status index`: 조회 전용 workflow 체크리스트를 확인합니다.
+8. `AI-safe preflight`: 조회 전용 핸드오프 사전 점검을 확인합니다.
+9. `AI handoff index`: 안전 파일 4개와 권장 순서를 확인합니다.
+10. `Prompt readiness index`: prompt 파일 상태와 수동 검토 경계를 확인합니다.
+11. `Evidence boundary index`: 정제 evidence와 raw 금지 범위 경계를 확인합니다.
+12. `Operator runbook index`: 수집부터 AI 투입 전 수동 검토까지 운영 순서를 다시 확인합니다.
+13. `Safe file inventory index`: safe files 4개의 존재 여부, 크기, 수정 시각, SHA-256 fingerprint를 확인합니다.
+14. `Export`: 안전 파일 4개만 dashboard export directory로 복사합니다.
 
 `Refresh`는 조회 전용 GET reload입니다. `Verify`, `Review`, `Report`,
 `Export`는 상태 변경 POST action이며 CSRF token이 필요합니다.
 `Finding triage index`, `Report readiness index`, `Workflow status index`,
 `AI-safe preflight`, `AI handoff index`, `Prompt readiness index`,
 `Evidence boundary index`, `Operator runbook index`, `Safe file inventory index`는 조회 전용 GET page이며 데이터를 제출하지 않습니다.
+`Simple Dashboard`도 조회 전용 GET page이며 현재 상태와 다음 행동 링크만 제공합니다.
 
 ## AI에 넣을 수 있는 파일
 
@@ -109,7 +114,9 @@ output 상세 화면의 action은 다음 순서로 사용합니다.
 
 검증에 실패한 output의 파일은 사용하지 않습니다.
 
-사전 점검 상태 필드와 문제 해결은
+간단 대시보드의 세 영역과 read-only 경계는
+[GUI_SIMPLE_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SIMPLE_DASHBOARD.md)를
+참조하세요. 사전 점검 상태 필드와 문제 해결은
 [GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
 참조하세요. 핸드오프 파일 순서와 metadata 필드는
 [GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md)를
