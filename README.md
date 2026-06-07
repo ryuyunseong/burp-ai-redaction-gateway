@@ -154,8 +154,8 @@ evidence only, using raw-free metadata. The current RC3 readiness baseline is
   `local_triage_sample_count=17`, `forbidden_value_hits=0`.
 
 These records do not make any finding final, do not make risk drafts final, and
-do not clear any output for external sharing. The next final tag candidate is
-`v0.4.34`; it must be created only after a separate final readiness review.
+do not clear any output for external sharing. The final v0.4 baseline tag is
+`v0.4.34`.
 
 ## Verification
 
@@ -215,6 +215,8 @@ HMAC verification, 실패 처리까지 포함한 전체 안전 운영 흐름은
 [docs/RELEASE_NOTES_v0.4.md](C:/coding/burp-ai-redaction-gateway/docs/RELEASE_NOTES_v0.4.md)를
 참조하세요. v0.4 release 전 CLI/GUI smoke와 tag 기준은
 [docs/RELEASE_CHECKLIST_v0.4.md](docs/RELEASE_CHECKLIST_v0.4.md)를
+참조하세요. v0.4.34 GitHub Release 발행 전 검토용 초안은
+[docs/GITHUB_RELEASE_v0.4.34.md](docs/GITHUB_RELEASE_v0.4.34.md)를
 참조하세요.
 
 ## Burp Montoya Collector

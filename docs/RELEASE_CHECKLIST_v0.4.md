@@ -171,12 +171,12 @@ raw-free metadata:
 The second smoke run also confirmed that generated metadata remains
 scanner-clean after redaction metadata hardening. This is readiness evidence
 only. It does not make any candidate finding final, does not make any risk draft
-final, does not create a CVSS decision, and does not guarantee that an output is
-cleared for external sharing.
+final, does not create a CVSS decision, and does not clear an output for
+external sharing.
 
-The proposed final tag candidate is `v0.4.34`. It must remain a candidate until
-the final readiness PR is merged and the final tag creation step is explicitly
-authorized.
+The final v0.4 baseline tag is `v0.4.34`. Use
+[`GITHUB_RELEASE_v0.4.34.md`](GITHUB_RELEASE_v0.4.34.md) as the review draft
+before publishing a GitHub Release entry.
 
 ## Tag 기준
 

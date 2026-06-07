@@ -2,7 +2,7 @@
 
 This release note summarizes the v0.4 dashboard baseline from
 `v0.4.0-local-dashboard` through
-`v0.4.33-rc3-redaction-metadata-hardening`.
+`v0.4.34`.
 
 The v0.4 line adds a local browser dashboard for verified sanitized output,
 keeps AI-facing files behind the existing `verify` gate, and preserves the
@@ -39,6 +39,7 @@ sent to AI tools.
 - `v0.4.33-rc3-redaction-metadata-hardening`: incorporates the second
   authorized local real export smoke finding, hardening scanner-clean metadata
   handling before final readiness.
+- `v0.4.34`: final v0.4 local-use baseline after final readiness review.
 
 ## Major Changes
 
@@ -224,16 +225,14 @@ PRs:
   - `local_triage_sample_count=17`
   - `forbidden_value_hits=0`
 
-This evidence supports RC3 readiness only. It is not a final release decision,
-not a guarantee for AI handoff, not external sharing clearance, and not a
-confirmation that any candidate finding or severity draft is final.
+This evidence supports RC3 readiness only. It is not an AI handoff clearance,
+not external sharing clearance, and not a confirmation that any candidate
+finding or severity draft is final.
 
-The proposed final tag candidate is `v0.4.34`. This tag is intentionally not
-created by the final readiness documentation PR.
-
-Before creating a v0.4 tag, use
-[`RELEASE_CHECKLIST_v0.4.md`](RELEASE_CHECKLIST_v0.4.md) to repeat the CLI,
-Gitleaks, git safety, and GUI route smoke checks.
+The final v0.4 baseline tag is `v0.4.34`. The GitHub Release body should be
+reviewed from [`GITHUB_RELEASE_v0.4.34.md`](GITHUB_RELEASE_v0.4.34.md) before
+publication. Keep using [`RELEASE_CHECKLIST_v0.4.md`](RELEASE_CHECKLIST_v0.4.md)
+for repeatable CLI, Gitleaks, git safety, and GUI route smoke checks.
 
 ## Known Limits
 
