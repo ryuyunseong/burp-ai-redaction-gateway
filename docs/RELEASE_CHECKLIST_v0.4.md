@@ -121,6 +121,11 @@ Release 문서, PR 본문, issue, AI prompt, dashboard 도움말에는 다음 �
   fixture로 재현 가능한 케이스를 만듭니다.
 - 실제 export 검증 결과를 release 근거로 남길 때도 고객명, 실제 endpoint,
   인증값, 개인정보를 쓰지 않습니다.
+- 반복 가능한 로컬 smoke에는 `scripts\run_local_real_export_smoke.ps1`을
+  사용할 수 있습니다. 사용법은 `docs/LOCAL_REAL_EXPORT_SMOKE_HARNESS.md`를
+  따릅니다.
+- smoke harness는 ignored `local_only/` 입력과 ignored `out/` 출력만
+  허용하고, console에는 raw-free metadata만 출력해야 합니다.
 
 ## Tag 기준
 

@@ -6,6 +6,7 @@ import http.client
 import io
 import json
 import re
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -2936,6 +2937,8 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertTrue((ROOT / "scripts" / "make_safe_burp_export_sample.py").is_file())
         self.assertTrue((ROOT / "scripts" / "run_safe_sample_smoke_test.bat").is_file())
         self.assertTrue((ROOT / "scripts" / "run_safe_sample_smoke_test.sh").is_file())
+        self.assertTrue((ROOT / "scripts" / "run_local_real_export_smoke.ps1").is_file())
+        self.assertTrue((ROOT / "scripts" / "run_local_real_export_smoke.bat").is_file())
         self.assertTrue((ROOT / ".gitleaks.toml").is_file())
 
     def test_gitleaks_scope_and_redaction_are_documented_in_repo_files(self) -> None:
@@ -3064,6 +3067,65 @@ class RedactionGatewayTests(unittest.TestCase):
         for text in [validation, template]:
             for item in forbidden:
                 self.assertNotIn(item, text)
+
+    def test_local_real_export_smoke_harness_is_local_only_and_raw_free(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        release_checklist = (ROOT / "docs" / "RELEASE_CHECKLIST_v0.4.md").read_text(encoding="utf-8")
+        validation = (ROOT / "docs" / "REAL_BURP_EXPORT_VALIDATION.md").read_text(encoding="utf-8")
+        guide = (ROOT / "docs" / "LOCAL_REAL_EXPORT_SMOKE_HARNESS.md").read_text(encoding="utf-8")
+        ps1 = (ROOT / "scripts" / "run_local_real_export_smoke.ps1").read_text(encoding="utf-8")
+        bat = (ROOT / "scripts" / "run_local_real_export_smoke.bat").read_text(encoding="utf-8")
+        gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+
+        for text in [readme, release_checklist, validation]:
+            self.assertIn("LOCAL_REAL_EXPORT_SMOKE_HARNESS.md", text)
+        for text in [guide, ps1]:
+            self.assertIn("local_only", text)
+            self.assertIn("raw_data_included=false", text)
+            self.assertIn("generate", text)
+            self.assertIn("verify", text)
+            self.assertIn("review", text)
+            self.assertIn("report", text)
+            self.assertIn("dashboard", text.lower())
+        self.assertIn("input_must_be_under_local_only", ps1)
+        self.assertIn("output_alias_must_be_direct_child_of_out", ps1)
+        self.assertIn("Start-Process", ps1)
+        self.assertIn("-WindowStyle Hidden", ps1)
+        self.assertIn("run_local_real_export_smoke.ps1", bat)
+        self.assertIn("local_only/", gitignore)
+        self.assertIn("out/", gitignore)
+
+        forbidden = [
+            "raw_request",
+            "raw_response",
+            "DUMMY_COOKIE_VALUE",
+            "DUMMY_BEARER_TOKEN",
+            "Authorization: Bearer",
+            "Cookie:",
+            "C:\\",
+            "safe to share",
+            "approved",
+            "guaranteed safe",
+            "confirmed CVSS",
+            "final severity",
+        ]
+        for text in [guide, ps1, bat]:
+            for item in forbidden:
+                self.assertNotIn(item, text)
+
+        tracked = subprocess.run(
+            ["git", "ls-files"],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if tracked.returncode == 0:
+            tracked_paths = tracked.stdout.splitlines()
+            blocked_prefixes = ("local_only/", "raw/", "raw_vault/", "out/")
+            for path in tracked_paths:
+                self.assertFalse(path.startswith(blocked_prefixes), path)
+                self.assertFalse(path.lower().endswith((".burp", ".har")), path)
 
     def test_montoya_handoff_payload_is_redacted_and_verified(self) -> None:
         payload = json.loads(MONTOYA_HANDOFF.read_text(encoding="utf-8"))
