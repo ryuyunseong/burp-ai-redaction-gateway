@@ -112,6 +112,9 @@ Release 문서, PR 본문, issue, AI prompt, dashboard 도움말에는 다음 �
 실제 Burp export 호환성은 synthetic fixture 검증을 대체하지 않고 보완합니다.
 
 - 실제 export는 ignored `local_only/` 아래에서만 테스트합니다.
+- 실제 export 검증 절차는 `REAL_BURP_EXPORT_VALIDATION.md`를 따릅니다.
+- 결과 기록은 `templates/REAL_BURP_EXPORT_VALIDATION_TEMPLATE.md`의 raw-free
+  항목만 사용합니다.
 - export 원본, 실패한 output, audit 원본은 Git에 추가하지 않습니다.
 - 실패 내용을 공유할 때는 error type과 안전 metadata만 기록합니다.
 - redaction 또는 verify 실패가 발생하면 raw 값을 복사하지 말고 synthetic

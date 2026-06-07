@@ -2979,6 +2979,92 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("Safe Real-Like Smoke Test", real_testing)
         self.assertIn("not a real Burp export compatibility test", real_testing)
 
+    def test_real_burp_export_validation_docs_are_raw_free(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        release_checklist = (ROOT / "docs" / "RELEASE_CHECKLIST_v0.4.md").read_text(encoding="utf-8")
+        real_testing = (ROOT / "docs" / "REAL_BURP_EXPORT_TESTING.md").read_text(encoding="utf-8")
+        validation = (ROOT / "docs" / "REAL_BURP_EXPORT_VALIDATION.md").read_text(encoding="utf-8")
+        template = (ROOT / "docs" / "templates" / "REAL_BURP_EXPORT_VALIDATION_TEMPLATE.md").read_text(
+            encoding="utf-8"
+        )
+
+        for text in [readme, release_checklist, real_testing]:
+            self.assertIn("REAL_BURP_EXPORT_VALIDATION.md", text)
+        self.assertIn("REAL_BURP_EXPORT_VALIDATION_TEMPLATE.md", readme)
+        self.assertIn("REAL_BURP_EXPORT_VALIDATION_TEMPLATE.md", release_checklist)
+
+        required = [
+            "local_only/",
+            "authorized_burp_export.xml",
+            "real_export_validation",
+            "real_export_alias",
+            "generate",
+            "verify",
+            "review",
+            "report",
+            "Dashboard smoke",
+            "/safe-files?project=real_export_validation",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "raw_data_included: false",
+            "candidate",
+            "risk rating은 draft",
+            "실제 export 파일명 또는 원본 경로",
+            "synthetic fixture",
+        ]
+        for item in required:
+            self.assertIn(item, validation)
+
+        template_required = [
+            "validation date",
+            "operator alias",
+            "source type alias",
+            "project alias",
+            "raw_data_included",
+            "generate",
+            "verify",
+            "review",
+            "report",
+            "Dashboard smoke 결과",
+            "Safe file inventory",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "finding은 candidate",
+            "risk rating은 draft",
+            "AI 입력 후보는 safe files 4개",
+        ]
+        for item in template_required:
+            self.assertIn(item, template)
+
+        forbidden = [
+            "raw_request",
+            "raw_response",
+            "DUMMY_COOKIE_VALUE",
+            "DUMMY_BEARER_TOKEN",
+            "Authorization: Bearer",
+            "Cookie:",
+            "https://",
+            "http://",
+            "C:\\",
+            "safe to share",
+            "approved",
+            "guaranteed safe",
+            "severity confirmed",
+            "ready to submit",
+            "confirmed CVSS",
+            "final severity",
+            "제출 가능",
+            "승인 완료",
+            "안전 보장",
+        ]
+        for text in [validation, template]:
+            for item in forbidden:
+                self.assertNotIn(item, text)
+
     def test_montoya_handoff_payload_is_redacted_and_verified(self) -> None:
         payload = json.loads(MONTOYA_HANDOFF.read_text(encoding="utf-8"))
         with tempfile.TemporaryDirectory() as temp_dir:

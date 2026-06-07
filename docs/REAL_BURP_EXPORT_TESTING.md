@@ -28,10 +28,12 @@ Create a local-only folder and put the real Burp export there:
 
 ```bat
 mkdir local_only
-copy C:\path\to\real_export.xml local_only\real_burp_history_sample.xml
+copy <authorized_burp_export_file> local_only\authorized_burp_export.xml
 ```
 
 `local_only/` is ignored by Git. Do not move real exports into `samples/`.
+For a v0.4 release-candidate validation flow and raw-free result template, see
+`REAL_BURP_EXPORT_VALIDATION.md`.
 
 ## Generate Sanitized Output
 
@@ -39,9 +41,9 @@ Run generation with a non-identifying project alias:
 
 ```bat
 python -m burp_ai_redaction_gateway generate ^
-  --input local_only\real_burp_history_sample.xml ^
-  --output out\real_sample_check ^
-  --project real_sample_alias
+  --input local_only\authorized_burp_export.xml ^
+  --output out\real_export_validation ^
+  --project real_export_alias
 ```
 
 Do not use the real customer name as the project alias.
@@ -51,7 +53,7 @@ Do not use the real customer name as the project alias.
 Run the fail-closed verifier before opening or sharing any generated output:
 
 ```bat
-python -m burp_ai_redaction_gateway verify --input out\real_sample_check
+python -m burp_ai_redaction_gateway verify --input out\real_export_validation
 ```
 
 Only files that pass verification may be used as ChatGPT or Codex prompt input.
@@ -76,7 +78,7 @@ After validation, remove local-only raw exports and temporary outputs:
 
 ```bat
 rmdir /s /q local_only
-rmdir /s /q out\real_sample_check
+rmdir /s /q out\real_export_validation
 ```
 
 If you need to keep raw evidence, store it outside the repository in an
