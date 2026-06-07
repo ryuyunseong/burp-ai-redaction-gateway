@@ -38,6 +38,8 @@ workflow 상태, audit 운영, audit panel 해석, risk rating 문서로 이동�
 [GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
 참조하세요. Operator runbook 체크리스트는
 [GUI_OPERATOR_RUNBOOK_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_OPERATOR_RUNBOOK_INDEX.md)를
+참조하세요. Safe file inventory 체크리스트는
+[GUI_SAFE_FILE_INVENTORY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SAFE_FILE_INVENTORY_INDEX.md)를
 참조하세요. finding 후보 triage 체크리스트는
 [GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 보고서 초안 준비 체크리스트는
@@ -208,6 +210,30 @@ request/response/prompt/report/evidence body preview, HMAC secret 입력,
 CSRF token 표시, retention/delete 정책 변경, replay, active scan을 제공하지
 않습니다.
 
+## Safe File Inventory 인덱스
+
+선택한 검증 output에 대해 조회 전용 safe file inventory checklist를 제공합니다.
+
+```text
+/safe-files?project=<alias>
+```
+
+safe file inventory 인덱스는 AI 후보 파일 4개의 존재 여부, 파일 목적,
+권장 사용 위치, verify 선행 필요 여부, file size, modified UTC, SHA-256
+fingerprint를 표시합니다.
+
+표시하는 파일은 다음 4개로 제한합니다.
+
+- `analysis_packet.json`
+- `chatgpt_prompt.md`
+- `codex_task_prompt.md`
+- `report_draft.md`
+
+파일 본문 preview, 다운로드 링크, full local path, raw request/response,
+Cookie, Authorization, token/JWT/session, 실제 도메인/IP, 개인정보,
+HMAC secret, CSRF token은 표시하지 않습니다. safe files가 모두 존재해도
+AI 투입이나 제출이 자동 승인되는 것은 아니며 사람이 수동 검토해야 합니다.
+
 ## 보고서 준비 상태 인덱스
 
 선택한 검증 output에 대해 조회 전용 보고서 준비 상태 인덱스를 제공합니다.
@@ -268,6 +294,7 @@ dashboard는 다음 기능을 구현하지 않습니다.
 - workflow status 실행 버튼
 - prompt readiness 실행 버튼
 - operator runbook 실행 버튼
+- safe file inventory 실행 버튼
 
 ## 허용된 상태 변경 action
 

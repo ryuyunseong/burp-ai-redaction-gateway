@@ -58,6 +58,7 @@ OPERATIONS_GUIDES = (
     ("Prompt readiness 인덱스", "docs/GUI_PROMPT_READINESS_INDEX.md", "prompt 파일 투입 전 조회 전용 점검"),
     ("Evidence boundary 인덱스", "docs/GUI_EVIDENCE_BOUNDARY_INDEX.md", "정제 증거와 raw 금지 범위의 조회 전용 경계"),
     ("Operator runbook 인덱스", "docs/GUI_OPERATOR_RUNBOOK_INDEX.md", "수집부터 AI 투입 전 수동 검토까지 운영 순서 점검"),
+    ("Safe file inventory 인덱스", "docs/GUI_SAFE_FILE_INVENTORY_INDEX.md", "AI 후보 파일 4개의 안전 metadata 점검"),
     ("Finding 후보 분류 인덱스", "docs/GUI_FINDING_TRIAGE_INDEX.md", "finding 후보 검토 순서와 수동 판단 경계"),
     ("보고서 준비 인덱스", "docs/GUI_REPORT_READINESS_INDEX.md", "report_draft 초안 검토 상태와 수동 제출 경계"),
     ("작업 흐름 상태 인덱스", "docs/GUI_WORKFLOW_STATUS_INDEX.md", "검증된 산출물의 조회 전용 작업 흐름 점검"),
@@ -276,6 +277,28 @@ class OperatorRunbookIndex:
     safe_file_count: int
 
 
+@dataclass(frozen=True)
+class SafeFileInventoryFile:
+    name: str
+    purpose: str
+    recommended_use: str
+    verify_required: bool
+    status: str
+    size_bytes: int | None
+    modified_utc: str
+    sha256: str
+
+
+@dataclass(frozen=True)
+class SafeFileInventoryIndex:
+    output: DashboardOutput
+    files: list[SafeFileInventoryFile]
+    candidate_count: int
+    safe_file_count: int
+    report_status: str
+    analysis_status: str
+
+
 class DashboardError(ValueError):
     def __init__(self, error_type: str, status: HTTPStatus = HTTPStatus.BAD_REQUEST) -> None:
         super().__init__(error_type)
@@ -351,6 +374,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
                 self._send_html(render_operator_runbook_index(_build_operator_runbook_index(output)))
+                return
+            if parsed.path == "/safe-files":
+                output_id = _required_query_value(parsed.query, "project")
+                output = _verified_output(self.server.config.root, self.server.policy, output_id)
+                self._send_html(render_safe_file_inventory_index(_build_safe_file_inventory_index(output)))
                 return
             if parsed.path == "/preview":
                 output_id = _required_query_value(parsed.query, "project")
@@ -914,6 +942,7 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
             <a class="button small secondary" href="{_evidence_boundary_href(output.output_id)}">증거 경계</a>
             <a class="button small secondary" href="{_workflow_href(output.output_id)}">작업 흐름 상태</a>
             <a class="button small secondary" href="{_operator_runbook_href(output.output_id)}">Operator runbook</a>
+            <a class="button small secondary" href="{_safe_files_href(output.output_id)}">Safe file inventory</a>
           </div>
           <div class="panel">
             <div class="panel-head"><h2>탐지 후보</h2><span class="muted">총 {len(candidates)}개</span></div>
@@ -1354,6 +1383,7 @@ def render_evidence_boundary_index(index: EvidenceBoundaryIndex) -> str:
               <div><dt>핸드오프</dt><dd><a href="{_handoff_href(output.output_id)}">AI 핸드오프 인덱스 열기</a></dd></div>
               <div><dt>Prompt readiness</dt><dd><a href="{_prompt_readiness_href(output.output_id)}">Prompt readiness 인덱스 열기</a></dd></div>
               <div><dt>Evidence boundary</dt><dd><a href="{_evidence_boundary_href(output.output_id)}">Evidence boundary 인덱스 열기</a></dd></div>
+              <div><dt>Safe file inventory</dt><dd><a href="{_safe_files_href(output.output_id)}">Safe file inventory 인덱스 열기</a></dd></div>
               <div><dt>후보 분류</dt><dd><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스 열기</a></dd></div>
               <div><dt>보고서 준비</dt><dd><a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스 열기</a></dd></div>
               <div><dt>작업 흐름</dt><dd><a href="{_workflow_href(output.output_id)}">작업 흐름 상태 인덱스 열기</a></dd></div>
@@ -1472,7 +1502,109 @@ def render_operator_runbook_index(index: OperatorRunbookIndex) -> str:
               <div><dt>보고서 준비</dt><dd><a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스 열기</a></dd></div>
               <div><dt>Prompt readiness</dt><dd><a href="{_prompt_readiness_href(output.output_id)}">Prompt readiness 인덱스 열기</a></dd></div>
               <div><dt>Evidence boundary</dt><dd><a href="{_evidence_boundary_href(output.output_id)}">Evidence boundary 인덱스 열기</a></dd></div>
+              <div><dt>Safe file inventory</dt><dd><a href="{_safe_files_href(output.output_id)}">Safe file inventory 인덱스 열기</a></dd></div>
               <div><dt>Workflow status recap</dt><dd><a href="{_workflow_href(output.output_id)}">작업 흐름 상태 인덱스 열기</a></dd></div>
+              <div><dt>경계</dt><dd>이 화면은 조회 전용이며 form, POST action, 실행 버튼, 파일 내려받기를 제공하지 않습니다.</dd></div>
+            </dl>
+          </div>
+        </section>
+        """,
+    )
+
+
+def render_safe_file_inventory_index(index: SafeFileInventoryIndex) -> str:
+    output = index.output
+    file_cards = "\n".join(_safe_file_inventory_card(file) for file in index.files)
+    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
+    forbidden_items = "".join(
+        f"<li>{_h(item)}</li>"
+        for item in (
+            "raw request/response body",
+            "request body 또는 response body preview",
+            "prompt/report/evidence body preview",
+            "Cookie 값",
+            "Authorization 값",
+            "token/JWT/session 값",
+            "실제 URL/도메인/IP",
+            "개인정보",
+            "HMAC secret",
+            "CSRF token",
+            "full local path",
+            "local_only/, raw/, raw_vault/, verify 전 out/, out/.audit 산출물",
+        )
+    )
+    related_links = "".join(
+        f'<div><dt>{_h(label)}</dt><dd><a href="{_h(href)}">{_h(text)}</a></dd></div>'
+        for label, href, text in (
+            ("사전 점검", _preflight_href(output.output_id), "AI 안전 사전 점검 열기"),
+            ("핸드오프", _handoff_href(output.output_id), "AI 핸드오프 인덱스 열기"),
+            ("Prompt readiness", _prompt_readiness_href(output.output_id), "Prompt readiness 인덱스 열기"),
+            ("Evidence boundary", _evidence_boundary_href(output.output_id), "Evidence boundary 인덱스 열기"),
+            ("후보 분류", _triage_href(output.output_id), "finding 후보 분류 인덱스 열기"),
+            ("보고서 준비", _report_readiness_href(output.output_id), "보고서 준비 인덱스 열기"),
+            ("Workflow", _workflow_href(output.output_id), "작업 흐름 상태 인덱스 열기"),
+            ("Operator runbook", _operator_runbook_href(output.output_id), "Operator runbook 인덱스 열기"),
+        )
+    )
+    return _page(
+        f"Safe file inventory 인덱스 {output.label}",
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="{_output_href(output.output_id)}">검증된 산출물 상세</a>
+            <h1>Safe file inventory 인덱스</h1>
+            <p class="subtitle">AI 투입 후보 파일 4개의 존재 여부와 안전 메타데이터를 보여주는 조회 전용 safe file inventory checklist입니다.</p>
+          </div>
+          <span class="badge good">조회 전용</span>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>프로젝트 별칭</span><strong>{_h(output.label)}</strong></div>
+          <div class="rail"><span>safe files</span><strong>{index.safe_file_count}/{len(SAFE_PREVIEW_FILES)}</strong></div>
+          <div class="rail"><span>finding 후보 수</span><strong>{index.candidate_count}</strong></div>
+          <div class="rail"><span>raw 표시</span><strong>false</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>Inventory 요약</h2><span class="muted">본문 preview 없이 파일 메타데이터만 표시합니다.</span></div>
+            <dl class="facts">
+              <div><dt>프로젝트 별칭</dt><dd>{_h(output.label)}</dd></div>
+              <div><dt>verify gate</dt><dd>{_status_badge("passed")}</dd></div>
+              <div><dt>finding candidate count</dt><dd>{index.candidate_count}</dd></div>
+              <div><dt>analysis_packet.json</dt><dd>{_status_badge(index.analysis_status)}</dd></div>
+              <div><dt>report_draft.md</dt><dd>{_status_badge(index.report_status)}</dd></div>
+              <div><dt>final severity</dt><dd>수동 결정입니다.</dd></div>
+              <div><dt>file body preview</dt><dd>false</dd></div>
+              <div><dt>download action</dt><dd>false</dd></div>
+              <div><dt>full local path 표시</dt><dd>false</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>safe files 4개</h2><span class="muted">AI 후보 파일 allowlist입니다.</span></div>
+            <ul class="safe-list">{safe_files}</ul>
+            <p class="muted">각 파일은 verify 통과 후에도 사람이 직접 검토해야 합니다.</p>
+          </div>
+          <div class="panel wide">
+            <div class="panel-head"><h2>파일 inventory</h2><span class="muted">exists/missing, size, modified UTC, SHA-256 fingerprint만 표시합니다.</span></div>
+            <div class="file-grid">{file_cards}</div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>AI 투입 해석 경계</h2><span class="muted">사람 검토 전 확정 상태가 아닙니다.</span></div>
+            <dl class="facts">
+              <div><dt>finding</dt><dd>수동 검증이 끝날 때까지 candidate입니다.</dd></div>
+              <div><dt>risk</dt><dd>risk rating은 초안이며 최종 심각도가 아닙니다.</dd></div>
+              <div><dt>confidence</dt><dd>evidence confidence이며 severity가 아닙니다.</dd></div>
+              <div><dt>final severity</dt><dd>Burp 재현, 권한별 비교, 영향도 판단 후 사람이 수동 결정합니다.</dd></div>
+              <div><dt>report_draft.md</dt><dd>final report가 아니라 수동 검토용 보고서 초안입니다.</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>금지 데이터 경계</h2><span class="muted">분류명만 표시하며 실제 값은 표시하지 않습니다.</span></div>
+            <ul class="safe-list">{forbidden_items}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>관련 조회 전용 인덱스</h2><span class="muted">GET 링크만 제공합니다.</span></div>
+            <dl class="facts">
+              {related_links}
               <div><dt>경계</dt><dd>이 화면은 조회 전용이며 form, POST action, 실행 버튼, 파일 내려받기를 제공하지 않습니다.</dd></div>
             </dl>
           </div>
@@ -1549,6 +1681,7 @@ def render_workflow_status_index(index: WorkflowStatusIndex) -> str:
               <div><dt>사전 점검</dt><dd><a href="{_preflight_href(output.output_id)}">AI 안전 사전 점검 열기</a></dd></div>
               <div><dt>핸드오프</dt><dd><a href="{_handoff_href(output.output_id)}">AI 핸드오프 인덱스 열기</a></dd></div>
               <div><dt>Prompt readiness</dt><dd><a href="{_prompt_readiness_href(output.output_id)}">Prompt readiness 인덱스 열기</a></dd></div>
+              <div><dt>Safe file inventory</dt><dd><a href="{_safe_files_href(output.output_id)}">Safe file inventory 인덱스 열기</a></dd></div>
               <div><dt>후보 분류</dt><dd><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스 열기</a></dd></div>
               <div><dt>보고서 준비</dt><dd><a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스 열기</a></dd></div>
               <div><dt>운영 runbook</dt><dd><a href="{_operator_runbook_href(output.output_id)}">Operator runbook 인덱스 열기</a></dd></div>
@@ -1992,6 +2125,12 @@ def _build_workflow_status_index(output: DashboardOutput) -> WorkflowStatusIndex
             href=_preflight_href(output.output_id),
         ),
         WorkflowStep(
+            name="Safe file inventory 인덱스",
+            status="manual review required",
+            summary="safe files 4개의 존재 여부, 크기, 수정 시각, SHA-256 fingerprint를 확인합니다.",
+            href=_safe_files_href(output.output_id),
+        ),
+        WorkflowStep(
             name="AI 핸드오프 인덱스",
             status="manual review required",
             summary="안전 파일 별칭, 순서, 목적, 메타데이터를 확인합니다.",
@@ -2156,6 +2295,65 @@ def _build_operator_runbook_index(output: DashboardOutput) -> OperatorRunbookInd
         analysis_status=analysis_status,
         safe_file_count=safe_file_count,
     )
+
+
+def _build_safe_file_inventory_index(output: DashboardOutput) -> SafeFileInventoryIndex:
+    files = [_safe_file_inventory_file(output.path, name) for name in SAFE_PREVIEW_FILES]
+    safe_file_count = sum(1 for file in files if file.status == "present")
+    return SafeFileInventoryIndex(
+        output=output,
+        files=files,
+        candidate_count=output.candidate_count,
+        safe_file_count=safe_file_count,
+        report_status=_file_status(output.path, "report_draft.md"),
+        analysis_status=_file_status(output.path, "analysis_packet.json"),
+    )
+
+
+def _safe_file_inventory_file(output_dir: Path, name: str) -> SafeFileInventoryFile:
+    path = output_dir / name
+    if not path.is_file():
+        return SafeFileInventoryFile(
+            name=name,
+            purpose=_safe_file_inventory_purpose(name),
+            recommended_use=_safe_file_inventory_recommended_use(name),
+            verify_required=True,
+            status="missing",
+            size_bytes=None,
+            modified_utc="missing",
+            sha256="missing",
+        )
+    stat = path.stat()
+    return SafeFileInventoryFile(
+        name=name,
+        purpose=_safe_file_inventory_purpose(name),
+        recommended_use=_safe_file_inventory_recommended_use(name),
+        verify_required=True,
+        status="present",
+        size_bytes=stat.st_size,
+        modified_utc=datetime.fromtimestamp(stat.st_mtime, UTC).replace(microsecond=0).isoformat(),
+        sha256=_sha256_file(path),
+    )
+
+
+def _safe_file_inventory_purpose(file_name: str) -> str:
+    purposes = {
+        "analysis_packet.json": "정제된 finding candidate 구조와 수동 검토 경계를 확인합니다.",
+        "chatgpt_prompt.md": "ChatGPT에 후보 분석 보조를 요청하기 전 prompt 파일 상태를 확인합니다.",
+        "codex_task_prompt.md": "Codex에 구현, 리뷰, 테스트 보조를 요청하기 전 prompt 파일 상태를 확인합니다.",
+        "report_draft.md": "사람이 검토할 보고서 초안의 존재와 fingerprint를 확인합니다.",
+    }
+    return purposes.get(file_name, "검증된 safe file 후보 메타데이터를 확인합니다.")
+
+
+def _safe_file_inventory_recommended_use(file_name: str) -> str:
+    uses = {
+        "analysis_packet.json": "AI 분석 전 구조화된 후보 증거 기준으로 사용합니다.",
+        "chatgpt_prompt.md": "ChatGPT에 필요한 범위만 투입하기 전 사람이 읽습니다.",
+        "codex_task_prompt.md": "Codex 작업 요청 전 범위와 금지 데이터를 재확인합니다.",
+        "report_draft.md": "최종 제출 전 사람이 수정할 보고서 초안으로만 사용합니다.",
+    }
+    return uses.get(file_name, "AI 투입 전 사람이 직접 검토합니다.")
 
 
 def _report_readiness_file(output_dir: Path, name: str, purpose: str) -> ReportReadinessFile:
@@ -2451,6 +2649,32 @@ def _operator_runbook_step_card(step: OperatorRunbookStep) -> str:
         <div><dt>확인 metadata</dt><dd><ul class="safe-list compact">{metadata}</ul></dd></div>
         <div><dt>관련 화면</dt><dd><a href="{_h(step.href)}">조회 전용 화면 열기</a></dd></div>
         <div><dt>action 표면</dt><dd>form 없음, POST action 없음, 상태 변경 버튼 없음</dd></div>
+      </dl>
+    </article>
+    """
+
+
+def _safe_file_inventory_card(file: SafeFileInventoryFile) -> str:
+    size = str(file.size_bytes) if file.size_bytes is not None else "missing"
+    verify_required = "true" if file.verify_required else "false"
+    return f"""
+    <article class="file-card">
+      <div>
+        <span class="kicker">safe file</span>
+        <strong>{_h(file.name)}</strong>
+        <span>{_status_badge(file.status)}</span>
+        <small>{_h(file.purpose)}</small>
+      </div>
+      <dl class="facts compact">
+        <div><dt>exists</dt><dd>{_h(file.status)}</dd></div>
+        <div><dt>파일 목적</dt><dd>{_h(file.purpose)}</dd></div>
+        <div><dt>권장 사용 위치</dt><dd>{_h(file.recommended_use)}</dd></div>
+        <div><dt>verify 선행 필요</dt><dd>{verify_required}</dd></div>
+        <div><dt>file size</dt><dd>{_h(size)}</dd></div>
+        <div><dt>modified UTC</dt><dd>{_h(file.modified_utc)}</dd></div>
+        <div><dt>SHA-256 fingerprint</dt><dd>{_h(file.sha256)}</dd></div>
+        <div><dt>사람 수동 검토</dt><dd>필수</dd></div>
+        <div><dt>body preview</dt><dd>false</dd></div>
       </dl>
     </article>
     """
@@ -3101,6 +3325,10 @@ def _workflow_href(output_id: str) -> str:
 
 def _operator_runbook_href(output_id: str) -> str:
     return "/operator-runbook?project=" + quote(output_id, safe="")
+
+
+def _safe_files_href(output_id: str) -> str:
+    return "/safe-files?project=" + quote(output_id, safe="")
 
 
 def _preview_href(output_id: str, file_name: str) -> str:

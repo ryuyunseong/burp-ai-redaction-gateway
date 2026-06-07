@@ -107,6 +107,8 @@ dashboard는 `127.0.0.1` 로컬 검토 도구입니다. production web applicati
 [GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
 참조하세요. 조회 전용 operator runbook 체크리스트는
 [GUI_OPERATOR_RUNBOOK_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_OPERATOR_RUNBOOK_INDEX.md)를
+참조하세요. 조회 전용 safe file inventory 체크리스트는
+[GUI_SAFE_FILE_INVENTORY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SAFE_FILE_INVENTORY_INDEX.md)를
 참조하세요. 조회 전용 finding 후보 triage 체크리스트는
 [GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 조회 전용 보고서 초안 준비 체크리스트는
@@ -157,6 +159,8 @@ Dashboard action 경계:
 - `Operator runbook index`는 수집, verify, review, report, preflight, handoff,
   triage, report-readiness, prompt-readiness, evidence-boundary, workflow status
   recap 순서를 묶어 보는 조회 전용 GET 체크리스트입니다.
+- `Safe file inventory index`는 safe files 4개의 존재 여부, 크기, 수정 시각,
+  SHA-256 fingerprint를 본문 preview 없이 확인하는 조회 전용 GET 체크리스트입니다.
 - Export는 안전 파일 allowlist로 제한됩니다.
 - Raw viewer, replay, active scan, delete, edit action은 제공하지 않습니다.
 - `/help`, `/operations`, `/settings`는 조회 전용 상태 또는 안내 page입니다.

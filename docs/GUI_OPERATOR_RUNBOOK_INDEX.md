@@ -52,7 +52,7 @@ safe files 4개는 다음 파일입니다.
 AI 후보 입력 범위는 검증을 통과한 safe files 4개, sanitized finding
 candidate metadata, candidate count, 파일 크기, 수정 시각, SHA-256
 fingerprint, preflight/handoff/triage/report-readiness/prompt-readiness/
-evidence-boundary 상태, workflow status recap에서 확인한 운영 순서입니다.
+evidence-boundary/safe-files 상태, workflow status recap에서 확인한 운영 순서입니다.
 
 ## 관련 화면
 
@@ -64,6 +64,7 @@ evidence-boundary 상태, workflow status recap에서 확인한 운영 순서입
 | `/report-readiness?project=<alias>` | 보고서 초안 준비 경계 확인 |
 | `/prompt-readiness?project=<alias>` | prompt 파일 상태와 수동 검토 경계 확인 |
 | `/evidence-boundary?project=<alias>` | 정제 evidence와 raw 금지 범위 확인 |
+| `/safe-files?project=<alias>` | safe files 4개의 존재 여부와 fingerprint 확인 |
 | `/workflow?project=<alias>` | 전체 GUI 흐름 상태 재확인 |
 
 ## 해석 경계
