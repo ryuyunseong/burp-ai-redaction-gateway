@@ -251,9 +251,10 @@ for repeatable CLI, Gitleaks, git safety, and GUI route smoke checks.
 
 ## Follow-Up Candidates
 
-- Risk rating profiles for organization-specific likelihood and impact
-  calibration.
-- Audit compression for long-term local storage.
-- Settings actions, if needed, with explicit CSRF, audit, secret handling, and
-  rollback review.
-- A GitHub release entry based on the existing v0.4 tags and release checklist.
+- Use `v0.4.34` in one or two internal local workflows and record friction.
+- Review a sample of finding candidates for false positives, duplicates, and
+  out-of-scope results.
+- Keep v0.4 fixes scoped to patch branches and tags.
+- Plan v0.5 work from [`ROADMAP_v0.5.md`](ROADMAP_v0.5.md), including Montoya
+  collector live-operation validation, candidate triage quality, report draft
+  quality, Windows launcher UX, and external-user documentation.

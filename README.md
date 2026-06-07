@@ -217,6 +217,8 @@ HMAC verification, 실패 처리까지 포함한 전체 안전 운영 흐름은
 [docs/RELEASE_CHECKLIST_v0.4.md](docs/RELEASE_CHECKLIST_v0.4.md)를
 참조하세요. v0.4.34 GitHub Release 발행 전 검토용 초안은
 [docs/GITHUB_RELEASE_v0.4.34.md](docs/GITHUB_RELEASE_v0.4.34.md)를
+참조하세요. v0.5 후보 작업과 hotfix 경계는
+[docs/ROADMAP_v0.5.md](docs/ROADMAP_v0.5.md)를
 참조하세요.
 
 ## Burp Montoya Collector
