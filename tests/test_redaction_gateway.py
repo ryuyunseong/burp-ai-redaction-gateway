@@ -741,6 +741,8 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("증거 경계", detail)
                 self.assertIn("/workflow?project=generated", detail)
                 self.assertIn("작업 흐름 상태", detail)
+                self.assertIn("/operator-runbook?project=generated", detail)
+                self.assertIn("Operator runbook", detail)
                 self.assertNotIn("AI-safe preflight", detail)
                 self.assertNotIn("handoff index", detail)
                 self.assertNotIn("triage index", detail)
@@ -1003,6 +1005,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "/triage?project=generated",
                     "/report-readiness?project=generated",
                     "/output?project=generated",
+                    "/operator-runbook?project=generated",
                 ]:
                     self.assertIn(link, workflow)
                 self.assertIn("수동 검증이 끝날 때까지 후보입니다", workflow)
@@ -1146,6 +1149,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "/triage?project=generated",
                     "/report-readiness?project=generated",
                     "/workflow?project=generated",
+                    "/operator-runbook?project=generated",
                 ]:
                     self.assertIn(link, evidence_boundary)
                 for label in [
@@ -1170,6 +1174,97 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn("DUMMY_COOKIE_VALUE", evidence_boundary)
                 self.assertNotIn("DUMMY_BEARER_TOKEN", evidence_boundary)
                 self.assertNotIn(str(root), evidence_boundary)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/operator-runbook?project=generated")
+                response = connection.getresponse()
+                operator_runbook = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("Operator runbook 인덱스", operator_runbook)
+                self.assertIn("조회 전용 operator runbook checklist", operator_runbook)
+                self.assertIn("운영 runbook 요약", operator_runbook)
+                self.assertIn("운영 순서", operator_runbook)
+                self.assertIn("프로젝트 별칭", operator_runbook)
+                self.assertIn("verify gate", operator_runbook)
+                self.assertIn("finding candidate count", operator_runbook)
+                self.assertIn(">22<", operator_runbook)
+                self.assertIn("report_draft.md", operator_runbook)
+                self.assertIn("analysis_packet.json", operator_runbook)
+                self.assertIn("chatgpt_prompt.md", operator_runbook)
+                self.assertIn("codex_task_prompt.md", operator_runbook)
+                self.assertIn("raw_data_included", operator_runbook)
+                self.assertIn("body preview", operator_runbook)
+                self.assertIn("full local path 표시", operator_runbook)
+                self.assertIn("safe files 4개", operator_runbook)
+                for step in [
+                    "Burp HTTP history 수집",
+                    "localhost receiver 저장",
+                    "redaction/verify",
+                    "review candidate findings",
+                    "report_draft.md 생성",
+                    "preflight",
+                    "handoff",
+                    "triage",
+                    "report-readiness",
+                    "prompt-readiness",
+                    "evidence-boundary",
+                    "workflow status recap",
+                ]:
+                    self.assertIn(step, operator_runbook)
+                for link in [
+                    "/help",
+                    "/operations",
+                    "/output?project=generated",
+                    "/preflight?project=generated",
+                    "/handoff?project=generated",
+                    "/triage?project=generated",
+                    "/report-readiness?project=generated",
+                    "/prompt-readiness?project=generated",
+                    "/evidence-boundary?project=generated",
+                    "/workflow?project=generated",
+                ]:
+                    self.assertIn(link, operator_runbook)
+                for label in [
+                    "raw request/response body",
+                    "raw audit row 전문",
+                    "Cookie 값",
+                    "Authorization 값",
+                    "token/JWT/session 값",
+                    "실제 URL/도메인/IP",
+                    "개인정보",
+                    "HMAC secret",
+                    "CSRF token",
+                    "full local path",
+                ]:
+                    self.assertIn(label, operator_runbook)
+                self.assertIn("수동 검증이 끝날 때까지 candidate입니다", operator_runbook)
+                self.assertIn("risk rating은 draft이며 최종 심각도가 아닙니다", operator_runbook)
+                self.assertIn("evidence confidence이며 severity가 아닙니다", operator_runbook)
+                self.assertIn("최종 심각도", operator_runbook)
+                self.assertIn("사람이 수동 결정합니다", operator_runbook)
+                self.assertIn("최종 보고서가 아니라 수동 검토용 초안입니다", operator_runbook)
+                self.assertIn("prompt/evidence/report", operator_runbook)
+                self.assertIn("모두 AI 투입 또는 공유 전 사람 검토가 필요합니다", operator_runbook)
+                self.assertNotIn("<pre", operator_runbook)
+                self.assertNotIn('name="csrf_token"', operator_runbook)
+                self.assertNotIn("<form", operator_runbook)
+                self.assertNotIn("<button", operator_runbook)
+                self.assertNotIn('method="post"', operator_runbook)
+                self.assertNotIn("download?project=generated", operator_runbook)
+                self.assertNotIn("raw_request", operator_runbook)
+                self.assertNotIn("raw_response", operator_runbook)
+                self.assertNotIn("DUMMY_COOKIE_VALUE", operator_runbook)
+                self.assertNotIn("DUMMY_BEARER_TOKEN", operator_runbook)
+                self.assertNotIn("approved", operator_runbook)
+                self.assertNotIn("guaranteed safe", operator_runbook)
+                self.assertNotIn("safe to share", operator_runbook)
+                self.assertNotIn("severity confirmed", operator_runbook)
+                self.assertNotIn("ready to submit", operator_runbook)
+                self.assertNotIn("제출 가능", operator_runbook)
+                self.assertNotIn("승인 완료", operator_runbook)
+                self.assertNotIn("안전 보장", operator_runbook)
+                self.assertNotIn(str(root), operator_runbook)
                 connection.close()
 
                 connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
@@ -1430,6 +1525,15 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertEqual(response.status, 403)
                 self.assertIn("forbidden_directory", evidence_traversal)
                 self.assertNotIn("rawBearerToken", evidence_traversal)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/operator-runbook?project=..%2Flocal_only")
+                response = connection.getresponse()
+                operator_traversal = response.read().decode("utf-8")
+                self.assertEqual(response.status, 403)
+                self.assertIn("forbidden_directory", operator_traversal)
+                self.assertNotIn("rawBearerToken", operator_traversal)
                 connection.close()
             finally:
                 server.shutdown()
@@ -3061,6 +3165,7 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("GUI_AI_HANDOFF_INDEX.md", text)
             self.assertIn("GUI_PROMPT_READINESS_INDEX.md", text)
             self.assertIn("GUI_EVIDENCE_BOUNDARY_INDEX.md", text)
+            self.assertIn("GUI_OPERATOR_RUNBOOK_INDEX.md", text)
             self.assertIn("GUI_FINDING_TRIAGE_INDEX.md", text)
             self.assertIn("GUI_REPORT_READINESS_INDEX.md", text)
             self.assertIn("GUI_WORKFLOW_STATUS_INDEX.md", text)
@@ -3078,6 +3183,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "check AI handoff index",
             "check prompt readiness index",
             "check evidence boundary index",
+            "check operator runbook index",
             "export safe files",
             "send only verified safe files to AI",
             "http://127.0.0.1:8766/",
@@ -3086,6 +3192,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "/workflow?project=<alias>",
             "/prompt-readiness?project=<alias>",
             "/evidence-boundary?project=<alias>",
+            "/operator-runbook?project=<alias>",
             "/preflight?project=<alias>",
             "/handoff?project=<alias>",
             "/help",
@@ -3098,6 +3205,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "Report readiness index",
             "Workflow status index",
             "Prompt readiness index",
+            "Operator runbook index",
             "AI-safe preflight",
             "AI handoff index",
             "Export",
@@ -3125,6 +3233,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "report readiness 실행 버튼",
             "workflow status 실행 버튼",
             "prompt readiness 실행 버튼",
+            "operator runbook 실행 버튼",
             "AI-safe preflight 실행 버튼",
             "AI handoff 실행 버튼",
             "risk profile 변경 버튼",
@@ -3338,6 +3447,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "handoff",
             "prompt-readiness",
             "evidence-boundary",
+            "operator-runbook",
             "triage",
             "report-readiness",
             "review/report/export flow",
@@ -3475,6 +3585,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "/triage?project=<alias>",
             "/report-readiness?project=<alias>",
             "/workflow?project=<alias>",
+            "/operator-runbook?project=<alias>",
             "finding은 수동 검증이 끝날 때까지 candidate",
             "risk는 draft",
             "evidence confidence는 severity가 아닙니다",
@@ -3494,6 +3605,75 @@ class RedactionGatewayTests(unittest.TestCase):
             "raw audit row preview",
             "download action",
             "archive 또는 HMAC 생성/검증 실행 버튼",
+            "replay 또는 active scan",
+        ]
+        for item in required:
+            self.assertIn(item, guide)
+
+        self.assertNotIn("raw_request", guide)
+        self.assertNotIn("raw_response", guide)
+        self.assertNotIn("DUMMY_COOKIE_VALUE", guide)
+        self.assertNotIn("DUMMY_BEARER_TOKEN", guide)
+        self.assertNotIn("safe to share", guide)
+        self.assertNotIn("approved", guide)
+        self.assertNotIn("guaranteed safe", guide)
+        self.assertNotIn("severity confirmed", guide)
+        self.assertNotIn("ready to submit", guide)
+        self.assertNotIn("제출 가능", guide)
+        self.assertNotIn("승인 완료", guide)
+        self.assertNotIn("안전 보장", guide)
+        self.assertNotIn("This guide explains", guide)
+
+    def test_gui_operator_runbook_index_guide_documents_read_only_boundary(self) -> None:
+        guide = (ROOT / "docs" / "GUI_OPERATOR_RUNBOOK_INDEX.md").read_text(encoding="utf-8")
+        required = [
+            "조회 전용 operator runbook checklist",
+            "/operator-runbook?project=<alias>",
+            "Burp HTTP history 수집",
+            "localhost receiver 저장",
+            "redaction/verify",
+            "review candidate findings",
+            "report_draft.md 생성",
+            "preflight",
+            "handoff",
+            "triage",
+            "report-readiness",
+            "prompt-readiness",
+            "evidence-boundary",
+            "workflow status recap",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "safe files 4개",
+            "AI 후보 입력 범위",
+            "금지 데이터 경계",
+            "finding은 수동 검증이 끝날 때까지 candidate",
+            "risk rating은 draft",
+            "evidence confidence는 severity가 아닙니다",
+            "최종 심각도는 Burp 재현",
+            "report_draft.md는 최종 보고서가 아니라 초안",
+            "prompt/evidence/report",
+            "/preflight?project=<alias>",
+            "/handoff?project=<alias>",
+            "/triage?project=<alias>",
+            "/report-readiness?project=<alias>",
+            "/prompt-readiness?project=<alias>",
+            "/evidence-boundary?project=<alias>",
+            "/workflow?project=<alias>",
+            "raw request/response body",
+            "raw audit row 전문",
+            "Cookie 값",
+            "Authorization 값",
+            "token/JWT/session 값",
+            "실제 domain, URL, IP 값",
+            "개인정보",
+            "HMAC secret 또는 CSRF token 값",
+            "full local path",
+            "form 또는 POST action",
+            "상태 변경 버튼",
+            "파일 내려받기",
+            "raw viewer",
             "replay 또는 active scan",
         ]
         for item in required:

@@ -73,6 +73,7 @@ secret 처리, CSRF token 처리, audit HMAC 검증, compressed archive HMAC 검
 | `/triage?project=<alias>` | finding 후보와 수동 검토 경계 확인 |
 | `/report-readiness?project=<alias>` | 보고서 초안 준비 경계 확인 |
 | `/workflow?project=<alias>` | 전체 GUI 흐름 상태 확인 |
+| `/operator-runbook?project=<alias>` | 수집부터 AI 투입 전 수동 검토까지 운영 순서 확인 |
 
 ## 해석 경계
 

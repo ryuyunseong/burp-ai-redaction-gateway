@@ -158,6 +158,8 @@ HMAC verification, 실패 처리까지 포함한 전체 안전 운영 흐름은
 [docs/GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
 참조하세요. 조회 전용 evidence boundary 체크리스트는
 [docs/GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
+참조하세요. 조회 전용 operator runbook 체크리스트는
+[docs/GUI_OPERATOR_RUNBOOK_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_OPERATOR_RUNBOOK_INDEX.md)를
 참조하세요. 조회 전용 GUI finding triage 체크리스트는
 [docs/GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 조회 전용 GUI 보고서 초안 준비 체크리스트는
@@ -281,6 +283,7 @@ dashboard에는 다음 조회 전용 화면도 포함됩니다.
 - `/handoff?project=<alias>`: AI 핸드오프 인덱스
 - `/prompt-readiness?project=<alias>`: prompt readiness 인덱스
 - `/evidence-boundary?project=<alias>`: 정제 evidence와 raw 금지 범위 경계 인덱스
+- `/operator-runbook?project=<alias>`: 수집부터 AI 투입 전 수동 검토까지 운영 순서 인덱스
 - `/triage?project=<alias>`: finding triage 인덱스
 - `/report-readiness?project=<alias>`: 보고서 초안 준비 상태 인덱스
 - `/workflow?project=<alias>`: workflow 상태 인덱스

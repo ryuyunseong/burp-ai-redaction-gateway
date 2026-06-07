@@ -36,6 +36,8 @@ workflow 상태, audit 운영, audit panel 해석, risk rating 문서로 이동�
 [GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
 참조하세요. Evidence boundary 체크리스트는
 [GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
+참조하세요. Operator runbook 체크리스트는
+[GUI_OPERATOR_RUNBOOK_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_OPERATOR_RUNBOOK_INDEX.md)를
 참조하세요. finding 후보 triage 체크리스트는
 [GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 보고서 초안 준비 체크리스트는
@@ -183,6 +185,29 @@ evidence 범위를 분리해 보여줍니다.
 path, form, POST action, download action, archive/HMAC 실행, replay,
 active scan, delete/retention action을 제공하지 않습니다.
 
+## Operator Runbook 인덱스
+
+선택한 검증 output에 대해 조회 전용 operator runbook checklist를 제공합니다.
+
+```text
+/operator-runbook?project=<alias>
+```
+
+operator runbook 인덱스는 Burp HTTP history 수집, localhost receiver 저장,
+redaction/verify, review candidate findings, report_draft.md 생성,
+preflight, handoff, triage, report-readiness, prompt-readiness,
+evidence-boundary, workflow status recap 순서를 한 화면에서 확인합니다.
+
+표시하는 값은 project alias, finding candidate count, safe files 4개 상태,
+관련 조회 화면 링크, raw_data_included=false, body preview=false 같은 안전
+metadata입니다. finding은 candidate이고 risk rating은 draft이며 최종 심각도는
+Burp 재현, 권한별 비교, 영향도 판단 후 사람이 수동 결정합니다.
+
+이 화면은 form, POST action, 상태 변경 버튼, 파일 내려받기, raw row 전문,
+request/response/prompt/report/evidence body preview, HMAC secret 입력,
+CSRF token 표시, retention/delete 정책 변경, replay, active scan을 제공하지
+않습니다.
+
 ## 보고서 준비 상태 인덱스
 
 선택한 검증 output에 대해 조회 전용 보고서 준비 상태 인덱스를 제공합니다.
@@ -242,6 +267,7 @@ dashboard는 다음 기능을 구현하지 않습니다.
 - report readiness 실행 버튼
 - workflow status 실행 버튼
 - prompt readiness 실행 버튼
+- operator runbook 실행 버튼
 
 ## 허용된 상태 변경 action
 

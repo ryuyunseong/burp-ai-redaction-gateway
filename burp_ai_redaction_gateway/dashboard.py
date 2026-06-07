@@ -57,6 +57,7 @@ OPERATIONS_GUIDES = (
     ("AI 핸드오프 인덱스", "docs/GUI_AI_HANDOFF_INDEX.md", "AI 투입 파일 순서와 주의사항"),
     ("Prompt readiness 인덱스", "docs/GUI_PROMPT_READINESS_INDEX.md", "prompt 파일 투입 전 조회 전용 점검"),
     ("Evidence boundary 인덱스", "docs/GUI_EVIDENCE_BOUNDARY_INDEX.md", "정제 증거와 raw 금지 범위의 조회 전용 경계"),
+    ("Operator runbook 인덱스", "docs/GUI_OPERATOR_RUNBOOK_INDEX.md", "수집부터 AI 투입 전 수동 검토까지 운영 순서 점검"),
     ("Finding 후보 분류 인덱스", "docs/GUI_FINDING_TRIAGE_INDEX.md", "finding 후보 검토 순서와 수동 판단 경계"),
     ("보고서 준비 인덱스", "docs/GUI_REPORT_READINESS_INDEX.md", "report_draft 초안 검토 상태와 수동 제출 경계"),
     ("작업 흐름 상태 인덱스", "docs/GUI_WORKFLOW_STATUS_INDEX.md", "검증된 산출물의 조회 전용 작업 흐름 점검"),
@@ -253,6 +254,28 @@ class WorkflowStatusIndex:
     analysis_status: str
 
 
+@dataclass(frozen=True)
+class OperatorRunbookStep:
+    order: int
+    name: str
+    status: str
+    purpose: str
+    safe_metadata: tuple[str, ...]
+    href: str
+
+
+@dataclass(frozen=True)
+class OperatorRunbookIndex:
+    output: DashboardOutput
+    file_statuses: list[tuple[str, str]]
+    steps: list[OperatorRunbookStep]
+    candidate_count: int
+    review_status: str
+    report_status: str
+    analysis_status: str
+    safe_file_count: int
+
+
 class DashboardError(ValueError):
     def __init__(self, error_type: str, status: HTTPStatus = HTTPStatus.BAD_REQUEST) -> None:
         super().__init__(error_type)
@@ -323,6 +346,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
                 self._send_html(render_workflow_status_index(_build_workflow_status_index(output)))
+                return
+            if parsed.path == "/operator-runbook":
+                output_id = _required_query_value(parsed.query, "project")
+                output = _verified_output(self.server.config.root, self.server.policy, output_id)
+                self._send_html(render_operator_runbook_index(_build_operator_runbook_index(output)))
                 return
             if parsed.path == "/preview":
                 output_id = _required_query_value(parsed.query, "project")
@@ -885,6 +913,7 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
             <a class="button small secondary" href="{_prompt_readiness_href(output.output_id)}">Prompt readiness</a>
             <a class="button small secondary" href="{_evidence_boundary_href(output.output_id)}">증거 경계</a>
             <a class="button small secondary" href="{_workflow_href(output.output_id)}">작업 흐름 상태</a>
+            <a class="button small secondary" href="{_operator_runbook_href(output.output_id)}">Operator runbook</a>
           </div>
           <div class="panel">
             <div class="panel-head"><h2>탐지 후보</h2><span class="muted">총 {len(candidates)}개</span></div>
@@ -1328,7 +1357,123 @@ def render_evidence_boundary_index(index: EvidenceBoundaryIndex) -> str:
               <div><dt>후보 분류</dt><dd><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스 열기</a></dd></div>
               <div><dt>보고서 준비</dt><dd><a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스 열기</a></dd></div>
               <div><dt>작업 흐름</dt><dd><a href="{_workflow_href(output.output_id)}">작업 흐름 상태 인덱스 열기</a></dd></div>
+              <div><dt>운영 runbook</dt><dd><a href="{_operator_runbook_href(output.output_id)}">Operator runbook 인덱스 열기</a></dd></div>
               <div><dt>경계</dt><dd>read-only evidence boundary checklist이며 form, POST action, download action이 없습니다.</dd></div>
+            </dl>
+          </div>
+        </section>
+        """,
+    )
+
+
+def render_operator_runbook_index(index: OperatorRunbookIndex) -> str:
+    output = index.output
+    step_cards = "\n".join(_operator_runbook_step_card(step) for step in index.steps)
+    file_rows = "\n".join(
+        f"<div><dt>{_h(name)}</dt><dd>{_status_badge(status)}</dd></div>"
+        for name, status in index.file_statuses
+    )
+    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
+    ai_candidate_items = "".join(
+        f"<li>{_h(item)}</li>"
+        for item in (
+            "검증을 통과한 safe files 4개",
+            "sanitized finding candidate metadata",
+            "candidate count, 파일 크기, 수정 시각, SHA-256 fingerprint",
+            "preflight, handoff, triage, report-readiness, prompt-readiness, evidence-boundary 상태",
+            "workflow status recap에서 확인한 운영 순서",
+        )
+    )
+    forbidden_items = "".join(
+        f"<li>{_h(item)}</li>"
+        for item in (
+            "raw request/response body",
+            "raw audit row 전문",
+            "Cookie 값",
+            "Authorization 값",
+            "token/JWT/session 값",
+            "실제 URL/도메인/IP",
+            "개인정보",
+            "HMAC secret",
+            "CSRF token",
+            "full local path",
+            "local_only/, raw/, raw_vault/, verify 전 out/, out/.audit 산출물",
+        )
+    )
+    return _page(
+        f"Operator runbook 인덱스 {output.label}",
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="{_output_href(output.output_id)}">검증된 산출물 상세</a>
+            <h1>Operator runbook 인덱스</h1>
+            <p class="subtitle">Burp 수집부터 AI 투입 전 수동 검토까지 운영자가 확인할 순서를 보여주는 조회 전용 operator runbook checklist입니다.</p>
+          </div>
+          <span class="badge good">조회 전용</span>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>프로젝트 별칭</span><strong>{_h(output.label)}</strong></div>
+          <div class="rail"><span>운영 단계</span><strong>{len(index.steps)}</strong></div>
+          <div class="rail"><span>safe files</span><strong>{index.safe_file_count}/{len(SAFE_PREVIEW_FILES)}</strong></div>
+          <div class="rail"><span>raw 표시</span><strong>false</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>운영 runbook 요약</h2><span class="muted">본문 미리보기 없이 안전 metadata만 표시합니다.</span></div>
+            <dl class="facts">
+              <div><dt>프로젝트 별칭</dt><dd>{_h(output.label)}</dd></div>
+              <div><dt>verify gate</dt><dd>{_status_badge("passed")}</dd></div>
+              <div><dt>review 후보 상태</dt><dd>{_status_badge(index.review_status)}</dd></div>
+              <div><dt>finding candidate count</dt><dd>{index.candidate_count}</dd></div>
+              <div><dt>analysis_packet.json</dt><dd>{_status_badge(index.analysis_status)}</dd></div>
+              <div><dt>report_draft.md</dt><dd>{_status_badge(index.report_status)}</dd></div>
+              <div><dt>raw_data_included</dt><dd>false</dd></div>
+              <div><dt>body preview</dt><dd>false</dd></div>
+              <div><dt>full local path 표시</dt><dd>false</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>운영 순서</h2><span class="muted">각 단계는 실행 버튼이 아니라 조회 전용 이동 링크입니다.</span></div>
+            <div class="file-grid">{step_cards}</div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>safe files 4개</h2><span class="muted">AI 후보 파일 allowlist입니다.</span></div>
+            <dl class="facts">{file_rows}</dl>
+            <ul class="safe-list">{safe_files}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>AI 후보 입력 범위</h2><span class="muted">검증 후 사람이 다시 확인해야 하는 후보입니다.</span></div>
+            <ul class="safe-list">{ai_candidate_items}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>금지 데이터 경계</h2><span class="muted">분류명만 표시하고 실제 값은 표시하지 않습니다.</span></div>
+            <ul class="safe-list">{forbidden_items}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>해석 경계</h2><span class="muted">자동 판단으로 확정하지 않습니다.</span></div>
+            <dl class="facts">
+              <div><dt>finding</dt><dd>수동 검증이 끝날 때까지 candidate입니다.</dd></div>
+              <div><dt>risk</dt><dd>risk rating은 draft이며 최종 심각도가 아닙니다.</dd></div>
+              <div><dt>confidence</dt><dd>evidence confidence이며 severity가 아닙니다.</dd></div>
+              <div><dt>최종 심각도</dt><dd>Burp 재현, 권한별 비교, 영향도 판단 후 사람이 수동 결정합니다.</dd></div>
+              <div><dt>report_draft.md</dt><dd>최종 보고서가 아니라 수동 검토용 초안입니다.</dd></div>
+              <div><dt>prompt/evidence/report</dt><dd>모두 AI 투입 또는 공유 전 사람 검토가 필요합니다.</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>관련 조회 화면</h2><span class="muted">GET 링크만 제공합니다.</span></div>
+            <dl class="facts">
+              <div><dt>산출물 상세</dt><dd><a href="{_output_href(output.output_id)}">검증된 산출물 상세 열기</a></dd></div>
+              <div><dt>도움말</dt><dd><a href="/help">운영 도움말 열기</a></dd></div>
+              <div><dt>운영 허브</dt><dd><a href="/operations">운영 허브 열기</a></dd></div>
+              <div><dt>사전 점검</dt><dd><a href="{_preflight_href(output.output_id)}">AI 안전 사전 점검 열기</a></dd></div>
+              <div><dt>핸드오프</dt><dd><a href="{_handoff_href(output.output_id)}">AI 핸드오프 인덱스 열기</a></dd></div>
+              <div><dt>후보 분류</dt><dd><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스 열기</a></dd></div>
+              <div><dt>보고서 준비</dt><dd><a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스 열기</a></dd></div>
+              <div><dt>Prompt readiness</dt><dd><a href="{_prompt_readiness_href(output.output_id)}">Prompt readiness 인덱스 열기</a></dd></div>
+              <div><dt>Evidence boundary</dt><dd><a href="{_evidence_boundary_href(output.output_id)}">Evidence boundary 인덱스 열기</a></dd></div>
+              <div><dt>Workflow status recap</dt><dd><a href="{_workflow_href(output.output_id)}">작업 흐름 상태 인덱스 열기</a></dd></div>
+              <div><dt>경계</dt><dd>이 화면은 조회 전용이며 form, POST action, 실행 버튼, 파일 내려받기를 제공하지 않습니다.</dd></div>
             </dl>
           </div>
         </section>
@@ -1406,6 +1551,7 @@ def render_workflow_status_index(index: WorkflowStatusIndex) -> str:
               <div><dt>Prompt readiness</dt><dd><a href="{_prompt_readiness_href(output.output_id)}">Prompt readiness 인덱스 열기</a></dd></div>
               <div><dt>후보 분류</dt><dd><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스 열기</a></dd></div>
               <div><dt>보고서 준비</dt><dd><a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스 열기</a></dd></div>
+              <div><dt>운영 runbook</dt><dd><a href="{_operator_runbook_href(output.output_id)}">Operator runbook 인덱스 열기</a></dd></div>
               <div><dt>리뷰/보고서/내보내기 흐름</dt><dd><a href="{_output_href(output.output_id)}">검증된 산출물 상세로 돌아가기</a></dd></div>
               <div><dt>경계</dt><dd>조회 전용 작업 흐름 점검이며 form 또는 POST action이 없습니다.</dd></div>
             </dl>
@@ -1893,6 +2039,125 @@ def _build_workflow_status_index(output: DashboardOutput) -> WorkflowStatusIndex
     )
 
 
+def _build_operator_runbook_index(output: DashboardOutput) -> OperatorRunbookIndex:
+    file_statuses = [
+        (name, "present" if (output.path / name).is_file() else "missing")
+        for name in SAFE_PREVIEW_FILES
+    ]
+    safe_file_count = sum(1 for _, status in file_statuses if status == "present")
+    report_status = "draft available" if (output.path / "report_draft.md").is_file() else "missing"
+    analysis_status = "candidate available" if (output.path / "analysis_packet.json").is_file() else "missing"
+    review_status = "candidate available" if output.candidate_count else "missing"
+    steps = [
+        OperatorRunbookStep(
+            order=1,
+            name="Burp HTTP history 수집",
+            status="manual review required",
+            purpose="스코프가 확인된 HTTP history만 로컬 receiver로 보낼 준비를 확인합니다.",
+            safe_metadata=("스코프 확인", "대상 별칭", "원문 값 미표시"),
+            href="/help",
+        ),
+        OperatorRunbookStep(
+            order=2,
+            name="localhost receiver 저장",
+            status="manual review required",
+            purpose="127.0.0.1 receiver가 sanitized output alias를 생성했는지 확인합니다.",
+            safe_metadata=("receiver 포트", "output alias", "project alias"),
+            href="/operations",
+        ),
+        OperatorRunbookStep(
+            order=3,
+            name="redaction/verify",
+            status="passed",
+            purpose="검증 gate를 통과한 산출물만 다음 단계로 넘깁니다.",
+            safe_metadata=("검증한 파일 수", "safe file 상태", "raw_data_included=false"),
+            href=_output_href(output.output_id),
+        ),
+        OperatorRunbookStep(
+            order=4,
+            name="review candidate findings",
+            status=review_status,
+            purpose="정제된 finding candidate metadata와 후보 수를 확인합니다.",
+            safe_metadata=("candidate count", "finding id", "risk draft metadata"),
+            href=_triage_href(output.output_id),
+        ),
+        OperatorRunbookStep(
+            order=5,
+            name="report_draft.md 생성",
+            status=report_status,
+            purpose="수동 검토용 보고서 초안 존재 여부를 확인합니다.",
+            safe_metadata=("report_draft.md 상태", "파일 fingerprint", "초안 경계"),
+            href=_report_readiness_href(output.output_id),
+        ),
+        OperatorRunbookStep(
+            order=6,
+            name="preflight",
+            status="manual review required",
+            purpose="AI 투입 전 safe files 4개와 금지 마커 상태를 확인합니다.",
+            safe_metadata=("safe files 4개", "금지 마커 스캔", "verify 선행 여부"),
+            href=_preflight_href(output.output_id),
+        ),
+        OperatorRunbookStep(
+            order=7,
+            name="handoff",
+            status="manual review required",
+            purpose="AI 후보 파일의 순서, 목적, 안전 metadata를 확인합니다.",
+            safe_metadata=("file alias", "purpose", "SHA-256 fingerprint"),
+            href=_handoff_href(output.output_id),
+        ),
+        OperatorRunbookStep(
+            order=8,
+            name="triage",
+            status="manual review required",
+            purpose="finding 후보가 확정 심각도로 읽히지 않는지 확인합니다.",
+            safe_metadata=("candidate status", "confidence", "severity draft"),
+            href=_triage_href(output.output_id),
+        ),
+        OperatorRunbookStep(
+            order=9,
+            name="report-readiness",
+            status="manual review required",
+            purpose="보고서 초안과 수동 제출 전 확인 항목을 분리해 봅니다.",
+            safe_metadata=("report draft status", "manual checklist", "safe file metadata"),
+            href=_report_readiness_href(output.output_id),
+        ),
+        OperatorRunbookStep(
+            order=10,
+            name="prompt-readiness",
+            status="manual review required",
+            purpose="prompt 파일을 AI에 넣기 전 본문 없이 상태와 경계를 확인합니다.",
+            safe_metadata=("prompt file status", "body preview=false", "manual review boundary"),
+            href=_prompt_readiness_href(output.output_id),
+        ),
+        OperatorRunbookStep(
+            order=11,
+            name="evidence-boundary",
+            status="manual review required",
+            purpose="정제 evidence와 raw 금지 범위가 분리되어 있는지 확인합니다.",
+            safe_metadata=("sanitized evidence status", "forbidden data categories", "full path=false"),
+            href=_evidence_boundary_href(output.output_id),
+        ),
+        OperatorRunbookStep(
+            order=12,
+            name="workflow status recap",
+            status="manual review required",
+            purpose="전체 GUI 운영 흐름과 남은 수동 검토 지점을 다시 확인합니다.",
+            safe_metadata=("step status", "related index links", "no state change"),
+            href=_workflow_href(output.output_id),
+        ),
+    ]
+    return OperatorRunbookIndex(
+        output=output,
+        file_statuses=file_statuses,
+        steps=steps,
+        candidate_count=output.candidate_count,
+        review_status=review_status,
+        report_status=report_status,
+        analysis_status=analysis_status,
+        safe_file_count=safe_file_count,
+    )
+
+
 def _report_readiness_file(output_dir: Path, name: str, purpose: str) -> ReportReadinessFile:
     path = output_dir / name
     if not path.is_file():
@@ -2165,6 +2430,26 @@ def _workflow_step_card(step: WorkflowStep) -> str:
       <dl class="facts compact">
         <div><dt>상태</dt><dd>{_h(_status_label(step.status))}</dd></div>
         <div><dt>링크</dt><dd><a href="{_h(step.href)}">조회 전용 단계 열기</a></dd></div>
+        <div><dt>action 표면</dt><dd>form 없음, POST action 없음, 상태 변경 버튼 없음</dd></div>
+      </dl>
+    </article>
+    """
+
+
+def _operator_runbook_step_card(step: OperatorRunbookStep) -> str:
+    metadata = "".join(f"<li>{_h(item)}</li>" for item in step.safe_metadata)
+    return f"""
+    <article class="file-card">
+      <div>
+        <span class="kicker">runbook step {step.order}</span>
+        <strong>{_h(step.name)}</strong>
+        <span>{_status_badge(step.status)}</span>
+        <small>{_h(step.purpose)}</small>
+      </div>
+      <dl class="facts compact">
+        <div><dt>상태</dt><dd>{_h(_status_label(step.status))}</dd></div>
+        <div><dt>확인 metadata</dt><dd><ul class="safe-list compact">{metadata}</ul></dd></div>
+        <div><dt>관련 화면</dt><dd><a href="{_h(step.href)}">조회 전용 화면 열기</a></dd></div>
         <div><dt>action 표면</dt><dd>form 없음, POST action 없음, 상태 변경 버튼 없음</dd></div>
       </dl>
     </article>
@@ -2812,6 +3097,10 @@ def _evidence_boundary_href(output_id: str) -> str:
 
 def _workflow_href(output_id: str) -> str:
     return "/workflow?project=" + quote(output_id, safe="")
+
+
+def _operator_runbook_href(output_id: str) -> str:
+    return "/operator-runbook?project=" + quote(output_id, safe="")
 
 
 def _preview_href(output_id: str, file_name: str) -> str:
