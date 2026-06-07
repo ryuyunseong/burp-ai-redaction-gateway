@@ -28,6 +28,10 @@ policy, or release status.
 Goal: run `v0.4.34` in one or two real internal local workflows and record
 operator friction without changing the data boundary.
 
+Use [`OPERATION_FRICTION_LOG_v0.5.md`](OPERATION_FRICTION_LOG_v0.5.md) and
+[`templates/OPERATION_FRICTION_ENTRY_TEMPLATE.md`](templates/OPERATION_FRICTION_ENTRY_TEMPLATE.md)
+for raw-free entries before selecting the first v0.5 feature slice.
+
 Candidate tasks:
 
 - Record where a first-time operator hesitates in the CLI or dashboard flow.
