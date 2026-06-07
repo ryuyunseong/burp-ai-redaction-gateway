@@ -93,6 +93,26 @@ file allowlist and candidate/draft wording before using:
 Findings remain candidates. Risk ratings remain drafts. Severity decisions and
 CVSS decisions require manual review outside this harness.
 
+## RC1 Readiness Use
+
+For the `v0.4.30-local-real-export-smoke-harness` baseline, the first authorized
+local real export smoke run is tracked only as raw-free metadata:
+
+- `actual_export_smoke=passed`
+- `generate=passed`
+- `verify=passed`
+- `review=passed`
+- `report=passed`
+- `dashboard_smoke=passed`
+- `browser_smoke=passed`
+- `candidate_count=60`
+- `safe_files_present=4`
+- `forbidden_value_hits=0`
+
+This supports the proposed `v0.4.31-rc1` readiness review, but it is not a final
+release decision and does not replace the normal safe file review before AI
+handoff.
+
 ## Failure Handling
 
 If a step fails, the harness reports only a safe error type. Do not paste failed

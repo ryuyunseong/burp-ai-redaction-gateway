@@ -2,7 +2,7 @@
 
 This release note summarizes the v0.4 dashboard baseline from
 `v0.4.0-local-dashboard` through
-`v0.4.27-gui-safe-file-inventory-index`.
+`v0.4.30-local-real-export-smoke-harness`.
 
 The v0.4 line adds a local browser dashboard for verified sanitized output,
 keeps AI-facing files behind the existing `verify` gate, and preserves the
@@ -28,6 +28,10 @@ sent to AI tools.
   flow, AI preflight, handoff, finding triage, report readiness, workflow
   status, prompt readiness, evidence boundary, operator runbook, and safe file
   inventory.
+- `v0.4.28` through `v0.4.30`: add release hardening notes, real Burp export
+  validation guidance, and a local real export smoke harness.
+- `v0.4.30-local-real-export-smoke-harness`: baseline for the first authorized
+  local real export smoke run.
 
 ## Major Changes
 
@@ -192,6 +196,25 @@ PRs:
 - Browser checks for read-only operator indexes, including form/button/POST
   absence on guide pages and safe file inventory metadata without body preview
   or download links.
+- First authorized local real export smoke evidence, recorded only as raw-free
+  metadata:
+  - `actual_export_smoke=passed`
+  - `generate=passed`
+  - `verify=passed`
+  - `review=passed`
+  - `report=passed`
+  - `dashboard_smoke=passed`
+  - `browser_smoke=passed`
+  - `candidate_count=60`
+  - `safe_files_present=4`
+  - `forbidden_value_hits=0`
+
+This evidence supports RC1 readiness only. It is not a final release decision,
+not a guarantee for AI handoff, and not a confirmation that any candidate
+finding or severity draft is final.
+
+The proposed next tag candidate is `v0.4.31-rc1`. This tag is intentionally not
+created by the RC1 readiness documentation PR.
 
 Before creating a v0.4 tag, use
 [`RELEASE_CHECKLIST_v0.4.md`](RELEASE_CHECKLIST_v0.4.md) to repeat the CLI,
@@ -208,6 +231,8 @@ Gitleaks, git safety, and GUI route smoke checks.
   absent.
 - HMAC protects retained audit files from undetected modification when the local
   secret is managed correctly. HMAC is tamper detection, not encryption.
+- The first real export smoke covers one authorized export shape. Additional
+  export shapes should be checked before broader release confidence is claimed.
 
 ## Follow-Up Candidates
 

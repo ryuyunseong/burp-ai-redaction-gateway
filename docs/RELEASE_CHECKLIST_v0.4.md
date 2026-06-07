@@ -127,6 +127,29 @@ Release 문서, PR 본문, issue, AI prompt, dashboard 도움말에는 다음 �
 - smoke harness는 ignored `local_only/` 입력과 ignored `out/` 출력만
   허용하고, console에는 raw-free metadata만 출력해야 합니다.
 
+## RC1 readiness metadata
+
+The current RC1 readiness baseline is
+`v0.4.30-local-real-export-smoke-harness`. The first authorized local real export
+smoke result is recorded only as raw-free metadata:
+
+- `actual_export_smoke=passed`
+- `generate=passed`
+- `verify=passed`
+- `review=passed`
+- `report=passed`
+- `dashboard_smoke=passed`
+- `browser_smoke=passed`
+- `candidate_count=60`
+- `safe_files_present=4`
+- `forbidden_value_hits=0`
+
+This is readiness evidence for an RC1 candidate only. It does not make any
+candidate finding final, does not make any risk draft final, and does not
+approve an AI handoff without the normal safe file review. The proposed tag
+candidate is `v0.4.31-rc1`, but the tag must be created only after separate
+approval and is not created by the readiness documentation PR.
+
 ## Tag 기준
 
 Tag는 다음 조건에서만 생성합니다.
