@@ -1,0 +1,324 @@
+# Live Capture Wizard Design v0.5
+
+This document defines the v0.5 design boundary for a local-only Live Capture
+Wizard. It is a planning document only. It does not add a `/live-capture`
+runtime route, dashboard action, collector behavior, or receiver behavior.
+
+## Goal
+
+The Live Capture Wizard should let an operator start from a local dashboard,
+define a narrow Burp browsing scope, explore in Burp, and produce the same four
+verified AI input candidate files that the existing CLI, receiver, and Upload
+Wizard flows produce.
+
+Target workflow:
+
+```text
+open local dashboard
+-> open /live-capture
+-> enter a local capture label and target scope
+-> start a capture session
+-> browse with Burp
+-> collector sends only allowed in-scope traffic to the loopback receiver
+-> gateway runs redaction, verify, review, and report draft
+-> operator opens /simple and /safe-files
+-> operator manually reviews the four safe files
+```
+
+The wizard must not send content to ChatGPT, paste content into ChatGPT, run
+active scans, replay traffic, or make findings final.
+
+## Relationship To Existing Flows
+
+| Flow | Input | Collection style | Output |
+| --- | --- | --- | --- |
+| Upload Wizard | Local `.xml` or `.json` export selected by the operator | One uploaded file | Verified output plus safe file links |
+| Receiver | Burp collector handoff payloads | Collector sends in-scope items to loopback | Sanitized receiver output |
+| Live Capture Wizard | Local capture label and target scope | Guided session using collector plus receiver | Verified output plus dashboard links |
+
+The Live Capture Wizard should reuse the existing receiver, redaction,
+verification, review, report, safe-file inventory, and Simple Dashboard
+contracts. It should not create a parallel pipeline.
+
+## Proposed Routes
+
+Future implementation may use these local dashboard routes:
+
+```text
+GET  /live-capture
+POST /live-capture/start
+POST /live-capture/stop
+GET  /live-capture/status?session=<capture_alias>
+```
+
+State-changing POST routes must be implemented in a separate runtime PR with
+CSRF protection and raw-free dashboard action audit. This design PR does not add
+those routes.
+
+## Screen Model
+
+`GET /live-capture` should show:
+
+- capture label input
+- target scope input
+- scope allowlist summary
+- receiver health status
+- collector readiness status
+- current capture status
+- links to `/simple`, `/safe-files`, `/triage`, and `/report-readiness` after
+  successful verification
+
+The screen should show safe aliases and status labels. It should not echo actual
+target identifiers after a capture starts.
+
+## Target Scope Handling
+
+The operator may enter a target scope locally, but the system should avoid
+showing that value outside the local form context.
+
+Design rules:
+
+- Require an explicit allowlist before capture starts.
+- Accept only narrow host or domain-style scope entries.
+- Reject empty, wildcard-only, broad public suffix, path traversal, and
+  malformed scope entries.
+- Reject IP ranges and raw URL paths in the first implementation slice.
+- Store the raw scope only in ignored local-only session state if storage is
+  required.
+- Display only a safe capture alias, scope count, and match status in dashboard
+  result pages and action audit.
+- Do not write actual target identifiers into docs, PRs, issues, release text,
+  logs, or AI prompts.
+
+## Collector And Receiver Integration
+
+The collector remains Burp-side. The receiver remains loopback-only.
+
+Expected integration:
+
+```text
+Burp Proxy history item
+-> collector checks Burp suite scope and wizard allowlist
+-> collector sends allowed item to loopback receiver
+-> receiver redacts and verifies generated output
+-> dashboard reads verified output metadata
+```
+
+Collector requirements:
+
+- Send only allowed in-scope items.
+- Do not log request or response values.
+- Do not log credential, session, token, cookie, or personal data values.
+- Use loopback receiver endpoints only.
+- Report safe status labels when the receiver is unavailable.
+
+Receiver requirements:
+
+- Continue rejecting non-loopback bind hosts.
+- Continue enforcing payload size limits.
+- Continue using the existing redaction and fail-closed verify gate.
+- Do not expose raw request or response values in errors.
+
+## Domain Match Rule
+
+Future implementation should use a conservative match rule:
+
+- Normalize the operator-provided scope locally.
+- Compare candidate traffic against the normalized allowlist.
+- Treat unknown or unparsable targets as out of scope.
+- Do not collect out-of-scope traffic.
+- Do not collect broad wildcard matches in the first slice.
+- Prefer fail-closed behavior when the collector cannot decide.
+
+The rule should produce safe metadata only:
+
+- `capture_alias`
+- `scope_entry_count`
+- `matched=true|false`
+- `match_rule_version`
+- `raw_data_included=false`
+
+It must not emit actual target identifiers.
+
+## Passive Suspicious Packet Selection
+
+The first implementation should remain passive. It should not scan, replay, or
+modify traffic.
+
+Allowed passive signals:
+
+| Signal | Allowed metadata |
+| --- | --- |
+| Authentication or session header presence | Presence only, no values |
+| Query, form, JSON, XML, or multipart parameter presence | Count or redacted key class only |
+| Error response status | Status family only |
+| Redirect or login/logout pattern | Pattern label only |
+| File upload endpoint shape | Endpoint template only |
+| API or GraphQL endpoint shape | Endpoint template only |
+| Hidden input or form presence | Presence only |
+| Cache or security header gaps | Header name class only |
+
+The selection output is a candidate queue. It is not a confirmed vulnerability
+list.
+
+Required wording:
+
+```text
+finding = candidate
+risk = draft
+final severity = manual decision
+CVSS = separate manual calculation
+```
+
+## Pipeline
+
+Live capture should reuse this sequence:
+
+```text
+capture session validation
+-> collector allowlist check
+-> loopback receiver handoff
+-> redaction
+-> verify
+-> review
+-> report draft
+-> Simple Dashboard
+-> safe file inventory
+```
+
+If `verify` fails:
+
+- stop the workflow safely
+- skip review and report
+- hide safe file links
+- show a safe failure category only
+- write raw-free action audit metadata
+
+## Safe Files
+
+The only AI input candidate files remain:
+
+- `analysis_packet.json`
+- `chatgpt_prompt.md`
+- `codex_task_prompt.md`
+- `report_draft.md`
+
+The wizard should show these files only after verification passes. The operator
+must manually review them before AI use.
+
+## ChatGPT Boundary
+
+The Live Capture Wizard must not:
+
+- send content to ChatGPT
+- paste content into ChatGPT
+- open a ChatGPT handoff automatically
+- call a ChatGPT API automatically
+- treat a verified output as safe for external sharing
+
+A future copy-to-clipboard button may be considered only for verified safe
+prompt files. If added, it must be a separate reviewed feature with explicit UI
+wording, raw-free audit, and no automatic paste behavior.
+
+## Raw Storage Boundary
+
+The implementation should not store raw traffic in repository source files.
+
+If local temporary storage is needed:
+
+- store only under ignored local-only locations
+- use generated internal names
+- do not display full local paths
+- do not display actual local-only filenames
+- do not expose raw preview or raw download actions
+- do not add deletion or retention policy changes in the first slice
+
+## Action Audit Design
+
+Dashboard action audit should record safe metadata only:
+
+- action name
+- capture alias
+- output alias
+- result status
+- blocked reason
+- receiver health status
+- collector readiness status
+- scope entry count
+- selected candidate count
+- safe file count
+- `raw_data_included=false`
+
+Audit must not record:
+
+- raw request or response values
+- target identifiers
+- credential, cookie, token, JWT, or session values
+- personal data
+- HMAC secret values
+- CSRF values
+- full local paths
+- stack traces
+
+## Failure Handling
+
+Safe failure categories:
+
+- `receiver_not_running`
+- `collector_not_ready`
+- `scope_missing`
+- `scope_invalid`
+- `scope_too_broad`
+- `out_of_scope_traffic_skipped`
+- `capture_start_blocked`
+- `capture_stop_failed`
+- `handoff_failed`
+- `generate_failed`
+- `verify_failed`
+- `review_skipped`
+- `report_skipped`
+
+Failure output must be actionable without exposing raw values.
+
+## Out Of Scope For First Implementation
+
+- Active scan
+- Replay
+- Traffic modification
+- Remote receiver endpoints
+- Automatic ChatGPT send
+- Automatic ChatGPT paste
+- HMAC secret handling changes
+- Retention or deletion policy changes
+- Final severity assignment
+- CVSS scoring
+- Raw request or response viewer
+- Raw preview or raw download
+
+## Implementation PR Split
+
+Recommended follow-up slices:
+
+1. `feat/live-capture-session-v0.5`
+   - add `/live-capture` session UI and CSRF-protected start/stop actions
+   - keep collector integration minimal and loopback-only
+   - write raw-free action audit
+2. `feat/live-capture-collector-filter-v0.5`
+   - harden collector allowlist matching and safe status output
+3. `test/live-capture-smoke-v0.5`
+   - add synthetic local-only smoke coverage without real traffic
+4. `docs/live-capture-operations-v0.5`
+   - document operator steps after the implementation is verified
+
+## Acceptance Criteria
+
+- No runtime behavior changes in this design PR.
+- Future implementation remains local-only and loopback-only.
+- The first live capture implementation cannot collect out-of-scope traffic.
+- The dashboard does not display raw values, actual target identifiers, full
+  paths, secrets, or personal data.
+- Verification remains fail-closed.
+- Safe file links appear only after verification passes.
+- Findings remain candidates.
+- Risk remains draft.
+- Final severity and CVSS remain manual decisions.

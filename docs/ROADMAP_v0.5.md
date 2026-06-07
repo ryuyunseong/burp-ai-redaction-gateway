@@ -33,6 +33,7 @@ Candidate tasks:
 - Record where a first-time operator hesitates in the CLI or dashboard flow.
 - Check whether the preferred first-screen path is clear:
   - `/upload`
+  - `/live-capture` design boundary
   - `/simple?project=<alias>`
   - `/safe-files?project=<alias>`
   - `/triage?project=<alias>`
@@ -48,13 +49,19 @@ Acceptance evidence:
 - No real export names, full paths, raw traffic, target identifiers, credentials,
   or personal data are copied into issue or PR text.
 
-## Priority 2: Montoya Collector Live-Operation Validation
+## Priority 2: Live Capture Wizard Design And Montoya Validation
 
-Goal: validate the Burp-side collector in a live local workflow so the path from
-exploration to local receiver to redaction is easier to trust.
+Goal: design and then validate the Burp-side live capture workflow so the path
+from exploration to local receiver to redaction is easier to trust.
 
 Candidate tasks:
 
+- Keep the design boundary in
+  [`LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md`](LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md).
+- Distinguish Upload Wizard file input from Live Capture Wizard guided Burp
+  browsing.
+- Define `/live-capture` as a future local-only wizard, not an automatic
+  ChatGPT handoff.
 - Confirm in-scope filtering behavior with synthetic or authorized local-only
   inputs.
 - Validate loopback receiver behavior and error messages.
@@ -70,6 +77,7 @@ Out of scope for the first v0.5 slice:
 
 Acceptance evidence:
 
+- Design text does not imply runtime support until implementation lands.
 - Collector validation can be reproduced without committing real traffic.
 - Failure output uses safe aliases and status metadata only.
 
@@ -180,9 +188,16 @@ Acceptance evidence:
 
 ## Suggested First v0.5 Slices
 
+Completed:
+
 1. `feat/gui-upload-wizard-v0.5`
-2. `docs/v0.5-troubleshooting-index`
-3. `feat/v0.5-montoya-live-validation`
-4. `feat/v0.5-candidate-triage-quality`
-5. `feat/v0.5-report-draft-quality`
-6. `feat/v0.5-windows-launcher-ux`
+
+Next:
+
+1. `docs/live-capture-wizard-design-v0.5`
+2. `feat/live-capture-session-v0.5`
+3. `docs/v0.5-troubleshooting-index`
+4. `feat/v0.5-montoya-live-validation`
+5. `feat/v0.5-candidate-triage-quality`
+6. `feat/v0.5-report-draft-quality`
+7. `feat/v0.5-windows-launcher-ux`
