@@ -139,6 +139,24 @@ v0.4 release 후보 검증에서 실제 export를 다룰 때는
 `forbidden_value_hits=0` 같은 raw-free metadata로 제한합니다. 제안된 RC1
 tag 후보는 `v0.4.31-rc1`이지만, tag 생성은 별도 승인 후에만 진행합니다.
 
+## v0.4 RC3 readiness metadata
+
+Authorized local real export smoke results are recorded as release readiness
+evidence only, using raw-free metadata. The current RC3 readiness baseline is
+`v0.4.33-rc3-redaction-metadata-hardening`.
+
+- First actual export smoke: `actual_export_smoke=passed`, `generate=passed`,
+  `verify=passed`, `review=passed`, `report=passed`,
+  `dashboard_smoke=passed`, `browser_smoke=passed`, `candidate_count=60`,
+  `safe_files_present=4`, `forbidden_value_hits=0`.
+- Second actual export smoke: `actual_export_smoke=passed`,
+  `source_event_count=54`, `candidate_count=84`, `safe_files_present=4`,
+  `local_triage_sample_count=17`, `forbidden_value_hits=0`.
+
+These records do not make any finding final, do not make risk drafts final, and
+do not clear any output for external sharing. The next final tag candidate is
+`v0.4.34`; it must be created only after a separate final readiness review.
+
 ## Verification
 
 테스트는 `unittest` 기반이며 pytest가 설치된 환경에서도 실행할 수 있습니다.

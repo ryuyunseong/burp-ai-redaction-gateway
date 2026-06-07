@@ -154,6 +154,30 @@ approve an AI handoff without the normal safe file review. The proposed tag
 candidate is `v0.4.31-rc1`, but the tag must be created only after separate
 approval and is not created by the readiness documentation PR.
 
+## RC3 readiness metadata
+
+The current RC3 readiness baseline is
+`v0.4.33-rc3-redaction-metadata-hardening`. It includes the RC1 evidence above
+and the second authorized local real export smoke result, recorded only as
+raw-free metadata:
+
+- `actual_export_smoke=passed`
+- `source_event_count=54`
+- `candidate_count=84`
+- `safe_files_present=4`
+- `local_triage_sample_count=17`
+- `forbidden_value_hits=0`
+
+The second smoke run also confirmed that generated metadata remains
+scanner-clean after redaction metadata hardening. This is readiness evidence
+only. It does not make any candidate finding final, does not make any risk draft
+final, does not create a CVSS decision, and does not guarantee that an output is
+cleared for external sharing.
+
+The proposed final tag candidate is `v0.4.34`. It must remain a candidate until
+the final readiness PR is merged and the final tag creation step is explicitly
+authorized.
+
 ## Tag 기준
 
 Tag는 다음 조건에서만 생성합니다.

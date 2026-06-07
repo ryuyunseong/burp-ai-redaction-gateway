@@ -178,6 +178,26 @@ Risk values remain draft values. The proposed RC1 tag candidate is
 실패가 redaction 또는 scanner rule 개선을 요구하면 실제 값을 복사하지 말고,
 synthetic fixture로 재현 가능한 케이스를 별도 작업으로 만듭니다.
 
+## RC3 readiness record
+
+The `v0.4.33-rc3-redaction-metadata-hardening` baseline includes a second
+authorized local real export smoke run. Record it only as raw-free metadata:
+
+- `actual_export_smoke=passed`
+- `source_event_count=54`
+- `candidate_count=84`
+- `safe_files_present=4`
+- `local_triage_sample_count=17`
+- `forbidden_value_hits=0`
+
+The local triage sample is a local-only reviewer aid. It must not be committed,
+uploaded, pasted into issues, or treated as confirmed vulnerability evidence.
+
+The candidate count is not a confirmed issue count. Risk values remain draft
+values. Final severity and CVSS require separate manual decisions. The proposed
+final tag candidate is `v0.4.34`; this validation record does not create that
+tag and does not clear any output for external sharing.
+
 ## AI 입력 후보 재확인
 
 실제 export 검증에서도 AI 입력 후보는 `verify` 통과 후 아래 4개뿐입니다.
