@@ -92,6 +92,19 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 http://127.0.0.1:8766/
 ```
 
+PowerShell 명령을 직접 반복하지 않고 로컬 Burp export를 처리하려면
+Upload Wizard를 엽니다.
+
+```text
+http://127.0.0.1:8766/upload
+```
+
+Upload Wizard는 `.xml` 또는 `.json` export를 받아 redaction, verify,
+review, report를 순서대로 실행합니다. 성공 후에도 ChatGPT로 자동 전송하지
+않고, AI 입력 후보 파일 4개와 관련 dashboard 링크만 표시합니다. 자세한
+경계는 [GUI_UPLOAD_WIZARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_UPLOAD_WIZARD.md)를
+참조하세요.
+
 dashboard는 `127.0.0.1` 로컬 검토 도구입니다. production web application이
 아니며 네트워크에 노출하지 않습니다.
 
@@ -159,20 +172,21 @@ report, export POST action을 표시할 수 있습니다. 그 외 인덱스 rout
 
 dashboard action은 다음 순서로 사용합니다.
 
-1. 검증된 output directory 또는 receiver output을 선택합니다.
-2. `Simple Dashboard`에서 현재 상태, 후보 파일 4개, 다음 행동을 먼저 확인합니다.
-3. `Verify`를 실행합니다.
-4. `Review`를 실행합니다.
-5. `Finding triage index`를 엽니다.
-6. `Report`를 실행합니다.
-7. `Report readiness index`를 엽니다.
-8. `Workflow status index`를 엽니다.
-9. `AI-safe preflight`를 엽니다.
-10. `AI handoff index`를 엽니다.
-11. `Prompt readiness index`를 열어 prompt 파일 상태와 경계를 확인합니다.
-12. `Evidence boundary index`를 열어 정제 evidence와 raw 금지 범위를 확인합니다.
-13. `Operator runbook index`를 열어 수집부터 AI 투입 전 수동 검토까지 운영 순서를 확인합니다.
-14. `Export`를 실행합니다.
+1. 새 export를 dashboard에서 처리하려면 `/upload`에서 파일과 프로젝트 별칭을 입력합니다.
+2. 기존 output을 보려면 검증된 output directory 또는 receiver output을 선택합니다.
+3. `Simple Dashboard`에서 현재 상태, 후보 파일 4개, 다음 행동을 먼저 확인합니다.
+4. `Verify`를 실행합니다.
+5. `Review`를 실행합니다.
+6. `Finding triage index`를 엽니다.
+7. `Report`를 실행합니다.
+8. `Report readiness index`를 엽니다.
+9. `Workflow status index`를 엽니다.
+10. `AI-safe preflight`를 엽니다.
+11. `AI handoff index`를 엽니다.
+12. `Prompt readiness index`를 열어 prompt 파일 상태와 경계를 확인합니다.
+13. `Evidence boundary index`를 열어 정제 evidence와 raw 금지 범위를 확인합니다.
+14. `Operator runbook index`를 열어 수집부터 AI 투입 전 수동 검토까지 운영 순서를 확인합니다.
+15. `Export`를 실행합니다.
 
 Dashboard action 경계:
 

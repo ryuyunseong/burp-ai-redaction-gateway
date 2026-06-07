@@ -52,7 +52,7 @@ from burp_ai_redaction_gateway.receiver import ReceiverConfig, ReceiverError, cr
 from burp_ai_redaction_gateway.redaction import Redactor, _safe_sensitive_field_path, _template_path, _templated_query
 from burp_ai_redaction_gateway.risk import RISK_RATING_PROFILE_NAMES, build_risk_rating_draft
 from burp_ai_redaction_gateway.scanner import assert_no_sensitive_text, scan_text
-from burp_ai_redaction_gateway.verifier import verify_path
+from burp_ai_redaction_gateway.verifier import VerificationResult, verify_path
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -78,6 +78,40 @@ EXPECTED_PASSIVE_FINDING_TYPES = {
 
 
 class RedactionGatewayTests(unittest.TestCase):
+    def multipart_form(
+        self,
+        fields: dict[str, str],
+        file_field: str,
+        file_name: str,
+        file_bytes: bytes,
+        *,
+        content_type: str = "application/octet-stream",
+    ) -> tuple[bytes, str]:
+        boundary = "----redaction-gateway-test-boundary"
+        chunks: list[bytes] = []
+        for name, value in fields.items():
+            chunks.extend(
+                [
+                    f"--{boundary}\r\n".encode("ascii"),
+                    f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode("ascii"),
+                    value.encode("utf-8"),
+                    b"\r\n",
+                ]
+            )
+        chunks.extend(
+            [
+                f"--{boundary}\r\n".encode("ascii"),
+                (
+                    f'Content-Disposition: form-data; name="{file_field}"; filename="{file_name}"\r\n'
+                    f"Content-Type: {content_type}\r\n\r\n"
+                ).encode("ascii"),
+                file_bytes,
+                b"\r\n",
+                f"--{boundary}--\r\n".encode("ascii"),
+            ]
+        )
+        return b"".join(chunks), f"multipart/form-data; boundary={boundary}"
+
     def assert_audit_hash_chain(
         self, audit_events: list[dict[str, object]], *, allow_prefix_gap: bool = False
     ) -> None:
@@ -1568,6 +1602,8 @@ class RedactionGatewayTests(unittest.TestCase):
                         linked_body = response.read().decode("utf-8")
                         self.assertEqual(response.status, 200)
                         self.assertIn('href="/help"', linked_body)
+                        if linked_path == "/":
+                            self.assertIn('href="/upload"', linked_body)
                         connection.close()
 
                     for path in ("/help", "/operations"):
@@ -1581,6 +1617,8 @@ class RedactionGatewayTests(unittest.TestCase):
                         self.assertIn("실행 버튼 없음", body)
                         self.assertIn("docs/USER_QUICKSTART.md", body)
                         self.assertIn("docs/GUI_USER_FLOW.md", body)
+                        self.assertIn("docs/GUI_UPLOAD_WIZARD.md", body)
+                        self.assertIn('href="/upload"', body)
                         self.assertIn("docs/GUI_SIMPLE_DASHBOARD.md", body)
                         self.assertIn("docs/GUI_AI_SAFE_PREFLIGHT.md", body)
                         self.assertIn("docs/GUI_AI_HANDOFF_INDEX.md", body)
@@ -1907,6 +1945,272 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn("raw_response", audit_text)
                 audit_review = review_audit_path(audit_path)
                 self.assertTrue(audit_review.passed, audit_review.findings)
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
+    def test_dashboard_upload_wizard_runs_safe_pipeline_and_hides_raw_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "out"
+            root.mkdir()
+            server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = server.server_address[1]
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/upload")
+                response = connection.getresponse()
+                upload_page = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("업로드 마법사", upload_page)
+                self.assertIn('enctype="multipart/form-data"', upload_page)
+                self.assertIn("마스킹 및 검증 시작", upload_page)
+                self.assertIn("analysis_packet.json", upload_page)
+                self.assertIn("chatgpt_prompt.md", upload_page)
+                self.assertIn("codex_task_prompt.md", upload_page)
+                self.assertIn("report_draft.md", upload_page)
+                self.assertNotIn("raw_request", upload_page)
+                self.assertNotIn("raw_response", upload_page)
+                self.assertNotIn("HMAC secret", upload_page)
+                self.assertNotIn("CSRF token", upload_page)
+                self.assertNotIn(str(root), upload_page)
+                token_match = re.search(r'name="csrf_token" value="([0-9a-f]{32})"', upload_page)
+                self.assertIsNotNone(token_match)
+                csrf_token = token_match.group(1)
+                connection.close()
+
+                body, content_type = self.multipart_form(
+                    {"project": "upload_alias_demo", "csrf_token": csrf_token},
+                    "burp_export",
+                    "synthetic-upload.xml",
+                    BURP_XML.read_bytes(),
+                    content_type="application/xml",
+                )
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+                connection.request("POST", "/upload", body=body, headers={"Content-Type": content_type})
+                response = connection.getresponse()
+                result = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("업로드 처리 완료", result)
+                self.assertIn("raw_data_included=false", result)
+                self.assertIn("upload_alias_demo", result)
+                self.assertIn("Simple Dashboard", result)
+                self.assertIn("/simple?project=upload_alias_demo", result)
+                self.assertIn("/safe-files?project=upload_alias_demo", result)
+                self.assertIn("/triage?project=upload_alias_demo", result)
+                self.assertIn("/report-readiness?project=upload_alias_demo", result)
+                for name in ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"]:
+                    self.assertIn(name, result)
+                    self.assertTrue((root / "upload_alias_demo" / name).is_file())
+                self.assertNotIn("synthetic-upload.xml", result)
+                self.assertNotIn("dashboard_upload_", result)
+                self.assertNotIn(str(root), result)
+                self.assertNotIn(str(Path(temp_dir)), result)
+                self.assertNotIn(csrf_token, result)
+                self.assertNotIn("raw_request", result)
+                self.assertNotIn("raw_response", result)
+                self.assertNotIn("Cookie:", result)
+                self.assertNotIn("Authorization:", result)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/simple?project=upload_alias_demo")
+                response = connection.getresponse()
+                simple = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("간단 대시보드", simple)
+                self.assertIn("upload_alias_demo", simple)
+                self.assertIn("/upload", simple)
+                self.assertNotIn("synthetic-upload.xml", simple)
+                self.assertNotIn(str(root), simple)
+                connection.close()
+
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/safe-files?project=upload_alias_demo")
+                response = connection.getresponse()
+                safe_files = response.read().decode("utf-8")
+                self.assertEqual(response.status, 200)
+                self.assertIn("Safe file inventory", safe_files)
+                self.assertNotIn("synthetic-upload.xml", safe_files)
+                self.assertNotIn("raw_request", safe_files)
+                self.assertNotIn("raw_response", safe_files)
+                connection.close()
+
+                upload_storage = Path(temp_dir) / "local_only" / "dashboard_uploads"
+                self.assertTrue(upload_storage.is_dir())
+                self.assertEqual(len(list(upload_storage.iterdir())), 1)
+
+                audit_path = root / ".audit" / "mcp_audit.jsonl"
+                audit_text = audit_path.read_text(encoding="utf-8")
+                audit_events = [json.loads(line) for line in audit_text.splitlines() if line.strip()]
+                self.assertEqual(len(audit_events), 1)
+                self.assert_audit_hash_chain(audit_events)
+                self.assertEqual(audit_events[0]["action_name"], "upload")
+                self.assertEqual(audit_events[0]["result_status"], "success")
+                self.assertEqual(audit_events[0]["output_id"], "upload_alias_demo")
+                self.assertFalse(audit_events[0]["raw_data_included"])
+                self.assertNotIn(csrf_token, audit_text)
+                self.assertNotIn("csrf_token", audit_text)
+                self.assertNotIn("synthetic-upload.xml", audit_text)
+                self.assertNotIn("dashboard_upload_", audit_text)
+                self.assertNotIn(str(root), audit_text)
+                self.assertNotIn("raw_request", audit_text)
+                self.assertNotIn("raw_response", audit_text)
+                audit_review = review_audit_path(audit_path)
+                self.assertTrue(audit_review.passed, audit_review.findings)
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
+    def test_dashboard_upload_wizard_blocks_invalid_posts_without_raw_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "out"
+            root.mkdir()
+            server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = server.server_address[1]
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/upload")
+                response = connection.getresponse()
+                upload_page = response.read().decode("utf-8")
+                token_match = re.search(r'name="csrf_token" value="([0-9a-f]{32})"', upload_page)
+                self.assertIsNotNone(token_match)
+                csrf_token = token_match.group(1)
+                connection.close()
+
+                invalid_posts = [
+                    (
+                        {"project": "upload_missing_csrf"},
+                        "missing-csrf.xml",
+                        BURP_XML.read_bytes(),
+                        400,
+                        "csrf_token_missing",
+                    ),
+                    (
+                        {"project": "upload_bad_csrf", "csrf_token": "invalid"},
+                        "bad-csrf.xml",
+                        BURP_XML.read_bytes(),
+                        403,
+                        "csrf_token_invalid",
+                    ),
+                    (
+                        {"project": "upload_bad_type", "csrf_token": csrf_token},
+                        "bad-type.txt",
+                        b"not used",
+                        400,
+                        "unsupported_file_type",
+                    ),
+                    (
+                        {"project": "../local_only", "csrf_token": csrf_token},
+                        "bad-alias.xml",
+                        BURP_XML.read_bytes(),
+                        400,
+                        "invalid_project_alias",
+                    ),
+                ]
+                for fields, file_name, file_bytes, expected_status, expected_error in invalid_posts:
+                    body, content_type = self.multipart_form(fields, "burp_export", file_name, file_bytes)
+                    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                    connection.request("POST", "/upload", body=body, headers={"Content-Type": content_type})
+                    response = connection.getresponse()
+                    result = response.read().decode("utf-8")
+                    self.assertEqual(response.status, expected_status)
+                    self.assertIn(expected_error, result)
+                    self.assertNotIn(file_name, result)
+                    self.assertNotIn(str(root), result)
+                    self.assertNotIn(csrf_token, result)
+                    self.assertNotIn("raw_request", result)
+                    self.assertNotIn("raw_response", result)
+                    connection.close()
+
+                audit_path = root / ".audit" / "mcp_audit.jsonl"
+                audit_text = audit_path.read_text(encoding="utf-8")
+                audit_events = [json.loads(line) for line in audit_text.splitlines() if line.strip()]
+                self.assertEqual(len(audit_events), 4)
+                self.assert_audit_hash_chain(audit_events)
+                self.assertTrue(all(event["action_name"] == "upload" for event in audit_events))
+                self.assertTrue(all(event["result_status"] == "blocked" for event in audit_events))
+                self.assertEqual(audit_events[0]["blocked_reason"], "csrf_missing")
+                self.assertEqual(audit_events[1]["blocked_reason"], "csrf_invalid")
+                self.assertEqual(audit_events[2]["blocked_reason"], "unsupported_file_type")
+                self.assertEqual(audit_events[3]["blocked_reason"], "invalid_project_alias")
+                self.assertNotIn(csrf_token, audit_text)
+                self.assertNotIn("csrf_token", audit_text)
+                self.assertNotIn("missing-csrf.xml", audit_text)
+                self.assertNotIn("bad-csrf.xml", audit_text)
+                self.assertNotIn("bad-type.txt", audit_text)
+                self.assertNotIn("bad-alias.xml", audit_text)
+                self.assertNotIn(str(root), audit_text)
+                self.assertNotIn("raw_request", audit_text)
+                self.assertNotIn("raw_response", audit_text)
+                self.assertFalse((Path(temp_dir) / "local_only").exists())
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
+    def test_dashboard_upload_wizard_hides_safe_links_when_verify_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "out"
+            root.mkdir()
+            server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = server.server_address[1]
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/upload")
+                response = connection.getresponse()
+                upload_page = response.read().decode("utf-8")
+                token_match = re.search(r'name="csrf_token" value="([0-9a-f]{32})"', upload_page)
+                self.assertIsNotNone(token_match)
+                csrf_token = token_match.group(1)
+                connection.close()
+
+                body, content_type = self.multipart_form(
+                    {"project": "upload_verify_fail", "csrf_token": csrf_token},
+                    "burp_export",
+                    "verify-fail.xml",
+                    BURP_XML.read_bytes(),
+                    content_type="application/xml",
+                )
+                with patch(
+                    "burp_ai_redaction_gateway.dashboard.verify_path",
+                    return_value=VerificationResult(files_checked=3, findings=[object()]),
+                ):
+                    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+                    connection.request("POST", "/upload", body=body, headers={"Content-Type": content_type})
+                    response = connection.getresponse()
+                    result = response.read().decode("utf-8")
+                    self.assertEqual(response.status, 200)
+                    self.assertIn("검증 실패", result)
+                    self.assertIn("verify failed safely", result)
+                    self.assertIn("safe files are hidden", result)
+                    self.assertNotIn("/safe-files?project=upload_verify_fail", result)
+                    self.assertNotIn("/simple?project=upload_verify_fail", result)
+                    self.assertNotIn("verify-fail.xml", result)
+                    self.assertNotIn(str(root), result)
+                    self.assertNotIn(csrf_token, result)
+                    self.assertNotIn("raw_request", result)
+                    self.assertNotIn("raw_response", result)
+                    connection.close()
+
+                audit_path = root / ".audit" / "mcp_audit.jsonl"
+                audit_text = audit_path.read_text(encoding="utf-8")
+                audit_events = [json.loads(line) for line in audit_text.splitlines() if line.strip()]
+                self.assertEqual(len(audit_events), 1)
+                self.assertEqual(audit_events[0]["action_name"], "upload")
+                self.assertEqual(audit_events[0]["result_status"], "blocked")
+                self.assertEqual(audit_events[0]["blocked_reason"], "verify_failed")
+                self.assertNotIn("verify-fail.xml", audit_text)
+                self.assertNotIn(csrf_token, audit_text)
+                self.assertNotIn("raw_request", audit_text)
+                self.assertNotIn("raw_response", audit_text)
             finally:
                 server.shutdown()
                 server.server_close()
@@ -3574,6 +3878,7 @@ class RedactionGatewayTests(unittest.TestCase):
         for text in [readme, quickstart, local_dashboard, audit_panel_guide]:
             self.assertIn("GUI_USER_FLOW.md", text)
         for text in [readme, quickstart, local_dashboard, user_flow]:
+            self.assertIn("GUI_UPLOAD_WIZARD.md", text)
             self.assertIn("GUI_SIMPLE_DASHBOARD.md", text)
             self.assertIn("GUI_AI_SAFE_PREFLIGHT.md", text)
             self.assertIn("GUI_AI_HANDOFF_INDEX.md", text)
@@ -3588,6 +3893,7 @@ class RedactionGatewayTests(unittest.TestCase):
         required = [
             "start receiver and dashboard",
             "send scoped Burp history",
+            "upload Burp export at /upload",
             "verify the selected output",
             "check simple dashboard summary",
             "review candidate findings",
@@ -3604,6 +3910,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "export safe files",
             "send only verified safe files to AI",
             "http://127.0.0.1:8766/",
+            "/upload",
             "/simple?project=<alias>",
             "/dashboard-simple?project=<alias>",
             "/triage?project=<alias>",
@@ -3619,6 +3926,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "/operations",
             "/settings",
             "Verify",
+            "Upload Wizard",
             "Simple Dashboard",
             "Review",
             "Report",
@@ -3679,6 +3987,83 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("제출 가능", user_flow)
         self.assertNotIn("승인 완료", user_flow)
         self.assertNotIn("안전 보장", user_flow)
+
+    def test_gui_upload_wizard_guide_documents_state_changing_boundary(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        quickstart = (ROOT / "docs" / "USER_QUICKSTART.md").read_text(encoding="utf-8")
+        local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
+        user_flow = (ROOT / "docs" / "GUI_USER_FLOW.md").read_text(encoding="utf-8")
+        guide = (ROOT / "docs" / "GUI_UPLOAD_WIZARD.md").read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
+
+        for text in [readme, quickstart, local_dashboard, user_flow]:
+            self.assertIn("GUI_UPLOAD_WIZARD.md", text)
+        for text in [quickstart, local_dashboard, user_flow, roadmap, guide]:
+            self.assertIn("/upload", text)
+
+        required = [
+            "GET /upload",
+            "POST /upload",
+            ".xml",
+            ".json",
+            "upload validation",
+            "redaction/generate",
+            "verify",
+            "review",
+            "report draft",
+            "/simple?project=<alias>",
+            "/safe-files?project=<alias>",
+            "/triage?project=<alias>",
+            "/report-readiness?project=<alias>",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "raw_data_included: false",
+            "finding means candidate",
+            "risk means draft",
+            "final severity is a manual decision",
+            "CVSS is a separate manual calculation",
+        ]
+        for item in required:
+            self.assertIn(item, guide)
+
+        blocked_items = [
+            "original request or response bodies",
+            "Cookie values",
+            "Authorization values",
+            "token, JWT, or session values",
+            "real URL, domain, IP",
+            "personal data",
+            "integrity secrets",
+            "request-forgery protection values",
+            "full local paths",
+            "actual local-only filenames",
+            "raw upload previews",
+            "report body previews",
+            "prompt body previews",
+        ]
+        for item in blocked_items:
+            self.assertIn(item, guide)
+
+        forbidden = [
+            "raw_request",
+            "raw_response",
+            "DUMMY_COOKIE_VALUE",
+            "DUMMY_BEARER_TOKEN",
+            "Authorization: Bearer",
+            "Cookie:",
+            "real_export_",
+            "C:\\",
+            "safe to share",
+            "approved",
+            "guaranteed safe",
+            "severity confirmed",
+            "ready to submit",
+            "confirmed CVSS",
+        ]
+        for item in forbidden:
+            self.assertNotIn(item, guide)
 
     def test_gui_simple_dashboard_guide_documents_read_only_boundary(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

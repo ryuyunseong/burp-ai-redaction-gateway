@@ -32,6 +32,7 @@ Candidate tasks:
 
 - Record where a first-time operator hesitates in the CLI or dashboard flow.
 - Check whether the preferred first-screen path is clear:
+  - `/upload`
   - `/simple?project=<alias>`
   - `/safe-files?project=<alias>`
   - `/triage?project=<alias>`
@@ -179,8 +180,9 @@ Acceptance evidence:
 
 ## Suggested First v0.5 Slices
 
-1. `docs/v0.5-troubleshooting-index`
-2. `feat/v0.5-montoya-live-validation`
-3. `feat/v0.5-candidate-triage-quality`
-4. `feat/v0.5-report-draft-quality`
-5. `feat/v0.5-windows-launcher-ux`
+1. `feat/gui-upload-wizard-v0.5`
+2. `docs/v0.5-troubleshooting-index`
+3. `feat/v0.5-montoya-live-validation`
+4. `feat/v0.5-candidate-triage-quality`
+5. `feat/v0.5-report-draft-quality`
+6. `feat/v0.5-windows-launcher-ux`
