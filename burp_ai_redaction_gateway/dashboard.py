@@ -4,15 +4,19 @@ import html
 import hashlib
 import json
 import os
+import re
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from email import policy as email_policy
+from email.parser import BytesParser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, quote, urlsplit
 
+from .findings import build_finding_candidates
 from .audit_compressed_hmac import AuditCompressedHmacError, verify_compressed_audit_hmac_manifest
 from .audit_compression import AuditCompressionError, verify_compressed_audit_jsonl
 from .audit_hmac import DEFAULT_HMAC_ENV_VAR, AuditHmacError, load_hmac_secret, verify_audit_hmac_manifest
@@ -29,10 +33,13 @@ from .mcp_server import (
     _safe_output_id,
     _safe_status,
 )
+from .output import write_outputs
+from .parser import load_events
 from .policy import RedactionPolicy, load_policy
 from .report import DEFAULT_REPORT_PROFILE, REPORT_PROFILE_NAMES, write_report_draft
 from .review import build_review, render_review_summary
 from .risk import DEFAULT_RISK_RATING_PROFILE, RISK_RATING_PROFILE_NAMES
+from .redaction import Redactor
 from .scanner import assert_no_sensitive_text, scan_text
 from .verifier import VerificationResult, verify_path
 
@@ -49,10 +56,16 @@ OUTPUT_MARKER_FILE = "analysis_packet.json"
 FINDINGS_FILE = "finding_candidates.json"
 MAX_PREVIEW_BYTES = 1024 * 1024
 MAX_FORM_BYTES = 16 * 1024
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+MAX_UPLOAD_FORM_BYTES = MAX_UPLOAD_BYTES + 16 * 1024
 ACTION_NAMES = {"verify", "review", "report", "export"}
+AUDIT_ACTION_NAMES = ACTION_NAMES | {"upload"}
+UPLOAD_PROJECT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+UPLOAD_ALLOWED_SUFFIXES = {".xml", ".json"}
 OPERATIONS_GUIDES = (
     ("빠른 시작", "docs/USER_QUICKSTART.md", "receiver, Burp 전송, dashboard 실행 흐름"),
     ("GUI 사용자 흐름", "docs/GUI_USER_FLOW.md", "처음 실행부터 AI 투입 전까지의 화면 흐름"),
+    ("Upload Wizard", "docs/GUI_UPLOAD_WIZARD.md", "dashboard에서 local Burp export를 처리하는 v0.5 진입점"),
     ("간단 대시보드", "docs/GUI_SIMPLE_DASHBOARD.md", "처음 보는 사용자를 위한 read-only 상태 요약"),
     ("AI 안전 사전 점검", "docs/GUI_AI_SAFE_PREFLIGHT.md", "AI 투입 전 조회 전용 상태 확인"),
     ("AI 핸드오프 인덱스", "docs/GUI_AI_HANDOFF_INDEX.md", "AI 투입 파일 순서와 주의사항"),
@@ -110,6 +123,29 @@ class DashboardActionResult:
     blocked_reason: str = ""
     exported_files: tuple[str, ...] = ()
     report_profile: str = ""
+
+
+@dataclass(frozen=True)
+class UploadWizardForm:
+    project_alias: str
+    upload_file_name: str
+    upload_bytes: bytes
+    csrf_token: str
+
+
+@dataclass(frozen=True)
+class UploadWizardResult:
+    status: str
+    project_alias: str
+    output_id: str
+    title: str
+    summary_lines: list[str]
+    stage_statuses: list[tuple[str, str]]
+    candidate_count: int = 0
+    safe_files_present: tuple[str, ...] = ()
+    files_checked: int = 0
+    blocked_reason: str = ""
+    raw_data_included: bool = False
 
 
 @dataclass(frozen=True)
@@ -331,6 +367,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             if parsed.path in {"/help", "/operations"}:
                 self._send_html(render_operations_help())
                 return
+            if parsed.path == "/upload":
+                self._send_html(render_upload_wizard(self.server.csrf_token))
+                return
             if parsed.path == "/output":
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
@@ -413,6 +452,40 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         audit_written = False
         try:
             parsed = urlsplit(self.path)
+            if parsed.path == "/upload":
+                form = self._read_upload_form()
+                action_for_audit = "upload"
+                output_for_audit = form.project_alias or "unknown_output"
+                if not form.csrf_token:
+                    self._write_dashboard_audit_event(
+                        "upload",
+                        output_for_audit,
+                        result_status="blocked",
+                        blocked_reason="csrf_missing",
+                    )
+                    audit_written = True
+                    raise DashboardError("csrf_token_missing", HTTPStatus.BAD_REQUEST)
+                try:
+                    _validate_csrf(form.csrf_token, self.server.csrf_token)
+                except DashboardError:
+                    self._write_dashboard_audit_event(
+                        "upload",
+                        output_for_audit,
+                        result_status="blocked",
+                        blocked_reason="csrf_invalid",
+                    )
+                    audit_written = True
+                    raise
+                result = run_upload_wizard(self.server.config.root, self.server.policy, form)
+                self._write_dashboard_audit_event(
+                    "upload",
+                    result.project_alias,
+                    result_status="success" if result.status == "passed" else "blocked",
+                    blocked_reason=result.blocked_reason,
+                )
+                audit_written = True
+                self._send_html(render_upload_result(result, self.server.csrf_token))
+                return
             if parsed.path != "/action":
                 self._send_error("not_found", HTTPStatus.NOT_FOUND)
                 return
@@ -455,7 +528,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             audit_written = True
             self._send_html(render_action_result(result, self.server.csrf_token))
         except DashboardError as error:
-            if not audit_written and self.path.startswith("/action"):
+            if not audit_written and self.path.startswith(("/action", "/upload")):
                 self._write_dashboard_audit_event(
                     action_for_audit,
                     output_for_audit,
@@ -465,7 +538,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 )
             self._send_error(error.error_type, error.status)
         except OSError:
-            if not audit_written and self.path.startswith("/action"):
+            if not audit_written and self.path.startswith(("/action", "/upload")):
                 self._write_dashboard_audit_event(
                     action_for_audit,
                     output_for_audit,
@@ -474,7 +547,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 )
             self._send_error("dashboard_action_file_access_failed", HTTPStatus.INTERNAL_SERVER_ERROR)
         except ValueError:
-            if not audit_written and self.path.startswith("/action"):
+            if not audit_written and self.path.startswith(("/action", "/upload")):
                 self._write_dashboard_audit_event(
                     action_for_audit,
                     output_for_audit,
@@ -527,6 +600,47 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             raise DashboardError("unsupported_form_content_type", HTTPStatus.UNSUPPORTED_MEDIA_TYPE)
         body = self.rfile.read(length).decode("utf-8", errors="replace")
         return parse_qs(body, keep_blank_values=False)
+
+    def _read_upload_form(self) -> UploadWizardForm:
+        length_text = self.headers.get("Content-Length", "0")
+        try:
+            length = int(length_text)
+        except ValueError as error:
+            raise DashboardError("invalid_content_length", HTTPStatus.BAD_REQUEST) from error
+        if length <= 0:
+            raise DashboardError("empty_form", HTTPStatus.BAD_REQUEST)
+        if length > MAX_UPLOAD_FORM_BYTES:
+            raise DashboardError("upload_too_large", HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
+        content_type = self.headers.get("Content-Type", "")
+        if "multipart/form-data" not in content_type:
+            raise DashboardError("unsupported_upload_content_type", HTTPStatus.UNSUPPORTED_MEDIA_TYPE)
+        raw_body = self.rfile.read(length)
+        message = BytesParser(policy=email_policy.default).parsebytes(
+            b"Content-Type: "
+            + content_type.encode("utf-8", errors="replace")
+            + b"\r\nMIME-Version: 1.0\r\n\r\n"
+            + raw_body
+        )
+        fields: dict[str, str] = {}
+        upload_file_name = ""
+        upload_bytes = b""
+        for part in message.iter_parts():
+            if part.get_content_disposition() != "form-data":
+                continue
+            name = part.get_param("name", header="content-disposition") or ""
+            filename = part.get_filename() or ""
+            payload = part.get_payload(decode=True) or b""
+            if name == "burp_export":
+                upload_file_name = filename
+                upload_bytes = payload
+            elif name in {"project", "csrf_token"}:
+                fields[name] = payload.decode("utf-8", errors="replace").strip()
+        return UploadWizardForm(
+            project_alias=fields.get("project", ""),
+            upload_file_name=upload_file_name,
+            upload_bytes=upload_bytes,
+            csrf_token=fields.get("csrf_token", ""),
+        )
 
     def _write_dashboard_audit_event(
         self,
@@ -651,6 +765,138 @@ def run_dashboard_action(
     raise DashboardError("unsupported_dashboard_action", HTTPStatus.BAD_REQUEST)
 
 
+def run_upload_wizard(root: Path, policy: RedactionPolicy, form: UploadWizardForm) -> UploadWizardResult:
+    project_alias = _safe_upload_project_alias(form.project_alias)
+    suffix = _safe_upload_suffix(form.upload_file_name)
+    if not form.upload_bytes:
+        raise DashboardError("upload_validation_failed", HTTPStatus.BAD_REQUEST)
+    if len(form.upload_bytes) > MAX_UPLOAD_BYTES:
+        raise DashboardError("upload_too_large", HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
+
+    output_dir = _upload_output_dir(root, project_alias)
+    if output_dir.exists():
+        raise DashboardError("upload_output_exists", HTTPStatus.CONFLICT)
+
+    upload_dir = _upload_storage_dir(root)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    upload_path = upload_dir / _internal_upload_file_name(project_alias, suffix)
+    upload_path.write_bytes(form.upload_bytes)
+
+    stage_statuses: list[tuple[str, str]] = [
+        ("upload validation", "passed"),
+        ("raw local storage", "stored under local_only alias"),
+    ]
+    try:
+        raw_events = load_events(upload_path)
+        redactor = Redactor(policy)
+        sanitized = [redactor.sanitize_event(event, index) for index, event in enumerate(raw_events, start=1)]
+        findings = build_finding_candidates(sanitized, DEFAULT_RISK_RATING_PROFILE)
+        write_outputs(project_alias, output_dir, sanitized, findings, policy)
+        stage_statuses.append(("redaction/generate", "passed"))
+    except (OSError, SyntaxError, ValueError):
+        stage_statuses.append(("redaction/generate", "failed"))
+        stage_statuses.append(("verify", "skipped"))
+        stage_statuses.append(("review", "skipped"))
+        stage_statuses.append(("report", "skipped"))
+        return UploadWizardResult(
+            status="failed",
+            project_alias=project_alias,
+            output_id=project_alias,
+            title="업로드 처리 실패",
+            summary_lines=[
+                "generate failed",
+                "원본 값이나 파일 경로는 표시하지 않습니다.",
+                "검증 전 산출물은 AI 입력 후보가 아닙니다.",
+            ],
+            stage_statuses=stage_statuses,
+            blocked_reason="generate_failed",
+        )
+
+    verification = verify_path(output_dir, policy)
+    if not verification.passed:
+        stage_statuses.append(("verify", "failed safely"))
+        stage_statuses.append(("review", "skipped"))
+        stage_statuses.append(("report", "skipped"))
+        return UploadWizardResult(
+            status="failed",
+            project_alias=project_alias,
+            output_id=project_alias,
+            title="검증 실패",
+            summary_lines=[
+                "verify failed safely",
+                f"검증한 파일 수: {verification.files_checked}.",
+                "safe files are hidden because verification did not pass.",
+                "원본 값이나 탐지 문자열은 표시하지 않습니다.",
+            ],
+            stage_statuses=stage_statuses,
+            files_checked=verification.files_checked,
+            blocked_reason="verify_failed",
+        )
+    stage_statuses.append(("verify", "passed"))
+
+    try:
+        review_result = build_review(output_dir, policy)
+        stage_statuses.append(("review", "passed"))
+    except ValueError:
+        stage_statuses.append(("review", "failed"))
+        stage_statuses.append(("report", "skipped"))
+        return UploadWizardResult(
+            status="failed",
+            project_alias=project_alias,
+            output_id=project_alias,
+            title="리뷰 실패",
+            summary_lines=[
+                "review failed",
+                "safe files are hidden because the workflow did not complete.",
+                "원본 값이나 파일 경로는 표시하지 않습니다.",
+            ],
+            stage_statuses=stage_statuses,
+            files_checked=verification.files_checked,
+            blocked_reason="review_failed",
+        )
+
+    try:
+        report_result = write_report_draft(output_dir, None, policy, DEFAULT_REPORT_PROFILE)
+        stage_statuses.append(("report", "passed"))
+    except ValueError:
+        stage_statuses.append(("report", "failed"))
+        return UploadWizardResult(
+            status="failed",
+            project_alias=project_alias,
+            output_id=project_alias,
+            title="보고서 초안 실패",
+            summary_lines=[
+                "report skipped",
+                "safe files are hidden because report generation did not complete.",
+                "원본 값이나 파일 경로는 표시하지 않습니다.",
+            ],
+            stage_statuses=stage_statuses,
+            files_checked=verification.files_checked,
+            blocked_reason="report_failed",
+        )
+
+    refreshed = _verified_output(root, policy, project_alias)
+    safe_files = tuple(name for name in SAFE_PREVIEW_FILES if (output_dir / name).is_file())
+    return UploadWizardResult(
+        status="passed",
+        project_alias=project_alias,
+        output_id=refreshed.output_id,
+        title="업로드 처리 완료",
+        summary_lines=[
+            "upload validation passed",
+            "redaction, verify, review, and report completed",
+            f"검증한 파일 수: {refreshed.verification.files_checked}.",
+            f"후보 finding 수: {report_result.candidate_count}.",
+            f"AI 입력 후보 파일 수: {len(safe_files)}.",
+            "raw_data_included: false",
+        ],
+        stage_statuses=stage_statuses,
+        candidate_count=review_result.candidate_count,
+        safe_files_present=safe_files,
+        files_checked=refreshed.verification.files_checked,
+    )
+
+
 def write_dashboard_action_audit_event(
     root: Path,
     *,
@@ -706,6 +952,7 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
           <div class="status-stack">
             <span class="badge good">로컬 전용</span>
             <span class="badge neutral">안전 미리보기</span>
+            <a class="button" href="/upload">업로드 마법사</a>
             <a class="button secondary" href="/help">운영 가이드</a>
             <a class="button secondary" href="/settings">설정/상태</a>
           </div>
@@ -847,6 +1094,7 @@ def render_operations_help() -> str:
           <div class="status-stack">
             <span class="badge good">조회 전용</span>
             <span class="badge neutral">실행 버튼 없음</span>
+            <a class="button" href="/upload">업로드 마법사</a>
             <a class="button secondary" href="/settings">설정/상태</a>
           </div>
         </section>
@@ -860,6 +1108,7 @@ def render_operations_help() -> str:
           <div class="panel">
             <div class="panel-head"><h2>빠른 흐름</h2><span class="muted">CLI와 GUI 병행 사용 순서입니다.</span></div>
             <ol class="safe-list">
+              <li>PowerShell 명령 없이 시작하려면 <a href="/upload">업로드 마법사</a>에서 파일을 선택합니다.</li>
               <li>receiver를 127.0.0.1에서 실행합니다.</li>
               <li>Burp scoped HTTP history를 로컬 receiver로 전송합니다.</li>
               <li>정제 산출물이 생성되고 verify를 통과했는지 확인합니다.</li>
@@ -897,6 +1146,154 @@ def render_operations_help() -> str:
               <li>archive/HMAC 생성 또는 검증 실행 버튼을 제공하지 않습니다.</li>
               <li>risk profile 변경 버튼을 제공하지 않습니다.</li>
               <li>form, POST action, delete/edit 기능을 추가하지 않습니다.</li>
+            </ul>
+          </div>
+        </section>
+        """,
+    )
+
+
+def render_upload_wizard(csrf_token: str) -> str:
+    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
+    token = _h(csrf_token)
+    return _page(
+        "업로드 마법사",
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="/">산출물 목록으로</a>
+            <h1>업로드 마법사</h1>
+            <p class="subtitle">Burp export 파일을 로컬에서 받아 redaction, verify, review, report까지 실행한 뒤 AI 입력 후보 파일 4개만 안내합니다.</p>
+          </div>
+          <div class="status-stack">
+            <span class="badge warning">state-changing POST</span>
+            <span class="badge neutral">raw-free result</span>
+            <a class="button secondary" href="/help">운영 허브</a>
+          </div>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>저장 위치</span><strong>ignored local_only alias</strong></div>
+          <div class="rail"><span>업로드 형식</span><strong>.xml 또는 .json</strong></div>
+          <div class="rail"><span>최대 크기</span><strong>{MAX_UPLOAD_BYTES // (1024 * 1024)} MB</strong></div>
+          <div class="rail"><span>자동 전송</span><strong>false</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>파일 업로드</h2><span class="muted">원본 본문이나 실제 파일명은 결과 화면에 표시하지 않습니다.</span></div>
+            <form class="stacked-form" method="post" action="/upload" enctype="multipart/form-data">
+              <input type="hidden" name="csrf_token" value="{token}">
+              <label>Burp export 파일
+                <input type="file" name="burp_export" accept=".xml,.json" required>
+              </label>
+              <label>프로젝트 별칭
+                <input type="text" name="project" required pattern="[A-Za-z0-9][A-Za-z0-9_-]{{0,63}}" placeholder="client_alias_demo">
+              </label>
+              <button type="submit">마스킹 및 검증 시작</button>
+              <small>POST에는 CSRF 보호가 적용됩니다. ChatGPT API 자동 전송은 수행하지 않습니다.</small>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>자동 처리 순서</h2><span class="muted">verify fail-closed를 통과한 경우에만 safe files 링크를 제공합니다.</span></div>
+            <ol class="safe-list">
+              <li>업로드 파일 형식과 프로젝트 별칭을 검증합니다.</li>
+              <li>원본 파일을 ignored local-only 저장소에 내부 이름으로 보관합니다.</li>
+              <li>redaction과 sanitized output 생성을 실행합니다.</li>
+              <li>verify를 실행하고 실패하면 review/report를 건너뜁니다.</li>
+              <li>verify 통과 후 review와 report draft를 생성합니다.</li>
+              <li>결과 화면에서 AI 입력 후보 파일 4개 상태만 표시합니다.</li>
+            </ol>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>AI 입력 후보 파일</h2><span class="muted">성공 후 직접 확인할 수 있는 후보 파일입니다.</span></div>
+            <ul class="safe-list">{safe_files}</ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>표시하지 않는 값</h2><span class="muted">실패 결과에도 원본 값과 내부 경로는 표시하지 않습니다.</span></div>
+            <ul class="safe-list">
+              <li>원본 요청/응답 본문</li>
+              <li>Cookie, Authorization, token, JWT, session 값</li>
+              <li>실제 URL, domain, IP, 개인정보</li>
+              <li>무결성 비밀값과 요청 위조 방지 보호값</li>
+              <li>전체 로컬 경로와 실제 local-only 파일명</li>
+              <li>prompt/report 본문 미리보기</li>
+            </ul>
+          </div>
+        </section>
+        """,
+    )
+
+
+def render_upload_result(result: UploadWizardResult, csrf_token: str) -> str:
+    status_badge = _status_badge(result.status)
+    summaries = "".join(f"<li>{_h(line)}</li>" for line in result.summary_lines)
+    stages = "".join(
+        f"<tr><td>{_h(name)}</td><td>{_status_badge(status)}</td></tr>" for name, status in result.stage_statuses
+    )
+    safe_rows = "".join(
+        f"<tr><td>{_h(name)}</td><td>{_status_badge('present' if name in result.safe_files_present else 'missing')}</td></tr>"
+        for name in SAFE_PREVIEW_FILES
+    )
+    links = ""
+    retry = f'<a class="button secondary" href="/upload">다시 업로드</a>'
+    if result.status == "passed":
+        links = f"""
+        <div class="actions">
+          <a class="button" href="{_simple_dashboard_href(result.output_id)}">Simple Dashboard</a>
+          <a class="button secondary" href="{_safe_files_href(result.output_id)}">Safe Files</a>
+          <a class="button secondary" href="{_triage_href(result.output_id)}">Triage</a>
+          <a class="button secondary" href="{_report_readiness_href(result.output_id)}">Report Readiness</a>
+          {retry}
+        </div>
+        """
+    else:
+        links = f"""
+        <div class="actions">
+          {retry}
+          <a class="button secondary" href="/">산출물 목록</a>
+        </div>
+        <p class="muted">검증 또는 처리 실패 상태에서는 safe file 링크를 제공하지 않습니다.</p>
+        """
+    return _page(
+        result.title,
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="/upload">업로드 마법사로 돌아가기</a>
+            <h1>{_h(result.title)}</h1>
+            <p class="subtitle">결과는 raw-free metadata만 표시합니다. ChatGPT 자동 전송은 수행하지 않습니다.</p>
+          </div>
+          <div class="status-stack">
+            {status_badge}
+            <span class="badge neutral">raw_data_included=false</span>
+          </div>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>project alias</span><strong>{_h(result.project_alias)}</strong></div>
+          <div class="rail"><span>verify files</span><strong>{result.files_checked}</strong></div>
+          <div class="rail"><span>후보 finding</span><strong>{result.candidate_count}</strong></div>
+          <div class="rail"><span>safe files</span><strong>{len(result.safe_files_present)}</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>처리 요약</h2><span class="muted">원본 값, 실제 파일명, 전체 경로는 제외합니다.</span></div>
+            <ul class="safe-list">{summaries}</ul>
+            {links}
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>단계 상태</h2><span class="muted">실패 단계 이후 작업은 건너뜁니다.</span></div>
+            <table><tbody>{stages}</tbody></table>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>AI 입력 후보 파일 4개</h2><span class="muted">성공 상태에서만 확인 대상으로 안내합니다.</span></div>
+            <table><tbody>{safe_rows}</tbody></table>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>해석 경계</h2><span class="muted">자동 처리 결과는 수동 검토 전 초안입니다.</span></div>
+            <ul class="safe-list">
+              <li>finding은 candidate입니다.</li>
+              <li>risk는 draft입니다.</li>
+              <li>final severity와 CVSS는 수동 결정입니다.</li>
+              <li>upload 성공은 외부 공유 가능 보장이 아닙니다.</li>
             </ul>
           </div>
         </section>
@@ -978,6 +1375,7 @@ def render_simple_dashboard(output: DashboardOutput) -> str:
           <div class="status-stack">
             <span class="badge good">read-only</span>
             <span class="badge neutral">간단 모드</span>
+            <a class="button secondary" href="/upload">새 업로드</a>
           </div>
         </section>
         <section class="safety-strip">
@@ -1010,6 +1408,7 @@ def render_simple_dashboard(output: DashboardOutput) -> str:
           <div class="panel">
             <div class="panel-head"><h2>다음 행동</h2><span class="muted">고급 화면으로 이동하는 조회 링크입니다.</span></div>
             <ol class="steps">
+              <li>새 Burp export는 <a href="/upload">업로드 마법사</a>에서 redaction/verify/review/report를 한 번에 실행합니다.</li>
               <li><a href="{_safe_files_href(output.output_id)}">/safe-files</a>와 <a href="{_preflight_href(output.output_id)}">/preflight</a>에서 AI 삽입 전 후보 파일을 확인합니다.</li>
               <li><a href="{_triage_href(output.output_id)}">/triage</a>에서 후보 finding을 수동 검토합니다.</li>
               <li><a href="{_report_readiness_href(output.output_id)}">/report-readiness</a>에서 보고서 초안을 수동 검토합니다.</li>
@@ -3281,6 +3680,55 @@ def _safe_report_profile(value: str) -> str:
     return profile
 
 
+def _safe_upload_project_alias(value: str) -> str:
+    alias = str(value).strip()
+    if not UPLOAD_PROJECT_RE.fullmatch(alias):
+        raise DashboardError("invalid_project_alias", HTTPStatus.BAD_REQUEST)
+    if alias.lower() in FORBIDDEN_PATH_PARTS:
+        raise DashboardError("invalid_project_alias", HTTPStatus.BAD_REQUEST)
+    if scan_text(alias):
+        raise DashboardError("invalid_project_alias", HTTPStatus.BAD_REQUEST)
+    return alias
+
+
+def _safe_upload_suffix(file_name: str) -> str:
+    suffix = Path(str(file_name or "")).suffix.lower()
+    if suffix not in UPLOAD_ALLOWED_SUFFIXES:
+        raise DashboardError("unsupported_file_type", HTTPStatus.BAD_REQUEST)
+    return suffix
+
+
+def _upload_output_dir(root: Path, project_alias: str) -> Path:
+    relative = Path(project_alias)
+    _reject_forbidden_parts(relative.parts)
+    candidate = (root / relative).resolve()
+    if not _is_relative_to(candidate, root):
+        raise DashboardError("path_traversal_rejected", HTTPStatus.FORBIDDEN)
+    return candidate
+
+
+def _upload_storage_dir(root: Path) -> Path:
+    base = _dashboard_workspace_root(root)
+    storage = (base / "local_only" / "dashboard_uploads").resolve()
+    if storage.is_dir() or not storage.exists():
+        return storage
+    raise DashboardError("upload_storage_unavailable", HTTPStatus.INTERNAL_SERVER_ERROR)
+
+
+def _dashboard_workspace_root(root: Path) -> Path:
+    resolved = root.resolve()
+    for candidate in (resolved, *resolved.parents):
+        if (candidate / ".git").exists() and (candidate / "pyproject.toml").is_file():
+            return candidate
+    return resolved.parent
+
+
+def _internal_upload_file_name(project_alias: str, suffix: str) -> str:
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    nonce = secrets.token_hex(6)
+    return f"dashboard_upload_{timestamp}_{project_alias}_{nonce}{suffix}"
+
+
 def _audit_form_action(form: dict[str, list[str]]) -> str:
     value = _optional_form_value(form, "action")
     try:
@@ -3311,8 +3759,17 @@ def _dashboard_error_blocked_reason(error_type: str) -> str:
         "csrf_token_missing": "csrf_missing",
         "csrf_token_invalid": "csrf_invalid",
         "verification_failed": "verify_failed",
+        "upload_validation_failed": "upload_validation_failed",
+        "unsupported_file_type": "unsupported_file_type",
+        "invalid_project_alias": "invalid_project_alias",
+        "upload_output_exists": "upload_output_exists",
+        "generate_failed": "generate_failed",
+        "verify_failed": "verify_failed",
+        "review_failed": "review_failed",
+        "report_failed": "report_failed",
         "safe_file_not_allowed": "unsafe_export",
         "path_traversal_forbidden": "path_traversal",
+        "path_traversal_rejected": "path_traversal",
         "absolute_output_path_forbidden": "path_traversal",
         "forbidden_directory": "forbidden_directory",
         "unsupported_dashboard_action": "unsupported_action",
@@ -3322,7 +3779,7 @@ def _dashboard_error_blocked_reason(error_type: str) -> str:
 
 def _safe_dashboard_audit_action(value: str) -> str:
     action = str(value).strip().lower()
-    return action if action in ACTION_NAMES else "unknown_action"
+    return action if action in AUDIT_ACTION_NAMES else "unknown_action"
 
 
 def _safe_dashboard_audit_output(value: str) -> str:

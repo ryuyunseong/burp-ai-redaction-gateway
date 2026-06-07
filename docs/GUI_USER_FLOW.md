@@ -32,6 +32,19 @@ start receiver and dashboard
 -> send only verified safe files to AI
 ```
 
+v0.5 Upload Wizard를 사용할 때는 receiver 전송 대신 dashboard에서 파일을
+선택해 같은 안전 파이프라인을 실행할 수 있습니다.
+
+```text
+open dashboard
+-> upload Burp export at /upload
+-> redaction and verify
+-> review and report
+-> check simple dashboard summary
+-> check safe file inventory index
+-> send only reviewed safe files to AI
+```
+
 Windows launcher로 receiver와 dashboard를 함께 시작할 수 있습니다.
 
 ```powershell
@@ -56,6 +69,7 @@ http://127.0.0.1:8766/
 | 화면 | 목적 | 경계 |
 | --- | --- | --- |
 | `/` | 검증된 output 선택과 audit/archive 상태 확인 | 검증된 sanitization metadata만 표시 |
+| `/upload` | Burp export 파일을 선택해 redaction/verify/review/report를 한 번에 실행 | CSRF 보호 POST. `.xml`, `.json`만 허용. 원본 preview, 원본 다운로드, ChatGPT 자동 전송 없음 |
 | `/simple?project=<alias>` | 처음 보는 사용자가 현재 상태, AI 후보 파일 4개, 다음 행동을 빠르게 확인 | 조회 전용. 파일 본문 preview, download, form, POST action, button 없음 |
 | `/dashboard-simple?project=<alias>` | `/simple?project=<alias>`와 같은 간단 체크 화면 alias | 조회 전용. full local path, raw viewer, 실행 action 없음 |
 | `/output?project=<alias>` | output 하나의 안전 파일, finding 후보, 허용된 dashboard action 확인 | 표시 전 `verify` 통과 필요 |
@@ -79,23 +93,27 @@ http://127.0.0.1:8766/
 
 output 상세 화면의 action은 다음 순서로 사용합니다.
 
-1. `Verify`: 선택한 output에 fail-closed 검증을 다시 실행합니다.
-2. `Simple Dashboard`: 현재 상태, AI 후보 파일 4개, 다음 행동을 먼저 확인합니다.
-3. `Review`: finding 후보의 안전 요약을 만듭니다.
-4. `Finding triage index`: 후보 metadata와 수동 검토 경계를 확인합니다.
-5. `Report`: `report_draft.md`를 작성하거나 갱신합니다.
-6. `Report readiness index`: 보고서 초안 metadata와 수동 검토 항목을 확인합니다.
-7. `Workflow status index`: 조회 전용 workflow 체크리스트를 확인합니다.
-8. `AI-safe preflight`: 조회 전용 핸드오프 사전 점검을 확인합니다.
-9. `AI handoff index`: 안전 파일 4개와 권장 순서를 확인합니다.
-10. `Prompt readiness index`: prompt 파일 상태와 수동 검토 경계를 확인합니다.
-11. `Evidence boundary index`: 정제 evidence와 raw 금지 범위 경계를 확인합니다.
-12. `Operator runbook index`: 수집부터 AI 투입 전 수동 검토까지 운영 순서를 다시 확인합니다.
-13. `Safe file inventory index`: safe files 4개의 존재 여부, 크기, 수정 시각, SHA-256 fingerprint를 확인합니다.
-14. `Export`: 안전 파일 4개만 dashboard export directory로 복사합니다.
+1. `Upload Wizard`: 새 export는 `/upload`에서 처리하고 성공 결과에서 `/simple`, `/safe-files`, `/triage`, `/report-readiness`로 이동합니다.
+2. `Verify`: 선택한 output에 fail-closed 검증을 다시 실행합니다.
+3. `Simple Dashboard`: 현재 상태, AI 후보 파일 4개, 다음 행동을 먼저 확인합니다.
+4. `Review`: finding 후보의 안전 요약을 만듭니다.
+5. `Finding triage index`: 후보 metadata와 수동 검토 경계를 확인합니다.
+6. `Report`: `report_draft.md`를 작성하거나 갱신합니다.
+7. `Report readiness index`: 보고서 초안 metadata와 수동 검토 항목을 확인합니다.
+8. `Workflow status index`: 조회 전용 workflow 체크리스트를 확인합니다.
+9. `AI-safe preflight`: 조회 전용 핸드오프 사전 점검을 확인합니다.
+10. `AI handoff index`: 안전 파일 4개와 권장 순서를 확인합니다.
+11. `Prompt readiness index`: prompt 파일 상태와 수동 검토 경계를 확인합니다.
+12. `Evidence boundary index`: 정제 evidence와 raw 금지 범위 경계를 확인합니다.
+13. `Operator runbook index`: 수집부터 AI 투입 전 수동 검토까지 운영 순서를 다시 확인합니다.
+14. `Safe file inventory index`: safe files 4개의 존재 여부, 크기, 수정 시각, SHA-256 fingerprint를 확인합니다.
+15. `Export`: 안전 파일 4개만 dashboard export directory로 복사합니다.
 
 `Refresh`는 조회 전용 GET reload입니다. `Verify`, `Review`, `Report`,
 `Export`는 상태 변경 POST action이며 CSRF token이 필요합니다.
+`Upload Wizard`도 상태 변경 POST action이며 CSRF 보호가 필요합니다.
+업로드 원본은 ignored local-only storage에 내부 이름으로 저장되고 화면에는
+원본 파일명, 전체 경로, 원본 preview를 표시하지 않습니다.
 `Finding triage index`, `Report readiness index`, `Workflow status index`,
 `AI-safe preflight`, `AI handoff index`, `Prompt readiness index`,
 `Evidence boundary index`, `Operator runbook index`, `Safe file inventory index`는 조회 전용 GET page이며 데이터를 제출하지 않습니다.
@@ -113,6 +131,10 @@ output 상세 화면의 action은 다음 순서로 사용합니다.
 | `report_draft.md` | 사람이 검토할 보고서 초안 |
 
 검증에 실패한 output의 파일은 사용하지 않습니다.
+
+Upload Wizard의 route, failure handling, action audit 경계는
+[GUI_UPLOAD_WIZARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_UPLOAD_WIZARD.md)를
+참조하세요.
 
 간단 대시보드의 세 영역과 read-only 경계는
 [GUI_SIMPLE_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SIMPLE_DASHBOARD.md)를

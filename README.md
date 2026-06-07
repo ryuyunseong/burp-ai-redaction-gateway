@@ -14,6 +14,12 @@ HAR-style JSON, 기본 Burp XML export 형태를 지원합니다.
 [docs/USER_QUICKSTART.md](C:/coding/burp-ai-redaction-gateway/docs/USER_QUICKSTART.md)를
 참조하세요.
 
+브라우저에서 Burp export 파일을 선택해 redaction, verify, review, report를
+한 번에 실행하는 v0.5 Upload Wizard는
+[docs/GUI_UPLOAD_WIZARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_UPLOAD_WIZARD.md)를
+참조하세요. 이 흐름도 ChatGPT 자동 전송은 하지 않으며, AI 입력 후보 파일
+4개만 표시합니다.
+
 ```powershell
 python -m burp_ai_redaction_gateway generate `
   --input samples/synthetic_burp_history.json `
@@ -185,6 +191,8 @@ HMAC verification, 실패 처리까지 포함한 전체 안전 운영 흐름은
 [docs/OPERATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/OPERATING_GUIDE.md)를
 참조하세요. 처음 실행부터 안전 AI 핸드오프까지의 GUI 운영자 흐름은
 [docs/GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md)를
+참조하세요. dashboard에서 로컬 Burp export를 처리하는 Upload Wizard는
+[docs/GUI_UPLOAD_WIZARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_UPLOAD_WIZARD.md)를
 참조하세요. AI 핸드오프 전 조회 전용 GUI 체크리스트는
 [docs/GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
 참조하세요. 조회 전용 GUI 핸드오프 파일 인덱스는

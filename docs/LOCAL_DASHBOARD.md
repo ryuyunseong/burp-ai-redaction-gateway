@@ -26,6 +26,18 @@ workflow 상태, audit 운영, audit panel 해석, risk rating 문서로 이동�
 또한 안전 파일 4개, 차단되는 raw-data 범위, candidate/draft 해석 경계를
 요약합니다.
 
+v0.5 Upload Wizard는 별도 state-changing route입니다.
+
+```text
+/upload
+```
+
+이 화면은 Burp export `.xml` 또는 `.json` 파일을 받아 redaction, verify,
+review, report를 순서대로 실행합니다. ChatGPT 자동 전송은 하지 않고, 성공
+후 AI 입력 후보 파일 4개와 관련 dashboard 링크만 표시합니다. 자세한 경계는
+[GUI_UPLOAD_WIZARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_UPLOAD_WIZARD.md)를
+참조하세요.
+
 화면별 운영 순서는
 [GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md)를
 참조하세요. 처음 보는 사용자를 위한 간단 대시보드는
@@ -58,6 +70,7 @@ release 전에는 dashboard를 loopback으로 실행한 뒤 다음 route를 확�
 
 ```text
 /
+/upload
 /help
 /operations
 /settings
@@ -77,7 +90,9 @@ release 전에는 dashboard를 loopback으로 실행한 뒤 다음 route를 확�
 
 조회 전용 route는 form, POST action, button, 새 download action을 표시하지
 않아야 합니다. `/output?project=<alias>`의 상태 변경 action은 CSRF 보호가
-적용된 verify, review, report, export로 제한됩니다.
+적용된 verify, review, report, export로 제한됩니다. `/upload`도 CSRF 보호가
+적용된 state-changing POST route이며, 원본 preview 또는 raw 다운로드 기능을
+제공하지 않습니다.
 
 `/simple?project=<alias>`와 `/dashboard-simple?project=<alias>`는 같은
 read-only 간단 체크 화면입니다. release smoke에서는 `formCount=0`,
