@@ -11,6 +11,7 @@ import tempfile
 import threading
 import unittest
 import uuid
+from collections import Counter
 from copy import deepcopy
 from contextlib import redirect_stdout
 from datetime import UTC, datetime
@@ -44,11 +45,11 @@ from burp_ai_redaction_gateway.dashboard import (
 )
 from burp_ai_redaction_gateway.findings import build_finding_candidates
 from burp_ai_redaction_gateway.mcp_server import ReadOnlyMcpGateway, ReadOnlyMcpServer, _next_rotated_audit_path
-from burp_ai_redaction_gateway.models import SanitizedEvent
+from burp_ai_redaction_gateway.models import HttpRequest, HttpResponse, RawEvent, SanitizedEvent
 from burp_ai_redaction_gateway.parser import load_events
 from burp_ai_redaction_gateway.policy import load_policy
 from burp_ai_redaction_gateway.receiver import ReceiverConfig, ReceiverError, create_server, ingest_montoya_payload
-from burp_ai_redaction_gateway.redaction import Redactor
+from burp_ai_redaction_gateway.redaction import Redactor, _safe_sensitive_field_path, _template_path, _templated_query
 from burp_ai_redaction_gateway.risk import RISK_RATING_PROFILE_NAMES, build_risk_rating_draft
 from burp_ai_redaction_gateway.scanner import assert_no_sensitive_text, scan_text
 from burp_ai_redaction_gateway.verifier import verify_path
@@ -471,6 +472,49 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertTrue(candidate["manual_verification_required"])
         self.assertEqual(candidate["risk_rating_draft"]["evidence_confidence"], "low")
         self.assertFalse(candidate["risk_rating_draft"]["confidence_is_severity"])
+
+    def test_redactor_redacts_unsafe_metadata_paths_before_output_scan(self) -> None:
+        counters: Counter[str] = Counter()
+        opaque_segment = "".join(["AbCdEfGh", "IjKlMnOp", "QrStUvWx", "Yz1234567890"])
+
+        field_path = _safe_sensitive_field_path(f"$.session.{opaque_segment}", counters)
+        self.assertEqual(field_path, "$.redacted_field_001")
+        self.assertEqual(scan_text(field_path), [])
+
+        path_template, identifier_observed = _template_path(f"/assets/{opaque_segment}", counters)
+        self.assertEqual(path_template, "/assets/{secret}")
+        self.assertTrue(identifier_observed)
+        self.assertEqual(scan_text(path_template), [])
+
+        query_template = _templated_query("session_id=synthetic", counters)
+        self.assertEqual(query_template, "?session_id:{value}")
+        self.assertEqual(scan_text(f"cookie metadata {query_template}"), [])
+
+        event = RawEvent(
+            raw_id="synthetic-unsafe-metadata",
+            request=HttpRequest(
+                method="GET",
+                url=f"https://target.example/assets/{opaque_segment}",
+                headers={"Cookie": "session_id=synthetic; preference=synthetic"},
+                body="",
+            ),
+            response=HttpResponse(
+                status=200,
+                headers={
+                    "Content-Type": "text/plain; charset=utf-8",
+                    "Cache-Control": "max-age=0",
+                    "Set-Cookie": "session_id=synthetic; SameSite=Lax",
+                },
+                body="ok",
+            ),
+        )
+        sanitized = Redactor().sanitize_event(event, 1)
+        self.assertEqual(sanitized.request["path_template"], "/assets/{secret}")
+        self.assertEqual(sanitized.signals["path_template"], "/assets/{secret}")
+        self.assertIn("charset {value}", sanitized.response["headers"]["Content-Type"])
+        self.assertIn("max-age {value}", sanitized.response["headers"]["Cache-Control"])
+        self.assertEqual(scan_text(sanitized.request["path_template"]), [])
+        self.assertEqual(scan_text(json.dumps(sanitized.to_dict(), sort_keys=True)), [])
 
     def test_analysis_packet_prompts_include_only_candidate_fields(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
