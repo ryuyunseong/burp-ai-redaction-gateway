@@ -125,6 +125,11 @@ v0.4 release 후보 검증에서 실제 export를 다룰 때는
 [docs/REAL_BURP_EXPORT_VALIDATION.md](docs/REAL_BURP_EXPORT_VALIDATION.md)와
 [docs/templates/REAL_BURP_EXPORT_VALIDATION_TEMPLATE.md](docs/templates/REAL_BURP_EXPORT_VALIDATION_TEMPLATE.md)를
 사용해 raw-free metadata만 기록합니다.
+반복 가능한 로컬 smoke harness는
+[docs/LOCAL_REAL_EXPORT_SMOKE_HARNESS.md](docs/LOCAL_REAL_EXPORT_SMOKE_HARNESS.md)를
+참조하세요. harness는 ignored `local_only/` 입력과 ignored `out/` 출력만
+허용하며, console에는 `raw_data_included=false`와 safe alias metadata만
+출력합니다.
 
 ## Verification
 

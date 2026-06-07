@@ -34,6 +34,20 @@ copy <authorized_burp_export_file> local_only\authorized_burp_export.xml
 
 ## 검증 순서
 
+### Optional local smoke harness
+
+반복 실행이 필요한 경우 raw-free smoke harness를 사용할 수 있습니다.
+
+```powershell
+scripts\run_local_real_export_smoke.ps1 -Input local_only\authorized_burp_export.xml
+```
+
+harness는 generate, verify, review, report, dashboard smoke를 safe alias
+기준으로 실행합니다. 입력은 ignored `local_only/` 아래 file만 허용하고,
+출력은 ignored `out/` 아래 direct alias만 허용합니다. console에는 raw 값이나
+full local path를 출력하지 않습니다.
+자세한 사용법은 `docs/LOCAL_REAL_EXPORT_SMOKE_HARNESS.md`를 참조하세요.
+
 ### 1. Generate
 
 ```powershell
