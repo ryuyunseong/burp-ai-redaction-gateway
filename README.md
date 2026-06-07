@@ -176,6 +176,8 @@ HMAC verification, 실패 처리까지 포함한 전체 안전 운영 흐름은
 [docs/RISK_RATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/RISK_RATING_GUIDE.md)를
 참조하세요. v0.4 dashboard release baseline은
 [docs/RELEASE_NOTES_v0.4.md](C:/coding/burp-ai-redaction-gateway/docs/RELEASE_NOTES_v0.4.md)를
+참조하세요. v0.4 release 전 CLI/GUI smoke와 tag 기준은
+[docs/RELEASE_CHECKLIST_v0.4.md](docs/RELEASE_CHECKLIST_v0.4.md)를
 참조하세요.
 
 ## Burp Montoya Collector

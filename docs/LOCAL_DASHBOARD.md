@@ -46,7 +46,34 @@ workflow 상태, audit 운영, audit panel 해석, risk rating 문서로 이동�
 [GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md)를
 참조하세요. 전체 workflow 상태 체크리스트는
 [GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
+참조하세요. release 전 GUI route smoke와 tag 기준은
+[RELEASE_CHECKLIST_v0.4.md](RELEASE_CHECKLIST_v0.4.md)를
 참조하세요.
+
+## GUI route smoke
+
+release 전에는 dashboard를 loopback으로 실행한 뒤 다음 route를 확인합니다.
+
+```text
+/
+/help
+/operations
+/settings
+/output?project=<alias>
+/preflight?project=<alias>
+/handoff?project=<alias>
+/triage?project=<alias>
+/report-readiness?project=<alias>
+/workflow?project=<alias>
+/prompt-readiness?project=<alias>
+/evidence-boundary?project=<alias>
+/operator-runbook?project=<alias>
+/safe-files?project=<alias>
+```
+
+조회 전용 route는 form, POST action, button, 새 download action을 표시하지
+않아야 합니다. `/output?project=<alias>`의 상태 변경 action은 CSRF 보호가
+적용된 verify, review, report, export로 제한됩니다.
 
 ## Verify-first 경계
 
