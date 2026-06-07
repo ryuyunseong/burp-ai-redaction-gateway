@@ -1030,10 +1030,10 @@ def render_simple_dashboard(output: DashboardOutput) -> str:
             <div class="panel-head"><h2>보안 경계</h2><span class="muted">간단 화면은 상태 표시만 합니다.</span></div>
             <ul class="safe-list">
               <li>raw request/response, Cookie, Authorization, token/JWT/session은 표시하지 않습니다.</li>
-              <li>실제 domain/IP, 개인정보, HMAC secret, CSRF token은 표시하지 않습니다.</li>
+              <li>실제 domain/IP, 개인정보, 무결성 검증 비밀값, 요청 위조 방지 값은 표시하지 않습니다.</li>
               <li>request body, response body, prompt body, report body preview는 표시하지 않습니다.</li>
-              <li>full local path, local_only, raw, raw_vault, out 원본은 AI 입력 대상으로 표시하지 않습니다.</li>
-              <li>replay, active scan, 파일 삭제, retention 정책 변경, HMAC secret 처리는 제공하지 않습니다.</li>
+              <li>전체 로컬 경로, local_only, raw, raw_vault, out 원본은 AI 입력 대상으로 표시하지 않습니다.</li>
+              <li>replay, active scan, 파일 삭제, retention 정책 변경, 무결성 검증 비밀값 처리는 제공하지 않습니다.</li>
             </ul>
           </div>
         </section>
@@ -1052,7 +1052,7 @@ def render_ai_handoff_index(index: AiHandoffIndex) -> str:
             "token, JWT, session 값",
             "실제 도메인, URL, IP 값",
             "개인정보",
-            "HMAC secret 또는 CSRF token 값",
+            "무결성 검증 비밀값 또는 요청 위조 방지 값",
             "로컬 전용 raw 저장소 또는 검증 전 산출물",
             "감사 로그, 압축 archive, manifest",
         )
@@ -1116,7 +1116,7 @@ def render_finding_triage_index(index: FindingTriageIndex) -> str:
             "token, JWT, session 값",
             "실제 도메인, URL, IP 값",
             "개인정보",
-            "HMAC secret 또는 CSRF token 값",
+            "무결성 검증 비밀값 또는 요청 위조 방지 값",
             "전체 로컬 경로",
             "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
         )
@@ -1211,7 +1211,7 @@ def render_report_readiness_index(index: ReportReadinessIndex) -> str:
             "token, JWT, session 값",
             "실제 도메인, URL, IP 값",
             "개인정보",
-            "HMAC secret 또는 CSRF token 값",
+            "무결성 검증 비밀값 또는 요청 위조 방지 값",
             "전체 로컬 경로",
             "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
         )
@@ -1298,7 +1298,7 @@ def render_prompt_readiness_index(index: PromptReadinessIndex) -> str:
             "token, JWT, session 값",
             "실제 도메인, URL, IP 값",
             "개인정보",
-            "HMAC secret 또는 CSRF token 값",
+            "무결성 검증 비밀값 또는 요청 위조 방지 값",
             "전체 로컬 경로",
             "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
         )
@@ -1401,7 +1401,7 @@ def render_evidence_boundary_index(index: EvidenceBoundaryIndex) -> str:
             "token, JWT, session 값",
             "실제 도메인, URL, IP 값",
             "개인정보",
-            "HMAC secret 또는 CSRF token 값",
+            "무결성 검증 비밀값 또는 요청 위조 방지 값",
             "전체 로컬 경로",
             "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
         )
@@ -1512,9 +1512,9 @@ def render_operator_runbook_index(index: OperatorRunbookIndex) -> str:
             "token/JWT/session 값",
             "실제 URL/도메인/IP",
             "개인정보",
-            "HMAC secret",
-            "CSRF token",
-            "full local path",
+            "무결성 검증 비밀값",
+            "요청 위조 방지 값",
+            "전체 로컬 경로",
             "local_only/, raw/, raw_vault/, verify 전 out/, out/.audit 산출물",
         )
     )
@@ -1547,7 +1547,7 @@ def render_operator_runbook_index(index: OperatorRunbookIndex) -> str:
               <div><dt>report_draft.md</dt><dd>{_status_badge(index.report_status)}</dd></div>
               <div><dt>raw_data_included</dt><dd>false</dd></div>
               <div><dt>body preview</dt><dd>false</dd></div>
-              <div><dt>full local path 표시</dt><dd>false</dd></div>
+              <div><dt>전체 로컬 경로 표시</dt><dd>false</dd></div>
             </dl>
           </div>
           <div class="panel">
@@ -1615,9 +1615,9 @@ def render_safe_file_inventory_index(index: SafeFileInventoryIndex) -> str:
             "token/JWT/session 값",
             "실제 URL/도메인/IP",
             "개인정보",
-            "HMAC secret",
-            "CSRF token",
-            "full local path",
+            "무결성 검증 비밀값",
+            "요청 위조 방지 값",
+            "전체 로컬 경로",
             "local_only/, raw/, raw_vault/, verify 전 out/, out/.audit 산출물",
         )
     )
@@ -1663,7 +1663,7 @@ def render_safe_file_inventory_index(index: SafeFileInventoryIndex) -> str:
               <div><dt>final severity</dt><dd>수동 결정입니다.</dd></div>
               <div><dt>file body preview</dt><dd>false</dd></div>
               <div><dt>download action</dt><dd>false</dd></div>
-              <div><dt>full local path 표시</dt><dd>false</dd></div>
+              <div><dt>전체 로컬 경로 표시</dt><dd>false</dd></div>
             </dl>
           </div>
           <div class="panel">
@@ -1718,7 +1718,7 @@ def render_workflow_status_index(index: WorkflowStatusIndex) -> str:
             "token, JWT, session 값",
             "실제 도메인, URL, IP 값",
             "개인정보",
-            "HMAC secret 또는 CSRF token 값",
+            "무결성 검증 비밀값 또는 요청 위조 방지 값",
             "전체 로컬 경로",
             "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
         )
@@ -1812,7 +1812,7 @@ def render_ai_safe_preflight(preflight: AiSafePreflight) -> str:
             "token, JWT, session 값",
             "실제 도메인, URL, IP 값",
             "개인정보",
-            "HMAC secret 또는 CSRF token 값",
+            "무결성 검증 비밀값 또는 요청 위조 방지 값",
             "로컬 전용 raw 저장소 또는 검증 전 산출물",
             "감사 로그, 압축 archive, manifest",
         )

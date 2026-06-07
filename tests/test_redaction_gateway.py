@@ -792,9 +792,9 @@ class RedactionGatewayTests(unittest.TestCase):
                     "Cookie",
                     "Authorization",
                     "token/JWT/session",
-                    "HMAC secret",
-                    "CSRF token",
-                    "full local path",
+                    "무결성 검증 비밀값",
+                    "요청 위조 방지 값",
+                    "전체 로컬 경로",
                 ]:
                     self.assertIn(label, simple)
                 self.assertNotIn("<form", simple)
@@ -802,6 +802,9 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn('method="post"', simple)
                 self.assertNotIn("/download?", simple)
                 self.assertNotIn("/preview?", simple)
+                self.assertNotIn("HMAC secret", simple)
+                self.assertNotIn("CSRF token", simple)
+                self.assertNotIn("full local path", simple)
                 self.assertNotIn("raw_request", simple)
                 self.assertNotIn("raw_response", simple)
                 self.assertNotIn("DUMMY_COOKIE_VALUE", simple)
@@ -847,7 +850,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token, JWT, session 값",
                     "실제 도메인, URL, IP 값",
                     "개인정보",
-                    "HMAC secret 또는 CSRF token 값",
+                    "무결성 검증 비밀값 또는 요청 위조 방지 값",
                     "감사 로그, 압축 archive, manifest",
                 ]:
                     self.assertIn(label, preflight)
@@ -901,7 +904,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token, JWT, session 값",
                     "실제 도메인, URL, IP 값",
                     "개인정보",
-                    "HMAC secret 또는 CSRF token 값",
+                    "무결성 검증 비밀값 또는 요청 위조 방지 값",
                     "감사 로그, 압축 archive, manifest",
                 ]:
                     self.assertIn(label, handoff)
@@ -951,7 +954,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token, JWT, session 값",
                     "실제 도메인, URL, IP 값",
                     "개인정보",
-                    "HMAC secret 또는 CSRF token 값",
+                    "무결성 검증 비밀값 또는 요청 위조 방지 값",
                     "전체 로컬 경로",
                 ]:
                     self.assertIn(label, triage)
@@ -1015,7 +1018,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token, JWT, session 값",
                     "실제 도메인, URL, IP 값",
                     "개인정보",
-                    "HMAC secret 또는 CSRF token 값",
+                    "무결성 검증 비밀값 또는 요청 위조 방지 값",
                     "전체 로컬 경로",
                 ]:
                     self.assertIn(label, readiness)
@@ -1093,7 +1096,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token, JWT, session 값",
                     "실제 도메인, URL, IP 값",
                     "개인정보",
-                    "HMAC secret 또는 CSRF token 값",
+                    "무결성 검증 비밀값 또는 요청 위조 방지 값",
                     "전체 로컬 경로",
                 ]:
                     self.assertIn(label, workflow)
@@ -1163,7 +1166,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token, JWT, session 값",
                     "실제 도메인, URL, IP 값",
                     "개인정보",
-                    "HMAC secret 또는 CSRF token 값",
+                    "무결성 검증 비밀값 또는 요청 위조 방지 값",
                     "전체 로컬 경로",
                 ]:
                     self.assertIn(label, prompt_readiness)
@@ -1231,7 +1234,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token, JWT, session 값",
                     "실제 도메인, URL, IP 값",
                     "개인정보",
-                    "HMAC secret 또는 CSRF token 값",
+                    "무결성 검증 비밀값 또는 요청 위조 방지 값",
                     "전체 로컬 경로",
                 ]:
                     self.assertIn(label, evidence_boundary)
@@ -1267,7 +1270,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("codex_task_prompt.md", operator_runbook)
                 self.assertIn("raw_data_included", operator_runbook)
                 self.assertIn("body preview", operator_runbook)
-                self.assertIn("full local path 표시", operator_runbook)
+                self.assertIn("전체 로컬 경로 표시", operator_runbook)
                 self.assertIn("safe files 4개", operator_runbook)
                 for step in [
                     "Burp HTTP history 수집",
@@ -1306,9 +1309,9 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token/JWT/session 값",
                     "실제 URL/도메인/IP",
                     "개인정보",
-                    "HMAC secret",
-                    "CSRF token",
-                    "full local path",
+                    "무결성 검증 비밀값",
+                    "요청 위조 방지 값",
+                    "전체 로컬 경로",
                 ]:
                     self.assertIn(label, operator_runbook)
                 self.assertIn("수동 검증이 끝날 때까지 candidate입니다", operator_runbook)
@@ -1391,9 +1394,9 @@ class RedactionGatewayTests(unittest.TestCase):
                     "token/JWT/session 값",
                     "실제 URL/도메인/IP",
                     "개인정보",
-                    "HMAC secret",
-                    "CSRF token",
-                    "full local path",
+                    "무결성 검증 비밀값",
+                    "요청 위조 방지 값",
+                    "전체 로컬 경로",
                 ]:
                     self.assertIn(label, safe_files)
                 self.assertNotIn("<pre", safe_files)
