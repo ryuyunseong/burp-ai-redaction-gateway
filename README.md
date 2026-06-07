@@ -131,6 +131,14 @@ v0.4 release 후보 검증에서 실제 export를 다룰 때는
 허용하며, console에는 `raw_data_included=false`와 safe alias metadata만
 출력합니다.
 
+첫 authorized local real export smoke 결과는 RC1 readiness 근거로만 기록합니다.
+기준선은 `v0.4.30-local-real-export-smoke-harness`이고, 기록값은
+`actual_export_smoke=passed`, `generate=passed`, `verify=passed`,
+`review=passed`, `report=passed`, `dashboard_smoke=passed`,
+`browser_smoke=passed`, `candidate_count=60`, `safe_files_present=4`,
+`forbidden_value_hits=0` 같은 raw-free metadata로 제한합니다. 제안된 RC1
+tag 후보는 `v0.4.31-rc1`이지만, tag 생성은 별도 승인 후에만 진행합니다.
+
 ## Verification
 
 테스트는 `unittest` 기반이며 pytest가 설치된 환경에서도 실행할 수 있습니다.

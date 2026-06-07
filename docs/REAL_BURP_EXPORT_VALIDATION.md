@@ -131,6 +131,27 @@ docs/templates/REAL_BURP_EXPORT_VALIDATION_TEMPLATE.md
 - failure reason code
 - `raw_data_included: false`
 
+## RC1 readiness record
+
+The first authorized local real export smoke run for the
+`v0.4.30-local-real-export-smoke-harness` baseline is recorded only as
+raw-free metadata:
+
+- `actual_export_smoke=passed`
+- `generate=passed`
+- `verify=passed`
+- `review=passed`
+- `report=passed`
+- `dashboard_smoke=passed`
+- `browser_smoke=passed`
+- `candidate_count=60`
+- `safe_files_present=4`
+- `forbidden_value_hits=0`
+
+The candidate count is a candidate finding count, not a confirmed issue count.
+Risk values remain draft values. The proposed RC1 tag candidate is
+`v0.4.31-rc1`; this validation record does not create that tag.
+
 ## 금지 항목
 
 다음은 기록하지 않습니다.

@@ -3127,6 +3127,58 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertFalse(path.startswith(blocked_prefixes), path)
                 self.assertFalse(path.lower().endswith((".burp", ".har")), path)
 
+    def test_v04_rc1_readiness_docs_are_raw_free_and_cautious(self) -> None:
+        docs = [
+            ROOT / "README.md",
+            ROOT / "docs" / "RELEASE_CHECKLIST_v0.4.md",
+            ROOT / "docs" / "RELEASE_NOTES_v0.4.md",
+            ROOT / "docs" / "REAL_BURP_EXPORT_VALIDATION.md",
+            ROOT / "docs" / "LOCAL_REAL_EXPORT_SMOKE_HARNESS.md",
+        ]
+        text = "\n".join(path.read_text(encoding="utf-8") for path in docs)
+
+        required = [
+            "v0.4.30-local-real-export-smoke-harness",
+            "v0.4.31-rc1",
+            "actual_export_smoke=passed",
+            "generate=passed",
+            "verify=passed",
+            "review=passed",
+            "report=passed",
+            "dashboard_smoke=passed",
+            "browser_smoke=passed",
+            "candidate_count=60",
+            "safe_files_present=4",
+            "forbidden_value_hits=0",
+            "raw-free metadata",
+            "candidate",
+            "draft",
+        ]
+        for item in required:
+            self.assertIn(item, text)
+
+        forbidden = [
+            "real_export_01.xml",
+            "real_export_validation_run_01.md",
+            "raw_request",
+            "raw_response",
+            "DUMMY_COOKIE_VALUE",
+            "DUMMY_BEARER_TOKEN",
+            "Authorization: Bearer",
+            "Cookie:",
+            "C:\\",
+            "safe to share",
+            "approved",
+            "safe-to-share guaranteed",
+            "guaranteed safe",
+            "severity confirmed",
+            "ready to submit",
+            "confirmed CVSS",
+            "final severity",
+        ]
+        for item in forbidden:
+            self.assertNotIn(item, text)
+
     def test_montoya_handoff_payload_is_redacted_and_verified(self) -> None:
         payload = json.loads(MONTOYA_HANDOFF.read_text(encoding="utf-8"))
         with tempfile.TemporaryDirectory() as temp_dir:
