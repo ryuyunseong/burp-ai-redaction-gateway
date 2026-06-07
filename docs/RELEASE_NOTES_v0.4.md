@@ -1,7 +1,8 @@
 # v0.4 Release Notes
 
 This release note summarizes the v0.4 dashboard baseline from
-`v0.4.0-local-dashboard` through `v0.4.5-dashboard-settings`.
+`v0.4.0-local-dashboard` through
+`v0.4.27-gui-safe-file-inventory-index`.
 
 The v0.4 line adds a local browser dashboard for verified sanitized output,
 keeps AI-facing files behind the existing `verify` gate, and preserves the
@@ -21,6 +22,12 @@ sent to AI tools.
 - `v0.4.4-dashboard-action-audit-ko`: adds raw-free dashboard action audit
   events and Korean dashboard UI text.
 - `v0.4.5-dashboard-settings`: adds a read-only settings/status page.
+- `v0.4.6` through `v0.4.16`: document user quickstart, risk rating guide,
+  audit operations, Windows launcher usage, and GUI audit panel interpretation.
+- `v0.4.17` through `v0.4.27`: add read-only GUI operator indexes for user
+  flow, AI preflight, handoff, finding triage, report readiness, workflow
+  status, prompt readiness, evidence boundary, operator runbook, and safe file
+  inventory.
 
 ## Major Changes
 
@@ -100,6 +107,25 @@ It must not print HMAC secret values, CSRF values, environment variable values,
 full local paths, raw traffic, cookies, authorization values, tokens, real
 domains, internal IPs, personal data, or stack traces.
 
+### Read-Only Operator Indexes
+
+The dashboard includes read-only operator indexes for the main GUI flow:
+
+- `/help` and `/operations`
+- `/preflight?project=<alias>`
+- `/handoff?project=<alias>`
+- `/triage?project=<alias>`
+- `/report-readiness?project=<alias>`
+- `/workflow?project=<alias>`
+- `/prompt-readiness?project=<alias>`
+- `/evidence-boundary?project=<alias>`
+- `/operator-runbook?project=<alias>`
+- `/safe-files?project=<alias>`
+
+These pages are guidance and status surfaces. They do not add POST actions,
+download controls, raw viewers, HMAC secret inputs, CSRF token displays, replay,
+active scan, delete, edit, retention, or risk profile actions.
+
 ## Security Boundaries
 
 The v0.4 dashboard follows the existing safe-output rules:
@@ -163,6 +189,13 @@ PRs:
 - Browser checks for safe preview, safe download, CSRF-protected actions,
   dashboard action audit metadata, Korean UI text, and the read-only settings
   page.
+- Browser checks for read-only operator indexes, including form/button/POST
+  absence on guide pages and safe file inventory metadata without body preview
+  or download links.
+
+Before creating a v0.4 tag, use
+[`RELEASE_CHECKLIST_v0.4.md`](RELEASE_CHECKLIST_v0.4.md) to repeat the CLI,
+Gitleaks, git safety, and GUI route smoke checks.
 
 ## Known Limits
 
@@ -183,4 +216,4 @@ PRs:
 - Audit compression for long-term local storage.
 - Settings actions, if needed, with explicit CSRF, audit, secret handling, and
   rollback review.
-- A GitHub release entry based on the existing v0.4 tags.
+- A GitHub release entry based on the existing v0.4 tags and release checklist.

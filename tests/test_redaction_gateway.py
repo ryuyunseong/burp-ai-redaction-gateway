@@ -3898,6 +3898,86 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("안전 보장", guide)
         self.assertNotIn("This guide explains", guide)
 
+    def test_release_checklist_v04_documents_hardening_flow(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        quickstart = (ROOT / "docs" / "USER_QUICKSTART.md").read_text(encoding="utf-8")
+        local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
+        release_notes = (ROOT / "docs" / "RELEASE_NOTES_v0.4.md").read_text(encoding="utf-8")
+        checklist = (ROOT / "docs" / "RELEASE_CHECKLIST_v0.4.md").read_text(encoding="utf-8")
+
+        for text in [readme, quickstart, local_dashboard, release_notes]:
+            self.assertIn("RELEASE_CHECKLIST_v0.4.md", text)
+
+        required = [
+            "v0.4 Release Checklist",
+            "python -m compileall burp_ai_redaction_gateway tests",
+            "python -m unittest discover -s tests",
+            "python -m burp_ai_redaction_gateway verify --input out",
+            "python -m burp_ai_redaction_gateway review --input out\\demo",
+            "python -m burp_ai_redaction_gateway report --input out\\demo --output out\\demo\\report_draft.md --profile conservative",
+            "gitleaks dir -v --redact=100 --config .gitleaks.toml .",
+            "gitleaks git -v --redact=100 --config .gitleaks.toml .",
+            "scripts\\git_safety_check.bat",
+            "git diff --check",
+            "git status --short --untracked-files=all",
+            "/help",
+            "/operations",
+            "/settings",
+            "/output?project=<alias>",
+            "/preflight?project=<alias>",
+            "/handoff?project=<alias>",
+            "/triage?project=<alias>",
+            "/report-readiness?project=<alias>",
+            "/workflow?project=<alias>",
+            "/prompt-readiness?project=<alias>",
+            "/evidence-boundary?project=<alias>",
+            "/operator-runbook?project=<alias>",
+            "/safe-files?project=<alias>",
+            "formCount=0",
+            "postFormCount=0",
+            "buttonCount=0",
+            "lang=\"ko\"",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "local_only/",
+            "raw/",
+            "raw_vault/",
+            "out/.audit/",
+            "candidate",
+            "risk_rating_draft",
+            "최종 심각도",
+            "실제 Burp export",
+            "Tag 기준",
+            "Rollback 기준",
+        ]
+        for item in required:
+            self.assertIn(item, checklist)
+
+        forbidden = [
+            "raw_request",
+            "raw_response",
+            "DUMMY_COOKIE_VALUE",
+            "DUMMY_BEARER_TOKEN",
+            "Authorization: Bearer",
+            "Cookie:",
+            "safe to share",
+            "approved",
+            "guaranteed safe",
+            "confirmed CVSS",
+            "final severity",
+            "severity confirmed",
+            "ready to submit",
+            "제출 가능",
+            "승인 완료",
+            "안전 보장",
+            "C:\\coding\\",
+            "C:\\Users\\",
+        ]
+        for item in forbidden:
+            self.assertNotIn(item, checklist)
+
 
 if __name__ == "__main__":
     unittest.main()

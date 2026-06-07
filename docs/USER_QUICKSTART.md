@@ -122,6 +122,25 @@ http://127.0.0.1:8766/help
 http://127.0.0.1:8766/operations
 ```
 
+현재 read-only route smoke는 아래 route를 함께 확인합니다.
+
+```text
+http://127.0.0.1:8766/settings
+http://127.0.0.1:8766/preflight?project=<alias>
+http://127.0.0.1:8766/handoff?project=<alias>
+http://127.0.0.1:8766/triage?project=<alias>
+http://127.0.0.1:8766/report-readiness?project=<alias>
+http://127.0.0.1:8766/workflow?project=<alias>
+http://127.0.0.1:8766/prompt-readiness?project=<alias>
+http://127.0.0.1:8766/evidence-boundary?project=<alias>
+http://127.0.0.1:8766/operator-runbook?project=<alias>
+http://127.0.0.1:8766/safe-files?project=<alias>
+```
+
+`/output?project=<alias>`는 검증된 output 상세 화면이며 verify, review,
+report, export POST action을 표시할 수 있습니다. 그 외 인덱스 route는
+조회 전용 안내 또는 상태 화면입니다.
+
 ## 4. Dashboard 흐름 사용
 
 dashboard action은 다음 순서로 사용합니다.
@@ -245,3 +264,10 @@ python -m burp_ai_redaction_gateway report --input out\receiver --output out\rec
 ```
 
 검증된 output 또는 export directory의 안전 파일만 사용합니다.
+
+## 10. Release 전 점검
+
+v0.4 release 전 CLI 검증, GUI route smoke, tag 기준, rollback 기준은
+[RELEASE_CHECKLIST_v0.4.md](RELEASE_CHECKLIST_v0.4.md)를
+참조하세요. 실제 Burp export 검증은 ignored `local_only/` 아래에서만
+수행하고, raw 원본이나 검증 전 output을 AI 입력 대상으로 쓰지 않습니다.
