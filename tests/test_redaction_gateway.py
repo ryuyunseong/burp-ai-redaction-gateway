@@ -1617,6 +1617,8 @@ class RedactionGatewayTests(unittest.TestCase):
                         self.assertIn("실행 버튼 없음", body)
                         self.assertIn("docs/USER_QUICKSTART.md", body)
                         self.assertIn("docs/GUI_USER_FLOW.md", body)
+                        self.assertIn("docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md", body)
+                        self.assertIn('href="/live-capture"', body)
                         self.assertIn("docs/GUI_UPLOAD_WIZARD.md", body)
                         self.assertIn('href="/upload"', body)
                         self.assertIn("docs/GUI_SIMPLE_DASHBOARD.md", body)
@@ -1656,6 +1658,95 @@ class RedactionGatewayTests(unittest.TestCase):
                         self.assertNotIn("DUMMY_COOKIE_VALUE", body)
                         self.assertNotIn("DUMMY_BEARER_TOKEN", body)
                         connection.close()
+                finally:
+                    server.shutdown()
+                    server.server_close()
+                    thread.join(timeout=5)
+
+    def test_dashboard_live_capture_readiness_screen_is_read_only_and_linked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "out"
+            output = root / "generated"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+            secret_value = "DUMMY_LIVE_CAPTURE_SECRET_1234567890"
+
+            with patch.dict("os.environ", {"BURP_AI_AUDIT_HMAC_KEY": secret_value}, clear=False):
+                server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+                thread = threading.Thread(target=server.serve_forever, daemon=True)
+                thread.start()
+                try:
+                    port = server.server_address[1]
+
+                    def get(path: str) -> str:
+                        connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                        connection.request("GET", path)
+                        response = connection.getresponse()
+                        body = response.read().decode("utf-8")
+                        connection.close()
+                        self.assertEqual(response.status, 200)
+                        return body
+
+                    body = get("/live-capture")
+                    self.assertIn("Live Capture 준비 화면", body)
+                    self.assertIn("read-only", body)
+                    self.assertIn("GET /live-capture", body)
+                    self.assertIn("capture start/stop", body)
+                    self.assertIn("별도 PR", body)
+                    self.assertIn("domain allowlist", body)
+                    self.assertIn("Burp browsing traffic", body)
+                    self.assertIn("ChatGPT 자동 전송", body)
+                    self.assertIn("safe files", body)
+                    self.assertIn("analysis_packet.json", body)
+                    self.assertIn("chatgpt_prompt.md", body)
+                    self.assertIn("codex_task_prompt.md", body)
+                    self.assertIn("report_draft.md", body)
+                    self.assertIn("finding은 candidate", body)
+                    self.assertIn("risk는 draft", body)
+                    self.assertIn("final severity", body)
+                    self.assertIn("CVSS", body)
+                    self.assertIn("docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md", body)
+                    self.assertIn('href="/help"', body)
+                    self.assertIn('href="/upload"', body)
+                    self.assertIn('href="/"', body)
+
+                    forbidden = [
+                        "<form",
+                        "<button",
+                        'method="post"',
+                        'name="csrf_token"',
+                        "/download?",
+                        "/preview?",
+                        "raw_request",
+                        "raw_response",
+                        "DUMMY_COOKIE_VALUE",
+                        "DUMMY_BEARER_TOKEN",
+                        secret_value,
+                        "BURP_AI_AUDIT_HMAC_KEY",
+                        "Cookie:",
+                        "Authorization:",
+                        "HMAC secret",
+                        "CSRF token",
+                        "safe to share",
+                        "guaranteed safe",
+                        "severity confirmed",
+                        "ready to submit",
+                        str(root),
+                    ]
+                    for item in forbidden:
+                        self.assertNotIn(item, body)
+
+                    for linked_path in (
+                        "/",
+                        "/settings",
+                        "/help",
+                        "/operations",
+                        "/upload",
+                        "/simple?project=generated",
+                        "/workflow?project=generated",
+                        "/operator-runbook?project=generated",
+                    ):
+                        linked_body = get(linked_path)
+                        self.assertIn('href="/live-capture"', linked_body)
                 finally:
                     server.shutdown()
                     server.server_close()
@@ -3889,11 +3980,16 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("GUI_FINDING_TRIAGE_INDEX.md", text)
             self.assertIn("GUI_REPORT_READINESS_INDEX.md", text)
             self.assertIn("GUI_WORKFLOW_STATUS_INDEX.md", text)
+        for text in [readme, local_dashboard, user_flow]:
+            self.assertIn("LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md", text)
 
         required = [
             "start receiver and dashboard",
             "send scoped Burp history",
             "upload Burp export at /upload",
+            "open /live-capture",
+            "confirm domain allowlist requirement",
+            "capture start/stop is a separate PR",
             "verify the selected output",
             "check simple dashboard summary",
             "review candidate findings",
@@ -3911,6 +4007,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "send only verified safe files to AI",
             "http://127.0.0.1:8766/",
             "/upload",
+            "/live-capture",
             "/simple?project=<alias>",
             "/dashboard-simple?project=<alias>",
             "/triage?project=<alias>",
@@ -3927,6 +4024,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "/settings",
             "Verify",
             "Upload Wizard",
+            "Live Capture",
             "Simple Dashboard",
             "Review",
             "Report",
@@ -3987,6 +4085,61 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("제출 가능", user_flow)
         self.assertNotIn("승인 완료", user_flow)
         self.assertNotIn("안전 보장", user_flow)
+
+    def test_gui_live_capture_readiness_guide_documents_read_only_boundary(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
+        user_flow = (ROOT / "docs" / "GUI_USER_FLOW.md").read_text(encoding="utf-8")
+        design = (ROOT / "docs" / "LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md").read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
+
+        for text in [readme, local_dashboard, user_flow, design, roadmap]:
+            self.assertIn("/live-capture", text)
+            self.assertIn("Live Capture", text)
+        for text in [readme, local_dashboard, user_flow, design]:
+            self.assertIn("read-only", text)
+            self.assertIn("capture start/stop", text)
+            self.assertIn("별도 PR", text)
+            self.assertIn("ChatGPT 자동 전송", text)
+        for text in [local_dashboard, user_flow, design]:
+            self.assertIn("domain allowlist", text)
+            self.assertIn("collector/receiver", text)
+            self.assertIn("POST action", text)
+
+        required = [
+            "GET /live-capture",
+            "safe files 4",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "finding = candidate",
+            "risk = draft",
+            "final severity = manual decision",
+            "CVSS = separate manual calculation",
+            "raw_data_included=false",
+        ]
+        for item in required:
+            self.assertIn(item, design)
+
+        forbidden = [
+            "raw_request",
+            "raw_response",
+            "DUMMY_COOKIE_VALUE",
+            "DUMMY_BEARER_TOKEN",
+            "Authorization: Bearer",
+            "Cookie:",
+            "real_export_",
+            "C:\\",
+            "safe to share",
+            "guaranteed safe",
+            "severity confirmed",
+            "ready to submit",
+            "confirmed CVSS",
+        ]
+        for text in [readme, local_dashboard, user_flow, design, roadmap]:
+            for item in forbidden:
+                self.assertNotIn(item, text)
 
     def test_gui_upload_wizard_guide_documents_state_changing_boundary(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

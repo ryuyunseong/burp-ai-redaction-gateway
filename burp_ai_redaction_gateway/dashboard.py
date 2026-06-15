@@ -65,6 +65,7 @@ UPLOAD_ALLOWED_SUFFIXES = {".xml", ".json"}
 OPERATIONS_GUIDES = (
     ("빠른 시작", "docs/USER_QUICKSTART.md", "receiver, Burp 전송, dashboard 실행 흐름"),
     ("GUI 사용자 흐름", "docs/GUI_USER_FLOW.md", "처음 실행부터 AI 투입 전까지의 화면 흐름"),
+    ("Live Capture 준비 화면", "docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md", "v0.5 live capture 구현 전 read-only 준비 경계"),
     ("Upload Wizard", "docs/GUI_UPLOAD_WIZARD.md", "dashboard에서 local Burp export를 처리하는 v0.5 진입점"),
     ("간단 대시보드", "docs/GUI_SIMPLE_DASHBOARD.md", "처음 보는 사용자를 위한 read-only 상태 요약"),
     ("AI 안전 사전 점검", "docs/GUI_AI_SAFE_PREFLIGHT.md", "AI 투입 전 조회 전용 상태 확인"),
@@ -366,6 +367,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 return
             if parsed.path in {"/help", "/operations"}:
                 self._send_html(render_operations_help())
+                return
+            if parsed.path == "/live-capture":
+                self._send_html(render_live_capture_readiness())
                 return
             if parsed.path == "/upload":
                 self._send_html(render_upload_wizard(self.server.csrf_token))
@@ -952,6 +956,7 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
           <div class="status-stack">
             <span class="badge good">로컬 전용</span>
             <span class="badge neutral">안전 미리보기</span>
+            <a class="button secondary" href="/live-capture">Live Capture 준비</a>
             <a class="button" href="/upload">업로드 마법사</a>
             <a class="button secondary" href="/help">운영 가이드</a>
             <a class="button secondary" href="/settings">설정/상태</a>
@@ -1011,6 +1016,7 @@ def render_settings(root: Path) -> str:
           <div class="status-stack">
             <span class="badge good">조회 전용</span>
             <span class="badge neutral">메타데이터만</span>
+            <a class="button secondary" href="/live-capture">Live Capture 준비</a>
             <a class="button secondary" href="/help">운영 가이드</a>
           </div>
         </section>
@@ -1094,6 +1100,7 @@ def render_operations_help() -> str:
           <div class="status-stack">
             <span class="badge good">조회 전용</span>
             <span class="badge neutral">실행 버튼 없음</span>
+            <a class="button secondary" href="/live-capture">Live Capture 준비</a>
             <a class="button" href="/upload">업로드 마법사</a>
             <a class="button secondary" href="/settings">설정/상태</a>
           </div>
@@ -1153,6 +1160,78 @@ def render_operations_help() -> str:
     )
 
 
+def render_live_capture_readiness() -> str:
+    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
+    return _page(
+        "Live Capture 준비 화면",
+        f"""
+        <section class="topbar">
+          <div>
+            <a class="back" href="/">대시보드로 돌아가기</a>
+            <h1>Live Capture 준비 화면</h1>
+            <p class="subtitle">v0.5 live capture 구현 전에 운영자가 필요한 조건과 보안 경계를 확인하는 read-only 안내 화면입니다.</p>
+          </div>
+          <div class="status-stack">
+            <span class="badge good">read-only</span>
+            <span class="badge neutral">planning boundary</span>
+          </div>
+        </section>
+        <section class="safety-strip">
+          <div class="rail"><span>화면 성격</span><strong>준비 안내</strong></div>
+          <div class="rail"><span>capture start/stop</span><strong>별도 PR</strong></div>
+          <div class="rail"><span>ChatGPT 자동 전송</span><strong>false</strong></div>
+          <div class="rail"><span>safe files</span><strong>4개 후보</strong></div>
+        </section>
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>이 화면에서 하는 일</h2><span class="muted">실행 없이 준비 상태만 확인합니다.</span></div>
+            <ul class="safe-list">
+              <li>Burp 탐색 기반 수집 흐름을 시작하기 전에 필요한 준비 항목을 정리합니다.</li>
+              <li>domain allowlist를 먼저 정하고, 허용 범위 밖의 트래픽은 수집하지 않는다는 운영 원칙을 확인합니다.</li>
+              <li>Burp browsing traffic에는 원본 요청과 응답이 포함될 수 있으므로 결과는 redaction과 verify를 통과한 뒤에만 검토합니다.</li>
+              <li>AI 투입 후보는 verify 이후 생성되는 safe files 4개로 제한합니다.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>이번 PR의 경계</h2><span class="muted">상태 변경 기능은 포함하지 않습니다.</span></div>
+            <dl class="facts">
+              <div><dt>GET /live-capture</dt><dd>read-only 준비 화면입니다.</dd></div>
+              <div><dt>capture start/stop</dt><dd>별도 PR에서 검토합니다.</dd></div>
+              <div><dt>collector/receiver 변경</dt><dd>없습니다.</dd></div>
+              <div><dt>ChatGPT 자동 전송</dt><dd>false입니다.</dd></div>
+              <div><dt>replay 또는 active scan</dt><dd>포함하지 않습니다.</dd></div>
+              <div><dt>파일 삭제 또는 보존 정책 변경</dt><dd>포함하지 않습니다.</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>AI 투입 후보 파일</h2><span class="muted">검증을 통과한 산출물에서만 수동 확인 후 사용합니다.</span></div>
+            <ul class="safe-list">{safe_files}</ul>
+            <p class="muted">finding은 candidate이고 risk는 draft입니다. final severity와 CVSS는 사람이 별도로 결정합니다.</p>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>표시하지 않는 값</h2><span class="muted">분류명과 원칙만 안내하고 실제 값은 표시하지 않습니다.</span></div>
+            <ul class="safe-list">
+              <li>원본 요청 또는 응답 본문</li>
+              <li>인증값, 세션값, 개인 식별값</li>
+              <li>실제 대상 식별자 또는 전체 로컬 경로</li>
+              <li>무결성 비밀값 또는 요청 위조 방지 값</li>
+              <li>검증 전 산출물, 감사 로그 원문, 보관 archive 원문</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>관련 화면과 문서</h2><span class="muted">모두 수동 확인용 링크입니다.</span></div>
+            <dl class="facts">
+              <div><dt>운영 허브</dt><dd><a href="/help">/help</a></dd></div>
+              <div><dt>파일 업로드 흐름</dt><dd><a href="/upload">/upload</a></dd></div>
+              <div><dt>설계 문서</dt><dd>docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md</dd></div>
+              <div><dt>대시보드 홈</dt><dd><a href="/">/</a></dd></div>
+            </dl>
+          </div>
+        </section>
+        """,
+    )
+
+
 def render_upload_wizard(csrf_token: str) -> str:
     safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
     token = _h(csrf_token)
@@ -1168,6 +1247,7 @@ def render_upload_wizard(csrf_token: str) -> str:
           <div class="status-stack">
             <span class="badge warning">state-changing POST</span>
             <span class="badge neutral">raw-free result</span>
+            <a class="button secondary" href="/live-capture">Live Capture 준비</a>
             <a class="button secondary" href="/help">운영 허브</a>
           </div>
         </section>
@@ -1375,6 +1455,7 @@ def render_simple_dashboard(output: DashboardOutput) -> str:
           <div class="status-stack">
             <span class="badge good">read-only</span>
             <span class="badge neutral">간단 모드</span>
+            <a class="button secondary" href="/live-capture">Live Capture 준비</a>
             <a class="button secondary" href="/upload">새 업로드</a>
           </div>
         </section>
@@ -1413,6 +1494,7 @@ def render_simple_dashboard(output: DashboardOutput) -> str:
               <li><a href="{_triage_href(output.output_id)}">/triage</a>에서 후보 finding을 수동 검토합니다.</li>
               <li><a href="{_report_readiness_href(output.output_id)}">/report-readiness</a>에서 보고서 초안을 수동 검토합니다.</li>
               <li><a href="{_workflow_href(output.output_id)}">/workflow</a>에서 전체 고급 흐름을 확인합니다.</li>
+              <li><a href="/live-capture">/live-capture</a>에서 v0.5 live capture 준비 조건을 read-only로 확인합니다.</li>
             </ol>
           </div>
           <div class="panel">
@@ -1423,6 +1505,7 @@ def render_simple_dashboard(output: DashboardOutput) -> str:
               <div><dt>finding triage</dt><dd><a href="{_triage_href(output.output_id)}">/triage</a></dd></div>
               <div><dt>evidence boundary</dt><dd><a href="{_evidence_boundary_href(output.output_id)}">/evidence-boundary</a></dd></div>
               <div><dt>operator runbook</dt><dd><a href="{_operator_runbook_href(output.output_id)}">/operator-runbook</a></dd></div>
+              <div><dt>live capture 준비</dt><dd><a href="/live-capture">/live-capture</a></dd></div>
             </dl>
           </div>
           <div class="panel">
@@ -1983,6 +2066,7 @@ def render_operator_runbook_index(index: OperatorRunbookIndex) -> str:
               <div><dt>산출물 상세</dt><dd><a href="{_output_href(output.output_id)}">검증된 산출물 상세 열기</a></dd></div>
               <div><dt>도움말</dt><dd><a href="/help">운영 도움말 열기</a></dd></div>
               <div><dt>운영 허브</dt><dd><a href="/operations">운영 허브 열기</a></dd></div>
+              <div><dt>Live Capture 준비</dt><dd><a href="/live-capture">Live Capture 준비 화면 열기</a></dd></div>
               <div><dt>사전 점검</dt><dd><a href="{_preflight_href(output.output_id)}">AI 안전 사전 점검 열기</a></dd></div>
               <div><dt>핸드오프</dt><dd><a href="{_handoff_href(output.output_id)}">AI 핸드오프 인덱스 열기</a></dd></div>
               <div><dt>후보 분류</dt><dd><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스 열기</a></dd></div>
@@ -2173,6 +2257,7 @@ def render_workflow_status_index(index: WorkflowStatusIndex) -> str:
               <div><dt>보고서 준비</dt><dd><a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스 열기</a></dd></div>
               <div><dt>운영 runbook</dt><dd><a href="{_operator_runbook_href(output.output_id)}">Operator runbook 인덱스 열기</a></dd></div>
               <div><dt>리뷰/보고서/내보내기 흐름</dt><dd><a href="{_output_href(output.output_id)}">검증된 산출물 상세로 돌아가기</a></dd></div>
+              <div><dt>Live Capture 준비</dt><dd><a href="/live-capture">Live Capture 준비 화면 열기</a></dd></div>
               <div><dt>경계</dt><dd>조회 전용 작업 흐름 점검이며 form 또는 POST action이 없습니다.</dd></div>
             </dl>
           </div>
