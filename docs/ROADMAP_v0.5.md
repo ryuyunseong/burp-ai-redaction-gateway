@@ -63,6 +63,9 @@ Candidate tasks:
 - Keep `/live-capture` as a session placeholder until actual collector/receiver
   capture integration lands in a separate reviewed PR.
 - Define Live Capture as a local-only wizard, not an automatic ChatGPT handoff.
+- Reuse the shared Live Capture scope guard for target normalization, safe
+  aliasing, and exact/subdomain-only match checks before collector filtering is
+  wired in.
 - Confirm in-scope filtering behavior with synthetic or authorized local-only
   inputs.
 - Validate loopback receiver behavior and error messages.
@@ -194,11 +197,13 @@ Completed:
 
 1. `feat/gui-upload-wizard-v0.5`
 2. `docs/live-capture-wizard-design-v0.5`
+3. `feat/live-capture-session-state-v0.5`
+4. `feat/live-capture-scope-guard-v0.5`
 
 Next:
 
-1. `feat/live-capture-readiness-screen-v0.5`
-2. `feat/live-capture-session-state-v0.5`
+1. `feat/live-capture-collector-filter-v0.5`
+2. `test/live-capture-smoke-v0.5`
 3. `docs/v0.5-troubleshooting-index`
 4. `feat/v0.5-montoya-live-validation`
 5. `feat/v0.5-candidate-triage-quality`

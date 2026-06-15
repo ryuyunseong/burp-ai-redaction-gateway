@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import html
 import hashlib
-import ipaddress
 import json
 import os
 import re
@@ -23,6 +22,11 @@ from .audit_compressed_hmac import AuditCompressedHmacError, verify_compressed_a
 from .audit_compression import AuditCompressionError, verify_compressed_audit_jsonl
 from .audit_hmac import DEFAULT_HMAC_ENV_VAR, AuditHmacError, load_hmac_secret, verify_audit_hmac_manifest
 from .audit_review import review_audit_path
+from .live_capture_scope import (
+    LIVE_CAPTURE_SCOPE_MAX_LENGTH,
+    LiveCaptureScopeError,
+    live_capture_scope_alias,
+)
 from .mcp_server import (
     AUDIT_DIR_NAME,
     AUDIT_FILE_NAME,
@@ -64,8 +68,6 @@ ACTION_NAMES = {"verify", "review", "report", "export"}
 LIVE_CAPTURE_ACTION_NAMES = {"live_capture_start", "live_capture_stop"}
 AUDIT_ACTION_NAMES = ACTION_NAMES | {"upload"} | LIVE_CAPTURE_ACTION_NAMES
 UPLOAD_PROJECT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
-LIVE_CAPTURE_TARGET_RE = re.compile(r"^[a-z0-9.-]+$")
-LIVE_CAPTURE_TARGET_MAX_LENGTH = 253
 UPLOAD_ALLOWED_SUFFIXES = {".xml", ".json"}
 OPERATIONS_GUIDES = (
     ("빠른 시작", "docs/USER_QUICKSTART.md", "receiver, Burp 전송, dashboard 실행 흐름"),
@@ -623,7 +625,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             blocked_reason=result.blocked_reason,
         )
         status = HTTPStatus.OK
-        if result.blocked_reason == "invalid_target":
+        if result.blocked_reason.startswith("invalid_target"):
             status = HTTPStatus.BAD_REQUEST
         elif result.blocked_reason:
             status = HTTPStatus.CONFLICT
@@ -1024,8 +1026,8 @@ def run_live_capture_start_placeholder(server: DashboardHttpServer, target: str)
                 blocked_reason="duplicate_start",
             )
     try:
-        target_alias = _safe_live_capture_target_alias(target)
-    except DashboardError:
+        target_alias = live_capture_scope_alias(target)
+    except LiveCaptureScopeError as error:
         session = LiveCaptureSession(status="failed_validation", updated_at_utc=_utc_now())
         with server.live_capture_lock:
             server.live_capture_session = session
@@ -1035,10 +1037,11 @@ def run_live_capture_start_placeholder(server: DashboardHttpServer, target: str)
             session=session,
             summary_lines=[
                 "target validation failed",
+                f"reason: {error.reason}",
                 "session state: failed_validation",
                 "raw_data_included: false",
             ],
-            blocked_reason="invalid_target",
+            blocked_reason=f"invalid_target_{error.reason}",
         )
 
     with server.live_capture_lock:
@@ -1380,7 +1383,7 @@ def render_live_capture_readiness(
             <form method="post" action="/live-capture/start" autocomplete="off">
               <input type="hidden" name="csrf_token" value="{token}">
               <label for="live-capture-target">Target domain</label>
-              <input id="live-capture-target" name="target" maxlength="{LIVE_CAPTURE_TARGET_MAX_LENGTH}" autocomplete="off" spellcheck="false">
+              <input id="live-capture-target" name="target" maxlength="{LIVE_CAPTURE_SCOPE_MAX_LENGTH}" autocomplete="off" spellcheck="false">
               <small>도메인은 검증 뒤 safe alias로만 표시됩니다. scheme, path, wildcard, loopback name, IP, 공백은 거부됩니다.</small>
               <button type="submit">Start placeholder</button>
             </form>
@@ -3961,38 +3964,6 @@ def _optional_form_value(form: dict[str, list[str]], name: str) -> str:
 def _validate_csrf(value: str, expected: str) -> None:
     if not secrets.compare_digest(value, expected):
         raise DashboardError("csrf_token_invalid", HTTPStatus.FORBIDDEN)
-
-
-def _safe_live_capture_target_alias(value: str) -> str:
-    target = str(value or "").strip().lower()
-    if not target:
-        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
-    if len(target) > LIVE_CAPTURE_TARGET_MAX_LENGTH:
-        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
-    if any(char.isspace() or ord(char) < 32 for char in target):
-        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
-    if "*" in target or "://" in target or any(marker in target for marker in ("/", "?", "#", "@", ":")):
-        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
-    if target.endswith("."):
-        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
-    try:
-        ipaddress.ip_address(target)
-    except ValueError:
-        pass
-    else:
-        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
-    if target in {"localhost", "local"} or target.endswith(".localhost") or target.endswith(".local"):
-        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
-    if not LIVE_CAPTURE_TARGET_RE.fullmatch(target):
-        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
-    labels = target.split(".")
-    if len(labels) < 2:
-        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
-    for label in labels:
-        if not label or len(label) > 63 or label.startswith("-") or label.endswith("-"):
-            raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
-    digest = hashlib.sha256(target.encode("utf-8")).hexdigest()[:12]
-    return f"target_alias_{digest}"
 
 
 def _new_live_capture_session_alias() -> str:

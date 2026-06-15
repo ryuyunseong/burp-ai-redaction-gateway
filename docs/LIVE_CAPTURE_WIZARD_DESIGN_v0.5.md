@@ -7,7 +7,8 @@ as session state placeholders. It does not add collector behavior, receiver
 behavior, raw traffic capture, or any automatic ChatGPT handoff.
 
 Current `/live-capture` state is a session placeholder. It validates target
-domains, stores safe aliases only, and keeps actual capture integration separate.
+domains through the shared scope guard, stores safe aliases only, and keeps
+actual capture integration separate.
 
 ## Goal
 
@@ -94,9 +95,14 @@ Design rules:
 
 - Require an explicit allowlist before capture starts.
 - Accept only narrow host or domain-style scope entries.
-- Reject empty, wildcard-only, broad public suffix, path traversal, and
-  malformed scope entries.
-- Reject IP ranges and raw URL paths in the first implementation slice.
+- Normalize scope entries to lowercase and tolerate a trailing dot by matching
+  the normalized domain form.
+- Reject empty, wildcard-only, URL/path-style, path traversal, and malformed
+  scope entries.
+- Reject URL forms, path or query suffixes, wildcard entries, loopback names,
+  IP literals, malformed labels, and whitespace/control characters.
+- Emit only raw-free reason codes such as `scope_url_or_path_not_allowed` or
+  `scope_ip_literal_not_allowed` when validation fails.
 - Store the raw scope only in ignored local-only session state if storage is
   required.
 - Display only a safe capture alias, scope count, and match status in dashboard
@@ -135,10 +141,12 @@ Receiver requirements:
 
 ## Domain Match Rule
 
-Future implementation should use a conservative match rule:
+Current shared guard exposes a conservative match rule that future collector
+integration should reuse:
 
 - Normalize the operator-provided scope locally.
-- Compare candidate traffic against the normalized allowlist.
+- Match exact host equality or a dot-bound subdomain suffix only.
+- Treat lookalike suffixes such as `allowed.example.evil.test` as out of scope.
 - Treat unknown or unparsable targets as out of scope.
 - Do not collect out-of-scope traffic.
 - Do not collect broad wildcard matches in the first slice.
@@ -317,11 +325,16 @@ Recommended follow-up slices:
    - add `/live-capture` session state UI and CSRF-protected placeholder actions
    - keep collector and receiver behavior unchanged
    - write raw-free action audit
-2. `feat/live-capture-collector-filter-v0.5`
+2. `feat/live-capture-scope-guard-v0.5`
+   - centralize target domain normalization, validation, safe aliasing, and
+     exact/subdomain match checks
+   - keep collector and receiver behavior unchanged
+   - expose raw-free validation reason codes only
+3. `feat/live-capture-collector-filter-v0.5`
    - harden collector allowlist matching and safe status output
-3. `test/live-capture-smoke-v0.5`
+4. `test/live-capture-smoke-v0.5`
    - add synthetic local-only smoke coverage without real traffic
-4. `docs/live-capture-operations-v0.5`
+5. `docs/live-capture-operations-v0.5`
    - document operator steps after the implementation is verified
 
 ## Acceptance Criteria

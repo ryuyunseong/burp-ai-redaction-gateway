@@ -44,6 +44,25 @@ from burp_ai_redaction_gateway.dashboard import (
     write_dashboard_action_audit_event,
 )
 from burp_ai_redaction_gateway.findings import build_finding_candidates
+from burp_ai_redaction_gateway.live_capture_scope import (
+    SCOPE_REASON_CONTROL_OR_SPACE,
+    SCOPE_REASON_EMPTY,
+    SCOPE_REASON_IP_LITERAL,
+    SCOPE_REASON_LOOPBACK_NAME,
+    SCOPE_REASON_MALFORMED,
+    SCOPE_REASON_MALFORMED_LABEL,
+    SCOPE_REASON_MATCHED,
+    SCOPE_REASON_SUFFIX_MISMATCH,
+    SCOPE_REASON_TOO_LONG,
+    SCOPE_REASON_URL_OR_PATH,
+    SCOPE_REASON_WILDCARD,
+    LiveCaptureScopeError,
+    evaluate_live_capture_scope_match,
+    host_matches_live_capture_scope,
+    live_capture_scope_alias,
+    normalize_live_capture_scope,
+    validate_live_capture_scope,
+)
 from burp_ai_redaction_gateway.mcp_server import ReadOnlyMcpGateway, ReadOnlyMcpServer, _next_rotated_audit_path
 from burp_ai_redaction_gateway.models import HttpRequest, HttpResponse, RawEvent, SanitizedEvent
 from burp_ai_redaction_gateway.parser import load_events
@@ -1663,6 +1682,70 @@ class RedactionGatewayTests(unittest.TestCase):
                     server.server_close()
                     thread.join(timeout=5)
 
+    def test_live_capture_scope_guard_normalizes_matches_and_rejects_raw_free(self) -> None:
+        self.assertEqual(normalize_live_capture_scope("Example.COM"), "example.com")
+        self.assertEqual(normalize_live_capture_scope("Example.COM."), "example.com")
+
+        scope = validate_live_capture_scope("Example.COM.")
+        self.assertEqual(scope.normalized, "example.com")
+        self.assertFalse(scope.raw_data_included)
+        self.assertRegex(scope.alias, r"^target_alias_[0-9a-f]{12}$")
+        self.assertEqual(scope.alias, live_capture_scope_alias("example.com"))
+        self.assertNotIn("example.com", scope.alias)
+
+        self.assertTrue(host_matches_live_capture_scope("example.com", "example.com"))
+        self.assertTrue(host_matches_live_capture_scope("sub.example.com", "example.com"))
+        self.assertFalse(host_matches_live_capture_scope("example.com.evil.test", "example.com"))
+        self.assertFalse(host_matches_live_capture_scope("badexample.com", "example.com"))
+
+        exact_match = evaluate_live_capture_scope_match("sub.example.com.", "example.com")
+        self.assertTrue(exact_match.matched)
+        self.assertEqual(exact_match.reason, SCOPE_REASON_MATCHED)
+        self.assertFalse(exact_match.raw_data_included)
+        self.assertRegex(exact_match.host_alias, r"^target_alias_[0-9a-f]{12}$")
+        self.assertRegex(exact_match.scope_alias, r"^target_alias_[0-9a-f]{12}$")
+
+        lookalike_match = evaluate_live_capture_scope_match("example.com.evil.test", "example.com")
+        self.assertFalse(lookalike_match.matched)
+        self.assertEqual(lookalike_match.reason, SCOPE_REASON_SUFFIX_MISMATCH)
+        self.assertFalse(lookalike_match.raw_data_included)
+        self.assertNotIn("example.com", str(lookalike_match))
+
+        invalid_cases = [
+            ("", SCOPE_REASON_EMPTY),
+            (" example.com", SCOPE_REASON_CONTROL_OR_SPACE),
+            ("example.com ", SCOPE_REASON_CONTROL_OR_SPACE),
+            ("example com", SCOPE_REASON_CONTROL_OR_SPACE),
+            ("*.example.com", SCOPE_REASON_WILDCARD),
+            ("http://example.com", SCOPE_REASON_URL_OR_PATH),
+            ("https://example.com/path", SCOPE_REASON_URL_OR_PATH),
+            ("example.com/path", SCOPE_REASON_URL_OR_PATH),
+            ("example.com?debug=1", SCOPE_REASON_URL_OR_PATH),
+            ("example.com:443", SCOPE_REASON_URL_OR_PATH),
+            ("localhost", SCOPE_REASON_LOOPBACK_NAME),
+            ("service.localhost", SCOPE_REASON_LOOPBACK_NAME),
+            ("local", SCOPE_REASON_LOOPBACK_NAME),
+            ("127.0.0.1", SCOPE_REASON_IP_LITERAL),
+            ("10.0.0.1", SCOPE_REASON_IP_LITERAL),
+            ("172.16.0.1", SCOPE_REASON_IP_LITERAL),
+            ("192.168.1.1", SCOPE_REASON_IP_LITERAL),
+            ("::1", SCOPE_REASON_IP_LITERAL),
+            ("example..com", SCOPE_REASON_MALFORMED_LABEL),
+            ("-example.com", SCOPE_REASON_MALFORMED_LABEL),
+            ("example-.com", SCOPE_REASON_MALFORMED_LABEL),
+            ("exa_mple.com", SCOPE_REASON_MALFORMED),
+            (f"{'a' * 64}.com", SCOPE_REASON_MALFORMED_LABEL),
+            (f"{'a' * 250}.com", SCOPE_REASON_TOO_LONG),
+        ]
+        for raw_value, expected_reason in invalid_cases:
+            with self.subTest(raw_value=raw_value):
+                with self.assertRaises(LiveCaptureScopeError) as context:
+                    validate_live_capture_scope(raw_value)
+                self.assertEqual(context.exception.reason, expected_reason)
+                self.assertEqual(str(context.exception), expected_reason)
+                if raw_value:
+                    self.assertNotIn(raw_value.lower(), str(context.exception))
+
     def test_dashboard_live_capture_session_placeholder_requires_csrf_and_hides_raw_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir) / "out"
@@ -1779,13 +1862,14 @@ class RedactionGatewayTests(unittest.TestCase):
 
                     status, start_result = post(
                         "/live-capture/start",
-                        {"target": "allowed.example", "csrf_token": csrf_token},
+                        {"target": "Allowed.Example.", "csrf_token": csrf_token},
                     )
                     self.assertEqual(status, 200)
                     self.assertIn("running_placeholder", start_result)
                     self.assertIn("target_alias_", start_result)
                     self.assertIn("live_capture_session_", start_result)
                     self.assertIn("actual traffic capture is not implemented", start_result)
+                    self.assertNotIn("Allowed.Example", start_result)
                     self.assertNotIn("allowed.example", start_result)
                     self.assertNotIn("raw_request", start_result)
                     self.assertNotIn("raw_response", start_result)
@@ -1824,7 +1908,15 @@ class RedactionGatewayTests(unittest.TestCase):
                     self.assertTrue(audit_path.is_file())
                     audit_text = audit_path.read_text(encoding="utf-8")
                     assert_no_sensitive_text(audit_text)
-                    for hidden in [csrf_token, "csrf_token", "allowed.example", "other.example", secret_value, str(root)]:
+                    for hidden in [
+                        csrf_token,
+                        "csrf_token",
+                        "Allowed.Example",
+                        "allowed.example",
+                        "other.example",
+                        secret_value,
+                        str(root),
+                    ]:
                         self.assertNotIn(hidden, audit_text)
                     audit_events = [json.loads(line) for line in audit_text.splitlines() if line.strip()]
                     self.assert_audit_hash_chain(audit_events)
@@ -1847,17 +1939,18 @@ class RedactionGatewayTests(unittest.TestCase):
                             ("live_capture_stop", "blocked"),
                         ],
                     )
+                    blocked_reasons = [event.get("blocked_reason", "") for event in audit_events[:8]]
+                    self.assertEqual(blocked_reasons[:2], ["csrf_missing", "csrf_invalid"])
+                    self.assertTrue(all(reason.startswith("invalid_target_scope_") for reason in blocked_reasons[2:]))
                     self.assertEqual(
-                        [event.get("blocked_reason", "") for event in audit_events[:8]],
+                        blocked_reasons[2:],
                         [
-                            "csrf_missing",
-                            "csrf_invalid",
-                            "invalid_target",
-                            "invalid_target",
-                            "invalid_target",
-                            "invalid_target",
-                            "invalid_target",
-                            "invalid_target",
+                            "invalid_target_scope_empty",
+                            "invalid_target_scope_wildcard_not_allowed",
+                            "invalid_target_scope_url_or_path_not_allowed",
+                            "invalid_target_scope_loopback_name_not_allowed",
+                            "invalid_target_scope_ip_literal_not_allowed",
+                            "invalid_target_scope_url_or_path_not_allowed",
                         ],
                     )
                     self.assertEqual(audit_events[9].get("blocked_reason"), "duplicate_start")
