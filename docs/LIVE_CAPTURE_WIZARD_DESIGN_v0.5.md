@@ -1,13 +1,13 @@
 # Live Capture Wizard Design v0.5
 
 This document defines the v0.5 design boundary for a local-only Live Capture
-Wizard. The first runtime slice adds only a read-only `GET /live-capture`
-readiness screen. It does not add capture start/stop actions, collector
-behavior, receiver behavior, or any automatic ChatGPT handoff.
+Wizard. The current runtime slice provides `GET /live-capture` plus
+CSRF-protected `POST /live-capture/start` and `POST /live-capture/stop`
+as session state placeholders. It does not add collector behavior, receiver
+behavior, raw traffic capture, or any automatic ChatGPT handoff.
 
-현재 `/live-capture`는 read-only 준비 화면입니다. ChatGPT 자동 전송은 false이며,
-capture start/stop은 별도 PR입니다. collector/receiver 동작 변경도 이번 범위에
-포함하지 않습니다. POST action도 포함하지 않습니다.
+Current `/live-capture` state is a session placeholder. It validates target
+domains, stores safe aliases only, and keeps actual capture integration separate.
 
 ## Goal
 
@@ -47,32 +47,31 @@ contracts. It should not create a parallel pipeline.
 
 ## Proposed Routes
 
-The first runtime slice exposes only the read-only readiness route. Future
-implementation may add state-changing routes in separate reviewed PRs:
+The current runtime slice exposes a session placeholder route and two
+CSRF-protected state-changing placeholder routes:
 
 ```text
 GET  /live-capture
 POST /live-capture/start
 POST /live-capture/stop
-GET  /live-capture/status?session=<capture_alias>
+GET  /live-capture/status?session=<capture_alias>  # future scope
 ```
 
-State-changing POST routes must be implemented in a separate runtime PR with
-CSRF protection and raw-free dashboard action audit. The current readiness
-screen does not add those routes.
+The implemented POST routes manage local dashboard session state only. They
+write raw-free dashboard action audit events and do not capture traffic. The
+start/stop placeholder is not collector or receiver integration.
 
 ## Screen Model
 
-`GET /live-capture` currently shows read-only preparation guidance:
+`GET /live-capture` currently shows session placeholder guidance:
 
-- domain allowlist requirement
-- Burp browsing traffic raw-data warning
+- target domain validation and safe target alias display
+- current session state: idle, running_placeholder, stopped, or failed_validation
 - ChatGPT automatic send status as false
 - safe files 4 candidate list
-- `capture start/stop` as a separate PR boundary
+- collector/receiver integration as separate PR boundary
 - links back to `/`, `/help`, `/upload`, and this design document
-
-Future state-changing implementation may add:
+Future collector integration may add:
 
 - capture label input
 - target scope input
@@ -314,9 +313,9 @@ Failure output must be actionable without exposing raw values.
 
 Recommended follow-up slices:
 
-1. `feat/live-capture-session-v0.5`
-   - add `/live-capture` session UI and CSRF-protected start/stop actions
-   - keep collector integration minimal and loopback-only
+1. `feat/live-capture-session-state-v0.5`
+   - add `/live-capture` session state UI and CSRF-protected placeholder actions
+   - keep collector and receiver behavior unchanged
    - write raw-free action audit
 2. `feat/live-capture-collector-filter-v0.5`
    - harden collector allowlist matching and safe status output

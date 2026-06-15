@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import html
 import hashlib
+import ipaddress
 import json
 import os
 import re
 import secrets
+import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email import policy as email_policy
@@ -59,13 +61,16 @@ MAX_FORM_BYTES = 16 * 1024
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 MAX_UPLOAD_FORM_BYTES = MAX_UPLOAD_BYTES + 16 * 1024
 ACTION_NAMES = {"verify", "review", "report", "export"}
-AUDIT_ACTION_NAMES = ACTION_NAMES | {"upload"}
+LIVE_CAPTURE_ACTION_NAMES = {"live_capture_start", "live_capture_stop"}
+AUDIT_ACTION_NAMES = ACTION_NAMES | {"upload"} | LIVE_CAPTURE_ACTION_NAMES
 UPLOAD_PROJECT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+LIVE_CAPTURE_TARGET_RE = re.compile(r"^[a-z0-9.-]+$")
+LIVE_CAPTURE_TARGET_MAX_LENGTH = 253
 UPLOAD_ALLOWED_SUFFIXES = {".xml", ".json"}
 OPERATIONS_GUIDES = (
     ("빠른 시작", "docs/USER_QUICKSTART.md", "receiver, Burp 전송, dashboard 실행 흐름"),
     ("GUI 사용자 흐름", "docs/GUI_USER_FLOW.md", "처음 실행부터 AI 투입 전까지의 화면 흐름"),
-    ("Live Capture 준비 화면", "docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md", "v0.5 live capture 구현 전 read-only 준비 경계"),
+    ("Live Capture 세션 placeholder", "docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md", "v0.5 live capture 세션 상태와 start/stop placeholder 경계"),
     ("Upload Wizard", "docs/GUI_UPLOAD_WIZARD.md", "dashboard에서 local Burp export를 처리하는 v0.5 진입점"),
     ("간단 대시보드", "docs/GUI_SIMPLE_DASHBOARD.md", "처음 보는 사용자를 위한 read-only 상태 요약"),
     ("AI 안전 사전 점검", "docs/GUI_AI_SAFE_PREFLIGHT.md", "AI 투입 전 조회 전용 상태 확인"),
@@ -147,6 +152,23 @@ class UploadWizardResult:
     files_checked: int = 0
     blocked_reason: str = ""
     raw_data_included: bool = False
+
+
+@dataclass(frozen=True)
+class LiveCaptureSession:
+    status: str
+    session_alias: str = "none"
+    target_alias: str = "none"
+    updated_at_utc: str = ""
+
+
+@dataclass(frozen=True)
+class LiveCaptureActionResult:
+    action_name: str
+    status: str
+    session: LiveCaptureSession
+    summary_lines: list[str]
+    blocked_reason: str = ""
 
 
 @dataclass(frozen=True)
@@ -351,6 +373,8 @@ class DashboardHttpServer(ThreadingHTTPServer):
         self.config = DashboardConfig(root=validated_root, policy_path=config.policy_path)
         self.policy = policy
         self.csrf_token = secrets.token_hex(16)
+        self.live_capture_lock = threading.Lock()
+        self.live_capture_session = LiveCaptureSession(status="idle", updated_at_utc=_utc_now())
 
 
 class DashboardRequestHandler(BaseHTTPRequestHandler):
@@ -369,7 +393,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 self._send_html(render_operations_help())
                 return
             if parsed.path == "/live-capture":
-                self._send_html(render_live_capture_readiness())
+                self._send_html(render_live_capture_readiness(self.server.csrf_token, self.server.live_capture_session))
                 return
             if parsed.path == "/upload":
                 self._send_html(render_upload_wizard(self.server.csrf_token))
@@ -490,6 +514,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 audit_written = True
                 self._send_html(render_upload_result(result, self.server.csrf_token))
                 return
+            if parsed.path in {"/live-capture/start", "/live-capture/stop"}:
+                self._handle_live_capture_post(parsed.path)
+                return
             if parsed.path != "/action":
                 self._send_error("not_found", HTTPStatus.NOT_FOUND)
                 return
@@ -532,7 +559,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             audit_written = True
             self._send_html(render_action_result(result, self.server.csrf_token))
         except DashboardError as error:
-            if not audit_written and self.path.startswith(("/action", "/upload")):
+            if not audit_written and self.path.startswith(("/action", "/upload", "/live-capture")):
                 self._write_dashboard_audit_event(
                     action_for_audit,
                     output_for_audit,
@@ -542,7 +569,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 )
             self._send_error(error.error_type, error.status)
         except OSError:
-            if not audit_written and self.path.startswith(("/action", "/upload")):
+            if not audit_written and self.path.startswith(("/action", "/upload", "/live-capture")):
                 self._write_dashboard_audit_event(
                     action_for_audit,
                     output_for_audit,
@@ -551,7 +578,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 )
             self._send_error("dashboard_action_file_access_failed", HTTPStatus.INTERNAL_SERVER_ERROR)
         except ValueError:
-            if not audit_written and self.path.startswith(("/action", "/upload")):
+            if not audit_written and self.path.startswith(("/action", "/upload", "/live-capture")):
                 self._write_dashboard_audit_event(
                     action_for_audit,
                     output_for_audit,
@@ -559,6 +586,48 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     error_type="dashboard_action_failed",
                 )
             self._send_error("dashboard_action_failed", HTTPStatus.BAD_REQUEST)
+
+    def _handle_live_capture_post(self, path: str) -> None:
+        form = self._read_form()
+        action_name = "live_capture_start" if path.endswith("/start") else "live_capture_stop"
+        csrf_token = _optional_form_value(form, "csrf_token")
+        if not csrf_token:
+            self._write_dashboard_audit_event(
+                action_name,
+                "live_capture",
+                result_status="blocked",
+                blocked_reason="csrf_missing",
+            )
+            self._send_error("csrf_token_missing", HTTPStatus.BAD_REQUEST)
+            return
+        try:
+            _validate_csrf(csrf_token, self.server.csrf_token)
+        except DashboardError:
+            self._write_dashboard_audit_event(
+                action_name,
+                "live_capture",
+                result_status="blocked",
+                blocked_reason="csrf_invalid",
+            )
+            self._send_error("csrf_token_invalid", HTTPStatus.FORBIDDEN)
+            return
+
+        if action_name == "live_capture_start":
+            result = run_live_capture_start_placeholder(self.server, _optional_form_value(form, "target"))
+        else:
+            result = run_live_capture_stop_placeholder(self.server)
+        self._write_dashboard_audit_event(
+            action_name,
+            result.session.session_alias,
+            result_status=_live_capture_result_status(result),
+            blocked_reason=result.blocked_reason,
+        )
+        status = HTTPStatus.OK
+        if result.blocked_reason == "invalid_target":
+            status = HTTPStatus.BAD_REQUEST
+        elif result.blocked_reason:
+            status = HTTPStatus.CONFLICT
+        self._send_html(render_live_capture_readiness(self.server.csrf_token, result.session, result), status)
 
     def log_message(self, format: str, *args: Any) -> None:
         return
@@ -939,6 +1008,107 @@ def write_dashboard_action_audit_event(
     )
 
 
+def run_live_capture_start_placeholder(server: DashboardHttpServer, target: str) -> LiveCaptureActionResult:
+    with server.live_capture_lock:
+        current = server.live_capture_session
+        if current.status == "running_placeholder":
+            return LiveCaptureActionResult(
+                action_name="live_capture_start",
+                status="blocked",
+                session=current,
+                summary_lines=[
+                    "duplicate start blocked",
+                    f"session state: {current.status}",
+                    "raw_data_included: false",
+                ],
+                blocked_reason="duplicate_start",
+            )
+    try:
+        target_alias = _safe_live_capture_target_alias(target)
+    except DashboardError:
+        session = LiveCaptureSession(status="failed_validation", updated_at_utc=_utc_now())
+        with server.live_capture_lock:
+            server.live_capture_session = session
+        return LiveCaptureActionResult(
+            action_name="live_capture_start",
+            status="blocked",
+            session=session,
+            summary_lines=[
+                "target validation failed",
+                "session state: failed_validation",
+                "raw_data_included: false",
+            ],
+            blocked_reason="invalid_target",
+        )
+
+    with server.live_capture_lock:
+        current = server.live_capture_session
+        if current.status == "running_placeholder":
+            return LiveCaptureActionResult(
+                action_name="live_capture_start",
+                status="blocked",
+                session=current,
+                summary_lines=[
+                    "duplicate start blocked",
+                    f"session state: {current.status}",
+                    "raw_data_included: false",
+                ],
+                blocked_reason="duplicate_start",
+            )
+        session = LiveCaptureSession(
+            status="running_placeholder",
+            session_alias=_new_live_capture_session_alias(),
+            target_alias=target_alias,
+            updated_at_utc=_utc_now(),
+        )
+        server.live_capture_session = session
+    return LiveCaptureActionResult(
+        action_name="live_capture_start",
+        status="passed",
+        session=session,
+        summary_lines=[
+            "start placeholder accepted",
+            "actual traffic capture is not implemented in this PR",
+            "collector and receiver behavior unchanged",
+            "raw_data_included: false",
+        ],
+    )
+
+
+def run_live_capture_stop_placeholder(server: DashboardHttpServer) -> LiveCaptureActionResult:
+    with server.live_capture_lock:
+        current = server.live_capture_session
+        if current.status != "running_placeholder":
+            return LiveCaptureActionResult(
+                action_name="live_capture_stop",
+                status="blocked",
+                session=current,
+                summary_lines=[
+                    "stop blocked because no running placeholder session exists",
+                    f"session state: {current.status}",
+                    "raw_data_included: false",
+                ],
+                blocked_reason="no_active_session",
+            )
+        session = LiveCaptureSession(
+            status="stopped",
+            session_alias=current.session_alias,
+            target_alias=current.target_alias,
+            updated_at_utc=_utc_now(),
+        )
+        server.live_capture_session = session
+    return LiveCaptureActionResult(
+        action_name="live_capture_stop",
+        status="passed",
+        session=session,
+        summary_lines=[
+            "stop placeholder accepted",
+            "actual traffic capture was not running",
+            "raw_data_included: false",
+        ],
+    )
+
+
 def render_home(root: Path, policy: RedactionPolicy) -> str:
     outputs, blocked_count = _discover_outputs(root, policy)
     audit_status = _audit_status(root)
@@ -1160,51 +1330,93 @@ def render_operations_help() -> str:
     )
 
 
-def render_live_capture_readiness() -> str:
+def render_live_capture_readiness(
+    csrf_token: str,
+    session: LiveCaptureSession,
+    result: LiveCaptureActionResult | None = None,
+) -> str:
     safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
+    token = _h(csrf_token)
+    result_panel = ""
+    if result:
+        summary = "".join(f"<li>{_h(line)}</li>" for line in result.summary_lines)
+        result_panel = f"""
+          <div class="panel">
+            <div class="panel-head"><h2>Live Capture action result</h2><span class="muted">raw-free metadata only</span></div>
+            <dl class="facts">
+              <div><dt>action</dt><dd>{_h(result.action_name)}</dd></div>
+              <div><dt>result status</dt><dd>{_h(result.status)}</dd></div>
+              <div><dt>blocked reason</dt><dd>{_h(result.blocked_reason or "none")}</dd></div>
+              <div><dt>raw_data_included</dt><dd>false</dd></div>
+            </dl>
+            <ul class="safe-list">{summary}</ul>
+          </div>
+        """
     return _page(
-        "Live Capture 준비 화면",
+        "Live Capture session placeholder",
         f"""
         <section class="topbar">
           <div>
             <a class="back" href="/">대시보드로 돌아가기</a>
-            <h1>Live Capture 준비 화면</h1>
-            <p class="subtitle">v0.5 live capture 구현 전에 운영자가 필요한 조건과 보안 경계를 확인하는 read-only 안내 화면입니다.</p>
+            <h1>Live Capture session placeholder</h1>
+            <p class="subtitle">v0.5 Live Capture의 첫 runtime 단계입니다. session state와 CSRF-protected start/stop placeholder만 관리하며 실제 Burp traffic capture는 수행하지 않습니다.</p>
           </div>
           <div class="status-stack">
-            <span class="badge good">read-only</span>
-            <span class="badge neutral">planning boundary</span>
+            <span class="badge warning">session placeholder</span>
+            <span class="badge neutral">CSRF protected</span>
           </div>
         </section>
         <section class="safety-strip">
-          <div class="rail"><span>화면 성격</span><strong>준비 안내</strong></div>
-          <div class="rail"><span>capture start/stop</span><strong>별도 PR</strong></div>
+          <div class="rail"><span>session state</span><strong>{_h(session.status)}</strong></div>
+          <div class="rail"><span>session alias</span><strong>{_h(session.session_alias)}</strong></div>
+          <div class="rail"><span>target alias</span><strong>{_h(session.target_alias)}</strong></div>
           <div class="rail"><span>ChatGPT 자동 전송</span><strong>false</strong></div>
-          <div class="rail"><span>safe files</span><strong>4개 후보</strong></div>
+          <div class="rail"><span>raw_data_included</span><strong>false</strong></div>
         </section>
         <section class="grid">
+          {result_panel}
           <div class="panel">
-            <div class="panel-head"><h2>이 화면에서 하는 일</h2><span class="muted">실행 없이 준비 상태만 확인합니다.</span></div>
-            <ul class="safe-list">
-              <li>Burp 탐색 기반 수집 흐름을 시작하기 전에 필요한 준비 항목을 정리합니다.</li>
-              <li>domain allowlist를 먼저 정하고, 허용 범위 밖의 트래픽은 수집하지 않는다는 운영 원칙을 확인합니다.</li>
-              <li>Burp browsing traffic에는 원본 요청과 응답이 포함될 수 있으므로 결과는 redaction과 verify를 통과한 뒤에만 검토합니다.</li>
-              <li>AI 투입 후보는 verify 이후 생성되는 safe files 4개로 제한합니다.</li>
-            </ul>
+            <div class="panel-head"><h2>Start placeholder</h2><span class="muted">실제 traffic capture는 아직 수행하지 않습니다.</span></div>
+            <form method="post" action="/live-capture/start" autocomplete="off">
+              <input type="hidden" name="csrf_token" value="{token}">
+              <label for="live-capture-target">Target domain</label>
+              <input id="live-capture-target" name="target" maxlength="{LIVE_CAPTURE_TARGET_MAX_LENGTH}" autocomplete="off" spellcheck="false">
+              <small>도메인은 검증 뒤 safe alias로만 표시됩니다. scheme, path, wildcard, loopback name, IP, 공백은 거부됩니다.</small>
+              <button type="submit">Start placeholder</button>
+            </form>
           </div>
           <div class="panel">
-            <div class="panel-head"><h2>이번 PR의 경계</h2><span class="muted">상태 변경 기능은 포함하지 않습니다.</span></div>
+            <div class="panel-head"><h2>Stop placeholder</h2><span class="muted">running_placeholder 상태만 중지합니다.</span></div>
+            <form method="post" action="/live-capture/stop" autocomplete="off">
+              <input type="hidden" name="csrf_token" value="{token}">
+              <button type="submit">Stop placeholder</button>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>Current session</h2><span class="muted">dashboard-local metadata only</span></div>
             <dl class="facts">
-              <div><dt>GET /live-capture</dt><dd>read-only 준비 화면입니다.</dd></div>
-              <div><dt>capture start/stop</dt><dd>별도 PR에서 검토합니다.</dd></div>
-              <div><dt>collector/receiver 변경</dt><dd>없습니다.</dd></div>
-              <div><dt>ChatGPT 자동 전송</dt><dd>false입니다.</dd></div>
-              <div><dt>replay 또는 active scan</dt><dd>포함하지 않습니다.</dd></div>
-              <div><dt>파일 삭제 또는 보존 정책 변경</dt><dd>포함하지 않습니다.</dd></div>
+              <div><dt>status</dt><dd>{_h(session.status)}</dd></div>
+              <div><dt>session alias</dt><dd>{_h(session.session_alias)}</dd></div>
+              <div><dt>target alias</dt><dd>{_h(session.target_alias)}</dd></div>
+              <div><dt>updated UTC</dt><dd>{_h(session.updated_at_utc or "none")}</dd></div>
+              <div><dt>collector/receiver integration</dt><dd>separate PR</dd></div>
+              <div><dt>actual traffic capture</dt><dd>false in this PR</dd></div>
             </dl>
           </div>
           <div class="panel">
-            <div class="panel-head"><h2>AI 투입 후보 파일</h2><span class="muted">검증을 통과한 산출물에서만 수동 확인 후 사용합니다.</span></div>
+            <div class="panel-head"><h2>이번 PR의 경계</h2><span class="muted">state-changing action은 placeholder 상태 관리에만 제한됩니다.</span></div>
+            <dl class="facts">
+              <div><dt>GET /live-capture</dt><dd>session state placeholder 화면입니다.</dd></div>
+              <div><dt>POST /live-capture/start</dt><dd>CSRF protected start placeholder입니다.</dd></div>
+              <div><dt>POST /live-capture/stop</dt><dd>CSRF protected stop placeholder입니다.</dd></div>
+              <div><dt>collector/receiver 변경</dt><dd>없습니다. 별도 PR입니다.</dd></div>
+              <div><dt>raw traffic preview</dt><dd>없습니다.</dd></div>
+              <div><dt>ChatGPT 자동 전송</dt><dd>false입니다.</dd></div>
+              <div><dt>replay 또는 active scan</dt><dd>포함하지 않습니다.</dd></div>
+            </dl>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>AI 투입 후보 파일</h2><span class="muted">redaction/verify 이후 생성된 파일만 수동 확인 후 사용합니다.</span></div>
             <ul class="safe-list">{safe_files}</ul>
             <p class="muted">finding은 candidate이고 risk는 draft입니다. final severity와 CVSS는 사람이 별도로 결정합니다.</p>
           </div>
@@ -1212,14 +1424,14 @@ def render_live_capture_readiness() -> str:
             <div class="panel-head"><h2>표시하지 않는 값</h2><span class="muted">분류명과 원칙만 안내하고 실제 값은 표시하지 않습니다.</span></div>
             <ul class="safe-list">
               <li>원본 요청 또는 응답 본문</li>
-              <li>인증값, 세션값, 개인 식별값</li>
-              <li>실제 대상 식별자 또는 전체 로컬 경로</li>
-              <li>무결성 비밀값 또는 요청 위조 방지 값</li>
+              <li>인증 헤더와 세션 계열 값</li>
+              <li>실제 대상 domain/IP 또는 전체 로컬 경로</li>
+              <li>개인정보, 무결성 비밀값, 요청 위조 방지 값</li>
               <li>검증 전 산출물, 감사 로그 원문, 보관 archive 원문</li>
             </ul>
           </div>
           <div class="panel">
-            <div class="panel-head"><h2>관련 화면과 문서</h2><span class="muted">모두 수동 확인용 링크입니다.</span></div>
+            <div class="panel-head"><h2>관련 화면과 문서</h2><span class="muted">운영자가 수동 확인할 링크입니다.</span></div>
             <dl class="facts">
               <div><dt>운영 허브</dt><dd><a href="/help">/help</a></dd></div>
               <div><dt>파일 업로드 흐름</dt><dd><a href="/upload">/upload</a></dd></div>
@@ -3751,6 +3963,46 @@ def _validate_csrf(value: str, expected: str) -> None:
         raise DashboardError("csrf_token_invalid", HTTPStatus.FORBIDDEN)
 
 
+def _safe_live_capture_target_alias(value: str) -> str:
+    target = str(value or "").strip().lower()
+    if not target:
+        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
+    if len(target) > LIVE_CAPTURE_TARGET_MAX_LENGTH:
+        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
+    if any(char.isspace() or ord(char) < 32 for char in target):
+        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
+    if "*" in target or "://" in target or any(marker in target for marker in ("/", "?", "#", "@", ":")):
+        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
+    if target.endswith("."):
+        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
+    try:
+        ipaddress.ip_address(target)
+    except ValueError:
+        pass
+    else:
+        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
+    if target in {"localhost", "local"} or target.endswith(".localhost") or target.endswith(".local"):
+        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
+    if not LIVE_CAPTURE_TARGET_RE.fullmatch(target):
+        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
+    labels = target.split(".")
+    if len(labels) < 2:
+        raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
+    for label in labels:
+        if not label or len(label) > 63 or label.startswith("-") or label.endswith("-"):
+            raise DashboardError("invalid_live_capture_target", HTTPStatus.BAD_REQUEST)
+    digest = hashlib.sha256(target.encode("utf-8")).hexdigest()[:12]
+    return f"target_alias_{digest}"
+
+
+def _new_live_capture_session_alias() -> str:
+    return f"live_capture_session_{secrets.token_hex(6)}"
+
+
+def _utc_now() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
 def _safe_action_name(value: str) -> str:
     action = str(value).strip().lower()
     if action not in ACTION_NAMES:
@@ -3828,6 +4080,14 @@ def _audit_form_output(form: dict[str, list[str]]) -> str:
 
 
 def _dashboard_result_status(result: DashboardActionResult) -> str:
+    if result.status == "passed":
+        return "success"
+    if result.blocked_reason:
+        return "blocked"
+    return "error"
+
+
+def _live_capture_result_status(result: LiveCaptureActionResult) -> str:
     if result.status == "passed":
         return "success"
     if result.blocked_reason:
