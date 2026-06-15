@@ -138,6 +138,10 @@ Receiver requirements:
 - Continue enforcing payload size limits.
 - Continue using the existing redaction and fail-closed verify gate.
 - Do not expose raw request or response values in errors.
+- A receiver scope dry-run helper may evaluate safe host metadata against the
+  shared scope guard before full collector integration. This dry-run must not
+  parse raw request or response bodies, persist traffic, call the redaction
+  pipeline, or change `POST /ingest/burp-history` behavior.
 
 ## Domain Match Rule
 
@@ -330,11 +334,16 @@ Recommended follow-up slices:
      exact/subdomain match checks
    - keep collector and receiver behavior unchanged
    - expose raw-free validation reason codes only
-3. `feat/live-capture-collector-filter-v0.5`
+3. `feat/live-capture-receiver-scope-dry-run-v0.5`
+   - evaluate safe receiver host metadata against the shared scope guard
+   - return raw-free accept/drop summaries only
+   - keep actual receiver ingest, collector behavior, and redaction pipeline
+     execution unchanged
+4. `feat/live-capture-collector-filter-v0.5`
    - harden collector allowlist matching and safe status output
-4. `test/live-capture-smoke-v0.5`
+5. `test/live-capture-smoke-v0.5`
    - add synthetic local-only smoke coverage without real traffic
-5. `docs/live-capture-operations-v0.5`
+6. `docs/live-capture-operations-v0.5`
    - document operator steps after the implementation is verified
 
 ## Acceptance Criteria
