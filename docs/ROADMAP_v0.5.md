@@ -64,17 +64,15 @@ Candidate tasks:
   capture integration lands in a separate reviewed PR.
 - Define Live Capture as a local-only wizard, not an automatic ChatGPT handoff.
 - Reuse the shared Live Capture scope guard for target normalization, safe
-  aliasing, and exact/subdomain-only match checks before collector filtering is
-  wired in.
+  aliasing, and exact/subdomain-only match checks around collector filtering.
 - Add a receiver-side scope dry-run that evaluates safe host metadata only,
   returns raw-free accept/drop summaries, and does not change actual receiver
   ingest behavior.
 - Add a receiver-side skip summary and audit event helper that converts dry-run
-  decisions into raw-free metadata only. Keep actual audit file writing,
-  collector filtering, and receiver ingest behavior in separate reviewed PRs.
-- Freeze the future collector filter contract with raw-free safe host metadata
-  keys, synthetic fixture coverage, and an integration checklist before
-  collector forwarding changes are implemented.
+  decisions into raw-free metadata only. Keep actual audit file writing and
+  receiver ingest behavior in separate reviewed PRs.
+- Implement collector-side filtering with raw-free safe host metadata keys,
+  synthetic fixture coverage, and skip status counts.
 - Confirm in-scope filtering behavior with synthetic or authorized local-only
   inputs.
 - Validate loopback receiver behavior and error messages.
@@ -211,13 +209,13 @@ Completed:
 5. `feat/live-capture-receiver-scope-dry-run-v0.5`
 6. `feat/live-capture-receiver-skip-audit-v0.5`
 7. `feat/live-capture-collector-filter-contract-v0.5`
+8. `feat/live-capture-collector-filter-v0.5`
 
 Next:
 
-1. `feat/live-capture-collector-filter-v0.5`
-2. `test/live-capture-smoke-v0.5`
-3. `docs/v0.5-troubleshooting-index`
-4. `feat/v0.5-montoya-live-validation`
-5. `feat/v0.5-candidate-triage-quality`
-6. `feat/v0.5-report-draft-quality`
-7. `feat/v0.5-windows-launcher-ux`
+1. `test/live-capture-smoke-v0.5`
+2. `docs/v0.5-troubleshooting-index`
+3. `feat/v0.5-montoya-live-validation`
+4. `feat/v0.5-candidate-triage-quality`
+5. `feat/v0.5-report-draft-quality`
+6. `feat/v0.5-windows-launcher-ux`

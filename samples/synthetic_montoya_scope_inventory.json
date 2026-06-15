@@ -7,9 +7,22 @@
       "in_scope": true,
       "raw_transport": "loopback_localhost",
       "raw_values_included": false,
+      "safe_host_metadata_key": "request_metadata.host",
+      "collector_decision_reason": "collector_scope_in_scope",
       "request_values": "omitted",
       "response_values": "omitted",
-      "safe_log_line": "Scoped Proxy history handoff completed. items_sent=1, skipped=0"
+      "safe_log_line": "Scoped Proxy history handoff completed. items_sent=1, skipped=0, out_of_scope_skipped=0, missing_host_skipped=0, invalid_host_skipped=0"
+    },
+    {
+      "source_event_id": "burp-proxy-history-skip-out-of-scope",
+      "in_scope": false,
+      "raw_transport": "not_handed_off",
+      "raw_values_included": false,
+      "safe_host_metadata_key": "request_metadata.host",
+      "collector_decision_reason": "collector_scope_out_of_burp_scope",
+      "request_values": "omitted",
+      "response_values": "omitted",
+      "safe_log_line": "Scoped Proxy history handoff completed. items_sent=0, skipped=1, out_of_scope_skipped=1, missing_host_skipped=0, invalid_host_skipped=0"
     }
   ]
 }

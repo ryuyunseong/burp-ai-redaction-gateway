@@ -1960,10 +1960,31 @@ class RedactionGatewayTests(unittest.TestCase):
         fixture = json.loads(LIVE_CAPTURE_COLLECTOR_CONTRACT_FIXTURE.read_text(encoding="utf-8"))
         self.assertEqual(fixture["schema_version"], "live-capture-collector-contract-v1")
         self.assertFalse(fixture["raw_data_included"])
-        self.assertFalse(fixture["collector_forwarding_changed"])
+        self.assertTrue(fixture["collector_forwarding_changed"])
         self.assertFalse(fixture["receiver_ingest_changed"])
         self.assertFalse(fixture["audit_file_write_changed"])
         self.assertFalse(fixture["redaction_pipeline_auto_run"])
+        self.assertEqual(fixture["collector_payload_preferred_container"], "request_metadata")
+        self.assertEqual(fixture["collector_payload_preferred_key"], "host")
+        self.assertEqual(
+            fixture["collector_status_values_included"],
+            [
+                "items_sent",
+                "skipped",
+                "out_of_scope_skipped",
+                "missing_host_skipped",
+                "invalid_host_skipped",
+            ],
+        )
+        self.assertEqual(
+            fixture["collector_decision_reasons"],
+            [
+                "collector_scope_in_scope",
+                "collector_scope_out_of_burp_scope",
+                "collector_scope_missing_host",
+                "collector_scope_invalid_host",
+            ],
+        )
         self.assertEqual(fixture["expected_safe_host_metadata_keys"], list(SAFE_HOST_METADATA_KEYS))
         self.assertEqual(fixture["expected_safe_host_metadata_containers"], list(SAFE_HOST_METADATA_CONTAINERS))
 
@@ -2030,11 +2051,13 @@ class RedactionGatewayTests(unittest.TestCase):
                 for fragment in forbidden_fragments:
                     self.assertNotIn(fragment, result_text)
 
-    def test_live_capture_collector_contract_docs_are_raw_free_and_planning_only(self) -> None:
+    def test_live_capture_collector_contract_docs_are_raw_free_and_filter_bound(self) -> None:
         contract_doc = LIVE_CAPTURE_COLLECTOR_CONTRACT_DOC.read_text(encoding="utf-8")
         fixture_text = LIVE_CAPTURE_COLLECTOR_CONTRACT_FIXTURE.read_text(encoding="utf-8")
         combined = "\n".join([contract_doc, fixture_text])
-        self.assertIn("does not implement collector forwarding", contract_doc)
+        self.assertIn("collector-side filter is implemented", contract_doc)
+        self.assertIn("request_metadata.host", contract_doc)
+        self.assertIn("out_of_scope_skipped", contract_doc)
         self.assertIn("receiver ingest behavior changes", contract_doc)
         self.assertIn("ChatGPT automatic handoff", contract_doc)
         self.assertIn("Findings remain candidates", contract_doc)
@@ -4358,7 +4381,25 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("implements BurpExtension", source)
         self.assertIn("api.proxy()", source)
         self.assertIn("proxy.history(requestResponse ->", source)
-        self.assertIn("requestResponse.request().isInScope()", source)
+        self.assertIn("requestResponse != null", source)
+        self.assertIn("CollectorSafeHostMetadata.evaluate(item)", source)
+        self.assertIn("request.isInScope()", source)
+        self.assertIn("request.httpService().host()", source)
+        self.assertIn("toLowerCase(Locale.ROOT)", source)
+        self.assertIn("value.trim()", source)
+        self.assertIn("IPV4_LITERAL", source)
+        self.assertIn("host.equals(\"localhost\")", source)
+        self.assertIn("host.endsWith(\".localhost\")", source)
+        self.assertIn("host.contains(\"/\")", source)
+        self.assertIn("host.contains(\":\")", source)
+        self.assertIn("request_metadata", source)
+        self.assertIn("\\\"host\\\"", source)
+        self.assertIn("collector_scope_out_of_burp_scope", source)
+        self.assertIn("collector_scope_missing_host", source)
+        self.assertIn("collector_scope_invalid_host", source)
+        self.assertIn("out_of_scope_skipped", source)
+        self.assertIn("missing_host_skipped", source)
+        self.assertIn("invalid_host_skipped", source)
         self.assertIn("raw_transport", source)
         self.assertIn("loopback_localhost", source)
         self.assertIn("isLoopbackHost", source)
@@ -4372,6 +4413,10 @@ class RedactionGatewayTests(unittest.TestCase):
             "logToError(item.response",
             "logToOutput(payload",
             "logToError(payload",
+            "logToOutput(decision.host",
+            "logToError(decision.host",
+            "logToOutput(requestHost",
+            "logToError(requestHost",
         ]
         for pattern in banned_log_patterns:
             self.assertNotIn(pattern, source)
@@ -4398,8 +4443,19 @@ class RedactionGatewayTests(unittest.TestCase):
 
         fixture = json.loads(MONTOYA_SCOPE_FIXTURE.read_text(encoding="utf-8"))
         self.assertEqual(fixture["schema_version"], "montoya-scope-inventory-v1")
-        self.assertTrue(all(item["in_scope"] for item in fixture["items"]))
+        self.assertTrue(any(item["in_scope"] for item in fixture["items"]))
+        self.assertTrue(any(not item["in_scope"] for item in fixture["items"]))
         self.assertTrue(all(item["raw_values_included"] is False for item in fixture["items"]))
+        self.assertTrue(all(item["request_values"] == "omitted" for item in fixture["items"]))
+        self.assertTrue(all(item["response_values"] == "omitted" for item in fixture["items"]))
+        self.assertTrue(all(item["safe_host_metadata_key"] == "request_metadata.host" for item in fixture["items"]))
+        self.assertIn(
+            "collector_scope_out_of_burp_scope",
+            {item["collector_decision_reason"] for item in fixture["items"]},
+        )
+        self.assertIn("out_of_scope_skipped", json.dumps(fixture))
+        self.assertIn("missing_host_skipped", json.dumps(fixture))
+        self.assertIn("invalid_host_skipped", json.dumps(fixture))
         self.assertNotIn("raw_request", json.dumps(fixture))
         self.assertNotIn("raw_response", json.dumps(fixture))
 

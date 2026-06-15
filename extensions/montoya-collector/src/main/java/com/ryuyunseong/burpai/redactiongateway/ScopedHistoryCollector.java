@@ -15,8 +15,6 @@ final class ScopedHistoryCollector {
     List<ProxyHttpRequestResponse> collectScopedHistory() {
         return proxy.history(requestResponse ->
             requestResponse != null
-                && requestResponse.request() != null
-                && requestResponse.request().isInScope()
         );
     }
 }

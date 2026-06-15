@@ -33,29 +33,34 @@ final class LocalGatewayClient {
     HandoffResult send(List<ProxyHttpRequestResponse> items) throws IOException {
         int sent = 0;
         int skipped = 0;
+        int outOfScopeSkipped = 0;
+        int missingHostSkipped = 0;
+        int invalidHostSkipped = 0;
         int index = 1;
 
         for (ProxyHttpRequestResponse item : items) {
-            if (!isEligible(item)) {
+            CollectorSafeHostMetadata decision = CollectorSafeHostMetadata.evaluate(item);
+            if (!decision.allowed()) {
                 skipped += 1;
+                if (CollectorSafeHostMetadata.REASON_OUT_OF_BURP_SCOPE.equals(decision.reason())) {
+                    outOfScopeSkipped += 1;
+                } else if (CollectorSafeHostMetadata.REASON_MISSING_HOST.equals(decision.reason())) {
+                    missingHostSkipped += 1;
+                } else if (CollectorSafeHostMetadata.REASON_INVALID_HOST.equals(decision.reason())) {
+                    invalidHostSkipped += 1;
+                }
                 continue;
             }
 
-            post(buildPayload(index, item));
+            post(buildPayload(index, item, decision.host()));
             sent += 1;
             index += 1;
         }
 
-        return new HandoffResult(sent, skipped);
+        return new HandoffResult(sent, skipped, outOfScopeSkipped, missingHostSkipped, invalidHostSkipped);
     }
 
-    private boolean isEligible(ProxyHttpRequestResponse item) {
-        return item != null
-            && item.request() != null
-            && item.request().isInScope();
-    }
-
-    private String buildPayload(int index, ProxyHttpRequestResponse item) {
+    private String buildPayload(int index, ProxyHttpRequestResponse item, String requestHost) {
         HttpResponse response = item.hasResponse() ? item.response() : null;
         String responseText = response == null ? null : response.toString();
 
@@ -66,6 +71,7 @@ final class LocalGatewayClient {
             + "\"in_scope\":true,"
             + "\"raw_transport\":\"loopback_localhost\","
             + "\"raw_values_included\":true,"
+            + "\"request_metadata\":{\"host\":" + JsonStrings.quote(requestHost) + "},"
             + "\"request\":" + JsonStrings.quote(item.request().toString()) + ","
             + "\"response\":" + JsonStrings.quote(responseText)
             + "}";

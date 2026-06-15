@@ -200,7 +200,8 @@ HMAC verification, 실패 처리까지 포함한 전체 안전 운영 흐름은
 Live Capture Wizard 설계는
 [docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md](docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)를
 Current dashboard routes provide `GET /live-capture`, `POST /live-capture/start`,
-and `POST /live-capture/stop` as a session state placeholder. Actual capture integration is not implemented yet. The read-only AI handoff checklist is
+and `POST /live-capture/stop` as a session state placeholder. Dashboard-driven
+capture integration is not implemented yet. The read-only AI handoff checklist is
 [docs/GUI_AI_SAFE_PREFLIGHT.md](docs/GUI_AI_SAFE_PREFLIGHT.md)를
 참조하세요. 조회 전용 GUI 핸드오프 파일 인덱스는
 [docs/GUI_AI_HANDOFF_INDEX.md](docs/GUI_AI_HANDOFF_INDEX.md)를
