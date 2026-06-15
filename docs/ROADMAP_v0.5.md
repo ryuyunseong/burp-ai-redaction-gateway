@@ -69,6 +69,9 @@ Candidate tasks:
 - Add a receiver-side scope dry-run that evaluates safe host metadata only,
   returns raw-free accept/drop summaries, and does not change actual receiver
   ingest behavior.
+- Add a receiver-side skip summary and audit event helper that converts dry-run
+  decisions into raw-free metadata only. Keep actual audit file writing,
+  collector filtering, and receiver ingest behavior in separate reviewed PRs.
 - Confirm in-scope filtering behavior with synthetic or authorized local-only
   inputs.
 - Validate loopback receiver behavior and error messages.
@@ -203,6 +206,7 @@ Completed:
 3. `feat/live-capture-session-state-v0.5`
 4. `feat/live-capture-scope-guard-v0.5`
 5. `feat/live-capture-receiver-scope-dry-run-v0.5`
+6. `feat/live-capture-receiver-skip-audit-v0.5`
 
 Next:
 
