@@ -193,6 +193,9 @@ HMAC verification, 실패 처리까지 포함한 전체 안전 운영 흐름은
 [docs/GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md)를
 참조하세요. dashboard에서 로컬 Burp export를 처리하는 Upload Wizard는
 [docs/GUI_UPLOAD_WIZARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_UPLOAD_WIZARD.md)를
+참조하세요. Burp browsing 중 local-only capture session을 안내하는 v0.5
+Live Capture Wizard 설계는
+[docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md](C:/coding/burp-ai-redaction-gateway/docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)를
 참조하세요. AI 핸드오프 전 조회 전용 GUI 체크리스트는
 [docs/GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
 참조하세요. 조회 전용 GUI 핸드오프 파일 인덱스는
