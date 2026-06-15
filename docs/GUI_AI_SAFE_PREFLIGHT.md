@@ -9,21 +9,21 @@
 이 화면으로 상태를 확인합니다.
 
 파일 순서, 목적, 크기, 수정 시각, SHA-256 metadata 화면은
-[GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md)를
+[GUI_AI_HANDOFF_INDEX.md](GUI_AI_HANDOFF_INDEX.md)를
 참조하세요. finding 후보 triage metadata와 수동 검토 경계는
-[GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
+[GUI_FINDING_TRIAGE_INDEX.md](GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 보고서 초안 준비 상태와 수동 검토 경계는
-[GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md)를
+[GUI_REPORT_READINESS_INDEX.md](GUI_REPORT_READINESS_INDEX.md)를
 참조하세요. prompt 파일 투입 전 점검은
-[GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
+[GUI_PROMPT_READINESS_INDEX.md](GUI_PROMPT_READINESS_INDEX.md)를
 참조하세요. 정제 evidence와 raw 금지 범위 경계는
-[GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
+[GUI_EVIDENCE_BOUNDARY_INDEX.md](GUI_EVIDENCE_BOUNDARY_INDEX.md)를
 참조하세요. 전체 조회 전용 workflow 체크리스트는
-[GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
+[GUI_WORKFLOW_STATUS_INDEX.md](GUI_WORKFLOW_STATUS_INDEX.md)를
 참조하세요. 수집부터 AI 투입 전 수동 검토까지 운영 순서는
-[GUI_OPERATOR_RUNBOOK_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_OPERATOR_RUNBOOK_INDEX.md)를
+[GUI_OPERATOR_RUNBOOK_INDEX.md](GUI_OPERATOR_RUNBOOK_INDEX.md)를
 참조하세요. safe files 4개 inventory는
-[GUI_SAFE_FILE_INVENTORY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SAFE_FILE_INVENTORY_INDEX.md)를
+[GUI_SAFE_FILE_INVENTORY_INDEX.md](GUI_SAFE_FILE_INVENTORY_INDEX.md)를
 참조하세요.
 
 ## 화면 열기

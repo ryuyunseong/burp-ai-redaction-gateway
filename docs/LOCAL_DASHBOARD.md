@@ -35,7 +35,7 @@ v0.5 Upload Wizard는 별도 state-changing route입니다.
 이 화면은 Burp export `.xml` 또는 `.json` 파일을 받아 redaction, verify,
 review, report를 순서대로 실행합니다. ChatGPT 자동 전송은 하지 않고, 성공
 후 AI 입력 후보 파일 4개와 관련 dashboard 링크만 표시합니다. 자세한 경계는
-[GUI_UPLOAD_WIZARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_UPLOAD_WIZARD.md)를
+[GUI_UPLOAD_WIZARD.md](GUI_UPLOAD_WIZARD.md)를
 참조하세요.
 
 v0.5 Live Capture currently provides a session state placeholder screen.
@@ -63,31 +63,31 @@ before forwarding behavior changes. This contract is documentation and fixture
 coverage only; it does not add live capture, raw preview, or automatic ChatGPT
 handoff behavior.
 Detailed design boundaries are in
-[LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md](C:/coding/burp-ai-redaction-gateway/docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)를
+[LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md](LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)를
 참조하세요.
 
 화면별 운영 순서는
-[GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md)를
+[GUI_USER_FLOW.md](GUI_USER_FLOW.md)를
 참조하세요. 처음 보는 사용자를 위한 간단 대시보드는
-[GUI_SIMPLE_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SIMPLE_DASHBOARD.md)를
+[GUI_SIMPLE_DASHBOARD.md](GUI_SIMPLE_DASHBOARD.md)를
 참조하세요. AI 핸드오프 체크리스트는
-[GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md)를
+[GUI_AI_HANDOFF_INDEX.md](GUI_AI_HANDOFF_INDEX.md)를
 참조하세요. AI 안전 후보 파일 인덱스는
-[GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
+[GUI_AI_SAFE_PREFLIGHT.md](GUI_AI_SAFE_PREFLIGHT.md)를
 참조하세요. Prompt readiness 체크리스트는
-[GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
+[GUI_PROMPT_READINESS_INDEX.md](GUI_PROMPT_READINESS_INDEX.md)를
 참조하세요. Evidence boundary 체크리스트는
-[GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
+[GUI_EVIDENCE_BOUNDARY_INDEX.md](GUI_EVIDENCE_BOUNDARY_INDEX.md)를
 참조하세요. Operator runbook 체크리스트는
-[GUI_OPERATOR_RUNBOOK_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_OPERATOR_RUNBOOK_INDEX.md)를
+[GUI_OPERATOR_RUNBOOK_INDEX.md](GUI_OPERATOR_RUNBOOK_INDEX.md)를
 참조하세요. Safe file inventory 체크리스트는
-[GUI_SAFE_FILE_INVENTORY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SAFE_FILE_INVENTORY_INDEX.md)를
+[GUI_SAFE_FILE_INVENTORY_INDEX.md](GUI_SAFE_FILE_INVENTORY_INDEX.md)를
 참조하세요. finding 후보 triage 체크리스트는
-[GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
+[GUI_FINDING_TRIAGE_INDEX.md](GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 보고서 초안 준비 체크리스트는
-[GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md)를
+[GUI_REPORT_READINESS_INDEX.md](GUI_REPORT_READINESS_INDEX.md)를
 참조하세요. 전체 workflow 상태 체크리스트는
-[GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
+[GUI_WORKFLOW_STATUS_INDEX.md](GUI_WORKFLOW_STATUS_INDEX.md)를
 참조하세요. release 전 GUI route smoke와 tag 기준은
 [RELEASE_CHECKLIST_v0.4.md](RELEASE_CHECKLIST_v0.4.md)를
 참조하세요.

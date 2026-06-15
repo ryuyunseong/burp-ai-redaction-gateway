@@ -47,7 +47,7 @@ scripts\stop_gateway.ps1
 ```
 
 execution policy, port 충돌, output alias, PID file 문제 해결은
-[WINDOWS_LAUNCHER_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/WINDOWS_LAUNCHER_GUIDE.md)를
+[WINDOWS_LAUNCHER_GUIDE.md](WINDOWS_LAUNCHER_GUIDE.md)를
 참조하세요.
 
 별도 terminal window를 선호하면 receiver를 수동으로 시작할 수 있습니다.
@@ -102,7 +102,7 @@ http://127.0.0.1:8766/upload
 Upload Wizard는 `.xml` 또는 `.json` export를 받아 redaction, verify,
 review, report를 순서대로 실행합니다. 성공 후에도 ChatGPT로 자동 전송하지
 않고, AI 입력 후보 파일 4개와 관련 dashboard 링크만 표시합니다. 자세한
-경계는 [GUI_UPLOAD_WIZARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_UPLOAD_WIZARD.md)를
+경계는 [GUI_UPLOAD_WIZARD.md](GUI_UPLOAD_WIZARD.md)를
 참조하세요.
 
 dashboard는 `127.0.0.1` 로컬 검토 도구입니다. production web application이
@@ -119,27 +119,27 @@ read-only 간단 체크 화면입니다. 파일 본문, 전체 로컬 경로, do
 POST action은 제공하지 않습니다.
 
 전체 GUI 화면 순서는
-[GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md)를
+[GUI_USER_FLOW.md](GUI_USER_FLOW.md)를
 참조하세요. Simple Dashboard 세 영역과 경계는
-[GUI_SIMPLE_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SIMPLE_DASHBOARD.md)를
+[GUI_SIMPLE_DASHBOARD.md](GUI_SIMPLE_DASHBOARD.md)를
 참조하세요. 조회 전용 AI 핸드오프 체크리스트는
-[GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
+[GUI_AI_SAFE_PREFLIGHT.md](GUI_AI_SAFE_PREFLIGHT.md)를
 참조하세요. 조회 전용 AI 안전 후보 파일 인덱스는
-[GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md)를
+[GUI_AI_HANDOFF_INDEX.md](GUI_AI_HANDOFF_INDEX.md)를
 참조하세요. 조회 전용 prompt readiness 체크리스트는
-[GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
+[GUI_PROMPT_READINESS_INDEX.md](GUI_PROMPT_READINESS_INDEX.md)를
 참조하세요. 조회 전용 evidence boundary 체크리스트는
-[GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
+[GUI_EVIDENCE_BOUNDARY_INDEX.md](GUI_EVIDENCE_BOUNDARY_INDEX.md)를
 참조하세요. 조회 전용 operator runbook 체크리스트는
-[GUI_OPERATOR_RUNBOOK_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_OPERATOR_RUNBOOK_INDEX.md)를
+[GUI_OPERATOR_RUNBOOK_INDEX.md](GUI_OPERATOR_RUNBOOK_INDEX.md)를
 참조하세요. 조회 전용 safe file inventory 체크리스트는
-[GUI_SAFE_FILE_INVENTORY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SAFE_FILE_INVENTORY_INDEX.md)를
+[GUI_SAFE_FILE_INVENTORY_INDEX.md](GUI_SAFE_FILE_INVENTORY_INDEX.md)를
 참조하세요. 조회 전용 finding 후보 triage 체크리스트는
-[GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
+[GUI_FINDING_TRIAGE_INDEX.md](GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 조회 전용 보고서 초안 준비 체크리스트는
-[GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md)를
+[GUI_REPORT_READINESS_INDEX.md](GUI_REPORT_READINESS_INDEX.md)를
 참조하세요. 조회 전용 workflow 상태 체크리스트는
-[GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
+[GUI_WORKFLOW_STATUS_INDEX.md](GUI_WORKFLOW_STATUS_INDEX.md)를
 참조하세요. dashboard 운영 인덱스는 다음 주소에서도 볼 수 있습니다.
 
 ```text

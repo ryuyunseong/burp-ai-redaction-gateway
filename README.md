@@ -11,12 +11,12 @@ HAR-style JSON, 기본 Burp XML export 형태를 지원합니다.
 ## Usage
 
 짧은 CLI와 dashboard walkthrough는
-[docs/USER_QUICKSTART.md](C:/coding/burp-ai-redaction-gateway/docs/USER_QUICKSTART.md)를
+[docs/USER_QUICKSTART.md](docs/USER_QUICKSTART.md)를
 참조하세요.
 
 브라우저에서 Burp export 파일을 선택해 redaction, verify, review, report를
 한 번에 실행하는 v0.5 Upload Wizard는
-[docs/GUI_UPLOAD_WIZARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_UPLOAD_WIZARD.md)를
+[docs/GUI_UPLOAD_WIZARD.md](docs/GUI_UPLOAD_WIZARD.md)를
 참조하세요. 이 흐름도 ChatGPT 자동 전송은 하지 않으며, AI 입력 후보 파일
 4개만 표시합니다.
 Burp browsing based live capture is now a session state placeholder.
@@ -92,7 +92,7 @@ metadata에서 만들어지며 `verify` 통과 후에만 사용합니다.
 
 ## Policy
 
-기본 policy는 [policy.json](C:/coding/burp-ai-redaction-gateway/policy.json)입니다.
+기본 policy는 [policy.json](policy.json)입니다.
 fail-closed 방식이며 raw request/response output과 response snippet은 기본적으로
 비활성화됩니다. 검증은 `.json`, `.jsonl`, `.md`, `.txt` 파일에서 raw token,
 cookie value, JWT, PII, internal IP, domain, high entropy string, raw HTTP
@@ -191,43 +191,43 @@ file check는 건너뛰지만 pre-commit verification은 실행합니다.
 
 Burp 수집, receiver 사용, verification, AI 안전 파일, audit retention,
 HMAC verification, 실패 처리까지 포함한 전체 안전 운영 흐름은
-[docs/OPERATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/OPERATING_GUIDE.md)를
+[docs/OPERATING_GUIDE.md](docs/OPERATING_GUIDE.md)를
 참조하세요. 처음 실행부터 안전 AI 핸드오프까지의 GUI 운영자 흐름은
-[docs/GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md)를
+[docs/GUI_USER_FLOW.md](docs/GUI_USER_FLOW.md)를
 참조하세요. dashboard에서 로컬 Burp export를 처리하는 Upload Wizard는
-[docs/GUI_UPLOAD_WIZARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_UPLOAD_WIZARD.md)를
+[docs/GUI_UPLOAD_WIZARD.md](docs/GUI_UPLOAD_WIZARD.md)를
 참조하세요. Burp browsing 중 local-only capture session을 안내하는 v0.5
 Live Capture Wizard 설계는
-[docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md](C:/coding/burp-ai-redaction-gateway/docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)를
+[docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md](docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)를
 Current dashboard routes provide `GET /live-capture`, `POST /live-capture/start`,
 and `POST /live-capture/stop` as a session state placeholder. Actual capture integration is not implemented yet. The read-only AI handoff checklist is
-[docs/GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
+[docs/GUI_AI_SAFE_PREFLIGHT.md](docs/GUI_AI_SAFE_PREFLIGHT.md)를
 참조하세요. 조회 전용 GUI 핸드오프 파일 인덱스는
-[docs/GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md)를
+[docs/GUI_AI_HANDOFF_INDEX.md](docs/GUI_AI_HANDOFF_INDEX.md)를
 참조하세요. 조회 전용 prompt readiness 체크리스트는
-[docs/GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
+[docs/GUI_PROMPT_READINESS_INDEX.md](docs/GUI_PROMPT_READINESS_INDEX.md)를
 참조하세요. 조회 전용 evidence boundary 체크리스트는
-[docs/GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
+[docs/GUI_EVIDENCE_BOUNDARY_INDEX.md](docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
 참조하세요. 조회 전용 operator runbook 체크리스트는
-[docs/GUI_OPERATOR_RUNBOOK_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_OPERATOR_RUNBOOK_INDEX.md)를
+[docs/GUI_OPERATOR_RUNBOOK_INDEX.md](docs/GUI_OPERATOR_RUNBOOK_INDEX.md)를
 참조하세요. 조회 전용 safe file inventory 체크리스트는
-[docs/GUI_SAFE_FILE_INVENTORY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SAFE_FILE_INVENTORY_INDEX.md)를
+[docs/GUI_SAFE_FILE_INVENTORY_INDEX.md](docs/GUI_SAFE_FILE_INVENTORY_INDEX.md)를
 참조하세요. 조회 전용 GUI finding triage 체크리스트는
-[docs/GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
+[docs/GUI_FINDING_TRIAGE_INDEX.md](docs/GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 조회 전용 GUI 보고서 초안 준비 체크리스트는
-[docs/GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md)를
+[docs/GUI_REPORT_READINESS_INDEX.md](docs/GUI_REPORT_READINESS_INDEX.md)를
 참조하세요. 조회 전용 GUI workflow 상태 체크리스트는
-[docs/GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
+[docs/GUI_WORKFLOW_STATUS_INDEX.md](docs/GUI_WORKFLOW_STATUS_INDEX.md)를
 참조하세요. audit review, retention, HMAC, compression, archive HMAC runbook은
-[docs/AUDIT_OPERATIONS_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/AUDIT_OPERATIONS_GUIDE.md)를
+[docs/AUDIT_OPERATIONS_GUIDE.md](docs/AUDIT_OPERATIONS_GUIDE.md)를
 참조하세요. dashboard audit/archive status panel 해석은
-[docs/GUI_AUDIT_PANEL_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AUDIT_PANEL_GUIDE.md)를
+[docs/GUI_AUDIT_PANEL_GUIDE.md](docs/GUI_AUDIT_PANEL_GUIDE.md)를
 참조하세요. 처음 보는 사용자를 위한 read-only simple dashboard는
-[docs/GUI_SIMPLE_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SIMPLE_DASHBOARD.md)를
+[docs/GUI_SIMPLE_DASHBOARD.md](docs/GUI_SIMPLE_DASHBOARD.md)를
 참조하세요. risk rating draft 개념과 profile 해석은
-[docs/RISK_RATING_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/RISK_RATING_GUIDE.md)를
+[docs/RISK_RATING_GUIDE.md](docs/RISK_RATING_GUIDE.md)를
 참조하세요. v0.4 dashboard release baseline은
-[docs/RELEASE_NOTES_v0.4.md](C:/coding/burp-ai-redaction-gateway/docs/RELEASE_NOTES_v0.4.md)를
+[docs/RELEASE_NOTES_v0.4.md](docs/RELEASE_NOTES_v0.4.md)를
 참조하세요. v0.4 release 전 CLI/GUI smoke와 tag 기준은
 [docs/RELEASE_CHECKLIST_v0.4.md](docs/RELEASE_CHECKLIST_v0.4.md)를
 참조하세요. v0.4.34 GitHub Release 발행 전 검토용 초안은
@@ -239,13 +239,13 @@ and `POST /live-capture/stop` as a session state placeholder. Actual capture int
 ## Burp Montoya Collector
 
 Burp-side collector skeleton은
-[extensions/montoya-collector](C:/coding/burp-ai-redaction-gateway/extensions/montoya-collector)
+[extensions/montoya-collector](extensions/montoya-collector)
 아래에 있습니다. Java/Gradle Montoya extension이며 in-scope Proxy HTTP
 history item만 수집해 loopback 전용 local gateway endpoint로 전달합니다.
 raw request/response 값은 log에 쓰지 않으며, 생성 output은 사용 전 기존
 Python `verify` gate를 계속 통과해야 합니다.
 
-[docs/MONTOYA_COLLECTOR.md](C:/coding/burp-ai-redaction-gateway/docs/MONTOYA_COLLECTOR.md)를
+[docs/MONTOYA_COLLECTOR.md](docs/MONTOYA_COLLECTOR.md)를
 참조하세요.
 
 ## Windows Local Launcher
@@ -268,9 +268,9 @@ scripts\stop_gateway.ps1
 
 launcher는 raw request/response 값, cookie, authorization 값, token, 실제
 target domain, 개인정보, HMAC secret, CSRF 값을 출력하지 않습니다.
-[docs/USER_QUICKSTART.md](C:/coding/burp-ai-redaction-gateway/docs/USER_QUICKSTART.md)를
+[docs/USER_QUICKSTART.md](docs/USER_QUICKSTART.md)를
 참조하세요. Windows launcher troubleshooting과 execution policy note는
-[docs/WINDOWS_LAUNCHER_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/WINDOWS_LAUNCHER_GUIDE.md)를
+[docs/WINDOWS_LAUNCHER_GUIDE.md](docs/WINDOWS_LAUNCHER_GUIDE.md)를
 참조하세요.
 
 ## Localhost Receiver
@@ -283,7 +283,7 @@ python -m burp_ai_redaction_gateway serve --host 127.0.0.1 --port 8765 --output 
 
 receiver는 `POST /ingest/burp-history`를 받고 즉시 redaction을 적용한 뒤 검증
 가능한 sanitization output만 기록합니다.
-[docs/LOCALHOST_RECEIVER.md](C:/coding/burp-ai-redaction-gateway/docs/LOCALHOST_RECEIVER.md)를
+[docs/LOCALHOST_RECEIVER.md](docs/LOCALHOST_RECEIVER.md)를
 참조하세요.
 
 ## Read-Only MCP Server
@@ -297,7 +297,7 @@ python -m burp_ai_redaction_gateway mcp --root out
 MCP server는 검증된 output directory에 대한 read-only tool만 제공합니다.
 raw exchange lookup, replay, file write, external transmission은 구현하지
 않습니다.
-[docs/READ_ONLY_MCP.md](C:/coding/burp-ai-redaction-gateway/docs/READ_ONLY_MCP.md)를
+[docs/READ_ONLY_MCP.md](docs/READ_ONLY_MCP.md)를
 참조하세요.
 
 ## Local Dashboard
@@ -358,7 +358,7 @@ Simple Dashboard는 현재 상태, AI에 넣을 후보 파일 4개, 다음 행�
 active scan, delete, edit, retention control, risk profile action을 추가하지
 않습니다.
 
-[docs/LOCAL_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/LOCAL_DASHBOARD.md)를
+[docs/LOCAL_DASHBOARD.md](docs/LOCAL_DASHBOARD.md)를
 참조하세요.
 
 ## MCP Audit Records

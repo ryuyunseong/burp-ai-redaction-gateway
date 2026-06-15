@@ -127,7 +127,7 @@ output 상세 화면의 action은 다음 순서로 사용합니다.
 `Live Capture placeholder` uses CSRF-protected POST actions for local session state only.
 It does not change collector/receiver behavior, does not capture raw traffic, and does not automatically send anything to ChatGPT. live capture design boundaries are in
 설계 경계는
-[LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md](C:/coding/burp-ai-redaction-gateway/docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)를
+[LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md](LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)를
 참조하세요.
 `Finding triage index`, `Report readiness index`, `Workflow status index`,
 `AI-safe preflight`, `AI handoff index`, `Prompt readiness index`,
@@ -148,29 +148,29 @@ It does not change collector/receiver behavior, does not capture raw traffic, an
 검증에 실패한 output의 파일은 사용하지 않습니다.
 
 Upload Wizard의 route, failure handling, action audit 경계는
-[GUI_UPLOAD_WIZARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_UPLOAD_WIZARD.md)를
+[GUI_UPLOAD_WIZARD.md](GUI_UPLOAD_WIZARD.md)를
 참조하세요.
 
 간단 대시보드의 세 영역과 read-only 경계는
-[GUI_SIMPLE_DASHBOARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SIMPLE_DASHBOARD.md)를
+[GUI_SIMPLE_DASHBOARD.md](GUI_SIMPLE_DASHBOARD.md)를
 참조하세요. 사전 점검 상태 필드와 문제 해결은
-[GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
+[GUI_AI_SAFE_PREFLIGHT.md](GUI_AI_SAFE_PREFLIGHT.md)를
 참조하세요. 핸드오프 파일 순서와 metadata 필드는
-[GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md)를
+[GUI_AI_HANDOFF_INDEX.md](GUI_AI_HANDOFF_INDEX.md)를
 참조하세요. finding 후보 triage 필드와 경계는
-[GUI_FINDING_TRIAGE_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_FINDING_TRIAGE_INDEX.md)를
+[GUI_FINDING_TRIAGE_INDEX.md](GUI_FINDING_TRIAGE_INDEX.md)를
 참조하세요. 보고서 초안 준비 필드와 경계는
-[GUI_REPORT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_REPORT_READINESS_INDEX.md)를
+[GUI_REPORT_READINESS_INDEX.md](GUI_REPORT_READINESS_INDEX.md)를
 참조하세요. 전체 조회 전용 workflow 체크리스트는
-[GUI_WORKFLOW_STATUS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_WORKFLOW_STATUS_INDEX.md)를
+[GUI_WORKFLOW_STATUS_INDEX.md](GUI_WORKFLOW_STATUS_INDEX.md)를
 참조하세요. prompt 파일 투입 전 점검은
-[GUI_PROMPT_READINESS_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_PROMPT_READINESS_INDEX.md)를
+[GUI_PROMPT_READINESS_INDEX.md](GUI_PROMPT_READINESS_INDEX.md)를
 참조하세요. 정제 evidence와 raw 금지 범위 경계는
-[GUI_EVIDENCE_BOUNDARY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_EVIDENCE_BOUNDARY_INDEX.md)를
+[GUI_EVIDENCE_BOUNDARY_INDEX.md](GUI_EVIDENCE_BOUNDARY_INDEX.md)를
 참조하세요. 운영 순서 runbook은
-[GUI_OPERATOR_RUNBOOK_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_OPERATOR_RUNBOOK_INDEX.md)를
+[GUI_OPERATOR_RUNBOOK_INDEX.md](GUI_OPERATOR_RUNBOOK_INDEX.md)를
 참조하세요. safe file inventory는
-[GUI_SAFE_FILE_INVENTORY_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_SAFE_FILE_INVENTORY_INDEX.md)를
+[GUI_SAFE_FILE_INVENTORY_INDEX.md](GUI_SAFE_FILE_INVENTORY_INDEX.md)를
 참조하세요.
 
 ## 보내거나 문서화하지 않을 값
