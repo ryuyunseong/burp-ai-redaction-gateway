@@ -60,8 +60,8 @@ Candidate tasks:
   [`LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md`](LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md).
 - Distinguish Upload Wizard file input from Live Capture Wizard guided Burp
   browsing.
-- Keep `/live-capture` as a read-only readiness screen until start/stop actions
-  are implemented in a separate CSRF-protected PR.
+- Keep `/live-capture` as a session placeholder until actual collector/receiver
+  capture integration lands in a separate reviewed PR.
 - Define Live Capture as a local-only wizard, not an automatic ChatGPT handoff.
 - Confirm in-scope filtering behavior with synthetic or authorized local-only
   inputs.
@@ -78,8 +78,8 @@ Out of scope for the first v0.5 slice:
 
 Acceptance evidence:
 
-- Readiness text does not imply capture start/stop runtime support until that
-  implementation lands.
+- Placeholder text does not imply actual traffic capture runtime support until
+  collector/receiver integration lands.
 - Collector validation can be reproduced without committing real traffic.
 - Failure output uses safe aliases and status metadata only.
 
@@ -198,7 +198,7 @@ Completed:
 Next:
 
 1. `feat/live-capture-readiness-screen-v0.5`
-2. `feat/live-capture-session-v0.5`
+2. `feat/live-capture-session-state-v0.5`
 3. `docs/v0.5-troubleshooting-index`
 4. `feat/v0.5-montoya-live-validation`
 5. `feat/v0.5-candidate-triage-quality`

@@ -19,9 +19,9 @@ HAR-style JSON, 기본 Burp XML export 형태를 지원합니다.
 [docs/GUI_UPLOAD_WIZARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_UPLOAD_WIZARD.md)를
 참조하세요. 이 흐름도 ChatGPT 자동 전송은 하지 않으며, AI 입력 후보 파일
 4개만 표시합니다.
-Burp browsing 기반 live capture는 아직 수집 시작/중지 기능이 아니라
-`/live-capture` read-only 준비 화면과 설계 문서로만 제공됩니다. capture
-start/stop, collector/receiver 동작 변경, 자동 ChatGPT 전송은 별도 PR 범위입니다.
+Burp browsing based live capture is now a session state placeholder.
+`/live-capture` provides CSRF-protected start/stop placeholders and safe
+session aliases only. collector/receiver behavior, actual traffic capture, and automatic ChatGPT handoff remain separate PR scope.
 
 ```powershell
 python -m burp_ai_redaction_gateway generate `
@@ -199,8 +199,8 @@ HMAC verification, 실패 처리까지 포함한 전체 안전 운영 흐름은
 참조하세요. Burp browsing 중 local-only capture session을 안내하는 v0.5
 Live Capture Wizard 설계는
 [docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md](C:/coding/burp-ai-redaction-gateway/docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)를
-참조하세요. 현재 dashboard route는 `GET /live-capture` read-only 준비 화면만
-제공하며, capture start/stop 실행 버튼은 아직 없습니다. AI 핸드오프 전 조회 전용 GUI 체크리스트는
+Current dashboard routes provide `GET /live-capture`, `POST /live-capture/start`,
+and `POST /live-capture/stop` as a session state placeholder. Actual capture integration is not implemented yet. The read-only AI handoff checklist is
 [docs/GUI_AI_SAFE_PREFLIGHT.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_SAFE_PREFLIGHT.md)를
 참조하세요. 조회 전용 GUI 핸드오프 파일 인덱스는
 [docs/GUI_AI_HANDOFF_INDEX.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_AI_HANDOFF_INDEX.md)를
