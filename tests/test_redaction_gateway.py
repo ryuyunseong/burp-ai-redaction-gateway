@@ -76,6 +76,8 @@ from burp_ai_redaction_gateway.live_capture_receiver_scope import (
     RECEIVER_SCOPE_RESULT_SKIPPED,
     RECEIVER_SCOPE_SUMMARY_KIND_ACCEPT,
     RECEIVER_SCOPE_SUMMARY_KIND_SKIP,
+    SAFE_HOST_METADATA_CONTAINERS,
+    SAFE_HOST_METADATA_KEYS,
     build_receiver_scope_audit_event,
     build_receiver_scope_decision_summary,
     evaluate_receiver_scope_decision_summary,
@@ -102,6 +104,8 @@ MONTOYA_SOURCE_DIR = MONTOYA_DIR / "src" / "main" / "java" / "com" / "ryuyunseon
 MONTOYA_DOC = ROOT / "docs" / "MONTOYA_COLLECTOR.md"
 MONTOYA_SCOPE_FIXTURE = ROOT / "samples" / "synthetic_montoya_scope_inventory.json"
 MONTOYA_HANDOFF = ROOT / "samples" / "synthetic_montoya_handoff_payload.json"
+LIVE_CAPTURE_COLLECTOR_CONTRACT_DOC = ROOT / "docs" / "LIVE_CAPTURE_COLLECTOR_CONTRACT_v0.5.md"
+LIVE_CAPTURE_COLLECTOR_CONTRACT_FIXTURE = ROOT / "samples" / "synthetic_live_capture_collector_contract.json"
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
     "missing_security_headers",
@@ -1951,6 +1955,109 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertRegex(result_text, r"target_alias_[0-9a-f]{12}|\"host_alias\": \"\"")
                 for fragment in forbidden_fragments:
                     self.assertNotIn(fragment, result_text)
+
+    def test_live_capture_collector_contract_fixture_matches_receiver_helpers(self) -> None:
+        fixture = json.loads(LIVE_CAPTURE_COLLECTOR_CONTRACT_FIXTURE.read_text(encoding="utf-8"))
+        self.assertEqual(fixture["schema_version"], "live-capture-collector-contract-v1")
+        self.assertFalse(fixture["raw_data_included"])
+        self.assertFalse(fixture["collector_forwarding_changed"])
+        self.assertFalse(fixture["receiver_ingest_changed"])
+        self.assertFalse(fixture["audit_file_write_changed"])
+        self.assertFalse(fixture["redaction_pipeline_auto_run"])
+        self.assertEqual(fixture["expected_safe_host_metadata_keys"], list(SAFE_HOST_METADATA_KEYS))
+        self.assertEqual(fixture["expected_safe_host_metadata_containers"], list(SAFE_HOST_METADATA_CONTAINERS))
+
+        missing_payload = {
+            "schema_version": "montoya-handoff-v1",
+            "source": "burp_proxy_history",
+            "request": "DUMMY_CONTRACT_RAW_REQUEST_MARKER Host: hidden.test",
+            "response": "DUMMY_CONTRACT_RAW_RESPONSE_MARKER",
+        }
+        cases = [
+            (
+                "missing_safe_host_metadata",
+                missing_payload,
+                RECEIVER_SCOPE_DECISION_DROP,
+                RECEIVER_SCOPE_REASON_MISSING_HOST,
+            ),
+            (
+                "invalid_safe_host_metadata",
+                {"request_metadata": {"host": "127.0.0.1"}, **missing_payload},
+                RECEIVER_SCOPE_DECISION_DROP,
+                RECEIVER_SCOPE_REASON_INVALID_HOST,
+            ),
+            (
+                "out_of_scope_safe_host_metadata",
+                {"request_metadata": {"host": "other.test"}, **missing_payload},
+                RECEIVER_SCOPE_DECISION_DROP,
+                RECEIVER_SCOPE_REASON_OUT_OF_SCOPE,
+            ),
+            (
+                "in_scope_safe_host_metadata",
+                {"request_metadata": {"host": "api.example.test"}, **missing_payload},
+                RECEIVER_SCOPE_DECISION_ACCEPT,
+                RECEIVER_SCOPE_REASON_IN_SCOPE,
+            ),
+        ]
+        fixture_cases = {item["case"]: item for item in fixture["contract_cases"]}
+        forbidden_fragments = [
+            "DUMMY_CONTRACT_RAW_REQUEST_MARKER",
+            "DUMMY_CONTRACT_RAW_RESPONSE_MARKER",
+            "hidden.test",
+            "other.test",
+            "127.0.0.1",
+            "api.example.test",
+            "example.test",
+        ]
+        for name, payload, expected_decision, expected_reason in cases:
+            with self.subTest(name=name):
+                self.assertIn(name, fixture_cases)
+                self.assertEqual(fixture_cases[name]["expected_decision"], expected_decision)
+                self.assertEqual(fixture_cases[name]["expected_reason"], expected_reason)
+                summary = evaluate_receiver_scope_decision_summary(payload, "example.test")
+                event = build_receiver_scope_audit_event(summary)
+                self.assertEqual(summary.decision, expected_decision)
+                self.assertEqual(summary.reason, expected_reason)
+                self.assertFalse(summary.raw_data_included)
+                self.assertFalse(summary.ingest_performed)
+                self.assertFalse(summary.collector_changed)
+                self.assertFalse(summary.receiver_ingest_changed)
+                self.assertFalse(event["raw_data_included"])
+                self.assertFalse(event["ingest_performed"])
+                self.assertFalse(event["collector_changed"])
+                self.assertFalse(event["receiver_ingest_changed"])
+                result_text = json.dumps([summary.to_summary(), event], sort_keys=True)
+                for fragment in forbidden_fragments:
+                    self.assertNotIn(fragment, result_text)
+
+    def test_live_capture_collector_contract_docs_are_raw_free_and_planning_only(self) -> None:
+        contract_doc = LIVE_CAPTURE_COLLECTOR_CONTRACT_DOC.read_text(encoding="utf-8")
+        fixture_text = LIVE_CAPTURE_COLLECTOR_CONTRACT_FIXTURE.read_text(encoding="utf-8")
+        combined = "\n".join([contract_doc, fixture_text])
+        self.assertIn("does not implement collector forwarding", contract_doc)
+        self.assertIn("receiver ingest behavior changes", contract_doc)
+        self.assertIn("ChatGPT automatic handoff", contract_doc)
+        self.assertIn("Findings remain candidates", contract_doc)
+        self.assertIn("Risk remains draft", contract_doc)
+        self.assertIn("Final severity and CVSS remain", contract_doc)
+
+        forbidden_fragments = [
+            "DUMMY_BEARER_TOKEN",
+            "DUMMY_COOKIE_VALUE",
+            "Authorization: Bearer",
+            "Cookie:",
+            "Set-Cookie:",
+            "C:\\",
+            "C:/",
+            "safe-to-share guaranteed",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final severity confirmed",
+            "confirmed CVSS",
+        ]
+        for fragment in forbidden_fragments:
+            self.assertNotIn(fragment, combined)
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", fixture_text))
 
     def test_dashboard_live_capture_session_placeholder_requires_csrf_and_hides_raw_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
