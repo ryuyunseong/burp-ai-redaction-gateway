@@ -46,10 +46,13 @@ POST /live-capture/start
 POST /live-capture/stop
 ```
 
-The screen accepts a target domain, validates it, and displays only a safe alias.
-The start/stop actions are CSRF-protected placeholders. They do not change
-collector/receiver behavior, do not capture traffic, and do not send anything
-to ChatGPT. Actual collector/receiver integration remains separate PR scope.
+The screen accepts a target domain, validates it with the shared Live Capture
+scope guard, and displays only a safe alias. The guard normalizes uppercase and
+trailing-dot domain forms, rejects URL/path/wildcard/loopback/IP inputs, and
+uses raw-free reason codes for validation failures. The start/stop actions are
+CSRF-protected placeholders. They do not change collector/receiver behavior, do
+not capture traffic, and do not send anything to ChatGPT. Actual
+collector/receiver integration remains separate PR scope.
 Detailed design boundaries are in
 [LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md](C:/coding/burp-ai-redaction-gateway/docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)를
 참조하세요.
