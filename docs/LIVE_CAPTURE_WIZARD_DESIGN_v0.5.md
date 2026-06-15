@@ -142,6 +142,12 @@ Receiver requirements:
   shared scope guard before full collector integration. This dry-run must not
   parse raw request or response bodies, persist traffic, call the redaction
   pipeline, or change `POST /ingest/burp-history` behavior.
+- A receiver scope summary helper may convert the dry-run decision into
+  raw-free accept/skip metadata for a future audit writer. This contract should
+  include only aliases, reason codes, decision status, and explicit
+  `raw_data_included=false` metadata. It must not write audit files, store raw
+  rows, or change actual receiver ingest behavior until a separate integration
+  PR wires it in.
 
 ## Domain Match Rule
 
@@ -339,11 +345,15 @@ Recommended follow-up slices:
    - return raw-free accept/drop summaries only
    - keep actual receiver ingest, collector behavior, and redaction pipeline
      execution unchanged
-4. `feat/live-capture-collector-filter-v0.5`
+4. `feat/live-capture-receiver-skip-audit-v0.5`
+   - convert receiver scope dry-run results into raw-free accept/skip summaries
+     and audit event metadata
+   - keep audit file writing, receiver ingest, and collector behavior unchanged
+5. `feat/live-capture-collector-filter-v0.5`
    - harden collector allowlist matching and safe status output
-5. `test/live-capture-smoke-v0.5`
+6. `test/live-capture-smoke-v0.5`
    - add synthetic local-only smoke coverage without real traffic
-6. `docs/live-capture-operations-v0.5`
+7. `docs/live-capture-operations-v0.5`
    - document operator steps after the implementation is verified
 
 ## Acceptance Criteria

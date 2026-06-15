@@ -64,6 +64,7 @@ from burp_ai_redaction_gateway.live_capture_scope import (
     validate_live_capture_scope,
 )
 from burp_ai_redaction_gateway.live_capture_receiver_scope import (
+    RECEIVER_SCOPE_AUDIT_EVENT_TYPE,
     RECEIVER_SCOPE_DECISION_ACCEPT,
     RECEIVER_SCOPE_DECISION_DROP,
     RECEIVER_SCOPE_REASON_IN_SCOPE,
@@ -71,6 +72,13 @@ from burp_ai_redaction_gateway.live_capture_receiver_scope import (
     RECEIVER_SCOPE_REASON_INVALID_SCOPE,
     RECEIVER_SCOPE_REASON_MISSING_HOST,
     RECEIVER_SCOPE_REASON_OUT_OF_SCOPE,
+    RECEIVER_SCOPE_RESULT_ACCEPTED,
+    RECEIVER_SCOPE_RESULT_SKIPPED,
+    RECEIVER_SCOPE_SUMMARY_KIND_ACCEPT,
+    RECEIVER_SCOPE_SUMMARY_KIND_SKIP,
+    build_receiver_scope_audit_event,
+    build_receiver_scope_decision_summary,
+    evaluate_receiver_scope_decision_summary,
     evaluate_receiver_scope_dry_run,
 )
 from burp_ai_redaction_gateway.mcp_server import ReadOnlyMcpGateway, ReadOnlyMcpServer, _next_rotated_audit_path
@@ -1830,6 +1838,119 @@ class RedactionGatewayTests(unittest.TestCase):
         for marker in raw_markers:
             self.assertNotIn(marker, summary_text)
         self.assertNotIn("DUMMY_BODY_VALUE", summary_text)
+
+    def test_receiver_scope_summary_and_audit_event_are_raw_free(self) -> None:
+        raw_payload_markers = {
+            "request": "DUMMY_RAW_REQUEST_MARKER token=DUMMY_TOKEN_MARKER",
+            "response": "DUMMY_RAW_RESPONSE_MARKER",
+            "authorization_hint": "DUMMY_AUTHORIZATION_MARKER",
+            "cookie_hint": "DUMMY_COOKIE_MARKER",
+            "local_path_hint": "DUMMY_FULL_LOCAL_PATH_MARKER",
+            "personal_data_hint": "DUMMY_PERSONAL_DATA_MARKER",
+        }
+        cases = [
+            (
+                "out_of_scope",
+                {"request_host": "other.test", **raw_payload_markers},
+                RECEIVER_SCOPE_DECISION_DROP,
+                RECEIVER_SCOPE_REASON_OUT_OF_SCOPE,
+                SCOPE_REASON_SUFFIX_MISMATCH,
+                RECEIVER_SCOPE_SUMMARY_KIND_SKIP,
+                RECEIVER_SCOPE_RESULT_SKIPPED,
+            ),
+            (
+                "missing_host",
+                dict(raw_payload_markers),
+                RECEIVER_SCOPE_DECISION_DROP,
+                RECEIVER_SCOPE_REASON_MISSING_HOST,
+                RECEIVER_SCOPE_REASON_MISSING_HOST,
+                RECEIVER_SCOPE_SUMMARY_KIND_SKIP,
+                RECEIVER_SCOPE_RESULT_SKIPPED,
+            ),
+            (
+                "invalid_host",
+                {"request_host": "127.0.0.1", **raw_payload_markers},
+                RECEIVER_SCOPE_DECISION_DROP,
+                RECEIVER_SCOPE_REASON_INVALID_HOST,
+                SCOPE_REASON_IP_LITERAL,
+                RECEIVER_SCOPE_SUMMARY_KIND_SKIP,
+                RECEIVER_SCOPE_RESULT_SKIPPED,
+            ),
+            (
+                "in_scope",
+                {"request_metadata": {"host": "api.example.test"}, **raw_payload_markers},
+                RECEIVER_SCOPE_DECISION_ACCEPT,
+                RECEIVER_SCOPE_REASON_IN_SCOPE,
+                SCOPE_REASON_MATCHED,
+                RECEIVER_SCOPE_SUMMARY_KIND_ACCEPT,
+                RECEIVER_SCOPE_RESULT_ACCEPTED,
+            ),
+        ]
+        expected_event_keys = {
+            "event_type",
+            "summary_kind",
+            "decision",
+            "reason",
+            "match_reason",
+            "result_status",
+            "accepted",
+            "dropped",
+            "host_alias",
+            "scope_alias",
+            "raw_data_included",
+            "ingest_performed",
+            "collector_changed",
+            "receiver_ingest_changed",
+        }
+        forbidden_fragments = [
+            "DUMMY_RAW_REQUEST_MARKER",
+            "DUMMY_RAW_RESPONSE_MARKER",
+            "DUMMY_TOKEN_MARKER",
+            "DUMMY_AUTHORIZATION_MARKER",
+            "DUMMY_COOKIE_MARKER",
+            "DUMMY_FULL_LOCAL_PATH_MARKER",
+            "DUMMY_PERSONAL_DATA_MARKER",
+            "other.test",
+            "127.0.0.1",
+            "api.example.test",
+            "example.test",
+        ]
+
+        for name, payload, decision, reason, match_reason, summary_kind, result_status in cases:
+            with self.subTest(name=name):
+                dry_run = evaluate_receiver_scope_dry_run(payload, "example.test")
+                summary = build_receiver_scope_decision_summary(dry_run)
+                direct_summary = evaluate_receiver_scope_decision_summary(payload, "example.test")
+                event = build_receiver_scope_audit_event(summary)
+
+                self.assertEqual(summary, direct_summary)
+                self.assertEqual(summary.summary_kind, summary_kind)
+                self.assertEqual(summary.decision, decision)
+                self.assertEqual(summary.reason, reason)
+                self.assertEqual(summary.match_reason, match_reason)
+                self.assertEqual(summary.result_status, result_status)
+                self.assertEqual(summary.accepted, decision == RECEIVER_SCOPE_DECISION_ACCEPT)
+                self.assertEqual(summary.dropped, decision == RECEIVER_SCOPE_DECISION_DROP)
+                self.assertFalse(summary.raw_data_included)
+                self.assertFalse(summary.ingest_performed)
+                self.assertFalse(summary.collector_changed)
+                self.assertFalse(summary.receiver_ingest_changed)
+
+                self.assertEqual(set(event), expected_event_keys)
+                self.assertEqual(event["event_type"], RECEIVER_SCOPE_AUDIT_EVENT_TYPE)
+                self.assertEqual(event["summary_kind"], summary_kind)
+                self.assertEqual(event["decision"], decision)
+                self.assertEqual(event["reason"], reason)
+                self.assertEqual(event["result_status"], result_status)
+                self.assertFalse(event["raw_data_included"])
+                self.assertFalse(event["ingest_performed"])
+                self.assertFalse(event["collector_changed"])
+                self.assertFalse(event["receiver_ingest_changed"])
+
+                result_text = json.dumps([summary.to_summary(), event], sort_keys=True)
+                self.assertRegex(result_text, r"target_alias_[0-9a-f]{12}|\"host_alias\": \"\"")
+                for fragment in forbidden_fragments:
+                    self.assertNotIn(fragment, result_text)
 
     def test_dashboard_live_capture_session_placeholder_requires_csrf_and_hides_raw_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

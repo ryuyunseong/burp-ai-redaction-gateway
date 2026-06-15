@@ -53,6 +53,10 @@ uses raw-free reason codes for validation failures. The start/stop actions are
 CSRF-protected placeholders. They do not change collector/receiver behavior, do
 not capture traffic, and do not send anything to ChatGPT. Actual
 collector/receiver integration remains separate PR scope.
+Receiver-side scope dry-run results can be converted into raw-free accept/skip
+summary metadata for future audit integration. The dashboard does not expose a
+skip audit action or raw traffic view for this helper, and the helper does not
+change collector behavior, receiver ingest behavior, or audit file retention.
 Detailed design boundaries are in
 [LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md](C:/coding/burp-ai-redaction-gateway/docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)를
 참조하세요.
