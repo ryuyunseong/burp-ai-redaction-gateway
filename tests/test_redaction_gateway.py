@@ -63,6 +63,16 @@ from burp_ai_redaction_gateway.live_capture_scope import (
     normalize_live_capture_scope,
     validate_live_capture_scope,
 )
+from burp_ai_redaction_gateway.live_capture_receiver_scope import (
+    RECEIVER_SCOPE_DECISION_ACCEPT,
+    RECEIVER_SCOPE_DECISION_DROP,
+    RECEIVER_SCOPE_REASON_IN_SCOPE,
+    RECEIVER_SCOPE_REASON_INVALID_HOST,
+    RECEIVER_SCOPE_REASON_INVALID_SCOPE,
+    RECEIVER_SCOPE_REASON_MISSING_HOST,
+    RECEIVER_SCOPE_REASON_OUT_OF_SCOPE,
+    evaluate_receiver_scope_dry_run,
+)
 from burp_ai_redaction_gateway.mcp_server import ReadOnlyMcpGateway, ReadOnlyMcpServer, _next_rotated_audit_path
 from burp_ai_redaction_gateway.models import HttpRequest, HttpResponse, RawEvent, SanitizedEvent
 from burp_ai_redaction_gateway.parser import load_events
@@ -1745,6 +1755,81 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertEqual(str(context.exception), expected_reason)
                 if raw_value:
                     self.assertNotIn(raw_value.lower(), str(context.exception))
+
+    def test_receiver_scope_dry_run_uses_safe_host_metadata_without_ingest(self) -> None:
+        raw_markers = [
+            "GET /secret?token=DUMMY_QUERY_TOKEN HTTP/1.1",
+            "Host: api.example.test",
+            "Authorization: Bearer DUMMY_BEARER_TOKEN",
+            "Cookie: DUMMY_SESSION=DUMMY_COOKIE_VALUE",
+            "HTTP/1.1 200 OK",
+        ]
+        base_payload = {
+            "schema_version": "montoya-handoff-v1",
+            "source": "burp_proxy_history",
+            "request": "\r\n".join(raw_markers),
+            "response": "HTTP/1.1 200 OK\r\n\r\nDUMMY_BODY_VALUE",
+        }
+
+        exact = evaluate_receiver_scope_dry_run({"request_host": "example.test"}, "example.test")
+        self.assertEqual(exact.decision, RECEIVER_SCOPE_DECISION_ACCEPT)
+        self.assertEqual(exact.reason, RECEIVER_SCOPE_REASON_IN_SCOPE)
+        self.assertEqual(exact.match_reason, SCOPE_REASON_MATCHED)
+        self.assertFalse(exact.raw_data_included)
+        self.assertFalse(exact.ingest_performed)
+        self.assertRegex(exact.host_alias, r"^target_alias_[0-9a-f]{12}$")
+
+        subdomain = evaluate_receiver_scope_dry_run({"request_metadata": {"host": "api.example.test"}}, "example.test")
+        self.assertEqual(subdomain.decision, RECEIVER_SCOPE_DECISION_ACCEPT)
+        self.assertEqual(subdomain.match_reason, SCOPE_REASON_MATCHED)
+
+        out_of_scope = evaluate_receiver_scope_dry_run({"request_host": "other.test"}, "example.test")
+        self.assertEqual(out_of_scope.decision, RECEIVER_SCOPE_DECISION_DROP)
+        self.assertEqual(out_of_scope.reason, RECEIVER_SCOPE_REASON_OUT_OF_SCOPE)
+        self.assertEqual(out_of_scope.match_reason, SCOPE_REASON_SUFFIX_MISMATCH)
+
+        lookalike = evaluate_receiver_scope_dry_run({"request_host": "example.test.evil.test"}, "example.test")
+        self.assertEqual(lookalike.decision, RECEIVER_SCOPE_DECISION_DROP)
+        self.assertEqual(lookalike.reason, RECEIVER_SCOPE_REASON_OUT_OF_SCOPE)
+        self.assertEqual(lookalike.match_reason, SCOPE_REASON_SUFFIX_MISMATCH)
+
+        missing = evaluate_receiver_scope_dry_run(base_payload, "example.test")
+        self.assertEqual(missing.decision, RECEIVER_SCOPE_DECISION_DROP)
+        self.assertEqual(missing.reason, RECEIVER_SCOPE_REASON_MISSING_HOST)
+        self.assertEqual(missing.host_alias, "")
+        self.assertFalse(missing.ingest_performed)
+
+        invalid_host = evaluate_receiver_scope_dry_run({"request_host": "127.0.0.1"}, "example.test")
+        self.assertEqual(invalid_host.decision, RECEIVER_SCOPE_DECISION_DROP)
+        self.assertEqual(invalid_host.reason, RECEIVER_SCOPE_REASON_INVALID_HOST)
+        self.assertEqual(invalid_host.match_reason, SCOPE_REASON_IP_LITERAL)
+
+        malformed_host = evaluate_receiver_scope_dry_run({"request_host": "https://example.test/path"}, "example.test")
+        self.assertEqual(malformed_host.reason, RECEIVER_SCOPE_REASON_INVALID_HOST)
+        self.assertEqual(malformed_host.match_reason, SCOPE_REASON_URL_OR_PATH)
+
+        invalid_scope = evaluate_receiver_scope_dry_run({"request_host": "example.test"}, "*.example.test")
+        self.assertEqual(invalid_scope.decision, RECEIVER_SCOPE_DECISION_DROP)
+        self.assertEqual(invalid_scope.reason, RECEIVER_SCOPE_REASON_INVALID_SCOPE)
+        self.assertEqual(invalid_scope.match_reason, SCOPE_REASON_WILDCARD)
+
+        summaries = [
+            exact.to_summary(),
+            subdomain.to_summary(),
+            out_of_scope.to_summary(),
+            lookalike.to_summary(),
+            missing.to_summary(),
+            invalid_host.to_summary(),
+            malformed_host.to_summary(),
+            invalid_scope.to_summary(),
+        ]
+        summary_text = json.dumps(summaries, sort_keys=True)
+        self.assertNotIn("example.test", summary_text)
+        self.assertNotIn("other.test", summary_text)
+        self.assertNotIn("127.0.0.1", summary_text)
+        for marker in raw_markers:
+            self.assertNotIn(marker, summary_text)
+        self.assertNotIn("DUMMY_BODY_VALUE", summary_text)
 
     def test_dashboard_live_capture_session_placeholder_requires_csrf_and_hides_raw_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
