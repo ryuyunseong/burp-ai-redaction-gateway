@@ -19,7 +19,7 @@ The Gradle project uses Montoya API `2026.4` as a `compileOnly` dependency. Burp
 provides the API at runtime when the JAR is loaded.
 
 ```powershell
-cd C:\coding\burp-ai-redaction-gateway\extensions\montoya-collector
+cd extensions\montoya-collector
 .\gradlew.bat clean build
 ```
 

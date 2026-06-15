@@ -6,7 +6,7 @@
 실행하지 않습니다.
 
 verify, review, report, export, 안전 AI 핸드오프까지의 넓은 dashboard 순서는
-[GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md)를
+[GUI_USER_FLOW.md](GUI_USER_FLOW.md)를
 참조하세요.
 
 ## 범위

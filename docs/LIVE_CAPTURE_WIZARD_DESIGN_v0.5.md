@@ -131,6 +131,9 @@ Collector requirements:
 - Do not log credential, session, token, cookie, or personal data values.
 - Use loopback receiver endpoints only.
 - Report safe status labels when the receiver is unavailable.
+- Use the raw-free safe host metadata contract in
+  [`LIVE_CAPTURE_COLLECTOR_CONTRACT_v0.5.md`](LIVE_CAPTURE_COLLECTOR_CONTRACT_v0.5.md)
+  before collector forwarding behavior is changed.
 
 Receiver requirements:
 
@@ -349,11 +352,16 @@ Recommended follow-up slices:
    - convert receiver scope dry-run results into raw-free accept/skip summaries
      and audit event metadata
    - keep audit file writing, receiver ingest, and collector behavior unchanged
-5. `feat/live-capture-collector-filter-v0.5`
+5. `feat/live-capture-collector-filter-contract-v0.5`
+   - document and fixture the safe host metadata contract expected by the
+     receiver dry-run helper
+   - keep collector forwarding, receiver ingest, and raw traffic handling
+     unchanged
+6. `feat/live-capture-collector-filter-v0.5`
    - harden collector allowlist matching and safe status output
-6. `test/live-capture-smoke-v0.5`
+7. `test/live-capture-smoke-v0.5`
    - add synthetic local-only smoke coverage without real traffic
-7. `docs/live-capture-operations-v0.5`
+8. `docs/live-capture-operations-v0.5`
    - document operator steps after the implementation is verified
 
 ## Acceptance Criteria

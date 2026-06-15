@@ -1,0 +1,81 @@
+{
+  "schema_version": "live-capture-collector-contract-v1",
+  "description": "Synthetic raw-free metadata contract for future Live Capture collector filtering.",
+  "raw_data_included": false,
+  "collector_forwarding_changed": false,
+  "receiver_ingest_changed": false,
+  "audit_file_write_changed": false,
+  "redaction_pipeline_auto_run": false,
+  "expected_safe_host_metadata_keys": [
+    "request_host",
+    "target_host",
+    "host"
+  ],
+  "expected_safe_host_metadata_containers": [
+    "request_metadata",
+    "metadata",
+    "scope_metadata"
+  ],
+  "required_summary_fields": [
+    "summary_kind",
+    "decision",
+    "reason",
+    "match_reason",
+    "result_status",
+    "host_alias",
+    "scope_alias",
+    "raw_data_included",
+    "ingest_performed",
+    "collector_changed",
+    "receiver_ingest_changed"
+  ],
+  "required_audit_event_fields": [
+    "event_type",
+    "summary_kind",
+    "decision",
+    "reason",
+    "match_reason",
+    "result_status",
+    "accepted",
+    "dropped",
+    "host_alias",
+    "scope_alias",
+    "raw_data_included",
+    "ingest_performed",
+    "collector_changed",
+    "receiver_ingest_changed"
+  ],
+  "decision_reasons": [
+    "receiver_scope_in_scope",
+    "receiver_scope_out_of_scope",
+    "receiver_scope_missing_host",
+    "receiver_scope_invalid_host",
+    "receiver_scope_invalid_scope"
+  ],
+  "contract_cases": [
+    {
+      "case": "missing_safe_host_metadata",
+      "expected_decision": "would_drop",
+      "expected_reason": "receiver_scope_missing_host",
+      "raw_data_included": false
+    },
+    {
+      "case": "invalid_safe_host_metadata",
+      "expected_decision": "would_drop",
+      "expected_reason": "receiver_scope_invalid_host",
+      "raw_data_included": false
+    },
+    {
+      "case": "out_of_scope_safe_host_metadata",
+      "expected_decision": "would_drop",
+      "expected_reason": "receiver_scope_out_of_scope",
+      "raw_data_included": false
+    },
+    {
+      "case": "in_scope_safe_host_metadata",
+      "expected_decision": "would_accept",
+      "expected_reason": "receiver_scope_in_scope",
+      "raw_data_included": false
+    }
+  ]
+}

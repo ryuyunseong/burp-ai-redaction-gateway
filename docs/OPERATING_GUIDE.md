@@ -167,7 +167,7 @@ Audit operations prove the sanitized workflow is observable without recording
 raw HTTP values.
 
 For a focused command-by-command audit operations runbook, see
-[AUDIT_OPERATIONS_GUIDE.md](C:/coding/burp-ai-redaction-gateway/docs/AUDIT_OPERATIONS_GUIDE.md).
+[AUDIT_OPERATIONS_GUIDE.md](AUDIT_OPERATIONS_GUIDE.md).
 
 ### Review Audit Logs
 
@@ -310,8 +310,8 @@ python -m unittest discover -s tests
 python -m burp_ai_redaction_gateway verify --input out
 python -m burp_ai_redaction_gateway review --input out\demo
 python -m burp_ai_redaction_gateway report --input out\demo --output out\demo\report_draft.md --profile conservative
-C:\Users\wuro1\bin\gitleaks.exe dir -v --redact=100 --config .gitleaks.toml .
-C:\Users\wuro1\bin\gitleaks.exe git -v --redact=100 --config .gitleaks.toml .
+gitleaks dir -v --redact=100 --config .gitleaks.toml .
+gitleaks git -v --redact=100 --config .gitleaks.toml .
 scripts\git_safety_check.bat
 git diff --check
 git status --short --untracked-files=all
