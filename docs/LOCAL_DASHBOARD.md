@@ -38,6 +38,18 @@ review, report를 순서대로 실행합니다. ChatGPT 자동 전송은 하지 
 [GUI_UPLOAD_WIZARD.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_UPLOAD_WIZARD.md)를
 참조하세요.
 
+v0.5 Live Capture는 현재 read-only 준비 화면만 제공합니다.
+
+```text
+/live-capture
+```
+
+이 화면은 domain allowlist, ChatGPT 자동 전송 금지, safe files 4개, capture
+start/stop 별도 PR 경계를 안내합니다. collector/receiver 동작 변경, POST action,
+capture start/stop 실행 버튼은 포함하지 않습니다. 자세한 설계 경계는
+[LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md](C:/coding/burp-ai-redaction-gateway/docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)를
+참조하세요.
+
 화면별 운영 순서는
 [GUI_USER_FLOW.md](C:/coding/burp-ai-redaction-gateway/docs/GUI_USER_FLOW.md)를
 참조하세요. 처음 보는 사용자를 위한 간단 대시보드는
@@ -71,6 +83,7 @@ release 전에는 dashboard를 loopback으로 실행한 뒤 다음 route를 확�
 ```text
 /
 /upload
+/live-capture
 /help
 /operations
 /settings
@@ -97,6 +110,8 @@ release 전에는 dashboard를 loopback으로 실행한 뒤 다음 route를 확�
 `/simple?project=<alias>`와 `/dashboard-simple?project=<alias>`는 같은
 read-only 간단 체크 화면입니다. release smoke에서는 `formCount=0`,
 `postFormCount=0`, `buttonCount=0`, `downloadLinkCount=0`을 확인합니다.
+`/live-capture`도 read-only 준비 화면이며 `formCount=0`, `postFormCount=0`,
+`buttonCount=0`, `downloadLinkCount=0`을 확인합니다.
 
 ## Verify-first 경계
 

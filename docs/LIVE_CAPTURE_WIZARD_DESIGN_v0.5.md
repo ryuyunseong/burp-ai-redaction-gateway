@@ -1,8 +1,13 @@
 # Live Capture Wizard Design v0.5
 
 This document defines the v0.5 design boundary for a local-only Live Capture
-Wizard. It is a planning document only. It does not add a `/live-capture`
-runtime route, dashboard action, collector behavior, or receiver behavior.
+Wizard. The first runtime slice adds only a read-only `GET /live-capture`
+readiness screen. It does not add capture start/stop actions, collector
+behavior, receiver behavior, or any automatic ChatGPT handoff.
+
+현재 `/live-capture`는 read-only 준비 화면입니다. ChatGPT 자동 전송은 false이며,
+capture start/stop은 별도 PR입니다. collector/receiver 동작 변경도 이번 범위에
+포함하지 않습니다. POST action도 포함하지 않습니다.
 
 ## Goal
 
@@ -42,7 +47,8 @@ contracts. It should not create a parallel pipeline.
 
 ## Proposed Routes
 
-Future implementation may use these local dashboard routes:
+The first runtime slice exposes only the read-only readiness route. Future
+implementation may add state-changing routes in separate reviewed PRs:
 
 ```text
 GET  /live-capture
@@ -52,12 +58,21 @@ GET  /live-capture/status?session=<capture_alias>
 ```
 
 State-changing POST routes must be implemented in a separate runtime PR with
-CSRF protection and raw-free dashboard action audit. This design PR does not add
-those routes.
+CSRF protection and raw-free dashboard action audit. The current readiness
+screen does not add those routes.
 
 ## Screen Model
 
-`GET /live-capture` should show:
+`GET /live-capture` currently shows read-only preparation guidance:
+
+- domain allowlist requirement
+- Burp browsing traffic raw-data warning
+- ChatGPT automatic send status as false
+- safe files 4 candidate list
+- `capture start/stop` as a separate PR boundary
+- links back to `/`, `/help`, `/upload`, and this design document
+
+Future state-changing implementation may add:
 
 - capture label input
 - target scope input
