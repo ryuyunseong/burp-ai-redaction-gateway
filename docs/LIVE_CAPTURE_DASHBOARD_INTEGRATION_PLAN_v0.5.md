@@ -39,10 +39,11 @@ Allowed display fields:
 - receiver output alias
 - raw_data_included: false
 
-The panel may support a local-only evidence import/status panel if the imported
-evidence uses the raw-free smoke template. Imported evidence must contain counts,
+The panel may support a local-only evidence status panel if the operator
+already has a raw-free runtime smoke summary. The summary must contain counts,
 status labels, route aliases, and output aliases only. Any operator checklist
-display must remain raw-free and count-based.
+display must remain raw-free and count-based. Phase 1 must not upload, submit,
+create, or mutate evidence from the dashboard.
 
 Phase 1 must not add:
 
