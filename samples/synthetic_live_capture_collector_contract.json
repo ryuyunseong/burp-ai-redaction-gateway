@@ -1,11 +1,20 @@
 {
   "schema_version": "live-capture-collector-contract-v1",
-  "description": "Synthetic raw-free metadata contract for future Live Capture collector filtering.",
+  "description": "Synthetic raw-free metadata contract and status boundary for Live Capture collector filtering.",
   "raw_data_included": false,
-  "collector_forwarding_changed": false,
+  "collector_forwarding_changed": true,
   "receiver_ingest_changed": false,
   "audit_file_write_changed": false,
   "redaction_pipeline_auto_run": false,
+  "collector_payload_preferred_container": "request_metadata",
+  "collector_payload_preferred_key": "host",
+  "collector_status_values_included": [
+    "items_sent",
+    "skipped",
+    "out_of_scope_skipped",
+    "missing_host_skipped",
+    "invalid_host_skipped"
+  ],
   "expected_safe_host_metadata_keys": [
     "request_host",
     "target_host",
@@ -51,6 +60,12 @@
     "receiver_scope_missing_host",
     "receiver_scope_invalid_host",
     "receiver_scope_invalid_scope"
+  ],
+  "collector_decision_reasons": [
+    "collector_scope_in_scope",
+    "collector_scope_out_of_burp_scope",
+    "collector_scope_missing_host",
+    "collector_scope_invalid_host"
   ],
   "contract_cases": [
     {

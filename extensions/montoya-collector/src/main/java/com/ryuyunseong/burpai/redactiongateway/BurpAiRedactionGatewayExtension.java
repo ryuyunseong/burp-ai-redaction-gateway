@@ -51,6 +51,12 @@ public final class BurpAiRedactionGatewayExtension implements BurpExtension {
                     + result.itemsSent()
                     + ", skipped="
                     + result.skipped()
+                    + ", out_of_scope_skipped="
+                    + result.outOfScopeSkipped()
+                    + ", missing_host_skipped="
+                    + result.missingHostSkipped()
+                    + ", invalid_host_skipped="
+                    + result.invalidHostSkipped()
             );
         } catch (IOException | IllegalArgumentException exception) {
             logging.logToError(

@@ -72,7 +72,8 @@ start/stop placeholder is not collector or receiver integration.
 - safe files 4 candidate list
 - collector/receiver integration as separate PR boundary
 - links back to `/`, `/help`, `/upload`, and this design document
-Future collector integration may add:
+Collector-side filtering now provides safe host metadata and raw-free skip
+counts for loopback handoff. Future wizard integration may add:
 
 - capture label input
 - target scope input
@@ -133,7 +134,7 @@ Collector requirements:
 - Report safe status labels when the receiver is unavailable.
 - Use the raw-free safe host metadata contract in
   [`LIVE_CAPTURE_COLLECTOR_CONTRACT_v0.5.md`](LIVE_CAPTURE_COLLECTOR_CONTRACT_v0.5.md)
-  before collector forwarding behavior is changed.
+  for collector-side handoff eligibility.
 
 Receiver requirements:
 
@@ -154,8 +155,8 @@ Receiver requirements:
 
 ## Domain Match Rule
 
-Current shared guard exposes a conservative match rule that future collector
-integration should reuse:
+Current shared guard exposes a conservative match rule that collector-side
+filtering and future wizard integration should reuse:
 
 - Normalize the operator-provided scope locally.
 - Match exact host equality or a dot-bound subdomain suffix only.
@@ -358,7 +359,8 @@ Recommended follow-up slices:
    - keep collector forwarding, receiver ingest, and raw traffic handling
      unchanged
 6. `feat/live-capture-collector-filter-v0.5`
-   - harden collector allowlist matching and safe status output
+   - harden collector in-scope filtering, safe host metadata handoff, and
+     raw-free skip status output
 7. `test/live-capture-smoke-v0.5`
    - add synthetic local-only smoke coverage without real traffic
 8. `docs/live-capture-operations-v0.5`

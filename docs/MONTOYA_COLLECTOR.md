@@ -8,6 +8,10 @@ kept separate from the Python CLI under `extensions/montoya-collector/`.
 - The extension uses the Java Montoya API.
 - It reads Proxy HTTP history with a `ProxyHistoryFilter`.
 - It accepts only items whose request is in Burp suite scope.
+- It extracts `request_metadata.host` from Montoya `HttpService` safe host
+  metadata before loopback handoff.
+- It skips missing, malformed, loopback, IP literal, URL/path, or out-of-scope
+  host metadata before handoff.
 - Raw request and response values are never logged.
 - Raw values are handed off only to an HTTP endpoint on loopback.
 - The local receiver must run the existing `generate` and `verify` policy before
@@ -50,13 +54,19 @@ $env:BURP_AI_REDACTION_GATEWAY_URL = "http://127.0.0.1:8765/ingest/burp-history"
 
 The extension rejects non-loopback URLs. This prevents accidental submission of
 raw traffic to remote services. The Python receiver for this endpoint is a
-follow-up integration slice; this first slice only establishes the Burp collector
-and transport boundary.
+local loopback ingest endpoint. Collector status output reports only raw-free
+counts such as `items_sent`, `skipped`, `out_of_scope_skipped`,
+`missing_host_skipped`, and `invalid_host_skipped`.
+
+The handoff payload includes `request_metadata.host` as safe host routing
+metadata. This metadata must be a host name only, not a URL, path, query string,
+credential, cookie, token, session value, personal data, or IP literal.
 
 ## Safety Rules
 
 - Do not add raw Burp traffic to this repository.
 - Do not log request or response values from the extension.
+- Do not log target host values; use raw-free skip counts only.
 - Keep real exports and local handoff artifacts under ignored folders such as
   `local_only/`, `out/`, `raw/`, or `raw_vault/`.
 - Continue to run `python -m burp_ai_redaction_gateway verify --input out`

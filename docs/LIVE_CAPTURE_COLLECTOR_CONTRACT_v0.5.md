@@ -1,11 +1,11 @@
 # Live Capture Collector Contract v0.5
 
-This document defines the raw-free metadata contract that the future Burp
-collector filter should satisfy before it is wired into receiver ingest.
+This document defines the raw-free metadata contract that the Burp collector
+filter uses before local loopback handoff.
 
-It is a contract document only. It does not implement collector forwarding,
-receiver ingest changes, raw traffic storage, redaction pipeline automation, or
-audit file writing.
+The collector-side filter is implemented for Montoya handoff eligibility. This
+document does not add receiver ingest changes, raw traffic storage, redaction
+pipeline automation, or audit file writing.
 
 ## Purpose
 
@@ -32,10 +32,10 @@ metadata
 scope_metadata
 ```
 
-Future collector work should prefer `request_metadata.host` because it groups
-the safe routing metadata away from raw request and response values. This field
-must contain a host name only, not a URL, path, query string, credential,
-cookie, token, session value, personal data, or IP literal.
+Collector handoff uses `request_metadata.host` because it groups the safe
+routing metadata away from raw request and response values. This field must
+contain a host name only, not a URL, path, query string, credential, cookie,
+token, session value, personal data, or IP literal.
 
 ## Decision Contract
 
@@ -63,6 +63,10 @@ Skip and accept summaries use raw-free metadata only:
 The summary is not a stored audit row. A future audit writer may consume this
 metadata, but audit file writing is a separate PR.
 
+Collector-side status output also stays raw-free. It may report counts such as
+`items_sent`, `skipped`, `out_of_scope_skipped`, `missing_host_skipped`, and
+`invalid_host_skipped`, but it must not report target host values.
+
 ## Required Reason Codes
 
 The current receiver-side contract uses these reason codes:
@@ -77,13 +81,13 @@ These codes must not include target values.
 
 ## Collector Integration Checklist
 
-Before collector forwarding is changed, the implementation PR should confirm:
+The collector filter implementation confirms:
 
 - the collector sends only allowed in-scope items
 - the collector never logs request or response values
 - the collector does not include credential, cookie, token, session, personal
   data, URL, IP literal, or full local path values in status output
-- the collector sends host metadata through one of the safe keys above
+- the collector sends host metadata through `request_metadata.host`
 - missing safe host metadata maps to a raw-free skip summary
 - invalid safe host metadata maps to a raw-free skip summary
 - out-of-scope safe host metadata maps to a raw-free skip summary
@@ -94,7 +98,6 @@ Before collector forwarding is changed, the implementation PR should confirm:
 
 This contract does not add:
 
-- collector forwarding changes
 - receiver ingest behavior changes
 - raw request or response collection
 - raw preview or download

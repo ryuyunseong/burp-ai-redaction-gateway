@@ -5,6 +5,9 @@
   "in_scope": true,
   "raw_transport": "loopback_localhost",
   "raw_values_included": true,
+  "request_metadata": {
+    "host": "fake-client.example.test"
+  },
   "request": "GET /api/users/123/profile?token=DUMMY_QUERY_TOKEN&view=full HTTP/1.1\r\nHost: FAKE-client.example.test\r\nAuthorization: Bearer DUMMY_BEARER_TOKEN\r\nCookie: DUMMY_SESSION=DUMMY_COOKIE_VALUE\r\nContent-Type: application/json\r\n\r\n",
   "response": "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nSet-Cookie: DUMMY_SESSION=DUMMY_SET_COOKIE; HttpOnly\r\nAccess-Control-Allow-Origin: https://FAKE-client.example.test\r\n\r\n{\"email\":\"DUMMY-user@example.test\",\"phone\":\"010-0000-0000\",\"accountId\":\"DUMMY_ACCOUNT_12345\"}"
 }
