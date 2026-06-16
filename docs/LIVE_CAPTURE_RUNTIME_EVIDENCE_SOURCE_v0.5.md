@@ -96,7 +96,9 @@ Tradeoff:
 ## Recommended First Source
 
 Use the existing receiver output alias first. Add a local-only smoke evidence
-file only after the raw-free schema and forbidden field checks are stable.
+file only after the raw-free schema and forbidden field checks are stable. The
+planned schema boundary is tracked in
+[`LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_v0.5.md`](LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_v0.5.md).
 
 The current read-only receiver output evidence model contains only:
 

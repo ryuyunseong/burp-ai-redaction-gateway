@@ -92,6 +92,9 @@ Candidate tasks:
   [`LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md`](LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md).
 - Use the verified receiver output alias as the first read-only evidence model
   before adding any local-only evidence file intake.
+- Keep the planned local-only runtime smoke evidence schema raw-free and
+  planning-only before adding any dashboard file reader:
+  [`LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_v0.5.md`](LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_v0.5.md).
 - Validate loopback receiver behavior and error messages.
 - Check that collector logs remain raw-free.
 - Document startup, stop, retry, and troubleshooting steps.
