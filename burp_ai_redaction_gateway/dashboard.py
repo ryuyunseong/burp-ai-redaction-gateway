@@ -58,6 +58,12 @@ SAFE_PREVIEW_FILES = (
     "codex_task_prompt.md",
     "report_draft.md",
 )
+SAFE_FILE_PURPOSES = (
+    ("analysis_packet.json", "정제된 분석 metadata 후보"),
+    ("chatgpt_prompt.md", "ChatGPT 검토용 prompt 후보"),
+    ("codex_task_prompt.md", "Codex 후속 작업용 prompt 후보"),
+    ("report_draft.md", "사람이 편집할 보고서 초안"),
+)
 OUTPUT_MARKER_FILE = "analysis_packet.json"
 FINDINGS_FILE = "finding_candidates.json"
 MAX_PREVIEW_BYTES = 1024 * 1024
@@ -1133,6 +1139,18 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
     rows = "\n".join(_output_row(output) for output in outputs) or (
         '<tr><td colspan="6" class="empty">검증을 통과한 산출물 디렉터리가 없습니다.</td></tr>'
     )
+    first_output_id = outputs[0].output_id if outputs else ""
+    safe_files_href = _safe_files_href(first_output_id) if first_output_id else "/help"
+    safe_file_cards = "\n".join(
+        f"""
+        <div class="guide-card">
+          <strong>{_h(name)}</strong>
+          <span>{_h(purpose)}</span>
+          <small>AI 입력 후보 파일이며 사람이 수동 검토해야 합니다.</small>
+        </div>
+        """
+        for name, purpose in SAFE_FILE_PURPOSES
+    )
     return _page(
         "로컬 리뷰 대시보드",
         f"""
@@ -1151,6 +1169,34 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
           </div>
         </section>
         {_safety_strip()}
+        <section class="grid">
+          <div class="panel">
+            <div class="panel-head"><h2>처음 시작하기</h2><span class="muted">PowerShell을 덜 쓰고 화면 순서대로 확인합니다.</span></div>
+            <div class="file-grid">
+              <a class="guide-card" href="/upload">
+                <strong>파일 업로드</strong>
+                <span>Burp export를 선택하고 redaction, verify, review, report를 순서대로 실행합니다.</span>
+              </a>
+              <a class="guide-card" href="/live-capture">
+                <strong>Live Capture 상태 확인</strong>
+                <span>Burp 탐색 후 receiver output 준비 상태를 조회합니다. 이 화면은 실행 화면이 아닙니다.</span>
+              </a>
+              <a class="guide-card" href="{_h(safe_files_href)}">
+                <strong>AI에 넣을 수 있는 후보 파일 확인</strong>
+                <span>검증 통과 산출물이 있으면 목록의 첫 번째 safe files로 이동합니다. 최종 결과가 아닙니다.</span>
+              </a>
+              <a class="guide-card" href="/help">
+                <strong>운영 도움말</strong>
+                <span>문제가 생기면 도움말과 troubleshooting 문서 흐름을 먼저 확인합니다.</span>
+              </a>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>safe files 4개</h2><span class="muted">AI 입력 후보 allowlist입니다.</span></div>
+            <div class="file-grid">{safe_file_cards}</div>
+            <p class="muted">finding은 후보, risk는 초안이며 final severity와 CVSS는 사람이 수동 결정합니다.</p>
+          </div>
+        </section>
         <section class="metrics">
           <div class="metric"><span class="metric-value">{len(outputs)}</span><span>검증 통과 산출물</span></div>
           <div class="metric"><span class="metric-value">{blocked_count}</span><span>차단 또는 숨김</span></div>

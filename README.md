@@ -313,6 +313,13 @@ raw exchange lookup, replay, file write, external transmission은 구현하지
 python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out
 ```
 
+dashboard home `/`에는 한글 우선 quickstart landing이 있습니다. 첫 화면에서
+업로드 마법사, Live Capture 상태 확인, safe files 4개 확인, 운영 도움말로 이동할
+수 있습니다. 검증 통과 산출물이 있으면 safe files 카드는 목록의 첫 번째
+검증 통과 산출물로 이동하고, 없으면 운영 도움말로 이동합니다. 이 landing은 안내와
+링크만 제공하며 raw preview, replay, active scan, 자동 ChatGPT 전송은
+제공하지 않습니다.
+
 dashboard는 `127.0.0.1`에만 bind합니다. 설정된 root 아래 output directory를
 찾고, 선택한 output이 `verify`를 통과한 뒤에만 preview, download, 보호된
 안전 action을 허용합니다. 노출되는 안전 파일은 다음 4개뿐입니다.
