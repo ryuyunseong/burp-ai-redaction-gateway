@@ -243,6 +243,9 @@ capture integration is not implemented yet. The read-only AI handoff checklist i
 [docs/MCP_INTEGRATION_DESIGN_v0.5.md](docs/MCP_INTEGRATION_DESIGN_v0.5.md)와
 [docs/WEB_UX_KO_PLAN_v0.5.md](docs/WEB_UX_KO_PLAN_v0.5.md)를 참조하세요.
 
+See the latest raw-free Montoya runtime smoke release evidence in
+[docs/V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md](docs/V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md).
+
 ## Burp Montoya Collector
 
 Burp-side collector skeleton은

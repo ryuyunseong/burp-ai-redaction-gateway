@@ -89,6 +89,9 @@ Candidate tasks:
 - Keep a raw-free runtime smoke checklist for extension load, receiver status,
   handoff counts, skip counts, and verify evidence:
   [`LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md`](LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md).
+- Keep the latest raw-free Montoya runtime smoke release evidence connected to
+  the release decision:
+  [`V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md`](V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md).
 - Keep a raw-free troubleshooting index for Upload Wizard and Live Capture
   setup, receiver, collector, dashboard, scope, and verify failures:
   [`TROUBLESHOOTING_v0.5.md`](TROUBLESHOOTING_v0.5.md).

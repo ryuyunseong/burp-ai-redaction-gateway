@@ -73,6 +73,7 @@ raw-free metadata only:
 - Montoya gradle build.
 - Browser smoke for `/`, `/upload`, `/live-capture`, `/safe-files`, `/help`.
 - Montoya runtime smoke evidence.
+- Montoya runtime smoke release evidence.
 - Gitleaks dir.
 - Gitleaks git.
 - git_safety_check.
@@ -88,7 +89,7 @@ raw-free metadata only:
 - Dashboard live capture orchestration does not exist yet.
 - MCP server is not implemented yet.
 - Computer Use GUI automation is not a stable release gate.
-- Actual runtime smoke still depends on manual evidence.
+- Latest Montoya runtime smoke release evidence is recorded as raw-free manual evidence.
 - Candidate findings are not confirmed issues.
 - Risk remains draft.
 - Final severity and CVSS remain manual decisions.
@@ -120,6 +121,7 @@ Shared docs, PR bodies, release notes, issues, and handoff text must not include
 - [`RELEASE_READINESS_v0.5.md`](RELEASE_READINESS_v0.5.md)
 - [`ROADMAP_v0.5.md`](ROADMAP_v0.5.md)
 - [`LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md`](LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md)
+- [`V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md`](V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md)
 - [`LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md`](LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md)
 - [`LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_v0.5.md`](LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_v0.5.md)
 - [`MCP_INTEGRATION_DESIGN_v0.5.md`](MCP_INTEGRATION_DESIGN_v0.5.md)
