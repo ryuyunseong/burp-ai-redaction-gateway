@@ -4,6 +4,9 @@ This document summarizes the current v0.5 MVP scope and the checks that must
 pass before any tag or GitHub Release is considered. It is a planning and
 readiness document only.
 
+The current RC review is recorded in
+[`RC_READINESS_v0.5.md`](RC_READINESS_v0.5.md).
+
 It does not create a tag, publish a release, change runtime behavior, add a
 local evidence file reader, add upload or import evidence actions, add POST
 actions, change collector forwarding, change receiver ingest, change HMAC
@@ -104,6 +107,7 @@ Shared docs, PR bodies, release notes, and issue text must not include:
 ## Related Documents
 
 - [`ROADMAP_v0.5.md`](ROADMAP_v0.5.md)
+- [`RC_READINESS_v0.5.md`](RC_READINESS_v0.5.md)
 - [`GUI_UPLOAD_WIZARD.md`](GUI_UPLOAD_WIZARD.md)
 - [`LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md`](LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)
 - [`LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md`](LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md)
