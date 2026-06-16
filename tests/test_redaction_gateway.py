@@ -132,6 +132,10 @@ LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_DOC = (
     ROOT / "docs" / "LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md"
 )
 LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_DOC = ROOT / "docs" / "LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md"
+LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_DOC = ROOT / "docs" / "LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_v0.5.md"
+LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_FIXTURE = (
+    ROOT / "samples" / "synthetic_live_capture_local_evidence_schema.json"
+)
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
     "missing_security_headers",
@@ -2442,6 +2446,103 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, evidence_source)
         self.assertIsNone(re.search(r"https?://", evidence_source))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", evidence_source))
+
+    def test_live_capture_local_evidence_schema_is_planning_only_and_raw_free(self) -> None:
+        schema_doc = LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
+        evidence_source = LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_DOC.read_text(encoding="utf-8")
+        troubleshooting = V05_TROUBLESHOOTING_DOC.read_text(encoding="utf-8")
+
+        for linked_text in [roadmap, evidence_source, troubleshooting]:
+            self.assertIn("LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_v0.5.md", linked_text)
+
+        self.assertEqual(fixture["schema_version"], "live-capture-local-evidence-v1")
+        self.assertEqual(fixture["source_type"], "manual_runtime_smoke")
+        self.assertEqual(fixture["evidence_source"], "local_only_smoke_evidence_file")
+        self.assertEqual(fixture["extension_load_status"], "passed")
+        self.assertEqual(fixture["local_receiver_status"], "passed")
+        self.assertGreaterEqual(fixture["in_scope_handoff_count"], 1)
+        self.assertGreaterEqual(fixture["out_of_scope_skip_count"], 1)
+        self.assertEqual(fixture["raw_markers_in_extension_output"], 0)
+        self.assertFalse(fixture["target_identifiers_recorded"])
+        self.assertFalse(fixture["raw_traffic_recorded"])
+        self.assertFalse(fixture["credential_values_recorded"])
+        self.assertFalse(fixture["raw_data_included"])
+
+        for required in [
+            "planning document only",
+            "does not add runtime behavior",
+            "does not add file read behavior",
+            "does not add upload or import behavior",
+            "does not add POST action behavior",
+            "does not add dashboard live capture integration",
+            "Future Intake Requirements",
+            "path traversal checks",
+            "forbidden directory checks",
+            "schema validation",
+            "strict forbidden field checks",
+            "raw-free error messages",
+            "receiver output alias",
+            "raw_data_included: false",
+            "Findings remain candidates",
+            "Risk remains draft",
+            "Final severity and CVSS remain manual decisions",
+            "not sharing approval",
+        ]:
+            self.assertIn(required, schema_doc)
+
+        required_fields = [
+            "schema_version",
+            "source_type",
+            "evidence_source",
+            "extension_load_status",
+            "local_receiver_status",
+            "in_scope_handoff_count",
+            "out_of_scope_skip_count",
+            "missing_host_skipped",
+            "invalid_host_skipped",
+            "receiver_verify_status",
+            "receiver_output_alias",
+            "raw_markers_in_extension_output",
+            "target_identifiers_recorded",
+            "raw_traffic_recorded",
+            "credential_values_recorded",
+            "raw_data_included",
+            "created_at_utc",
+        ]
+        self.assertEqual(set(required_fields), set(fixture))
+        for field in required_fields:
+            self.assertIn(field, schema_doc)
+
+        combined = "\n".join([schema_doc, fixture_text])
+        for forbidden in [
+            "safe-to-share",
+            "confirmed vulnerability",
+            "confirmed issue",
+            "final CVSS",
+            "raw_request",
+            "raw_response",
+            "cookie_value",
+            "authorization_value",
+            "Authorization: Bearer",
+            "Cookie:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "actual.local",
+            "real_export_",
+            "upload evidence",
+            "submit evidence",
+            "create evidence",
+            "run capture",
+            "start capture from dashboard",
+            "raw preview/download action is approved",
+            "external sharing clearance",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
     def test_live_capture_receiver_output_evidence_model_is_alias_based_and_raw_free(self) -> None:
         empty_evidence = _build_live_capture_receiver_output_evidence(None)
