@@ -213,10 +213,11 @@ Completed:
 6. `feat/live-capture-receiver-skip-audit-v0.5`
 7. `feat/live-capture-collector-filter-contract-v0.5`
 8. `feat/live-capture-collector-filter-v0.5`
+9. `test/live-capture-scope-drift-matrix-v0.5`
 
 Next:
 
-1. `test/live-capture-scope-drift-matrix-v0.5`
+1. `test/live-capture-java-scope-matrix-v0.5`
 2. `docs/v0.5-troubleshooting-index`
 3. `feat/v0.5-montoya-live-validation`
 4. `feat/v0.5-candidate-triage-quality`
