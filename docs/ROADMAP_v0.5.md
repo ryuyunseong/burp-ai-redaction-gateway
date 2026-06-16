@@ -90,6 +90,8 @@ Candidate tasks:
 - Define the future runtime evidence source before connecting runtime smoke
   evidence to the dashboard:
   [`LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md`](LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md).
+- Use the verified receiver output alias as the first read-only evidence model
+  before adding any local-only evidence file intake.
 - Validate loopback receiver behavior and error messages.
 - Check that collector logs remain raw-free.
 - Document startup, stop, retry, and troubleshooting steps.
