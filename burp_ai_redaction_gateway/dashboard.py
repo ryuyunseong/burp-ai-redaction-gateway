@@ -174,6 +174,17 @@ class LiveCaptureActionResult:
 
 
 @dataclass(frozen=True)
+class LiveCaptureReceiverOutputEvidence:
+    evidence_source: str
+    receiver_output_alias: str
+    receiver_verify_status: str
+    safe_file_existence_status: str
+    candidate_count: int
+    raw_data_included: bool
+    safe_navigation_available: bool
+
+
+@dataclass(frozen=True)
 class AiSafePreflight:
     output: DashboardOutput
     file_statuses: list[tuple[str, str]]
@@ -1344,6 +1355,7 @@ def render_live_capture_readiness(
     output: DashboardOutput | None = None,
 ) -> str:
     safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
+    receiver_evidence = _build_live_capture_receiver_output_evidence(output)
     result_panel = ""
     if result:
         summary = "".join(f"<li>{_h(line)}</li>" for line in result.summary_lines)
@@ -1359,18 +1371,21 @@ def render_live_capture_readiness(
             <ul class="safe-list">{summary}</ul>
           </div>
         """
-    receiver_output_alias = output.label if output else "not selected"
-    receiver_verify_status = "passed" if output else "not selected"
-    safe_navigation_status = "available" if output else "hidden until verify passes"
+    receiver_output_alias = receiver_evidence.receiver_output_alias
+    receiver_verify_status = receiver_evidence.receiver_verify_status
+    safe_navigation_status = receiver_evidence.safe_file_existence_status
+    raw_data_included = "true" if receiver_evidence.raw_data_included else "false"
     safe_navigation = (
         f"""
           <div class="panel">
             <div class="panel-head"><h2>Verified receiver output navigation</h2><span class="muted">read-only links</span></div>
             <dl class="facts">
-              <div><dt>receiver output alias</dt><dd>{_h(output.label)}</dd></div>
+              <div><dt>evidence source</dt><dd>{_h(receiver_evidence.evidence_source)}</dd></div>
+              <div><dt>receiver output alias</dt><dd>{_h(receiver_evidence.receiver_output_alias)}</dd></div>
               <div><dt>receiver verify status</dt><dd>{_status_badge("passed")}</dd></div>
-              <div><dt>safe files</dt><dd>{_status_badge("available")}</dd></div>
-              <div><dt>raw_data_included</dt><dd>false</dd></div>
+              <div><dt>safe files</dt><dd>{_status_badge(receiver_evidence.safe_file_existence_status)}</dd></div>
+              <div><dt>candidate count</dt><dd>{_h(str(receiver_evidence.candidate_count))}</dd></div>
+              <div><dt>raw_data_included</dt><dd>{raw_data_included}</dd></div>
             </dl>
             <ul class="safe-list">
               <li><a href="{_simple_dashboard_href(output.output_id)}">simple dashboard</a></li>
@@ -1381,14 +1396,16 @@ def render_live_capture_readiness(
             </ul>
           </div>
         """
-        if output
+        if output and receiver_evidence.safe_navigation_available
         else """
           <div class="panel">
             <div class="panel-head"><h2>Verified receiver output navigation</h2><span class="muted">hidden until verify passes</span></div>
             <dl class="facts">
+              <div><dt>evidence source</dt><dd>receiver_output_alias</dd></div>
               <div><dt>receiver output alias</dt><dd>not selected</dd></div>
               <div><dt>receiver verify status</dt><dd>not selected</dd></div>
               <div><dt>safe files</dt><dd>hidden until verify passes</dd></div>
+              <div><dt>candidate count</dt><dd>0</dd></div>
               <div><dt>raw_data_included</dt><dd>false</dd></div>
             </dl>
             <p class="muted">Open this page with a verified receiver output alias to show safe navigation links.</p>
@@ -1415,7 +1432,8 @@ def render_live_capture_readiness(
           <div class="rail"><span>receiver verify</span><strong>{_h(receiver_verify_status)}</strong></div>
           <div class="rail"><span>receiver output alias</span><strong>{_h(receiver_output_alias)}</strong></div>
           <div class="rail"><span>safe navigation</span><strong>{_h(safe_navigation_status)}</strong></div>
-          <div class="rail"><span>raw_data_included</span><strong>false</strong></div>
+          <div class="rail"><span>evidence source</span><strong>{_h(receiver_evidence.evidence_source)}</strong></div>
+          <div class="rail"><span>raw_data_included</span><strong>{raw_data_included}</strong></div>
         </section>
         <section class="grid">
           {result_panel}
@@ -1430,7 +1448,10 @@ def render_live_capture_readiness(
               <div><dt>invalid_host_skipped</dt><dd>not recorded in dashboard</dd></div>
               <div><dt>receiver verify status</dt><dd>{_h(receiver_verify_status)}</dd></div>
               <div><dt>receiver output alias</dt><dd>{_h(receiver_output_alias)}</dd></div>
-              <div><dt>raw_data_included</dt><dd>false</dd></div>
+              <div><dt>safe file existence status</dt><dd>{_h(receiver_evidence.safe_file_existence_status)}</dd></div>
+              <div><dt>candidate count</dt><dd>{_h(str(receiver_evidence.candidate_count))}</dd></div>
+              <div><dt>evidence source</dt><dd>{_h(receiver_evidence.evidence_source)}</dd></div>
+              <div><dt>raw_data_included</dt><dd>{raw_data_included}</dd></div>
             </dl>
           </div>
           {safe_navigation}
@@ -2703,6 +2724,31 @@ def _verified_output(root: Path, policy: RedactionPolicy, output_id: str) -> Das
         candidate_count=len(_load_candidates(output_dir)),
         prompt_files=[name for name in SAFE_PREVIEW_FILES if (output_dir / name).is_file()],
         report_available=(output_dir / "report_draft.md").is_file(),
+    )
+
+
+def _build_live_capture_receiver_output_evidence(
+    output: DashboardOutput | None,
+) -> LiveCaptureReceiverOutputEvidence:
+    if output is None:
+        return LiveCaptureReceiverOutputEvidence(
+            evidence_source="receiver_output_alias",
+            receiver_output_alias="not selected",
+            receiver_verify_status="not selected",
+            safe_file_existence_status="hidden until verify passes",
+            candidate_count=0,
+            raw_data_included=False,
+            safe_navigation_available=False,
+        )
+
+    return LiveCaptureReceiverOutputEvidence(
+        evidence_source="receiver_output_alias",
+        receiver_output_alias=output.label,
+        receiver_verify_status="passed",
+        safe_file_existence_status="available",
+        candidate_count=output.candidate_count,
+        raw_data_included=False,
+        safe_navigation_available=True,
     )
 
 

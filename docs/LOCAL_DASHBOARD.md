@@ -70,9 +70,11 @@ execution buttons, raw preview, raw download, replay, active scan, collector
 forwarding changes, receiver ingest changes, or automatic ChatGPT handoff.
 Runtime smoke evidence source planning is tracked in
 [LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md](LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md).
-The dashboard should read only metadata-only status labels, counts, route
-aliases, and receiver output aliases. It should not upload, create, mutate, or
-display raw evidence.
+The first read-only evidence model derives metadata from a verified receiver
+output alias only. It exposes the receiver output alias, verify status, safe
+file existence status, candidate count, and `raw_data_included: false`. It
+should not upload, create, mutate, import local-only evidence files, or display
+raw evidence.
 
 화면별 운영 순서는
 [GUI_USER_FLOW.md](GUI_USER_FLOW.md)를

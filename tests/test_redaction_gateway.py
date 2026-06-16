@@ -40,6 +40,8 @@ from burp_ai_redaction_gateway.cli import main
 from burp_ai_redaction_gateway.dashboard import (
     DashboardConfig,
     DashboardError,
+    _build_live_capture_receiver_output_evidence,
+    _verified_output,
     create_dashboard_server,
     write_dashboard_action_audit_event,
 )
@@ -2379,6 +2381,9 @@ class RedactionGatewayTests(unittest.TestCase):
 
         for required in [
             "planning document only",
+            "planning document only for new evidence intake sources",
+            "first implemented source is a read-only receiver output evidence model",
+            "does not read local-only smoke evidence files or accept manual evidence input",
             "read-only status panel",
             "Candidate Evidence Sources",
             "Existing Receiver Output Alias",
@@ -2395,6 +2400,8 @@ class RedactionGatewayTests(unittest.TestCase):
             "dashboard state-changing actions",
             "metadata-only fields",
             "receiver output alias",
+            "evidence_source: receiver_output_alias",
+            "safe file existence status",
             "raw_data_included",
             "Safe navigation links must stay hidden unless receiver output verification has",
             "Findings remain candidates",
@@ -2436,6 +2443,43 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIsNone(re.search(r"https?://", evidence_source))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", evidence_source))
 
+    def test_live_capture_receiver_output_evidence_model_is_alias_based_and_raw_free(self) -> None:
+        empty_evidence = _build_live_capture_receiver_output_evidence(None)
+        self.assertEqual(empty_evidence.evidence_source, "receiver_output_alias")
+        self.assertEqual(empty_evidence.receiver_output_alias, "not selected")
+        self.assertEqual(empty_evidence.receiver_verify_status, "not selected")
+        self.assertEqual(empty_evidence.safe_file_existence_status, "hidden until verify passes")
+        self.assertEqual(empty_evidence.candidate_count, 0)
+        self.assertFalse(empty_evidence.raw_data_included)
+        self.assertFalse(empty_evidence.safe_navigation_available)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "out"
+            output = root / "generated"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+            dashboard_output = _verified_output(root, load_policy(None), "generated")
+
+            evidence = _build_live_capture_receiver_output_evidence(dashboard_output)
+            self.assertEqual(evidence.evidence_source, "receiver_output_alias")
+            self.assertEqual(evidence.receiver_output_alias, "generated")
+            self.assertEqual(evidence.receiver_verify_status, "passed")
+            self.assertEqual(evidence.safe_file_existence_status, "available")
+            self.assertEqual(evidence.candidate_count, 22)
+            self.assertFalse(evidence.raw_data_included)
+            self.assertTrue(evidence.safe_navigation_available)
+
+            serialized = json.dumps(evidence.__dict__, sort_keys=True)
+            for forbidden in [
+                "raw_request",
+                "raw_response",
+                "DUMMY_COOKIE_VALUE",
+                "DUMMY_BEARER_TOKEN",
+                "Cookie:",
+                "Authorization:",
+                str(root),
+            ]:
+                self.assertNotIn(forbidden, serialized)
+
     def test_dashboard_live_capture_read_only_status_panel_hides_actions_and_raw_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir) / "out"
@@ -2472,6 +2516,9 @@ class RedactionGatewayTests(unittest.TestCase):
                     self.assertIn("receiver output alias", body)
                     self.assertIn("not selected", body)
                     self.assertIn("hidden until verify passes", body)
+                    self.assertIn("evidence source", body)
+                    self.assertIn("receiver_output_alias", body)
+                    self.assertIn("candidate count", body)
                     self.assertIn("raw_data_included", body)
                     self.assertIn("false", body)
                     self.assertIn("Findings remain candidates", body)
@@ -2488,6 +2535,11 @@ class RedactionGatewayTests(unittest.TestCase):
                     self.assertIn("generated", linked_body)
                     self.assertIn("receiver verify status", linked_body)
                     self.assertIn("passed", linked_body)
+                    self.assertIn("evidence source", linked_body)
+                    self.assertIn("receiver_output_alias", linked_body)
+                    self.assertIn("safe file existence status", linked_body)
+                    self.assertIn("candidate count", linked_body)
+                    self.assertIn(">22<", linked_body)
                     self.assertIn("/simple?project=generated", linked_body)
                     self.assertIn("/safe-files?project=generated", linked_body)
                     self.assertIn("/triage?project=generated", linked_body)

@@ -2,7 +2,10 @@
 
 This document defines how the `/live-capture` read-only dashboard status panel
 should receive runtime smoke evidence in a future implementation. It is a
-planning document only.
+planning document only for new evidence intake sources.
+
+The first implemented source is a read-only receiver output evidence model that
+derives metadata from an already verified receiver output alias. It does not read local-only smoke evidence files or accept manual evidence input.
 
 It does not add runtime behavior, collector forwarding, receiver ingest,
 dashboard state-changing actions, evidence upload, evidence mutation, raw
@@ -94,6 +97,15 @@ Tradeoff:
 
 Use the existing receiver output alias first. Add a local-only smoke evidence
 file only after the raw-free schema and forbidden field checks are stable.
+
+The current read-only receiver output evidence model contains only:
+
+- evidence_source: receiver_output_alias
+- receiver output alias
+- receiver verify status
+- safe file existence status
+- candidate count
+- raw_data_included: false
 
 The first dashboard integration should keep this order:
 
