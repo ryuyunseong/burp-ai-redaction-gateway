@@ -22,6 +22,8 @@ The current v0.5 MVP candidate includes:
 - Runtime smoke checklist.
 - Troubleshooting index.
 - Local evidence schema planning document.
+- MCP integration design document.
+- Korean-first web UX planning document.
 - Safe files four-file allowlist:
   - `analysis_packet.json`
   - `chatgpt_prompt.md`
@@ -39,6 +41,8 @@ The current v0.5 MVP candidate excludes:
 - Local evidence file reader.
 - Upload or import evidence action.
 - Dashboard state-changing live capture orchestration.
+- New MCP runtime behavior.
+- Automatic MCP-based ChatGPT handoff.
 - HMAC secret UI.
 - File retention or delete policy changes.
 - Automatic final severity or CVSS decisions.
@@ -106,6 +110,8 @@ Shared docs, PR bodies, release notes, and issue text must not include:
 - [`LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md`](LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md)
 - [`LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md`](LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md)
 - [`LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_v0.5.md`](LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_v0.5.md)
+- [`MCP_INTEGRATION_DESIGN_v0.5.md`](MCP_INTEGRATION_DESIGN_v0.5.md)
+- [`WEB_UX_KO_PLAN_v0.5.md`](WEB_UX_KO_PLAN_v0.5.md)
 - [`TROUBLESHOOTING_v0.5.md`](TROUBLESHOOTING_v0.5.md)
 
 ## Release Decision Boundary
