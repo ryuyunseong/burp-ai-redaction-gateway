@@ -237,6 +237,8 @@ capture integration is not implemented yet. The read-only AI handoff checklist i
 [docs/ROADMAP_v0.5.md](docs/ROADMAP_v0.5.md)를
 참조하세요. v0.5 MVP release readiness 범위와 점검 항목은
 [docs/RELEASE_READINESS_v0.5.md](docs/RELEASE_READINESS_v0.5.md)를
+참조하세요. v0.5 RC 후보 판단은
+[docs/RC_READINESS_v0.5.md](docs/RC_READINESS_v0.5.md)를
 참조하세요. v0.5 MCP 연동 설계와 한글 웹 UX 개선 계획은
 [docs/MCP_INTEGRATION_DESIGN_v0.5.md](docs/MCP_INTEGRATION_DESIGN_v0.5.md)와
 [docs/WEB_UX_KO_PLAN_v0.5.md](docs/WEB_UX_KO_PLAN_v0.5.md)를 참조하세요.

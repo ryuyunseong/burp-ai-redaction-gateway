@@ -137,6 +137,7 @@ LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_FIXTURE = (
     ROOT / "samples" / "synthetic_live_capture_local_evidence_schema.json"
 )
 V05_RELEASE_READINESS_DOC = ROOT / "docs" / "RELEASE_READINESS_v0.5.md"
+V05_RC_READINESS_DOC = ROOT / "docs" / "RC_READINESS_v0.5.md"
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
@@ -2662,6 +2663,110 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
         self.assertIsNone(re.search(r"https?://", readiness))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", readiness))
+
+    def test_v05_rc_readiness_review_is_scope_based_and_raw_free(self) -> None:
+        rc_readiness = V05_RC_READINESS_DOC.read_text(encoding="utf-8")
+        readiness = V05_RELEASE_READINESS_DOC.read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        for linked_text in [readiness, roadmap, readme]:
+            self.assertIn("RC_READINESS_v0.5.md", linked_text)
+
+        self.assertIn("RC possible with follow-up required", rc_readiness)
+        self.assertIn("This document records whether the current `main` branch can be treated", rc_readiness)
+
+        for included in [
+            "Upload Wizard",
+            "Local dashboard",
+            "Home Korean quickstart landing",
+            "/live-capture",
+            "Receiver output alias evidence model",
+            "Montoya collector safe host filter",
+            "Receiver dry-run and skip summary helper",
+            "Runtime smoke checklist",
+            "Troubleshooting index",
+            "Local evidence schema planning document",
+            "MCP integration design",
+            "Korean-first web UX plan",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+        ]:
+            self.assertIn(included, rc_readiness)
+
+        for excluded in [
+            "ChatGPT automatic handoff",
+            "MCP server implementation",
+            "Raw preview or raw download",
+            "Replay",
+            "Active scan",
+            "Local evidence file reader",
+            "Upload or import evidence action",
+            "Dashboard state-changing live capture orchestration",
+            "HMAC secret UI",
+            "File retention or delete policy changes",
+            "Automatic final severity or CVSS decisions",
+        ]:
+            self.assertIn(excluded, rc_readiness)
+
+        for checklist_item in [
+            "compileall",
+            "unittest",
+            "verify --input out",
+            "review/report demo",
+            "Montoya gradle build",
+            "Browser smoke for `/`, `/upload`, `/live-capture`, `/safe-files`, `/help`",
+            "Montoya runtime smoke evidence",
+            "Gitleaks dir",
+            "Gitleaks git",
+            "git_safety_check",
+            "git diff --check",
+            "PR body hygiene",
+            "docs forbidden marker check",
+            "no tag until explicit approval",
+            "no GitHub Release until explicit approval",
+        ]:
+            self.assertIn(checklist_item, rc_readiness)
+
+        for required_boundary in [
+            "The local evidence reader does not exist yet",
+            "Dashboard live capture orchestration does not exist yet",
+            "MCP server is not implemented yet",
+            "Computer Use GUI automation is not a stable release gate",
+            "Actual runtime smoke still depends on manual evidence",
+            "Candidate findings are not confirmed issues",
+            "Risk remains draft",
+            "Final severity and CVSS remain manual decisions",
+            "Passing smoke evidence is readiness evidence only",
+            "Passing smoke evidence is not sharing approval",
+            "A tag or GitHub Release must not be created without explicit approval",
+        ]:
+            self.assertIn(required_boundary, rc_readiness)
+
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "raw_request",
+            "raw_response",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+        ]:
+            self.assertNotIn(forbidden, rc_readiness)
+        self.assertIsNone(re.search(r"https?://", rc_readiness))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", rc_readiness))
 
     def test_mcp_and_web_ux_plan_docs_are_planning_only_and_raw_free(self) -> None:
         mcp_design = MCP_INTEGRATION_DESIGN_DOC.read_text(encoding="utf-8")

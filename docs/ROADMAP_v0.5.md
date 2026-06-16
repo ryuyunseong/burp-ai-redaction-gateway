@@ -10,6 +10,8 @@ policy, or release status.
 
 The v0.5 MVP release readiness boundary is tracked in
 [`RELEASE_READINESS_v0.5.md`](RELEASE_READINESS_v0.5.md).
+The current RC readiness review is tracked in
+[`RC_READINESS_v0.5.md`](RC_READINESS_v0.5.md).
 MCP integration and Korean-first web UX planning are tracked in
 [`MCP_INTEGRATION_DESIGN_v0.5.md`](MCP_INTEGRATION_DESIGN_v0.5.md) and
 [`WEB_UX_KO_PLAN_v0.5.md`](WEB_UX_KO_PLAN_v0.5.md).
@@ -268,10 +270,12 @@ Completed:
 11. `docs/live-capture-runtime-smoke-checklist-v0.5`
 12. `docs/v0.5-troubleshooting-index`
 13. `docs/v0.5-release-readiness`
+14. `docs/mcp-and-web-ux-plan-v0.5`
+15. `feat/web-ux-ko-quickstart-landing-v0.5`
 
 Next:
 
-1. `docs/mcp-and-web-ux-plan-v0.5`
+1. `docs/v0.5-rc-readiness-review`
 2. `docs/live-capture-dashboard-integration-plan-v0.5`
 3. `feat/v0.5-live-capture-read-only-status-panel`
 4. `feat/v0.5-montoya-live-validation`
