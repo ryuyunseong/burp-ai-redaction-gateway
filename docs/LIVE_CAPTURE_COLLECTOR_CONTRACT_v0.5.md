@@ -67,6 +67,15 @@ Collector-side status output also stays raw-free. It may report counts such as
 `items_sent`, `skipped`, `out_of_scope_skipped`, `missing_host_skipped`, and
 `invalid_host_skipped`, but it must not report target host values.
 
+## Scope Drift Matrix
+
+`docs/LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_v0.5.md` and
+`samples/synthetic_live_capture_scope_drift_matrix.json` document the synthetic
+host metadata cases used to compare collector gating with the Python receiver
+dry-run guard. This matrix is raw-free and does not change collector
+forwarding, receiver ingest, dashboard live capture integration, replay, active
+scan, raw preview, retention, HMAC, or ChatGPT handoff behavior.
+
 ## Required Reason Codes
 
 The current receiver-side contract uses these reason codes:

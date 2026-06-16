@@ -75,6 +75,9 @@ Candidate tasks:
   synthetic fixture coverage, and skip status counts.
 - Confirm in-scope filtering behavior with synthetic or authorized local-only
   inputs.
+- Keep a synthetic scope drift matrix for collector host gating and receiver
+  dry-run guard expectations:
+  [`LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_v0.5.md`](LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_v0.5.md).
 - Validate loopback receiver behavior and error messages.
 - Check that collector logs remain raw-free.
 - Document startup, stop, retry, and troubleshooting steps.
@@ -213,7 +216,7 @@ Completed:
 
 Next:
 
-1. `test/live-capture-smoke-v0.5`
+1. `test/live-capture-scope-drift-matrix-v0.5`
 2. `docs/v0.5-troubleshooting-index`
 3. `feat/v0.5-montoya-live-validation`
 4. `feat/v0.5-candidate-triage-quality`

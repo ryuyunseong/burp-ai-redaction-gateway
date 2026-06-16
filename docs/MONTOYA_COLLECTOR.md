@@ -73,6 +73,17 @@ credential, cookie, token, session value, personal data, or IP literal.
   before using generated output.
 - Continue to run Gitleaks before pushing.
 
+## Drift Matrix
+
+The synthetic scope drift matrix documents how collector host gating and the
+Python receiver scope dry-run guard should classify safe host metadata cases.
+It is a fixture and documentation boundary only; it does not add receiver
+ingest, dashboard live capture integration, replay, active scan, raw preview,
+or ChatGPT automatic handoff behavior.
+
+See `docs/LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_v0.5.md` and
+`samples/synthetic_live_capture_scope_drift_matrix.json`.
+
 ## References
 
 - PortSwigger: Creating Burp extensions
