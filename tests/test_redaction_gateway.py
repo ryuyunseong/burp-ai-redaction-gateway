@@ -121,6 +121,10 @@ LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_JAVA_TEST = (
     / "redactiongateway"
     / "CollectorSafeHostMetadataMatrixTest.java"
 )
+LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_DOC = ROOT / "docs" / "LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md"
+LIVE_CAPTURE_RUNTIME_SMOKE_EVIDENCE_TEMPLATE = (
+    ROOT / "docs" / "templates" / "LIVE_CAPTURE_RUNTIME_SMOKE_EVIDENCE_TEMPLATE.md"
+)
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
     "missing_security_headers",
@@ -2181,6 +2185,51 @@ class RedactionGatewayTests(unittest.TestCase):
         fixture_text = json.dumps(fixture, sort_keys=True)
         for forbidden_key in ["raw_request", "raw_response", "cookie_value", "authorization_value"]:
             self.assertNotIn(forbidden_key, fixture_text)
+
+    def test_live_capture_runtime_smoke_checklist_is_raw_free_and_count_based(self) -> None:
+        checklist = LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_DOC.read_text(encoding="utf-8")
+        template = LIVE_CAPTURE_RUNTIME_SMOKE_EVIDENCE_TEMPLATE.read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
+        combined = "\n".join([checklist, template, roadmap])
+
+        self.assertIn("LIVE_CAPTURE_RUNTIME_SMOKE_EVIDENCE_TEMPLATE.md", checklist)
+        self.assertIn("LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md", roadmap)
+        for marker in [
+            "extension load",
+            "local receiver",
+            "in-scope handoff count",
+            "out-of-scope skip count",
+            "missing_host_skipped",
+            "invalid_host_skipped",
+            "receiver verify",
+            "raw markers in extension output",
+            "actual target identifiers recorded",
+            "raw request/response recorded",
+            "token/JWT/session values recorded",
+            "final severity or CVSS",
+        ]:
+            self.assertIn(marker, combined)
+
+        for failure_category in [
+            "extension_load_failed",
+            "receiver_unavailable",
+            "no_in_scope_handoff",
+            "no_out_of_scope_skip",
+            "verify_failed_safely",
+        ]:
+            self.assertIn(failure_category, checklist)
+
+        for forbidden in [
+            "safe-to-share",
+            "confirmed vulnerability",
+            "raw_request",
+            "raw_response",
+            "cookie_value",
+            "authorization_value",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
     def test_dashboard_live_capture_session_placeholder_requires_csrf_and_hides_raw_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

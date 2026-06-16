@@ -78,6 +78,9 @@ Candidate tasks:
 - Keep a synthetic scope drift matrix for collector host gating and receiver
   dry-run guard expectations:
   [`LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_v0.5.md`](LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_v0.5.md).
+- Keep a raw-free runtime smoke checklist for extension load, receiver status,
+  handoff counts, skip counts, and verify evidence:
+  [`LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md`](LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md).
 - Validate loopback receiver behavior and error messages.
 - Check that collector logs remain raw-free.
 - Document startup, stop, retry, and troubleshooting steps.
@@ -214,10 +217,11 @@ Completed:
 7. `feat/live-capture-collector-filter-contract-v0.5`
 8. `feat/live-capture-collector-filter-v0.5`
 9. `test/live-capture-scope-drift-matrix-v0.5`
+10. `test/live-capture-java-scope-matrix-v0.5`
 
 Next:
 
-1. `test/live-capture-java-scope-matrix-v0.5`
+1. `docs/live-capture-runtime-smoke-checklist-v0.5`
 2. `docs/v0.5-troubleshooting-index`
 3. `feat/v0.5-montoya-live-validation`
 4. `feat/v0.5-candidate-triage-quality`
