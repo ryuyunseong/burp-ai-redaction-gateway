@@ -136,6 +136,7 @@ LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_DOC = ROOT / "docs" / "LIVE_CAPTURE_LOCAL_EVI
 LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_FIXTURE = (
     ROOT / "samples" / "synthetic_live_capture_local_evidence_schema.json"
 )
+V05_RELEASE_READINESS_DOC = ROOT / "docs" / "RELEASE_READINESS_v0.5.md"
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
     "missing_security_headers",
@@ -2543,6 +2544,97 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v05_release_readiness_doc_is_scope_based_and_raw_free(self) -> None:
+        readiness = V05_RELEASE_READINESS_DOC.read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        troubleshooting = V05_TROUBLESHOOTING_DOC.read_text(encoding="utf-8")
+
+        for linked_text in [roadmap, readme, troubleshooting]:
+            self.assertIn("RELEASE_READINESS_v0.5.md", linked_text)
+
+        for included in [
+            "Upload Wizard",
+            "Local dashboard",
+            "/live-capture",
+            "Receiver output alias evidence model",
+            "Montoya collector safe host filter",
+            "Receiver dry-run and skip summary helper",
+            "Runtime smoke checklist",
+            "Troubleshooting index",
+            "Local evidence schema planning document",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+        ]:
+            self.assertIn(included, readiness)
+
+        for excluded in [
+            "ChatGPT automatic handoff",
+            "Raw preview or raw download",
+            "Replay",
+            "Active scan",
+            "Local evidence file reader",
+            "Upload or import evidence action",
+            "Dashboard state-changing live capture orchestration",
+            "HMAC secret UI",
+            "File retention or delete policy changes",
+            "Automatic final severity or CVSS decisions",
+        ]:
+            self.assertIn(excluded, readiness)
+
+        for checklist_item in [
+            "Python compileall",
+            "Python unittest",
+            "verify --input out",
+            "Demo review and report generation",
+            "Montoya Gradle build",
+            "Browser smoke for `/upload`, `/live-capture`, `/safe-files`, and `/simple`",
+            "Gitleaks directory scan",
+            "Gitleaks git history scan",
+            "Git safety check",
+            "Git diff whitespace check",
+            "Actual Burp runtime smoke raw-free evidence",
+            "PR body hygiene",
+            "Docs forbidden marker check",
+            "No tag until explicit approval",
+        ]:
+            self.assertIn(checklist_item, readiness)
+
+        for required_boundary in [
+            "The local evidence reader does not exist yet",
+            "Dashboard live capture orchestration does not exist yet",
+            "Computer Use GUI automation is not a stable release gate",
+            "Actual runtime smoke still depends on manual evidence",
+            "Candidate findings are not confirmed issues",
+            "Risk remains draft",
+            "Final severity and CVSS remain manual decisions",
+            "Passing smoke evidence is readiness evidence only",
+            "Passing smoke evidence is not sharing approval",
+        ]:
+            self.assertIn(required_boundary, readiness)
+
+        combined = "\n".join([readiness, roadmap, troubleshooting])
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "raw_request",
+            "raw_response",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", readiness))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", readiness))
 
     def test_live_capture_receiver_output_evidence_model_is_alias_based_and_raw_free(self) -> None:
         empty_evidence = _build_live_capture_receiver_output_evidence(None)
