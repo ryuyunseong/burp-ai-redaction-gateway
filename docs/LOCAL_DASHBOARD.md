@@ -13,6 +13,23 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 `out`처럼 명시적인 root를 사용합니다. dashboard는 root 아래의 output
 directory만 찾고, path traversal과 금지 directory 접근을 차단합니다.
 
+## Home quickstart landing
+
+dashboard home `/`은 한글 우선 quickstart landing을 표시합니다.
+
+- `파일 업로드`: `/upload`에서 Burp export를 선택하고 redaction, verify,
+  review, report를 순서대로 실행합니다.
+- `Live Capture 상태 확인`: `/live-capture`에서 receiver output 준비 상태를
+  조회합니다. 이 화면은 실행 화면이 아닙니다.
+- `AI에 넣을 수 있는 후보 파일 확인`: 검증 통과 후 `/safe-files`에서 safe
+  files 4개를 확인합니다.
+- `운영 도움말`: `/help`에서 운영 흐름과 troubleshooting 문서 위치를 확인합니다.
+
+home quickstart는 안내와 링크만 제공하며 raw preview, raw download, replay,
+active scan, 자동 ChatGPT 전송, file delete, retention 변경을 제공하지 않습니다.
+safe files가 모두 보여도 finding은 후보이고 risk는 초안이며 final severity와
+CVSS는 사람이 수동 결정합니다.
+
 dashboard에는 조회 전용 운영 인덱스가 있습니다.
 
 ```text
