@@ -10,6 +10,12 @@ Current `/live-capture` state is a session placeholder. It validates target
 domains through the shared scope guard, stores safe aliases only, and keeps
 actual capture integration separate.
 
+Dashboard integration after the runtime smoke is planned separately in
+[LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md](LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md).
+That plan keeps the first dashboard slice read-only and does not approve new
+collector forwarding, receiver ingest, raw preview, raw download, replay, active
+scan, or automatic ChatGPT handoff behavior.
+
 ## Goal
 
 The Live Capture Wizard should let an operator start from a local dashboard,
@@ -365,6 +371,11 @@ Recommended follow-up slices:
    - add synthetic local-only smoke coverage without real traffic
 8. `docs/live-capture-operations-v0.5`
    - document operator steps after the implementation is verified
+9. `docs/live-capture-dashboard-integration-plan-v0.5`
+   - define the phase order for a read-only status panel, verified receiver
+     output navigation, and any later CSRF-protected dashboard action review
+   - keep runtime behavior, collector forwarding, receiver ingest, raw preview,
+     raw download, replay, active scan, and automatic ChatGPT handoff unchanged
 
 ## Acceptance Criteria
 

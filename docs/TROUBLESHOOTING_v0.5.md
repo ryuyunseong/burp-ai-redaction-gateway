@@ -140,9 +140,24 @@ Use this when Java collector validation and Python receiver scope handling appea
 to disagree. Keep the follow-up focused on the matrix case and expected raw-free
 decision, not on the actual host or request.
 
+### `live_capture_status_missing`
+
+Use this when the future Live Capture dashboard status panel cannot find
+raw-free runtime smoke evidence or a receiver output alias. Record only the
+status label that was expected and whether the operator intended a read-only
+status check.
+
+### `dashboard_read_only_boundary_confusion`
+
+Use this when an operator expects `/live-capture` to run capture, replay,
+active scan, raw preview, raw download, or automatic ChatGPT handoff. Route the
+follow-up to the dashboard integration plan unless a separate implementation PR
+has already approved a CSRF-protected dashboard action.
+
 ## Related Documents
 
 - [`LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md`](LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md)
+- [`LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md`](LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md)
 - [`templates/LIVE_CAPTURE_RUNTIME_SMOKE_EVIDENCE_TEMPLATE.md`](templates/LIVE_CAPTURE_RUNTIME_SMOKE_EVIDENCE_TEMPLATE.md)
 - [`LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_v0.5.md`](LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_v0.5.md)
 - [`LIVE_CAPTURE_COLLECTOR_CONTRACT_v0.5.md`](LIVE_CAPTURE_COLLECTOR_CONTRACT_v0.5.md)
