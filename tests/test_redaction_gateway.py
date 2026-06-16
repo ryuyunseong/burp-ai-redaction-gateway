@@ -2364,7 +2364,7 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIsNone(re.search(r"https?://", plan))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", plan))
 
-    def test_dashboard_live_capture_session_placeholder_requires_csrf_and_hides_raw_values(self) -> None:
+    def test_dashboard_live_capture_read_only_status_panel_hides_actions_and_raw_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir) / "out"
             output = root / "generated"
@@ -2387,194 +2387,68 @@ class RedactionGatewayTests(unittest.TestCase):
                         self.assertEqual(response.status, 200)
                         return body
 
-                    def post(path: str, values: dict[str, str]) -> tuple[int, str]:
-                        connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
-                        body = urlencode(values)
-                        connection.request(
-                            "POST",
-                            path,
-                            body=body,
-                            headers={"Content-Type": "application/x-www-form-urlencoded"},
-                        )
-                        response = connection.getresponse()
-                        result = response.read().decode("utf-8")
-                        connection.close()
-                        return response.status, result
-
                     body = get("/live-capture")
-                    self.assertIn("Live Capture session placeholder", body)
-                    self.assertIn("CSRF protected", body)
-                    self.assertIn("session state", body)
-                    self.assertIn("idle", body)
-                    self.assertIn("Start placeholder", body)
-                    self.assertIn("Stop placeholder", body)
-                    self.assertIn("actual traffic capture", body)
-                    self.assertIn("false in this PR", body)
-                    self.assertIn("ChatGPT", body)
-                    self.assertIn("analysis_packet.json", body)
-                    self.assertIn("chatgpt_prompt.md", body)
-                    self.assertIn("codex_task_prompt.md", body)
-                    self.assertIn("report_draft.md", body)
-                    self.assertIn("candidate", body)
-                    self.assertIn("draft", body)
-                    self.assertIn("final severity", body)
-                    self.assertIn("CVSS", body)
-                    self.assertIn('action="/live-capture/start"', body)
-                    self.assertIn('action="/live-capture/stop"', body)
-                    token_match = re.search(r'name="csrf_token" value="([0-9a-f]{32})"', body)
-                    self.assertIsNotNone(token_match)
-                    csrf_token = token_match.group(1)
+                    self.assertIn("Live Capture read-only status", body)
+                    self.assertIn("Runtime smoke status panel", body)
+                    self.assertIn("extension load status", body)
+                    self.assertIn("local receiver status", body)
+                    self.assertIn("in-scope handoff count", body)
+                    self.assertIn("out-of-scope skip count", body)
+                    self.assertIn("missing_host_skipped", body)
+                    self.assertIn("invalid_host_skipped", body)
+                    self.assertIn("receiver verify status", body)
+                    self.assertIn("receiver output alias", body)
+                    self.assertIn("not selected", body)
+                    self.assertIn("hidden until verify passes", body)
+                    self.assertIn("raw_data_included", body)
+                    self.assertIn("false", body)
+                    self.assertIn("Findings remain candidates", body)
+                    self.assertIn("Risk remains draft", body)
+                    self.assertIn("Final severity and CVSS remain manual decisions", body)
+                    self.assertIn("docs/LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md", body)
+                    self.assertIn("docs/LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md", body)
+                    self.assertIn("docs/TROUBLESHOOTING_v0.5.md", body)
+                    self.assertNotIn("/safe-files?project=generated", body)
 
-                    forbidden = [
-                        "/download?",
-                        "/preview?",
-                        "raw_request",
-                        "raw_response",
-                        "DUMMY_COOKIE_VALUE",
-                        "DUMMY_BEARER_TOKEN",
-                        secret_value,
-                        "BURP_AI_AUDIT_HMAC_KEY",
-                        "Cookie:",
-                        "Authorization:",
-                        "HMAC secret",
-                        "CSRF token",
-                        "safe to share",
-                        "guaranteed safe",
-                        "severity confirmed",
-                        "ready to submit",
-                        str(root),
-                    ]
-                    for item in forbidden:
-                        self.assertNotIn(item, body)
+                    linked_body = get("/live-capture?project=generated")
+                    self.assertIn("Verified receiver output navigation", linked_body)
+                    self.assertIn("receiver output alias", linked_body)
+                    self.assertIn("generated", linked_body)
+                    self.assertIn("receiver verify status", linked_body)
+                    self.assertIn("passed", linked_body)
+                    self.assertIn("/simple?project=generated", linked_body)
+                    self.assertIn("/safe-files?project=generated", linked_body)
+                    self.assertIn("/triage?project=generated", linked_body)
+                    self.assertIn("/report-readiness?project=generated", linked_body)
+                    self.assertIn("/workflow?project=generated", linked_body)
 
-                    status, missing_csrf = post("/live-capture/start", {"target": "allowed.example"})
-                    self.assertEqual(status, 400)
-                    self.assertIn("csrf_token_missing", missing_csrf)
-                    self.assertNotIn("allowed.example", missing_csrf)
-
-                    status, invalid_csrf = post(
-                        "/live-capture/start",
-                        {"target": "allowed.example", "csrf_token": "invalid"},
-                    )
-                    self.assertEqual(status, 403)
-                    self.assertIn("csrf_token_invalid", invalid_csrf)
-                    self.assertNotIn("allowed.example", invalid_csrf)
-
-                    invalid_targets = [
-                        "",
-                        "*.example",
-                        "https://allowed.example/path",
-                        "localhost",
-                        "127.0.0.1",
-                        "allowed.example/path",
-                    ]
-                    for invalid_target in invalid_targets:
-                        status, invalid_result = post(
-                            "/live-capture/start",
-                            {"target": invalid_target, "csrf_token": csrf_token},
-                        )
-                        self.assertEqual(status, 400)
-                        self.assertIn("invalid_target", invalid_result)
-                        self.assertNotIn("raw_request", invalid_result)
-                        self.assertNotIn("raw_response", invalid_result)
-
-                    status, start_result = post(
-                        "/live-capture/start",
-                        {"target": "Allowed.Example.", "csrf_token": csrf_token},
-                    )
-                    self.assertEqual(status, 200)
-                    self.assertIn("running_placeholder", start_result)
-                    self.assertIn("target_alias_", start_result)
-                    self.assertIn("live_capture_session_", start_result)
-                    self.assertIn("actual traffic capture is not implemented", start_result)
-                    self.assertNotIn("Allowed.Example", start_result)
-                    self.assertNotIn("allowed.example", start_result)
-                    self.assertNotIn("raw_request", start_result)
-                    self.assertNotIn("raw_response", start_result)
-
-                    status, duplicate_result = post(
-                        "/live-capture/start",
-                        {"target": "other.example", "csrf_token": csrf_token},
-                    )
-                    self.assertEqual(status, 409)
-                    self.assertIn("duplicate_start", duplicate_result)
-                    self.assertNotIn("other.example", duplicate_result)
-
-                    status, stop_result = post("/live-capture/stop", {"csrf_token": csrf_token})
-                    self.assertEqual(status, 200)
-                    self.assertIn("stopped", stop_result)
-                    self.assertIn("stop placeholder accepted", stop_result)
-
-                    status, stop_without_session = post("/live-capture/stop", {"csrf_token": csrf_token})
-                    self.assertEqual(status, 409)
-                    self.assertIn("no_active_session", stop_without_session)
-
-                    for linked_path in (
-                        "/",
-                        "/settings",
-                        "/help",
-                        "/operations",
-                        "/upload",
-                        "/simple?project=generated",
-                        "/workflow?project=generated",
-                        "/operator-runbook?project=generated",
-                    ):
-                        linked_body = get(linked_path)
-                        self.assertIn('href="/live-capture"', linked_body)
-
-                    audit_path = root / ".audit" / "mcp_audit.jsonl"
-                    self.assertTrue(audit_path.is_file())
-                    audit_text = audit_path.read_text(encoding="utf-8")
-                    assert_no_sensitive_text(audit_text)
-                    for hidden in [
-                        csrf_token,
-                        "csrf_token",
-                        "Allowed.Example",
-                        "allowed.example",
-                        "other.example",
-                        secret_value,
-                        str(root),
-                    ]:
-                        self.assertNotIn(hidden, audit_text)
-                    audit_events = [json.loads(line) for line in audit_text.splitlines() if line.strip()]
-                    self.assert_audit_hash_chain(audit_events)
-                    self.assertTrue(all(event["event_type"] == "dashboard_action" for event in audit_events))
-                    self.assertTrue(all(event["raw_data_included"] is False for event in audit_events))
-                    self.assertEqual(
-                        [(event["action_name"], event["result_status"]) for event in audit_events],
-                        [
-                            ("live_capture_start", "blocked"),
-                            ("live_capture_start", "blocked"),
-                            ("live_capture_start", "blocked"),
-                            ("live_capture_start", "blocked"),
-                            ("live_capture_start", "blocked"),
-                            ("live_capture_start", "blocked"),
-                            ("live_capture_start", "blocked"),
-                            ("live_capture_start", "blocked"),
-                            ("live_capture_start", "success"),
-                            ("live_capture_start", "blocked"),
-                            ("live_capture_stop", "success"),
-                            ("live_capture_stop", "blocked"),
-                        ],
-                    )
-                    blocked_reasons = [event.get("blocked_reason", "") for event in audit_events[:8]]
-                    self.assertEqual(blocked_reasons[:2], ["csrf_missing", "csrf_invalid"])
-                    self.assertTrue(all(reason.startswith("invalid_target_scope_") for reason in blocked_reasons[2:]))
-                    self.assertEqual(
-                        blocked_reasons[2:],
-                        [
-                            "invalid_target_scope_empty",
-                            "invalid_target_scope_wildcard_not_allowed",
-                            "invalid_target_scope_url_or_path_not_allowed",
-                            "invalid_target_scope_loopback_name_not_allowed",
-                            "invalid_target_scope_ip_literal_not_allowed",
-                            "invalid_target_scope_url_or_path_not_allowed",
-                        ],
-                    )
-                    self.assertEqual(audit_events[9].get("blocked_reason"), "duplicate_start")
-                    self.assertEqual(audit_events[11].get("blocked_reason"), "no_active_session")
-                    audit_review = review_audit_path(audit_path)
-                    self.assertTrue(audit_review.passed, audit_review.findings)
+                    for rendered in [body, linked_body]:
+                        for forbidden in [
+                            "<form",
+                            "<button",
+                            'method="post"',
+                            'name="csrf_token"',
+                            'action="/live-capture/start"',
+                            'action="/live-capture/stop"',
+                            "/download?",
+                            "/preview?",
+                            "raw_request",
+                            "raw_response",
+                            "DUMMY_COOKIE_VALUE",
+                            "DUMMY_BEARER_TOKEN",
+                            secret_value,
+                            "BURP_AI_AUDIT_HMAC_KEY",
+                            "Cookie:",
+                            "Authorization:",
+                            "HMAC secret",
+                            "CSRF token",
+                            "safe to share",
+                            "guaranteed safe",
+                            "severity confirmed",
+                            "ready to submit",
+                            str(root),
+                        ]:
+                            self.assertNotIn(forbidden, rendered)
                 finally:
                     server.shutdown()
                     server.server_close()
@@ -4851,8 +4725,8 @@ class RedactionGatewayTests(unittest.TestCase):
             "send scoped Burp history",
             "upload Burp export at /upload",
             "open /live-capture",
-            "enter a target domain for validation",
-            "start/stop the placeholder session",
+            "check live capture read-only status",
+            "check receiver output alias",
             "verify the selected output",
             "check simple dashboard summary",
             "review candidate findings",
@@ -4961,20 +4835,19 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn("Live Capture", text)
         for text in [readme, local_dashboard, user_flow, design]:
             self.assertIn("session", text)
-            self.assertIn("start/stop", text)
+            self.assertIn("read-only", text)
             self.assertIn("separate PR", text)
-            self.assertIn("ChatGPT", text)
+            self.assertIn("AI", text)
         for text in [local_dashboard, user_flow, design]:
-            self.assertIn("target domain", text)
+            self.assertIn("receiver output alias", text)
             self.assertIn("collector/receiver", text)
-            self.assertIn("POST", text)
 
         required = [
             "GET /live-capture",
-            "POST /live-capture/start",
-            "POST /live-capture/stop",
-            "running_placeholder",
-            "failed_validation",
+            "read-only status",
+            "runtime smoke status labels",
+            "receiver output alias",
+            "automatic AI handoff status as false",
             "safe files 4",
             "analysis_packet.json",
             "chatgpt_prompt.md",

@@ -45,13 +45,13 @@ open dashboard
 -> send only reviewed safe files to AI
 ```
 
-v0.5 Live Capture is currently a session state placeholder flow, not actual traffic capture.
+v0.5 Live Capture is currently a read-only status flow, not actual traffic capture.
 
 ```text
 open dashboard
 -> open /live-capture
--> enter a target domain for validation
--> start/stop the placeholder session
+-> check live capture read-only status
+-> check receiver output alias
 -> confirm actual collector/receiver integration is separate PR scope
 -> continue with /upload or existing receiver flow
 ```
@@ -80,7 +80,7 @@ http://127.0.0.1:8766/
 | 화면 | 목적 | 경계 |
 | --- | --- | --- |
 | `/` | 검증된 output 선택과 audit/archive 상태 확인 | 검증된 sanitization metadata만 표시 |
-| `/live-capture` | v0.5 live capture session state placeholder | CSRF-protected start/stop placeholder only. collector/receiver changes, raw traffic capture, replay, active scan, and ChatGPT automatic handoff are absent |
+| `/live-capture` | v0.5 live capture read-only status panel | No form, POST action, action button, collector/receiver changes, raw traffic capture, replay, active scan, or ChatGPT automatic handoff |
 | `/simple?project=<alias>` | 처음 보는 사용자가 현재 상태, AI 후보 파일 4개, 다음 행동을 빠르게 확인 | 조회 전용. 파일 본문 preview, download, form, POST action, button 없음 |
 | `/dashboard-simple?project=<alias>` | `/simple?project=<alias>`와 같은 간단 체크 화면 alias | 조회 전용. full local path, raw viewer, 실행 action 없음 |
 | `/output?project=<alias>` | output 하나의 안전 파일, finding 후보, 허용된 dashboard action 확인 | 표시 전 `verify` 통과 필요 |
@@ -104,7 +104,7 @@ http://127.0.0.1:8766/
 
 output 상세 화면의 action은 다음 순서로 사용합니다.
 
-2. `Live Capture placeholder`: `/live-capture` validates a target domain, stores only safe aliases, and manages `idle/running_placeholder/stopped/failed_validation` state. Actual capture integration is separate PR scope.
+2. `Live Capture read-only status`: `/live-capture` shows runtime smoke status labels, verified receiver output alias guidance, and safe file navigation only after verify passes. Actual capture integration is separate PR scope.
 3. `Verify`: 선택한 output에 fail-closed 검증을 다시 실행합니다.
 4. `Simple Dashboard`: 현재 상태, AI 후보 파일 4개, 다음 행동을 먼저 확인합니다.
 5. `Review`: finding 후보의 안전 요약을 만듭니다.
@@ -124,7 +124,7 @@ output 상세 화면의 action은 다음 순서로 사용합니다.
 `Export`는 상태 변경 POST action이며 CSRF token이 필요합니다.
 `Upload Wizard`도 상태 변경 POST action이며 CSRF 보호가 필요합니다.
 업로드 원본은 ignored local-only storage에 내부 이름으로 저장되고 화면에는
-`Live Capture placeholder` uses CSRF-protected POST actions for local session state only.
+`Live Capture read-only status` does not show form, POST action, or action button.
 It does not change collector/receiver behavior, does not capture raw traffic, and does not automatically send anything to ChatGPT. live capture design boundaries are in
 설계 경계는
 [LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md](LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)를

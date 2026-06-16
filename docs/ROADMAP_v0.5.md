@@ -60,8 +60,8 @@ Candidate tasks:
   [`LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md`](LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md).
 - Distinguish Upload Wizard file input from Live Capture Wizard guided Burp
   browsing.
-- Keep `/live-capture` as a session placeholder until actual collector/receiver
-  capture integration lands in a separate reviewed PR.
+- Keep `/live-capture` as a read-only status panel until actual
+  collector/receiver capture integration lands in a separate reviewed PR.
 - Define Live Capture as a local-only wizard, not an automatic ChatGPT handoff.
 - Reuse the shared Live Capture scope guard for target normalization, safe
   aliasing, and exact/subdomain-only match checks around collector filtering.

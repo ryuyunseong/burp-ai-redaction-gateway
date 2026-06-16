@@ -38,21 +38,18 @@ review, report를 순서대로 실행합니다. ChatGPT 자동 전송은 하지 
 [GUI_UPLOAD_WIZARD.md](GUI_UPLOAD_WIZARD.md)를
 참조하세요.
 
-v0.5 Live Capture currently provides a session state placeholder screen.
+v0.5 Live Capture currently provides a read-only status screen.
 
 ```text
 /live-capture
-POST /live-capture/start
-POST /live-capture/stop
+/live-capture?project=<alias>
 ```
 
-The screen accepts a target domain, validates it with the shared Live Capture
-scope guard, and displays only a safe alias. The guard normalizes uppercase and
-trailing-dot domain forms, rejects URL/path/wildcard/loopback/IP inputs, and
-uses raw-free reason codes for validation failures. The start/stop actions are
-CSRF-protected placeholders. They do not change collector/receiver behavior, do
-not capture traffic, and do not send anything to ChatGPT. Actual
-collector/receiver integration remains separate PR scope.
+The screen displays runtime smoke status labels, receiver verify status, and an
+optional verified receiver output alias. It has no form, POST action, action
+button, capture execution, raw preview, raw download, replay, active scan, or
+automatic AI handoff. Actual collector/receiver integration remains separate PR
+scope.
 Receiver-side scope dry-run results can be converted into raw-free accept/skip
 summary metadata for future audit integration. The dashboard does not expose a
 skip audit action or raw traffic view for this helper, and the helper does not
@@ -132,9 +129,9 @@ release 전에는 dashboard를 loopback으로 실행한 뒤 다음 route를 확�
 `/simple?project=<alias>`와 `/dashboard-simple?project=<alias>`는 같은
 read-only 간단 체크 화면입니다. release smoke에서는 `formCount=0`,
 `buttonCount=0`, `downloadLinkCount=0`을 확인합니다. `/live-capture`는
-session placeholder 화면이며 start/stop form은 CSRF-protected이고 결과는
-raw-free action summary만 표시합니다. release smoke에서는 download 또는
-preview link가 없는지도 확인합니다.
+read-only status panel 화면이며 form, POST action, action button을 표시하지
+않습니다. release smoke에서는 download 또는 preview link가 없는지도
+확인합니다.
 
 ## Verify-first 경계
 

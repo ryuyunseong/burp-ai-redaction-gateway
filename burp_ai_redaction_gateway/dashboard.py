@@ -395,7 +395,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 self._send_html(render_operations_help())
                 return
             if parsed.path == "/live-capture":
-                self._send_html(render_live_capture_readiness(self.server.csrf_token, self.server.live_capture_session))
+                output_id = _optional_query_value(parsed.query, "project")
+                output = _verified_output(self.server.config.root, self.server.policy, output_id) if output_id else None
+                self._send_html(
+                    render_live_capture_readiness(self.server.csrf_token, self.server.live_capture_session, output=output)
+                )
                 return
             if parsed.path == "/upload":
                 self._send_html(render_upload_wizard(self.server.csrf_token))
@@ -1334,12 +1338,12 @@ def render_operations_help() -> str:
 
 
 def render_live_capture_readiness(
-    csrf_token: str,
+    _csrf_token: str,
     session: LiveCaptureSession,
     result: LiveCaptureActionResult | None = None,
+    output: DashboardOutput | None = None,
 ) -> str:
     safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
-    token = _h(csrf_token)
     result_panel = ""
     if result:
         summary = "".join(f"<li>{_h(line)}</li>" for line in result.summary_lines)
@@ -1355,46 +1359,81 @@ def render_live_capture_readiness(
             <ul class="safe-list">{summary}</ul>
           </div>
         """
+    receiver_output_alias = output.label if output else "not selected"
+    receiver_verify_status = "passed" if output else "not selected"
+    safe_navigation_status = "available" if output else "hidden until verify passes"
+    safe_navigation = (
+        f"""
+          <div class="panel">
+            <div class="panel-head"><h2>Verified receiver output navigation</h2><span class="muted">read-only links</span></div>
+            <dl class="facts">
+              <div><dt>receiver output alias</dt><dd>{_h(output.label)}</dd></div>
+              <div><dt>receiver verify status</dt><dd>{_status_badge("passed")}</dd></div>
+              <div><dt>safe files</dt><dd>{_status_badge("available")}</dd></div>
+              <div><dt>raw_data_included</dt><dd>false</dd></div>
+            </dl>
+            <ul class="safe-list">
+              <li><a href="{_simple_dashboard_href(output.output_id)}">simple dashboard</a></li>
+              <li><a href="{_safe_files_href(output.output_id)}">safe files</a></li>
+              <li><a href="{_triage_href(output.output_id)}">triage</a></li>
+              <li><a href="{_report_readiness_href(output.output_id)}">report readiness</a></li>
+              <li><a href="{_workflow_href(output.output_id)}">workflow</a></li>
+            </ul>
+          </div>
+        """
+        if output
+        else """
+          <div class="panel">
+            <div class="panel-head"><h2>Verified receiver output navigation</h2><span class="muted">hidden until verify passes</span></div>
+            <dl class="facts">
+              <div><dt>receiver output alias</dt><dd>not selected</dd></div>
+              <div><dt>receiver verify status</dt><dd>not selected</dd></div>
+              <div><dt>safe files</dt><dd>hidden until verify passes</dd></div>
+              <div><dt>raw_data_included</dt><dd>false</dd></div>
+            </dl>
+            <p class="muted">Open this page with a verified receiver output alias to show safe navigation links.</p>
+          </div>
+        """
+    )
     return _page(
-        "Live Capture session placeholder",
+        "Live Capture read-only status",
         f"""
         <section class="topbar">
           <div>
             <a class="back" href="/">대시보드로 돌아가기</a>
-            <h1>Live Capture session placeholder</h1>
-            <p class="subtitle">v0.5 Live Capture의 첫 runtime 단계입니다. session state와 CSRF-protected start/stop placeholder만 관리하며 실제 Burp traffic capture는 수행하지 않습니다.</p>
+            <h1>Live Capture read-only status</h1>
+            <p class="subtitle">v0.5 Live Capture의 read-only 상태 패널입니다. runtime smoke 상태와 verified receiver output alias만 안내하며 dashboard에서 capture를 시작하거나 중지하지 않습니다.</p>
           </div>
           <div class="status-stack">
-            <span class="badge warning">session placeholder</span>
-            <span class="badge neutral">CSRF protected</span>
+            <span class="badge good">read-only</span>
+            <span class="badge neutral">no form</span>
+            <span class="badge neutral">no POST action</span>
           </div>
         </section>
         <section class="safety-strip">
           <div class="rail"><span>session state</span><strong>{_h(session.status)}</strong></div>
-          <div class="rail"><span>session alias</span><strong>{_h(session.session_alias)}</strong></div>
-          <div class="rail"><span>target alias</span><strong>{_h(session.target_alias)}</strong></div>
-          <div class="rail"><span>ChatGPT 자동 전송</span><strong>false</strong></div>
+          <div class="rail"><span>receiver verify</span><strong>{_h(receiver_verify_status)}</strong></div>
+          <div class="rail"><span>receiver output alias</span><strong>{_h(receiver_output_alias)}</strong></div>
+          <div class="rail"><span>safe navigation</span><strong>{_h(safe_navigation_status)}</strong></div>
           <div class="rail"><span>raw_data_included</span><strong>false</strong></div>
         </section>
         <section class="grid">
           {result_panel}
           <div class="panel">
-            <div class="panel-head"><h2>Start placeholder</h2><span class="muted">실제 traffic capture는 아직 수행하지 않습니다.</span></div>
-            <form method="post" action="/live-capture/start" autocomplete="off">
-              <input type="hidden" name="csrf_token" value="{token}">
-              <label for="live-capture-target">Target domain</label>
-              <input id="live-capture-target" name="target" maxlength="{LIVE_CAPTURE_SCOPE_MAX_LENGTH}" autocomplete="off" spellcheck="false">
-              <small>도메인은 검증 뒤 safe alias로만 표시됩니다. scheme, path, wildcard, loopback name, IP, 공백은 거부됩니다.</small>
-              <button type="submit">Start placeholder</button>
-            </form>
+            <div class="panel-head"><h2>Runtime smoke status panel</h2><span class="muted">count/status labels only</span></div>
+            <dl class="facts">
+              <div><dt>extension load status</dt><dd>manual evidence not recorded in dashboard</dd></div>
+              <div><dt>local receiver status</dt><dd>manual evidence not recorded in dashboard</dd></div>
+              <div><dt>in-scope handoff count</dt><dd>not recorded in dashboard</dd></div>
+              <div><dt>out-of-scope skip count</dt><dd>not recorded in dashboard</dd></div>
+              <div><dt>missing_host_skipped</dt><dd>not recorded in dashboard</dd></div>
+              <div><dt>invalid_host_skipped</dt><dd>not recorded in dashboard</dd></div>
+              <div><dt>receiver verify status</dt><dd>{_h(receiver_verify_status)}</dd></div>
+              <div><dt>receiver output alias</dt><dd>{_h(receiver_output_alias)}</dd></div>
+              <div><dt>raw_data_included</dt><dd>false</dd></div>
+            </dl>
           </div>
-          <div class="panel">
-            <div class="panel-head"><h2>Stop placeholder</h2><span class="muted">running_placeholder 상태만 중지합니다.</span></div>
-            <form method="post" action="/live-capture/stop" autocomplete="off">
-              <input type="hidden" name="csrf_token" value="{token}">
-              <button type="submit">Stop placeholder</button>
-            </form>
-          </div>
+          {safe_navigation}
           <div class="panel">
             <div class="panel-head"><h2>Current session</h2><span class="muted">dashboard-local metadata only</span></div>
             <dl class="facts">
@@ -1403,50 +1442,51 @@ def render_live_capture_readiness(
               <div><dt>target alias</dt><dd>{_h(session.target_alias)}</dd></div>
               <div><dt>updated UTC</dt><dd>{_h(session.updated_at_utc or "none")}</dd></div>
               <div><dt>collector/receiver integration</dt><dd>separate PR</dd></div>
-              <div><dt>actual traffic capture</dt><dd>false in this PR</dd></div>
+              <div><dt>dashboard capture execution</dt><dd>false</dd></div>
             </dl>
           </div>
           <div class="panel">
-            <div class="panel-head"><h2>이번 PR의 경계</h2><span class="muted">state-changing action은 placeholder 상태 관리에만 제한됩니다.</span></div>
+            <div class="panel-head"><h2>Read-only boundary</h2><span class="muted">no dashboard execution</span></div>
             <dl class="facts">
-              <div><dt>GET /live-capture</dt><dd>session state placeholder 화면입니다.</dd></div>
-              <div><dt>POST /live-capture/start</dt><dd>CSRF protected start placeholder입니다.</dd></div>
-              <div><dt>POST /live-capture/stop</dt><dd>CSRF protected stop placeholder입니다.</dd></div>
-              <div><dt>collector/receiver 변경</dt><dd>없습니다. 별도 PR입니다.</dd></div>
-              <div><dt>raw traffic preview</dt><dd>없습니다.</dd></div>
-              <div><dt>ChatGPT 자동 전송</dt><dd>false입니다.</dd></div>
-              <div><dt>replay 또는 active scan</dt><dd>포함하지 않습니다.</dd></div>
+              <div><dt>GET /live-capture</dt><dd>read-only status panel</dd></div>
+              <div><dt>dashboard form</dt><dd>none</dd></div>
+              <div><dt>dashboard action button</dt><dd>none</dd></div>
+              <div><dt>collector forwarding changes</dt><dd>none</dd></div>
+              <div><dt>receiver ingest changes</dt><dd>none</dd></div>
+              <div><dt>raw preview/download</dt><dd>none</dd></div>
+              <div><dt>replay or active scan</dt><dd>none</dd></div>
+              <div><dt>AI automatic handoff</dt><dd>false</dd></div>
             </dl>
           </div>
           <div class="panel">
-            <div class="panel-head"><h2>AI 투입 후보 파일</h2><span class="muted">redaction/verify 이후 생성된 파일만 수동 확인 후 사용합니다.</span></div>
+            <div class="panel-head"><h2>AI input candidate files</h2><span class="muted">manual review required</span></div>
             <ul class="safe-list">{safe_files}</ul>
-            <p class="muted">finding은 candidate이고 risk는 draft입니다. final severity와 CVSS는 사람이 별도로 결정합니다.</p>
+            <p class="muted">Findings remain candidates. Risk remains draft. Final severity and CVSS remain manual decisions.</p>
           </div>
           <div class="panel">
-            <div class="panel-head"><h2>표시하지 않는 값</h2><span class="muted">분류명과 원칙만 안내하고 실제 값은 표시하지 않습니다.</span></div>
+            <div class="panel-head"><h2>Values not displayed</h2><span class="muted">principles only</span></div>
             <ul class="safe-list">
-              <li>원본 요청 또는 응답 본문</li>
-              <li>인증 헤더와 세션 계열 값</li>
-              <li>실제 대상 domain/IP 또는 전체 로컬 경로</li>
-              <li>개인정보, 무결성 비밀값, 요청 위조 방지 값</li>
-              <li>검증 전 산출물, 감사 로그 원문, 보관 archive 원문</li>
+              <li>raw request or response body</li>
+              <li>credential, cookie, token, JWT, or session value</li>
+              <li>actual target identifier or full local path</li>
+              <li>personal data, integrity secret, or request forgery token value</li>
+              <li>unverified output, raw audit row, or archive content</li>
             </ul>
           </div>
           <div class="panel">
-            <div class="panel-head"><h2>관련 화면과 문서</h2><span class="muted">운영자가 수동 확인할 링크입니다.</span></div>
+            <div class="panel-head"><h2>Related routes and documents</h2><span class="muted">read-only references</span></div>
             <dl class="facts">
-              <div><dt>운영 허브</dt><dd><a href="/help">/help</a></dd></div>
-              <div><dt>파일 업로드 흐름</dt><dd><a href="/upload">/upload</a></dd></div>
-              <div><dt>설계 문서</dt><dd>docs/LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md</dd></div>
-              <div><dt>대시보드 홈</dt><dd><a href="/">/</a></dd></div>
+              <div><dt>operations hub</dt><dd><a href="/help">/help</a></dd></div>
+              <div><dt>upload flow</dt><dd><a href="/upload">/upload</a></dd></div>
+              <div><dt>integration plan</dt><dd>docs/LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md</dd></div>
+              <div><dt>runtime smoke checklist</dt><dd>docs/LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md</dd></div>
+              <div><dt>troubleshooting</dt><dd>docs/TROUBLESHOOTING_v0.5.md</dd></div>
+              <div><dt>dashboard home</dt><dd><a href="/">/</a></dd></div>
             </dl>
           </div>
         </section>
         """,
     )
-
-
 def render_upload_wizard(csrf_token: str) -> str:
     safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
     token = _h(csrf_token)
@@ -3944,6 +3984,13 @@ def _required_query_value(query: str, name: str) -> str:
     values = parse_qs(query, keep_blank_values=False).get(name)
     if not values or not values[0].strip():
         raise DashboardError(f"missing_query:{name}", HTTPStatus.BAD_REQUEST)
+    return values[0]
+
+
+def _optional_query_value(query: str, name: str) -> str:
+    values = parse_qs(query, keep_blank_values=False).get(name)
+    if not values or not values[0].strip():
+        return ""
     return values[0]
 
 
