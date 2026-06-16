@@ -22,7 +22,8 @@ dashboard home `/`은 한글 우선 quickstart landing을 표시합니다.
 - `Live Capture 상태 확인`: `/live-capture`에서 receiver output 준비 상태를
   조회합니다. 이 화면은 실행 화면이 아닙니다.
 - `AI에 넣을 수 있는 후보 파일 확인`: 검증 통과 후 `/safe-files`에서 safe
-  files 4개를 확인합니다.
+  files 4개를 확인합니다. 검증 통과 산출물이 있으면 목록의 첫 번째 산출물로
+  이동하고, 없으면 운영 도움말로 이동합니다.
 - `운영 도움말`: `/help`에서 운영 흐름과 troubleshooting 문서 위치를 확인합니다.
 
 home quickstart는 안내와 링크만 제공하며 raw preview, raw download, replay,

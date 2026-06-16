@@ -867,6 +867,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("codex_task_prompt.md", body)
                 self.assertIn("report_draft.md", body)
                 self.assertIn("AI 입력 후보 파일", body)
+                self.assertIn("목록의 첫 번째 safe files", body)
                 self.assertIn("최종 결과가 아닙니다", body)
                 self.assertIn("final severity", body)
                 self.assertIn("CVSS", body)

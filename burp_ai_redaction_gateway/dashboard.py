@@ -1183,7 +1183,7 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
               </a>
               <a class="guide-card" href="{_h(safe_files_href)}">
                 <strong>AI에 넣을 수 있는 후보 파일 확인</strong>
-                <span>검증 통과 후 safe files 4개만 확인합니다. 최종 결과가 아닙니다.</span>
+                <span>검증 통과 산출물이 있으면 목록의 첫 번째 safe files로 이동합니다. 최종 결과가 아닙니다.</span>
               </a>
               <a class="guide-card" href="/help">
                 <strong>운영 도움말</strong>
