@@ -23,7 +23,7 @@ retention, delete policy, or automatic AI handoff behavior.
 - Risk remains draft.
 - Final severity and CVSS remain manual decisions.
 - Runtime smoke evidence is readiness evidence only.
-- Runtime smoke evidence is not external sharing clearance.
+- Runtime smoke evidence is not sharing approval.
 
 ## Candidate Evidence Sources
 
@@ -162,7 +162,7 @@ The evidence source must not contain:
 - archive content
 - final severity decisions
 - CVSS scores
-- external sharing clearance claims
+- sharing approval claims
 
 ## Verify-First Safe Navigation
 

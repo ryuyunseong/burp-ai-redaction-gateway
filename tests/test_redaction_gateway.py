@@ -2489,7 +2489,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "Findings remain candidates",
             "Risk remains draft",
             "Final severity and CVSS remain manual decisions",
-            "not external sharing clearance",
+            "not sharing approval",
         ]:
             self.assertIn(required, schema_doc)
 
@@ -2538,6 +2538,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "run capture",
             "start capture from dashboard",
             "raw preview/download action is approved",
+            "external sharing clearance",
         ]:
             self.assertNotIn(forbidden, combined)
         self.assertIsNone(re.search(r"https?://", combined))

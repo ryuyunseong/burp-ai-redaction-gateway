@@ -124,7 +124,7 @@ Do not include:
 - archive content
 - final severity decisions
 - CVSS scores
-- external sharing clearance claims
+- sharing approval claims
 
 ## Future Intake Requirements
 
@@ -148,5 +148,5 @@ receiver output alias as its implemented read-only evidence model.
 - Risk remains draft.
 - Final severity and CVSS remain manual decisions.
 - Runtime smoke evidence is readiness evidence only.
-- A passing smoke record is not external sharing clearance.
+- A passing smoke record is not sharing approval.
 - AI input candidates remain limited to the verified safe file allowlist.
