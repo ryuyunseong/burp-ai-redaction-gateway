@@ -75,6 +75,12 @@ output alias only. It exposes the receiver output alias, verify status, safe
 file existence status, candidate count, and `raw_data_included: false`. It
 should not upload, create, mutate, import local-only evidence files, or display
 raw evidence.
+MCP integration and Korean-first web UX planning are tracked in
+[MCP_INTEGRATION_DESIGN_v0.5.md](MCP_INTEGRATION_DESIGN_v0.5.md) and
+[WEB_UX_KO_PLAN_v0.5.md](WEB_UX_KO_PLAN_v0.5.md). These documents are planning
+only and do not add MCP runtime behavior, dashboard orchestration, local
+evidence reading, raw preview, replay, active scan, or automatic ChatGPT
+handoff.
 
 화면별 운영 순서는
 [GUI_USER_FLOW.md](GUI_USER_FLOW.md)를

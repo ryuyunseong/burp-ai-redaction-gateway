@@ -137,6 +137,8 @@ LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_FIXTURE = (
     ROOT / "samples" / "synthetic_live_capture_local_evidence_schema.json"
 )
 V05_RELEASE_READINESS_DOC = ROOT / "docs" / "RELEASE_READINESS_v0.5.md"
+MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
+WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
     "missing_security_headers",
@@ -2635,6 +2637,99 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
         self.assertIsNone(re.search(r"https?://", readiness))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", readiness))
+
+    def test_mcp_and_web_ux_plan_docs_are_planning_only_and_raw_free(self) -> None:
+        mcp_design = MCP_INTEGRATION_DESIGN_DOC.read_text(encoding="utf-8")
+        web_ux = WEB_UX_KO_PLAN_DOC.read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
+        readiness = V05_RELEASE_READINESS_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
+
+        for linked_text in [roadmap, readiness, readme, local_dashboard]:
+            self.assertIn("MCP_INTEGRATION_DESIGN_v0.5.md", linked_text)
+            self.assertIn("WEB_UX_KO_PLAN_v0.5.md", linked_text)
+
+        for required in [
+            "planning document only",
+            "does not implement a new MCP server",
+            "read-only first",
+            "Allowlist tools only",
+            "No raw traffic",
+            "No automatic ChatGPT handoff",
+            "Findings remain candidates",
+            "Risk remains draft",
+            "Final severity and CVSS remain manual decisions",
+            "get_gateway_status",
+            "list_verified_outputs",
+            "get_live_capture_status",
+            "get_safe_file_inventory",
+            "get_report_readiness",
+            "get_prompt_readiness",
+            "get_troubleshooting_categories",
+            "get_release_readiness",
+            "get_raw_request",
+            "get_raw_response",
+            "read_local_only_file",
+            "read_raw_vault",
+            "replay_request",
+            "active_scan",
+            "send_to_chatgpt",
+            "delete_files",
+            "show_hmac_secret",
+            "show_csrf_token",
+        ]:
+            self.assertIn(required, mcp_design)
+
+        for required in [
+            "planning document only",
+            "Korean-first",
+            "처음 시작하기",
+            "파일 업로드",
+            "Live Capture 상태 확인",
+            "AI에 넣을 수 있는 후보 파일 확인",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "First-run wizard",
+            "Korean quickstart landing",
+            "Safe files explanation cards",
+            "Copy prompt button",
+            "MCP read-only server design",
+            "MCP read-only prototype",
+            "Local evidence reader",
+            "Dashboard orchestration",
+            "Replay or active scan",
+            "ChatGPT auto-send",
+        ]:
+            self.assertIn(required, web_ux)
+
+        combined = "\n".join([mcp_design, web_ux])
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed issue",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "external sharing clearance",
+            "implementation approved",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
     def test_live_capture_receiver_output_evidence_model_is_alias_based_and_raw_free(self) -> None:
         empty_evidence = _build_live_capture_receiver_output_evidence(None)

@@ -10,6 +10,9 @@ policy, or release status.
 
 The v0.5 MVP release readiness boundary is tracked in
 [`RELEASE_READINESS_v0.5.md`](RELEASE_READINESS_v0.5.md).
+MCP integration and Korean-first web UX planning are tracked in
+[`MCP_INTEGRATION_DESIGN_v0.5.md`](MCP_INTEGRATION_DESIGN_v0.5.md) and
+[`WEB_UX_KO_PLAN_v0.5.md`](WEB_UX_KO_PLAN_v0.5.md).
 
 ## Non-Negotiable Boundaries
 
@@ -213,6 +216,28 @@ Acceptance evidence:
 - External-facing text does not claim AI handoff clearance, validated findings,
   final severity, or CVSS decisions.
 
+## Priority 8: MCP And Korean-First Web UX Planning
+
+Goal: define the safe MCP tool boundary and Korean-first dashboard copy before
+adding any new MCP server behavior or dashboard orchestration.
+
+Candidate tasks:
+
+- Keep MCP integration read-only first:
+  [`MCP_INTEGRATION_DESIGN_v0.5.md`](MCP_INTEGRATION_DESIGN_v0.5.md).
+- Keep web UX improvements Korean-first and raw-free:
+  [`WEB_UX_KO_PLAN_v0.5.md`](WEB_UX_KO_PLAN_v0.5.md).
+- Separate design, prototype, and state-changing action PRs.
+- Treat automatic ChatGPT handoff, replay, active scan, local evidence reader,
+  and file deletion as deferred work.
+
+Acceptance evidence:
+
+- Tool and UI plans list allowed and forbidden boundaries.
+- Planning text does not imply runtime support.
+- New copy keeps candidate finding, draft risk, and manual severity/CVSS
+  boundaries explicit.
+
 ## Branching Guidance
 
 - v0.4 bug fixes: use `fix/v0.4.x-*` and consider a patch tag such as
@@ -242,12 +267,14 @@ Completed:
 10. `test/live-capture-java-scope-matrix-v0.5`
 11. `docs/live-capture-runtime-smoke-checklist-v0.5`
 12. `docs/v0.5-troubleshooting-index`
+13. `docs/v0.5-release-readiness`
 
 Next:
 
-1. `docs/live-capture-dashboard-integration-plan-v0.5`
-2. `feat/v0.5-live-capture-read-only-status-panel`
-3. `feat/v0.5-montoya-live-validation`
-4. `feat/v0.5-candidate-triage-quality`
-5. `feat/v0.5-report-draft-quality`
-6. `feat/v0.5-windows-launcher-ux`
+1. `docs/mcp-and-web-ux-plan-v0.5`
+2. `docs/live-capture-dashboard-integration-plan-v0.5`
+3. `feat/v0.5-live-capture-read-only-status-panel`
+4. `feat/v0.5-montoya-live-validation`
+5. `feat/v0.5-candidate-triage-quality`
+6. `feat/v0.5-report-draft-quality`
+7. `feat/v0.5-windows-launcher-ux`
