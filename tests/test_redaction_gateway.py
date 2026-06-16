@@ -126,6 +126,9 @@ LIVE_CAPTURE_RUNTIME_SMOKE_EVIDENCE_TEMPLATE = (
     ROOT / "docs" / "templates" / "LIVE_CAPTURE_RUNTIME_SMOKE_EVIDENCE_TEMPLATE.md"
 )
 V05_TROUBLESHOOTING_DOC = ROOT / "docs" / "TROUBLESHOOTING_v0.5.md"
+LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_DOC = (
+    ROOT / "docs" / "LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md"
+)
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
     "missing_security_headers",
@@ -2288,6 +2291,78 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_live_capture_dashboard_integration_plan_is_read_only_and_phase_based(self) -> None:
+        plan = LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_DOC.read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
+        local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
+        wizard_design = (ROOT / "docs" / "LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md").read_text(
+            encoding="utf-8"
+        )
+        troubleshooting = V05_TROUBLESHOOTING_DOC.read_text(encoding="utf-8")
+
+        for linked_text in [roadmap, local_dashboard, wizard_design, troubleshooting]:
+            self.assertIn("LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md", linked_text)
+
+        for required in [
+            "Phase 1",
+            "Phase 2",
+            "Phase 3",
+            "read-only runtime smoke status panel",
+            "local-only evidence status panel",
+            "operator checklist",
+            "safe files",
+            "receiver output alias",
+            "CSRF-protected dashboard action",
+            "does not change runtime behavior",
+            "collector forwarding",
+            "receiver ingest",
+            "dashboard state-changing action",
+            "ChatGPT automatic handoff is prohibited",
+            "raw request/response preview is prohibited",
+            "raw traffic download is prohibited",
+            "replay is prohibited",
+            "active scan is prohibited",
+            "Findings remain candidates",
+            "Risk remains draft",
+            "Final severity and CVSS remain manual decisions",
+        ]:
+            self.assertIn(required, plan)
+
+        for troubleshooting_category in [
+            "live_capture_status_missing",
+            "receiver_output_alias_missing",
+            "receiver_verify_not_run",
+            "receiver_verify_failed_safely",
+            "runtime_smoke_evidence_incomplete",
+            "scope_mismatch",
+            "dashboard_read_only_boundary_confusion",
+        ]:
+            self.assertIn(troubleshooting_category, plan)
+
+        for forbidden in [
+            "safe-to-share",
+            "confirmed vulnerability",
+            "confirmed issue",
+            "final CVSS",
+            "evidence import",
+            "upload evidence",
+            "submit evidence",
+            "create evidence",
+            "run capture",
+            "start capture from dashboard",
+            "raw_request",
+            "raw_response",
+            "cookie_value",
+            "authorization_value",
+            "Authorization: Bearer",
+            "Cookie:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+        ]:
+            self.assertNotIn(forbidden, plan)
+        self.assertIsNone(re.search(r"https?://", plan))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", plan))
 
     def test_dashboard_live_capture_session_placeholder_requires_csrf_and_hides_raw_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

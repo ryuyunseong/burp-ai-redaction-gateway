@@ -84,6 +84,9 @@ Candidate tasks:
 - Keep a raw-free troubleshooting index for Upload Wizard and Live Capture
   setup, receiver, collector, dashboard, scope, and verify failures:
   [`TROUBLESHOOTING_v0.5.md`](TROUBLESHOOTING_v0.5.md).
+- Keep the dashboard integration scope for `/live-capture` phase-based and
+  read-only before adding any new dashboard action:
+  [`LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md`](LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md).
 - Validate loopback receiver behavior and error messages.
 - Check that collector logs remain raw-free.
 - Document startup, stop, retry, and troubleshooting steps.
@@ -224,11 +227,13 @@ Completed:
 9. `test/live-capture-scope-drift-matrix-v0.5`
 10. `test/live-capture-java-scope-matrix-v0.5`
 11. `docs/live-capture-runtime-smoke-checklist-v0.5`
+12. `docs/v0.5-troubleshooting-index`
 
 Next:
 
-1. `docs/v0.5-troubleshooting-index`
-2. `feat/v0.5-montoya-live-validation`
-3. `feat/v0.5-candidate-triage-quality`
-4. `feat/v0.5-report-draft-quality`
-5. `feat/v0.5-windows-launcher-ux`
+1. `docs/live-capture-dashboard-integration-plan-v0.5`
+2. `feat/v0.5-live-capture-read-only-status-panel`
+3. `feat/v0.5-montoya-live-validation`
+4. `feat/v0.5-candidate-triage-quality`
+5. `feat/v0.5-report-draft-quality`
+6. `feat/v0.5-windows-launcher-ux`
