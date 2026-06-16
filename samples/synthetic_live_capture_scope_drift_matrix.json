@@ -1,0 +1,175 @@
+{
+  "schema_version": "live-capture-scope-drift-matrix-v1",
+  "description": "Synthetic matrix for comparing collector host gating with receiver scope dry-run expectations.",
+  "target_scope_alias_only": true,
+  "raw_data_included": false,
+  "collector_runtime_changed": false,
+  "receiver_ingest_changed": false,
+  "dashboard_changed": false,
+  "cases": [
+    {
+      "case": "normal_host",
+      "category": "normal host",
+      "safe_host_metadata": "example.test",
+      "burp_in_scope": true,
+      "expected_collector_reason": "collector_scope_in_scope",
+      "expected_collector_allowed": true,
+      "expected_receiver_decision": "would_accept",
+      "expected_receiver_reason": "receiver_scope_in_scope",
+      "expected_receiver_match_reason": "scope_matched"
+    },
+    {
+      "case": "uppercase_host",
+      "category": "uppercase host",
+      "safe_host_metadata": "EXAMPLE.TEST",
+      "burp_in_scope": true,
+      "expected_collector_reason": "collector_scope_in_scope",
+      "expected_collector_allowed": true,
+      "expected_receiver_decision": "would_accept",
+      "expected_receiver_reason": "receiver_scope_in_scope",
+      "expected_receiver_match_reason": "scope_matched"
+    },
+    {
+      "case": "trailing_dot_host",
+      "category": "host with trailing dot",
+      "safe_host_metadata": "example.test.",
+      "burp_in_scope": true,
+      "expected_collector_reason": "collector_scope_in_scope",
+      "expected_collector_allowed": true,
+      "expected_receiver_decision": "would_accept",
+      "expected_receiver_reason": "receiver_scope_in_scope",
+      "expected_receiver_match_reason": "scope_matched"
+    },
+    {
+      "case": "url_shape",
+      "category": "URL shape",
+      "safe_host_metadata": "https://example.test",
+      "burp_in_scope": true,
+      "expected_collector_reason": "collector_scope_invalid_host",
+      "expected_collector_allowed": false,
+      "expected_receiver_decision": "would_drop",
+      "expected_receiver_reason": "receiver_scope_invalid_host",
+      "expected_receiver_match_reason": "scope_url_or_path_not_allowed"
+    },
+    {
+      "case": "path_query_shape",
+      "category": "path/query included",
+      "safe_host_metadata": "example.test/path?debug=1",
+      "burp_in_scope": true,
+      "expected_collector_reason": "collector_scope_invalid_host",
+      "expected_collector_allowed": false,
+      "expected_receiver_decision": "would_drop",
+      "expected_receiver_reason": "receiver_scope_invalid_host",
+      "expected_receiver_match_reason": "scope_url_or_path_not_allowed"
+    },
+    {
+      "case": "wildcard_host",
+      "category": "wildcard",
+      "safe_host_metadata": "*.example.test",
+      "burp_in_scope": true,
+      "expected_collector_reason": "collector_scope_invalid_host",
+      "expected_collector_allowed": false,
+      "expected_receiver_decision": "would_drop",
+      "expected_receiver_reason": "receiver_scope_invalid_host",
+      "expected_receiver_match_reason": "scope_wildcard_not_allowed"
+    },
+    {
+      "case": "localhost_name",
+      "category": "localhost",
+      "safe_host_metadata": "localhost",
+      "burp_in_scope": true,
+      "expected_collector_reason": "collector_scope_invalid_host",
+      "expected_collector_allowed": false,
+      "expected_receiver_decision": "would_drop",
+      "expected_receiver_reason": "receiver_scope_invalid_host",
+      "expected_receiver_match_reason": "scope_loopback_name_not_allowed"
+    },
+    {
+      "case": "loopback_ipv4",
+      "category": "loopback IPv4",
+      "safe_host_metadata": "127.0.0.1",
+      "burp_in_scope": true,
+      "expected_collector_reason": "collector_scope_invalid_host",
+      "expected_collector_allowed": false,
+      "expected_receiver_decision": "would_drop",
+      "expected_receiver_reason": "receiver_scope_invalid_host",
+      "expected_receiver_match_reason": "scope_ip_literal_not_allowed"
+    },
+    {
+      "case": "ip_literal",
+      "category": "IP literal",
+      "safe_host_metadata": "203.0.113.10",
+      "burp_in_scope": true,
+      "expected_collector_reason": "collector_scope_invalid_host",
+      "expected_collector_allowed": false,
+      "expected_receiver_decision": "would_drop",
+      "expected_receiver_reason": "receiver_scope_invalid_host",
+      "expected_receiver_match_reason": "scope_ip_literal_not_allowed"
+    },
+    {
+      "case": "private_looking_ip",
+      "category": "private-looking IP",
+      "safe_host_metadata": "10.0.0.1",
+      "burp_in_scope": true,
+      "expected_collector_reason": "collector_scope_invalid_host",
+      "expected_collector_allowed": false,
+      "expected_receiver_decision": "would_drop",
+      "expected_receiver_reason": "receiver_scope_invalid_host",
+      "expected_receiver_match_reason": "scope_ip_literal_not_allowed"
+    },
+    {
+      "case": "malformed_label",
+      "category": "malformed label",
+      "safe_host_metadata": "-example.test",
+      "burp_in_scope": true,
+      "expected_collector_reason": "collector_scope_invalid_host",
+      "expected_collector_allowed": false,
+      "expected_receiver_decision": "would_drop",
+      "expected_receiver_reason": "receiver_scope_invalid_host",
+      "expected_receiver_match_reason": "scope_malformed_label"
+    },
+    {
+      "case": "lookalike_suffix",
+      "category": "lookalike suffix",
+      "safe_host_metadata": "example.test.evil.test",
+      "burp_in_scope": false,
+      "expected_collector_reason": "collector_scope_out_of_burp_scope",
+      "expected_collector_allowed": false,
+      "expected_receiver_decision": "would_drop",
+      "expected_receiver_reason": "receiver_scope_out_of_scope",
+      "expected_receiver_match_reason": "scope_suffix_mismatch"
+    },
+    {
+      "case": "subdomain",
+      "category": "subdomain",
+      "safe_host_metadata": "api.example.test",
+      "burp_in_scope": true,
+      "expected_collector_reason": "collector_scope_in_scope",
+      "expected_collector_allowed": true,
+      "expected_receiver_decision": "would_accept",
+      "expected_receiver_reason": "receiver_scope_in_scope",
+      "expected_receiver_match_reason": "scope_matched"
+    },
+    {
+      "case": "out_of_scope_host",
+      "category": "out-of-scope host",
+      "safe_host_metadata": "other.test",
+      "burp_in_scope": false,
+      "expected_collector_reason": "collector_scope_out_of_burp_scope",
+      "expected_collector_allowed": false,
+      "expected_receiver_decision": "would_drop",
+      "expected_receiver_reason": "receiver_scope_out_of_scope",
+      "expected_receiver_match_reason": "scope_suffix_mismatch"
+    }
+  ],
+  "forbidden_values": [
+    "raw request",
+    "raw response",
+    "Cookie",
+    "Authorization",
+    "token",
+    "session",
+    "personal data",
+    "full local path"
+  ]
+}

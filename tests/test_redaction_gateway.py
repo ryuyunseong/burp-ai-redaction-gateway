@@ -106,6 +106,8 @@ MONTOYA_SCOPE_FIXTURE = ROOT / "samples" / "synthetic_montoya_scope_inventory.js
 MONTOYA_HANDOFF = ROOT / "samples" / "synthetic_montoya_handoff_payload.json"
 LIVE_CAPTURE_COLLECTOR_CONTRACT_DOC = ROOT / "docs" / "LIVE_CAPTURE_COLLECTOR_CONTRACT_v0.5.md"
 LIVE_CAPTURE_COLLECTOR_CONTRACT_FIXTURE = ROOT / "samples" / "synthetic_live_capture_collector_contract.json"
+LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_DOC = ROOT / "docs" / "LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_v0.5.md"
+LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_FIXTURE = ROOT / "samples" / "synthetic_live_capture_scope_drift_matrix.json"
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
     "missing_security_headers",
@@ -2081,6 +2083,84 @@ class RedactionGatewayTests(unittest.TestCase):
         for fragment in forbidden_fragments:
             self.assertNotIn(fragment, combined)
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", fixture_text))
+
+    def test_live_capture_scope_drift_matrix_matches_receiver_guard_and_docs(self) -> None:
+        doc = LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_FIXTURE.read_text(encoding="utf-8"))
+        self.assertEqual(fixture["schema_version"], "live-capture-scope-drift-matrix-v1")
+        self.assertFalse(fixture["raw_data_included"])
+        self.assertFalse(fixture["collector_runtime_changed"])
+        self.assertFalse(fixture["receiver_ingest_changed"])
+        self.assertFalse(fixture["dashboard_changed"])
+        self.assertIn("fixture and documentation boundary only", doc)
+        self.assertIn("does not change collector forwarding behavior", doc)
+        self.assertIn("samples/synthetic_live_capture_scope_drift_matrix.json", doc)
+
+        expected_categories = {
+            "normal host",
+            "uppercase host",
+            "host with trailing dot",
+            "URL shape",
+            "path/query included",
+            "wildcard",
+            "localhost",
+            "loopback IPv4",
+            "IP literal",
+            "private-looking IP",
+            "malformed label",
+            "lookalike suffix",
+            "subdomain",
+            "out-of-scope host",
+        }
+        self.assertEqual({case["category"] for case in fixture["cases"]}, expected_categories)
+
+        java_source = "\n".join(path.read_text(encoding="utf-8") for path in MONTOYA_SOURCE_DIR.glob("*.java"))
+        for marker in [
+            "request.isInScope()",
+            "request.httpService().host()",
+            "normalizeHost",
+            "isValidHost",
+            "collector_scope_out_of_burp_scope",
+            "collector_scope_invalid_host",
+            "collector_scope_in_scope",
+        ]:
+            self.assertIn(marker, java_source)
+
+        for case in fixture["cases"]:
+            with self.subTest(case=case["case"]):
+                host = case["safe_host_metadata"]
+                payload = {"request_metadata": {"host": host}}
+                summary = evaluate_receiver_scope_decision_summary(payload, "example.test")
+                self.assertEqual(summary.decision, case["expected_receiver_decision"])
+                self.assertEqual(summary.reason, case["expected_receiver_reason"])
+                self.assertEqual(summary.match_reason, case["expected_receiver_match_reason"])
+                self.assertFalse(summary.raw_data_included)
+                self.assertFalse(summary.ingest_performed)
+                self.assertFalse(summary.collector_changed)
+                self.assertFalse(summary.receiver_ingest_changed)
+
+                if not case["burp_in_scope"]:
+                    expected_collector_reason = "collector_scope_out_of_burp_scope"
+                    expected_collector_allowed = False
+                else:
+                    try:
+                        validate_live_capture_scope(host)
+                    except LiveCaptureScopeError:
+                        expected_collector_reason = "collector_scope_invalid_host"
+                        expected_collector_allowed = False
+                    else:
+                        expected_collector_reason = "collector_scope_in_scope"
+                        expected_collector_allowed = True
+                self.assertEqual(case["expected_collector_reason"], expected_collector_reason)
+                self.assertEqual(case["expected_collector_allowed"], expected_collector_allowed)
+
+                summary_text = json.dumps(summary.to_summary(), sort_keys=True)
+                self.assertNotIn(host, summary_text)
+                self.assertNotIn("example.test", summary_text)
+
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        for forbidden_key in ["raw_request", "raw_response", "cookie_value", "authorization_value"]:
+            self.assertNotIn(forbidden_key, fixture_text)
 
     def test_dashboard_live_capture_session_placeholder_requires_csrf_and_hides_raw_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -4440,6 +4520,8 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("loopback", doc)
         self.assertIn("non-loopback URLs", doc)
         self.assertIn("verify", doc)
+        self.assertIn("LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_v0.5.md", doc)
+        self.assertIn("synthetic_live_capture_scope_drift_matrix.json", doc)
 
         fixture = json.loads(MONTOYA_SCOPE_FIXTURE.read_text(encoding="utf-8"))
         self.assertEqual(fixture["schema_version"], "montoya-scope-inventory-v1")
