@@ -1,14 +1,13 @@
 # Live Capture Wizard Design v0.5
 
 This document defines the v0.5 design boundary for a local-only Live Capture
-Wizard. The current runtime slice provides `GET /live-capture` plus
-CSRF-protected `POST /live-capture/start` and `POST /live-capture/stop`
-as session state placeholders. It does not add collector behavior, receiver
-behavior, raw traffic capture, or any automatic ChatGPT handoff.
+Wizard. The current dashboard slice provides `GET /live-capture` as a read-only
+status panel. It does not add collector behavior, receiver behavior, raw traffic
+capture, dashboard capture execution, or any automatic ChatGPT handoff.
 
-Current `/live-capture` state is a session placeholder. It validates target
-domains through the shared scope guard, stores safe aliases only, and keeps
-actual capture integration separate.
+Current `/live-capture` state shows runtime smoke status labels, optional
+verified receiver output navigation, and safe aliases only. Actual capture
+integration stays separate.
 
 Dashboard integration after the runtime smoke is planned separately in
 [LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md](LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md).
@@ -54,27 +53,24 @@ contracts. It should not create a parallel pipeline.
 
 ## Proposed Routes
 
-The current runtime slice exposes a session placeholder route and two
-CSRF-protected state-changing placeholder routes:
+The current dashboard slice exposes a read-only status route:
 
 ```text
 GET  /live-capture
-POST /live-capture/start
-POST /live-capture/stop
 GET  /live-capture/status?session=<capture_alias>  # future scope
 ```
 
-The implemented POST routes manage local dashboard session state only. They
-write raw-free dashboard action audit events and do not capture traffic. The
-start/stop placeholder is not collector or receiver integration.
+The implemented status route does not capture traffic, forward collector items,
+change receiver ingest, or write new dashboard action audit events.
 
 ## Screen Model
 
-`GET /live-capture` currently shows session placeholder guidance:
+`GET /live-capture` currently shows read-only status guidance:
 
-- target domain validation and safe target alias display
-- current session state: idle, running_placeholder, stopped, or failed_validation
-- ChatGPT automatic send status as false
+- runtime smoke status labels
+- receiver output alias when a verified output is selected
+- current session metadata as safe aliases only
+- automatic AI handoff status as false
 - safe files 4 candidate list
 - collector/receiver integration as separate PR boundary
 - links back to `/`, `/help`, `/upload`, and this design document
