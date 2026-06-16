@@ -81,6 +81,9 @@ Candidate tasks:
 - Keep a raw-free runtime smoke checklist for extension load, receiver status,
   handoff counts, skip counts, and verify evidence:
   [`LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md`](LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md).
+- Keep a raw-free troubleshooting index for Upload Wizard and Live Capture
+  setup, receiver, collector, dashboard, scope, and verify failures:
+  [`TROUBLESHOOTING_v0.5.md`](TROUBLESHOOTING_v0.5.md).
 - Validate loopback receiver behavior and error messages.
 - Check that collector logs remain raw-free.
 - Document startup, stop, retry, and troubleshooting steps.
@@ -182,6 +185,8 @@ Candidate tasks:
 
 - Add a short troubleshooting index for install, verification, dashboard,
   Gitleaks, and release use.
+- Keep v0.5 Live Capture and Upload Wizard troubleshooting categories in
+  [`TROUBLESHOOTING_v0.5.md`](TROUBLESHOOTING_v0.5.md).
 - Clarify internal local-use baseline versus broader distribution confidence.
 - Add a GitHub Release follow-up checklist for future patch releases.
 
@@ -218,12 +223,12 @@ Completed:
 8. `feat/live-capture-collector-filter-v0.5`
 9. `test/live-capture-scope-drift-matrix-v0.5`
 10. `test/live-capture-java-scope-matrix-v0.5`
+11. `docs/live-capture-runtime-smoke-checklist-v0.5`
 
 Next:
 
-1. `docs/live-capture-runtime-smoke-checklist-v0.5`
-2. `docs/v0.5-troubleshooting-index`
-3. `feat/v0.5-montoya-live-validation`
-4. `feat/v0.5-candidate-triage-quality`
-5. `feat/v0.5-report-draft-quality`
-6. `feat/v0.5-windows-launcher-ux`
+1. `docs/v0.5-troubleshooting-index`
+2. `feat/v0.5-montoya-live-validation`
+3. `feat/v0.5-candidate-triage-quality`
+4. `feat/v0.5-report-draft-quality`
+5. `feat/v0.5-windows-launcher-ux`

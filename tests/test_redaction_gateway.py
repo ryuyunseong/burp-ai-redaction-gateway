@@ -125,6 +125,7 @@ LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_DOC = ROOT / "docs" / "LIVE_CAPTURE_RUNTIME
 LIVE_CAPTURE_RUNTIME_SMOKE_EVIDENCE_TEMPLATE = (
     ROOT / "docs" / "templates" / "LIVE_CAPTURE_RUNTIME_SMOKE_EVIDENCE_TEMPLATE.md"
 )
+V05_TROUBLESHOOTING_DOC = ROOT / "docs" / "TROUBLESHOOTING_v0.5.md"
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
     "missing_security_headers",
@@ -2226,6 +2227,63 @@ class RedactionGatewayTests(unittest.TestCase):
             "raw_response",
             "cookie_value",
             "authorization_value",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v05_troubleshooting_index_is_raw_free_and_category_based(self) -> None:
+        troubleshooting = V05_TROUBLESHOOTING_DOC.read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
+        combined = "\n".join([troubleshooting, roadmap])
+
+        self.assertIn("TROUBLESHOOTING_v0.5.md", roadmap)
+        for failure_category in [
+            "extension_load_failed",
+            "receiver_unavailable",
+            "no_in_scope_handoff",
+            "no_out_of_scope_skip",
+            "verify_failed_safely",
+            "upload_validation_failed",
+            "invalid_project_alias",
+            "dashboard_server_not_running",
+            "scope_mismatch",
+        ]:
+            self.assertIn(failure_category, troubleshooting)
+
+        for related_doc in [
+            "LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md",
+            "LIVE_CAPTURE_RUNTIME_SMOKE_EVIDENCE_TEMPLATE.md",
+            "LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_v0.5.md",
+            "LIVE_CAPTURE_COLLECTOR_CONTRACT_v0.5.md",
+            "MONTOYA_COLLECTOR.md",
+            "LOCALHOST_RECEIVER.md",
+            "GUI_UPLOAD_WIZARD.md",
+            "LOCAL_DASHBOARD.md",
+        ]:
+            self.assertIn(related_doc, troubleshooting)
+
+        for required_boundary in [
+            "Findings remain candidates",
+            "Risk remains draft",
+            "Final severity and CVSS remain manual decisions",
+            "does not change runtime behavior",
+            "raw-free metadata",
+        ]:
+            self.assertIn(required_boundary, troubleshooting)
+
+        for forbidden in [
+            "safe-to-share",
+            "confirmed vulnerability",
+            "confirmed issue",
+            "raw_request",
+            "raw_response",
+            "cookie_value",
+            "authorization_value",
+            "Authorization: Bearer",
+            "Cookie:",
+            "C:\\coding\\",
+            "C:\\Users\\",
         ]:
             self.assertNotIn(forbidden, combined)
         self.assertIsNone(re.search(r"https?://", combined))
