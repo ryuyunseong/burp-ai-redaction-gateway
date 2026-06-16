@@ -68,6 +68,11 @@ The next safe dashboard slice should start with a read-only runtime smoke status
 panel and receiver output alias guidance. It should not add archive/capture
 execution buttons, raw preview, raw download, replay, active scan, collector
 forwarding changes, receiver ingest changes, or automatic ChatGPT handoff.
+Runtime smoke evidence source planning is tracked in
+[LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md](LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md).
+The dashboard should read only metadata-only status labels, counts, route
+aliases, and receiver output aliases. It should not upload, create, mutate, or
+display raw evidence.
 
 화면별 운영 순서는
 [GUI_USER_FLOW.md](GUI_USER_FLOW.md)를

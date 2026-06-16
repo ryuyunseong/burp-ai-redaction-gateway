@@ -14,6 +14,9 @@ Dashboard integration after the runtime smoke is planned separately in
 That plan keeps the first dashboard slice read-only and does not approve new
 collector forwarding, receiver ingest, raw preview, raw download, replay, active
 scan, or automatic ChatGPT handoff behavior.
+Runtime smoke evidence source planning is tracked in
+[LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md](LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md).
+That evidence source must stay raw-free and metadata-only.
 
 ## Goal
 

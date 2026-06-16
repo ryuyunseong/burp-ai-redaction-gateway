@@ -129,6 +129,7 @@ V05_TROUBLESHOOTING_DOC = ROOT / "docs" / "TROUBLESHOOTING_v0.5.md"
 LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_DOC = (
     ROOT / "docs" / "LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md"
 )
+LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_DOC = ROOT / "docs" / "LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md"
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
     "missing_security_headers",
@@ -2363,6 +2364,77 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, plan)
         self.assertIsNone(re.search(r"https?://", plan))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", plan))
+
+    def test_live_capture_runtime_evidence_source_is_raw_free_and_non_mutating(self) -> None:
+        evidence_source = LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_DOC.read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
+        local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
+        wizard_design = (ROOT / "docs" / "LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md").read_text(
+            encoding="utf-8"
+        )
+        troubleshooting = V05_TROUBLESHOOTING_DOC.read_text(encoding="utf-8")
+
+        for linked_text in [roadmap, local_dashboard, wizard_design, troubleshooting]:
+            self.assertIn("LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md", linked_text)
+
+        for required in [
+            "planning document only",
+            "read-only status panel",
+            "Candidate Evidence Sources",
+            "Existing Receiver Output Alias",
+            "Local-Only Smoke Evidence File",
+            "Manual Count And Status Summary",
+            "Recommended First Source",
+            "Raw-Free Schema",
+            "Forbidden Fields",
+            "Verify-First Safe Navigation",
+            "Future Action Boundary",
+            "does not add runtime behavior",
+            "collector forwarding",
+            "receiver ingest",
+            "dashboard state-changing actions",
+            "metadata-only fields",
+            "receiver output alias",
+            "raw_data_included",
+            "Safe navigation links must stay hidden unless receiver output verification has",
+            "Findings remain candidates",
+            "Risk remains draft",
+            "Final severity and CVSS remain manual decisions",
+        ]:
+            self.assertIn(required, evidence_source)
+
+        for allowed_link in [
+            "simple dashboard",
+            "safe files",
+            "triage",
+            "report readiness",
+            "workflow",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+        ]:
+            self.assertIn(allowed_link, evidence_source)
+
+        for forbidden in [
+            "safe-to-share",
+            "confirmed vulnerability",
+            "confirmed issue",
+            "final CVSS",
+            "raw_request",
+            "raw_response",
+            "cookie_value",
+            "authorization_value",
+            "Authorization: Bearer",
+            "Cookie:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "start capture from dashboard",
+            "raw preview/download action is approved",
+        ]:
+            self.assertNotIn(forbidden, evidence_source)
+        self.assertIsNone(re.search(r"https?://", evidence_source))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", evidence_source))
 
     def test_dashboard_live_capture_read_only_status_panel_hides_actions_and_raw_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
