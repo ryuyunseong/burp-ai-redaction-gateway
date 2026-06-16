@@ -8,6 +8,9 @@ This roadmap is a planning document. It does not change runtime behavior,
 redaction rules, dashboard actions, HMAC handling, CSRF handling, retention
 policy, or release status.
 
+The v0.5 MVP release readiness boundary is tracked in
+[`RELEASE_READINESS_v0.5.md`](RELEASE_READINESS_v0.5.md).
+
 ## Non-Negotiable Boundaries
 
 - Raw request or response values must not be displayed, logged, committed, or
@@ -95,6 +98,9 @@ Candidate tasks:
 - Keep the planned local-only runtime smoke evidence schema raw-free and
   planning-only before adding any dashboard file reader:
   [`LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_v0.5.md`](LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_v0.5.md).
+- Keep the v0.5 MVP included and excluded scope explicit before any tag or
+  release decision:
+  [`RELEASE_READINESS_v0.5.md`](RELEASE_READINESS_v0.5.md).
 - Validate loopback receiver behavior and error messages.
 - Check that collector logs remain raw-free.
 - Document startup, stop, retry, and troubleshooting steps.

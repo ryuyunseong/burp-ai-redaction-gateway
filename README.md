@@ -235,6 +235,8 @@ capture integration is not implemented yet. The read-only AI handoff checklist i
 [docs/GITHUB_RELEASE_v0.4.34.md](docs/GITHUB_RELEASE_v0.4.34.md)를
 참조하세요. v0.5 후보 작업과 hotfix 경계는
 [docs/ROADMAP_v0.5.md](docs/ROADMAP_v0.5.md)를
+참조하세요. v0.5 MVP release readiness 범위와 점검 항목은
+[docs/RELEASE_READINESS_v0.5.md](docs/RELEASE_READINESS_v0.5.md)를
 참조하세요.
 
 ## Burp Montoya Collector
