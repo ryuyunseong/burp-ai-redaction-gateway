@@ -108,6 +108,19 @@ LIVE_CAPTURE_COLLECTOR_CONTRACT_DOC = ROOT / "docs" / "LIVE_CAPTURE_COLLECTOR_CO
 LIVE_CAPTURE_COLLECTOR_CONTRACT_FIXTURE = ROOT / "samples" / "synthetic_live_capture_collector_contract.json"
 LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_DOC = ROOT / "docs" / "LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_v0.5.md"
 LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_FIXTURE = ROOT / "samples" / "synthetic_live_capture_scope_drift_matrix.json"
+LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_JAVA_TEST = (
+    ROOT
+    / "extensions"
+    / "montoya-collector"
+    / "src"
+    / "test"
+    / "java"
+    / "com"
+    / "ryuyunseong"
+    / "burpai"
+    / "redactiongateway"
+    / "CollectorSafeHostMetadataMatrixTest.java"
+)
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
     "missing_security_headers",
@@ -2095,6 +2108,11 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("fixture and documentation boundary only", doc)
         self.assertIn("does not change collector forwarding behavior", doc)
         self.assertIn("samples/synthetic_live_capture_scope_drift_matrix.json", doc)
+        java_matrix_test = LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_JAVA_TEST.read_text(encoding="utf-8")
+        self.assertIn("CollectorSafeHostMetadata.evaluate", java_matrix_test)
+        self.assertIn("collector_scope_in_scope", java_matrix_test)
+        self.assertIn("collector_scope_invalid_host", java_matrix_test)
+        self.assertIn("collector_scope_out_of_burp_scope", java_matrix_test)
 
         expected_categories = {
             "normal host",
@@ -2113,6 +2131,8 @@ class RedactionGatewayTests(unittest.TestCase):
             "out-of-scope host",
         }
         self.assertEqual({case["category"] for case in fixture["cases"]}, expected_categories)
+        for case in fixture["cases"]:
+            self.assertIn(case["case"], java_matrix_test)
 
         java_source = "\n".join(path.read_text(encoding="utf-8") for path in MONTOYA_SOURCE_DIR.glob("*.java"))
         for marker in [
