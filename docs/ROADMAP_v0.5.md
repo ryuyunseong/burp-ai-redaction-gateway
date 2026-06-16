@@ -87,6 +87,9 @@ Candidate tasks:
 - Keep the dashboard integration scope for `/live-capture` phase-based and
   read-only before adding any new dashboard action:
   [`LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md`](LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md).
+- Define the future runtime evidence source before connecting runtime smoke
+  evidence to the dashboard:
+  [`LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md`](LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md).
 - Validate loopback receiver behavior and error messages.
 - Check that collector logs remain raw-free.
 - Document startup, stop, retry, and troubleshooting steps.
