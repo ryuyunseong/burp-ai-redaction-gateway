@@ -58,6 +58,9 @@ scan, or automatic handoff behavior.
 - Release readiness status page.
 - Report and prompt readiness read-only endpoint.
 
+The first contract matrix slice is tracked in
+[`MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md`](MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md).
+
 Expected acceptance evidence:
 
 - Tools read only verified output aliases.

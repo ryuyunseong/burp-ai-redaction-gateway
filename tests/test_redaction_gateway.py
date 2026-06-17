@@ -143,6 +143,12 @@ V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE_DOC = (
 )
 ROADMAP_V06_DOC = ROOT / "docs" / "ROADMAP_v0.6.md"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
+MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
+    ROOT / "docs" / "MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md"
+)
+MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_FIXTURE = (
+    ROOT / "samples" / "synthetic_mcp_read_only_tool_contract_matrix_v0.6.json"
+)
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
@@ -3005,6 +3011,125 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, compatibility)
         self.assertIsNone(re.search(r"https?://", compatibility))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", compatibility))
+
+    def test_mcp_read_only_tool_contract_matrix_v06_is_planning_only_and_raw_free(self) -> None:
+        contract = MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(
+            MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_FIXTURE.read_text(encoding="utf-8")
+        )
+        roadmap_v06 = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        mcp_design = MCP_INTEGRATION_DESIGN_DOC.read_text(encoding="utf-8")
+        compatibility = BURP_MCP_COMPATIBILITY_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        for linked_text in [roadmap_v06, mcp_design, compatibility, readme]:
+            self.assertIn("MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md", linked_text)
+
+        allowed_tools = [
+            "get_gateway_status",
+            "list_verified_outputs",
+            "get_live_capture_status",
+            "get_safe_file_inventory",
+            "get_report_readiness",
+            "get_prompt_readiness",
+            "get_troubleshooting_categories",
+            "get_release_readiness",
+        ]
+        blocked_tools = [
+            "get_raw_request",
+            "get_raw_response",
+            "read_local_only_file",
+            "read_raw_vault",
+            "replay_request",
+            "active_scan",
+            "send_to_chatgpt",
+            "delete_files",
+            "show_hmac_secret",
+            "show_csrf_token",
+            "modify_burp_config",
+            "collaborator_payload_send",
+        ]
+        blocked_codes = [
+            "not_verified",
+            "not_allowlisted",
+            "raw_access_blocked",
+            "state_change_blocked",
+            "local_path_blocked",
+            "secret_access_blocked",
+        ]
+
+        self.assertEqual(fixture["allowed_candidate_tools"], allowed_tools)
+        self.assertEqual(fixture["forbidden_tool_concepts"], blocked_tools)
+        self.assertEqual(fixture["blocked_response_codes"], blocked_codes)
+        self.assertTrue(fixture["planning_only"])
+        self.assertFalse(fixture["runtime_registry_implemented"])
+        self.assertTrue(fixture["read_only_first"])
+        self.assertTrue(fixture["allowlist_tools_only"])
+        self.assertTrue(fixture["verify_first_requirement"])
+        self.assertFalse(fixture["raw_data_included"])
+
+        for required in [
+            "contract matrix only",
+            "does not implement an MCP server",
+            "register MCP tools",
+            "read-only first",
+            "allowlist tools only",
+            "verify-first",
+            "No automatic ChatGPT handoff",
+            "Candidate finding",
+            "risk language draft-only",
+            "severity and CVSS as manual decisions",
+            "not return raw traffic",
+            "Blocked Response Contract",
+            "raw_data_included: false",
+        ]:
+            self.assertIn(required, contract)
+        for tool in allowed_tools + blocked_tools:
+            self.assertIn(tool, contract)
+        for code in blocked_codes:
+            self.assertIn(code, contract)
+        for safe_file in [
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+        ]:
+            self.assertIn(safe_file, contract)
+            self.assertIn(safe_file, json.dumps(fixture))
+
+        serialized_fixture = json.dumps(fixture)
+        self.assertIn("no_raw_traffic", serialized_fixture)
+        self.assertIn("no_automatic_chatgpt_handoff", serialized_fixture)
+        self.assertIn("candidate_finding_only", serialized_fixture)
+        self.assertIn("risk_draft_only", serialized_fixture)
+        self.assertIn("final_severity_cvss_manual_decision", serialized_fixture)
+
+        combined = contract + "\n" + serialized_fixture
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
     def test_mcp_and_web_ux_plan_docs_are_planning_only_and_raw_free(self) -> None:
         mcp_design = MCP_INTEGRATION_DESIGN_DOC.read_text(encoding="utf-8")

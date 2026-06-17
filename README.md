@@ -250,6 +250,8 @@ See the latest raw-free Montoya runtime smoke release evidence in
 Post-v0.5 planning and v0.5.x hotfix boundaries are tracked in
 [docs/ROADMAP_v0.6.md](docs/ROADMAP_v0.6.md) and
 [docs/V0.5_HOTFIX_POLICY.md](docs/V0.5_HOTFIX_POLICY.md).
+The v0.6 read-only MCP tool contract matrix is tracked in
+[docs/MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md](docs/MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md).
 
 ## Burp Montoya Collector
 
