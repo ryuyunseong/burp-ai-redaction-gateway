@@ -42,8 +42,9 @@ CVSS는 사람이 수동 결정합니다.
 home, `/help`, `/operations`, `/live-capture`의 read-only troubleshooting
 categories와 release readiness status 안내는 setup, upload/export,
 verify/review/report, live-capture, safe-files, MCP boundary를 빠르게 찾기 위한
-링크만 제공합니다. 이 영역은 tag 생성, GitHub Release 생성, raw preview, replay,
-active scan, 자동 ChatGPT 전송, POST action을 제공하지 않습니다.
+기존 route 링크와 문서 파일명 안내만 제공합니다. Dashboard는 `docs/*.md`를 직접
+serving하지 않으며, 이 영역은 tag 생성, GitHub Release 생성, raw preview,
+replay, active scan, 자동 ChatGPT 전송, POST action을 제공하지 않습니다.
 
 dashboard에는 조회 전용 운영 인덱스가 있습니다.
 

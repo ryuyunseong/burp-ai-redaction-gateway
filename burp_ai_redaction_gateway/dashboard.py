@@ -4103,31 +4103,37 @@ def _read_only_troubleshooting_panel() -> str:
         (
             "setup friction",
             "Windows 실행, 포트 충돌, dashboard 시작 문제를 먼저 확인합니다.",
+            "/help",
             "docs/WINDOWS_LAUNCHER_GUIDE.md",
         ),
         (
             "upload/export friction",
             "Burp export 입력과 Upload Wizard 경계를 확인합니다.",
+            "/upload",
             "docs/GUI_UPLOAD_WIZARD.md",
         ),
         (
             "verify/review/report friction",
             "verify 실패, 후보 finding, report draft 생성 흐름을 점검합니다.",
+            "/operations",
             "docs/USER_QUICKSTART.md",
         ),
         (
             "live-capture friction",
             "Live Capture는 상태 확인과 runtime evidence만 read-only로 봅니다.",
             "/live-capture",
+            "docs/LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md",
         ),
         (
             "safe-files friction",
             "AI 입력 후보 파일 4개와 수동 검토 경계를 확인합니다.",
+            "/help",
             "docs/GUI_SAFE_FILE_INVENTORY_INDEX.md",
         ),
         (
             "MCP boundary friction",
             "MCP는 read-only 경계와 별도 구현 단위를 먼저 확인합니다.",
+            "/operations",
             "docs/READ_ONLY_MCP.md",
         ),
     )
@@ -4137,9 +4143,10 @@ def _read_only_troubleshooting_panel() -> str:
                 <strong>{_h(title)}</strong>
                 <span>{_h(summary)}</span>
                 <small>read-only navigation only; raw traffic은 표시하지 않습니다.</small>
+                <code>{_h(reference)}</code>
               </a>
         """
-        for title, summary, href in categories
+        for title, summary, href, reference in categories
     )
     return f"""
         <section class="panel read-only-troubleshooting-panel" aria-label="read-only troubleshooting categories">
@@ -4180,7 +4187,7 @@ def _release_readiness_status_panel() -> str:
         f"""
               <div>
                 <dt>{_h(title)}</dt>
-                <dd><a href="{_h(href)}">{_h(summary)}</a></dd>
+                <dd><span>{_h(summary)}</span><br><code>{_h(href)}</code></dd>
               </div>
         """
         for title, summary, href in readiness_items
@@ -4189,7 +4196,7 @@ def _release_readiness_status_panel() -> str:
         <section class="panel release-readiness-status-panel" aria-label="release readiness status">
           <div class="panel-head">
             <h2>Release readiness status</h2>
-            <span class="muted">문서 링크와 상태 metadata만 표시합니다.</span>
+            <span class="muted">문서 파일명과 상태 metadata만 표시합니다.</span>
           </div>
           <dl class="facts">
             {rows}

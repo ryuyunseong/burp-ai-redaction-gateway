@@ -344,9 +344,9 @@ Safe files는 AI 입력 후보이며 수동 검토가 필요하고, finding은 �
 home, `/help`, `/operations`, `/live-capture`에는 read-only troubleshooting
 categories와 release readiness status 안내가 표시됩니다. 이 영역은 setup,
 upload/export, verify/review/report, live-capture, safe-files, MCP boundary
-문서나 기존 route로 이동하는 링크만 제공합니다. tag 생성, GitHub Release 생성,
-raw preview, replay, active scan, 자동 ChatGPT 전송, POST action은 제공하지
-않습니다.
+기존 route로 이동하는 링크와 문서 파일명 안내만 제공합니다. Dashboard는
+`docs/*.md`를 직접 serving하지 않으며, tag 생성, GitHub Release 생성, raw
+preview, replay, active scan, 자동 ChatGPT 전송, POST action은 제공하지 않습니다.
 
 dashboard는 `127.0.0.1`에만 bind합니다. 설정된 root 아래 output directory를
 찾고, 선택한 output이 `verify`를 통과한 뒤에만 preview, download, 보호된

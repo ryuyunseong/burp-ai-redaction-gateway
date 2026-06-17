@@ -39,10 +39,11 @@ handling, integrity handling, or state-changing behavior.
   identifiers, raw traffic, credential values, or state-changing actions.
 - Troubleshooting panel for setup, upload/export, verify/review/report,
   live-capture, safe-files, and MCP boundary guidance. It should link to
-  existing routes or documents only.
+  existing dashboard routes and show document filenames as non-serving
+  reference text only.
 - Read-only release readiness status panel. It should link to v0.5 release
-  readiness, v0.6 planning, and hotfix policy documents without creating tags
-  or GitHub Releases.
+  readiness, v0.6 planning, and hotfix policy documents as reference text
+  without creating tags or GitHub Releases.
 - Demo and sample output guidance.
 
 Expected acceptance evidence:

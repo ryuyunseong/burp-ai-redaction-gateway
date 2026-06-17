@@ -1795,6 +1795,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     self.assertIn("safe-files friction", body)
                     self.assertIn("MCP boundary friction", body)
                     self.assertIn("read-only navigation only", body)
+                    self.assertNotRegex(body, r'href=["\']docs/')
                     self.assertNotIn(str(root), body)
                     self.assertNotIn("raw_request", body)
                     self.assertNotIn("raw_response", body)
@@ -1821,8 +1822,12 @@ class RedactionGatewayTests(unittest.TestCase):
                     self.assertIn("tag action", body)
                     self.assertIn("not available in dashboard", body)
                     self.assertIn("GitHub Release action", body)
+                    self.assertIn("<code>docs/RELEASE_READINESS_v0.5.md</code>", body)
+                    self.assertNotRegex(body, r'<a[^>]+href=["\']docs/')
 
                 self.assertIn("receiver output alias", pages["/live-capture"])
+                for linked_route in ["/help", "/upload", "/operations", "/live-capture"]:
+                    get(linked_route)
             finally:
                 server.shutdown()
                 server.server_close()
@@ -1847,6 +1852,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "GitHub Release 생성",
             "POST action",
             "Read-only release readiness status panel",
+            "Dashboard는 `docs/*.md`를 직접",
         ]:
             self.assertIn(required, combined)
 
