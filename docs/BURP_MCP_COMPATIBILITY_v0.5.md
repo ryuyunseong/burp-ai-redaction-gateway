@@ -6,6 +6,8 @@ gateway. It is a compatibility and safety boundary document only.
 It does not implement an MCP server, connect to a Burp MCP tool, change runtime
 behavior, change collector forwarding, change receiver ingest, add POST
 actions, add a local evidence reader, create a tag, or create a GitHub Release.
+The v0.6 gateway-owned read-only MCP contract matrix is tracked in
+[`MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md`](MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md).
 
 ## Core Conclusion
 

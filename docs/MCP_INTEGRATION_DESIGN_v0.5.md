@@ -16,6 +16,8 @@ reading raw Burp traffic or local-only artifacts.
 Burp MCP-style upstream tooling does not replace this gateway. The compatibility
 boundary is tracked in
 [`BURP_MCP_COMPATIBILITY_v0.5.md`](BURP_MCP_COMPATIBILITY_v0.5.md).
+The v0.6 read-only tool contract matrix is tracked in
+[`MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md`](MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md).
 
 The intended flow is:
 
