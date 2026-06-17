@@ -79,6 +79,13 @@ The release evidence does not include:
 
 ## Follow-Up
 
-Before creating a tag or GitHub Release, confirm that this evidence still
-matches the intended release commit and repeat the raw-free runtime smoke if the
-collector, receiver, dashboard, or release commit changes.
+The tested runtime baseline is `2e7503b`. This release evidence PR changes only
+docs and tests; it does not change runtime behavior.
+
+Repeat the raw-free runtime smoke if collector, receiver, dashboard runtime
+code, Montoya extension behavior, scope policy, or other runtime-affecting code
+changes after the tested runtime baseline.
+
+If only release evidence docs or tests change after the tested runtime
+baseline, confirm that the runtime baseline remains unchanged before creating a
+tag or GitHub Release.

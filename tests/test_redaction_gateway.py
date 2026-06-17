@@ -2808,10 +2808,17 @@ class RedactionGatewayTests(unittest.TestCase):
             "Candidate findings are not confirmed issues",
             "Risk remains draft",
             "Final severity and CVSS remain manual decisions",
+            "The tested runtime baseline is `2e7503b`",
+            "changes only",
+            "docs and tests",
+            "does not change runtime behavior",
+            "runtime-affecting code",
+            "runtime baseline remains unchanged",
         ]:
             self.assertIn(required, evidence)
 
         for forbidden in [
+            "release commit changes",
             "safe-to-share",
             "guaranteed safe",
             "confirmed vulnerability",
