@@ -138,6 +138,9 @@ LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_FIXTURE = (
 )
 V05_RELEASE_READINESS_DOC = ROOT / "docs" / "RELEASE_READINESS_v0.5.md"
 V05_RC_READINESS_DOC = ROOT / "docs" / "RC_READINESS_v0.5.md"
+V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE_DOC = (
+    ROOT / "docs" / "V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md"
+)
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
@@ -2635,7 +2638,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "The local evidence reader does not exist yet",
             "Dashboard live capture orchestration does not exist yet",
             "Computer Use GUI automation is not a stable release gate",
-            "Actual runtime smoke still depends on manual evidence",
+            "Latest Montoya runtime smoke release evidence is recorded as raw-free manual evidence",
             "Candidate findings are not confirmed issues",
             "Risk remains draft",
             "Final severity and CVSS remain manual decisions",
@@ -2735,7 +2738,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "Dashboard live capture orchestration does not exist yet",
             "MCP server is not implemented yet",
             "Computer Use GUI automation is not a stable release gate",
-            "Actual runtime smoke still depends on manual evidence",
+            "Latest Montoya runtime smoke release evidence is recorded as raw-free manual evidence",
             "Candidate findings are not confirmed issues",
             "Risk remains draft",
             "Final severity and CVSS remain manual decisions",
@@ -2767,6 +2770,79 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, rc_readiness)
         self.assertIsNone(re.search(r"https?://", rc_readiness))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", rc_readiness))
+
+    def test_v05_montoya_runtime_smoke_release_evidence_is_raw_free(self) -> None:
+        evidence = V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE_DOC.read_text(encoding="utf-8")
+        rc_readiness = V05_RC_READINESS_DOC.read_text(encoding="utf-8")
+        readiness = V05_RELEASE_READINESS_DOC.read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        for linked_text in [rc_readiness, readiness, roadmap, readme]:
+            self.assertIn("V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md", linked_text)
+
+        for required in [
+            "v0.5 Montoya Runtime Smoke Release Evidence",
+            "smoke date",
+            "2026-06-17",
+            "montoya-runtime-smoke-v0.5-release-evidence",
+            "tested commit alias",
+            "2e7503b",
+            "extension load status",
+            "local receiver status",
+            "in_scope_handoff_count",
+            "out_of_scope_skip_count",
+            "missing_host_skipped",
+            "invalid_host_skipped",
+            "receiver_verify_status",
+            "receiver_output_alias",
+            "montoya_runtime_smoke",
+            "raw_marker_count",
+            "raw_data_included",
+            "target_identifiers_recorded",
+            "raw_traffic_recorded",
+            "credential_values_recorded",
+            "false",
+            "No tag until explicit approval",
+            "No GitHub Release until explicit approval",
+            "Candidate findings are not confirmed issues",
+            "Risk remains draft",
+            "Final severity and CVSS remain manual decisions",
+            "The tested runtime baseline is `2e7503b`",
+            "changes only",
+            "docs and tests",
+            "does not change runtime behavior",
+            "runtime-affecting code",
+            "runtime baseline remains unchanged",
+        ]:
+            self.assertIn(required, evidence)
+
+        for forbidden in [
+            "release commit changes",
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "raw_request",
+            "raw_response",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden, evidence)
+
+        self.assertIsNone(re.search(r"https?://", evidence))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", evidence))
 
     def test_mcp_and_web_ux_plan_docs_are_planning_only_and_raw_free(self) -> None:
         mcp_design = MCP_INTEGRATION_DESIGN_DOC.read_text(encoding="utf-8")

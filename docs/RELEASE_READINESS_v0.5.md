@@ -69,6 +69,7 @@ only raw-free metadata:
 - Git safety check.
 - Git diff whitespace check.
 - Actual Burp runtime smoke raw-free evidence.
+- Montoya runtime smoke release evidence.
 - PR body hygiene.
 - Docs forbidden marker check.
 - No tag until explicit approval.
@@ -78,7 +79,7 @@ only raw-free metadata:
 - The local evidence reader does not exist yet.
 - Dashboard live capture orchestration does not exist yet.
 - Computer Use GUI automation is not a stable release gate.
-- Actual runtime smoke still depends on manual evidence.
+- Latest Montoya runtime smoke release evidence is recorded as raw-free manual evidence.
 - Candidate findings are not confirmed issues.
 - Risk remains draft.
 - Final severity and CVSS remain manual decisions.
@@ -111,6 +112,7 @@ Shared docs, PR bodies, release notes, and issue text must not include:
 - [`GUI_UPLOAD_WIZARD.md`](GUI_UPLOAD_WIZARD.md)
 - [`LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md`](LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)
 - [`LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md`](LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md)
+- [`V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md`](V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md)
 - [`LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md`](LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md)
 - [`LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md`](LIVE_CAPTURE_RUNTIME_EVIDENCE_SOURCE_v0.5.md)
 - [`LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_v0.5.md`](LIVE_CAPTURE_LOCAL_EVIDENCE_SCHEMA_v0.5.md)
