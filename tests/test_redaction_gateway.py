@@ -1758,6 +1758,125 @@ class RedactionGatewayTests(unittest.TestCase):
                 server.server_close()
                 thread.join(timeout=5)
 
+    def test_dashboard_read_only_ux_bundle_panels_are_safe(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "out"
+            output = root / "generated"
+            main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
+
+            server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = server.server_address[1]
+
+                def get(path: str) -> str:
+                    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                    connection.request("GET", path)
+                    response = connection.getresponse()
+                    body = response.read().decode("utf-8")
+                    connection.close()
+                    self.assertEqual(response.status, 200)
+                    return body
+
+                pages = {
+                    "/": get("/"),
+                    "/help": get("/help"),
+                    "/operations": get("/operations"),
+                    "/live-capture": get("/live-capture?project=generated"),
+                }
+
+                for path, body in pages.items():
+                    self.assertIn("Read-only troubleshooting categories", body)
+                    self.assertIn("setup friction", body)
+                    self.assertIn("upload/export friction", body)
+                    self.assertIn("verify/review/report friction", body)
+                    self.assertIn("live-capture friction", body)
+                    self.assertIn("safe-files friction", body)
+                    self.assertIn("MCP boundary friction", body)
+                    self.assertIn("read-only navigation only", body)
+                    self.assertNotRegex(body, r'href=["\']docs/')
+                    self.assertNotIn(str(root), body)
+                    self.assertNotIn("raw_request", body)
+                    self.assertNotIn("raw_response", body)
+                    self.assertNotIn("DUMMY_COOKIE_VALUE", body)
+                    self.assertNotIn("DUMMY_BEARER_TOKEN", body)
+                    self.assertNotIn("Authorization:", body)
+                    self.assertNotIn("Cookie:", body)
+                    self.assertNotIn("safe-to-share", body)
+                    self.assertNotIn("safe to share", body.lower())
+                    self.assertNotIn("confirmed vulnerability", body.lower())
+                    self.assertNotIn("final CVSS confirmed", body)
+                    self.assertNotIn("severity confirmed", body.lower())
+                    self.assertNotIn("<form", body)
+                    self.assertNotIn("<button", body)
+                    self.assertNotIn('method="post"', body)
+                    self.assertNotIn('action="/action"', body)
+
+                for path in ["/", "/help", "/operations"]:
+                    body = pages[path]
+                    self.assertIn("Release readiness status", body)
+                    self.assertIn("v0.5 local-use baseline", body)
+                    self.assertIn("v0.6 planning", body)
+                    self.assertIn("v0.5 hotfix policy", body)
+                    self.assertIn("tag action", body)
+                    self.assertIn("not available in dashboard", body)
+                    self.assertIn("GitHub Release action", body)
+                    self.assertIn("<code>docs/RELEASE_READINESS_v0.5.md</code>", body)
+                    self.assertNotRegex(body, r'<a[^>]+href=["\']docs/')
+
+                self.assertIn("receiver output alias", pages["/live-capture"])
+                for linked_route in ["/help", "/upload", "/operations", "/live-capture"]:
+                    get(linked_route)
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
+    def test_dashboard_read_only_ux_bundle_docs_are_raw_free(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
+        roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+
+        combined = "\n".join([readme, local_dashboard, roadmap])
+        for required in [
+            "read-only troubleshooting",
+            "release readiness status",
+            "setup",
+            "upload/export",
+            "verify/review/report",
+            "live-capture",
+            "safe-files",
+            "MCP boundary",
+            "tag 생성",
+            "GitHub Release 생성",
+            "POST action",
+            "Read-only release readiness status panel",
+            "Dashboard는 `docs/*.md`를 직접",
+        ]:
+            self.assertIn(required, combined)
+
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS confirmed",
+            "raw_request",
+            "raw_response",
+            "cookie_value",
+            "authorization_value",
+            "Authorization: Bearer",
+            "Cookie:",
+            "DUMMY_COOKIE_VALUE",
+            "DUMMY_BEARER_TOKEN",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden, combined)
+
     def test_dashboard_settings_page_shows_safe_status_only(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir) / "out"
