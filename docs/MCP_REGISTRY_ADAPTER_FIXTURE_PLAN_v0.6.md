@@ -19,6 +19,7 @@ The purpose is to prevent drift between:
 - `MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md`
 - `MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md`
 - `MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md`
+- `MCP_IMPLEMENTATION_GATE_DESIGN_v0.6.md`
 - `samples/synthetic_mcp_registry_adapter_expected_behavior_v0.6.json`
 
 The fixture fixes expected read-only adapter behavior before any runtime MCP
@@ -169,6 +170,7 @@ A later implementation PR must show:
 - Severity and CVSS remain manual decisions.
 - No runtime case returns raw traffic, target identifiers, credential or session
   values, secret values, or local path details.
+- The implementation gate fixture is consumed before runtime behavior is added.
 
 ## Deferred Runtime Decisions
 

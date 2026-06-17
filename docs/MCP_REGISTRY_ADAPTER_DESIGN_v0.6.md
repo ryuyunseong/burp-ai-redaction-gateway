@@ -5,6 +5,8 @@ adapter. It is a design document only.
 
 The fixture plan for expected adapter behavior is tracked in
 [`MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md`](MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md).
+The implementation gate for any later runtime PR is tracked in
+[`MCP_IMPLEMENTATION_GATE_DESIGN_v0.6.md`](MCP_IMPLEMENTATION_GATE_DESIGN_v0.6.md).
 
 It does not implement an MCP server, MCP transport, protocol handler, tool
 handler, local evidence reader, upload or import action, dashboard POST action,
@@ -164,6 +166,7 @@ A later implementation PR must keep these sources aligned:
 - `MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md`
 - `MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md`
 - `MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md`
+- `MCP_IMPLEMENTATION_GATE_DESIGN_v0.6.md`
 - This adapter design document.
 
 Required fixture checks:
@@ -182,6 +185,7 @@ A later implementation PR must provide:
 
 - Adapter allowlist consumption test.
 - Forbidden concept blocked test.
+- Implementation gate fixture consumption test.
 - Verify-first blocked response test.
 - Blocked response field-shape test.
 - Safe file inventory metadata test.

@@ -1,0 +1,198 @@
+{
+  "schema_version": "mcp_implementation_gate.v0.6",
+  "planning_only": true,
+  "implementation_approved": false,
+  "mcp_server_implemented": false,
+  "mcp_transport_implemented": false,
+  "mcp_protocol_handler_implemented": false,
+  "mcp_tool_execution_implemented": false,
+  "local_evidence_reader_implemented": false,
+  "upload_import_action_implemented": false,
+  "dashboard_post_action_implemented": false,
+  "collector_forwarding_changed": false,
+  "receiver_ingest_changed": false,
+  "raw_preview_download_implemented": false,
+  "replay_active_scan_implemented": false,
+  "automatic_chatgpt_handoff_implemented": false,
+  "tag_created": false,
+  "github_release_created": false,
+  "raw_data_included": false,
+  "gate_requirements": [
+    {
+      "name": "registry_helper_consumed",
+      "required": true,
+      "evidence_type": "unit_test",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "adapter_expected_behavior_fixture_consumed",
+      "required": true,
+      "evidence_type": "fixture_check",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "allowed_tools_match_registry",
+      "required": true,
+      "evidence_type": "fixture_check",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "forbidden_tools_absent",
+      "required": true,
+      "evidence_type": "unit_test",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "blocked_response_helper_used",
+      "required": true,
+      "evidence_type": "unit_test",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "blocked_response_fields_match_fixture",
+      "required": true,
+      "evidence_type": "fixture_check",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "verify_first_for_output_specific_tools",
+      "required": true,
+      "evidence_type": "unit_test",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "unverified_alias_blocked",
+      "required": true,
+      "evidence_type": "unit_test",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "unknown_tool_blocked",
+      "required": true,
+      "evidence_type": "unit_test",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "forbidden_concept_blocked",
+      "required": true,
+      "evidence_type": "unit_test",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "raw_access_blocked",
+      "required": true,
+      "evidence_type": "unit_test",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "state_change_blocked",
+      "required": true,
+      "evidence_type": "unit_test",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "local_path_blocked",
+      "required": true,
+      "evidence_type": "unit_test",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "secret_access_blocked",
+      "required": true,
+      "evidence_type": "unit_test",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "no_automatic_chatgpt_handoff",
+      "required": true,
+      "evidence_type": "unit_test",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "no_local_evidence_reader",
+      "required": true,
+      "evidence_type": "code_review",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "no_raw_file_body",
+      "required": true,
+      "evidence_type": "unit_test",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "no_target_identifier",
+      "required": true,
+      "evidence_type": "raw_free_scan",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "no_credential_or_session_value",
+      "required": true,
+      "evidence_type": "raw_free_scan",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "candidate_findings_only",
+      "required": true,
+      "evidence_type": "document_review",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "risk_draft_only",
+      "required": true,
+      "evidence_type": "document_review",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "severity_cvss_manual_decision",
+      "required": true,
+      "evidence_type": "document_review",
+      "blocks_runtime_if_missing": true,
+      "raw_data_included": false,
+      "state_change_performed": false
+    }
+  ]
+}
