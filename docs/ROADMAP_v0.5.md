@@ -15,6 +15,9 @@ The current RC readiness review is tracked in
 MCP integration and Korean-first web UX planning are tracked in
 [`MCP_INTEGRATION_DESIGN_v0.5.md`](MCP_INTEGRATION_DESIGN_v0.5.md) and
 [`WEB_UX_KO_PLAN_v0.5.md`](WEB_UX_KO_PLAN_v0.5.md).
+Post-v0.5 planning and the v0.5.x hotfix boundary are tracked in
+[`ROADMAP_v0.6.md`](ROADMAP_v0.6.md) and
+[`V0.5_HOTFIX_POLICY.md`](V0.5_HOTFIX_POLICY.md).
 
 ## Non-Negotiable Boundaries
 

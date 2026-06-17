@@ -108,6 +108,8 @@ Shared docs, PR bodies, release notes, and issue text must not include:
 ## Related Documents
 
 - [`ROADMAP_v0.5.md`](ROADMAP_v0.5.md)
+- [`ROADMAP_v0.6.md`](ROADMAP_v0.6.md)
+- [`V0.5_HOTFIX_POLICY.md`](V0.5_HOTFIX_POLICY.md)
 - [`RC_READINESS_v0.5.md`](RC_READINESS_v0.5.md)
 - [`GUI_UPLOAD_WIZARD.md`](GUI_UPLOAD_WIZARD.md)
 - [`LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md`](LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md)

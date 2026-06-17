@@ -141,6 +141,8 @@ V05_RC_READINESS_DOC = ROOT / "docs" / "RC_READINESS_v0.5.md"
 V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE_DOC = (
     ROOT / "docs" / "V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md"
 )
+ROADMAP_V06_DOC = ROOT / "docs" / "ROADMAP_v0.6.md"
+V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
@@ -2844,6 +2846,97 @@ class RedactionGatewayTests(unittest.TestCase):
 
         self.assertIsNone(re.search(r"https?://", evidence))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", evidence))
+
+    def test_v06_roadmap_and_v05_hotfix_policy_are_planning_only_and_raw_free(self) -> None:
+        roadmap_v06 = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        hotfix_policy = V05_HOTFIX_POLICY_DOC.read_text(encoding="utf-8")
+        roadmap_v05 = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
+        readiness = V05_RELEASE_READINESS_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        for linked_text in [roadmap_v05, readiness, readme]:
+            self.assertIn("ROADMAP_v0.6.md", linked_text)
+            self.assertIn("V0.5_HOTFIX_POLICY.md", linked_text)
+
+        for required in [
+            "v0.6 Roadmap",
+            "planning only",
+            "Low-Risk UX Improvements",
+            "Read-Only Integration",
+            "Security-Sensitive Deferred Work",
+            "Korean quickstart wording polish",
+            "Safe files explanation cards",
+            "Output alias selector",
+            "Troubleshooting panel",
+            "Demo and sample output guidance",
+            "MCP read-only tool contract matrix",
+            "MCP read-only prototype",
+            "Release readiness status page",
+            "Report and prompt readiness read-only endpoint",
+            "Local evidence file reader",
+            "Upload or import evidence action",
+            "Dashboard live capture orchestration",
+            "Replay",
+            "Active scan",
+            "Automatic ChatGPT handoff",
+            "File retention or delete policy changes",
+            "HMAC secret UI",
+            "CSRF or state-changing action changes",
+            "MCP server implementation",
+            "New tag",
+            "GitHub Release",
+        ]:
+            self.assertIn(required, roadmap_v06)
+
+        for required in [
+            "v0.5 Hotfix Policy",
+            "policy only",
+            "Release note typo",
+            "Broken link fix",
+            "Documentation correction",
+            "Failing test fix",
+            "Packaging or launch script bug",
+            "Dashboard copy bug",
+            "Non-behavioral safety wording correction",
+            "MCP server implementation",
+            "Local evidence reader",
+            "New POST action",
+            "Collector forwarding behavior change",
+            "Receiver ingest behavior change",
+            "Raw preview or raw download",
+            "Replay or active scan",
+            "ChatGPT auto-send",
+            "File delete or retention policy change",
+            "HMAC or CSRF behavior change",
+        ]:
+            self.assertIn(required, hotfix_policy)
+
+        combined = "\n".join([roadmap_v06, hotfix_policy])
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "raw_request",
+            "raw_response",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden, combined)
+
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
     def test_burp_mcp_compatibility_doc_is_boundary_only_and_raw_free(self) -> None:
         compatibility = BURP_MCP_COMPATIBILITY_DOC.read_text(encoding="utf-8")
