@@ -260,6 +260,11 @@ The v0.6 MCP registry adapter fixture plan is tracked in
 [docs/MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md](docs/MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md).
 The v0.6 MCP implementation gate design is tracked in
 [docs/MCP_IMPLEMENTATION_GATE_DESIGN_v0.6.md](docs/MCP_IMPLEMENTATION_GATE_DESIGN_v0.6.md).
+The v0.6 local-only MCP adapter dry-run helper is
+`burp_ai_redaction_gateway/mcp_adapter_dry_run.py`. It consumes the registry,
+adapter fixture, and implementation gate fixture without adding an MCP server,
+transport, protocol handler, actual tool execution, local evidence reader, or
+runtime MCP exposure.
 
 ## Burp Montoya Collector
 

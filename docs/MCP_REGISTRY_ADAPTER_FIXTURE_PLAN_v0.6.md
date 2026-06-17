@@ -153,6 +153,12 @@ If a future PR changes any top-level non-goal flag from false, it must be a
 separate runtime-affecting review with its own tests. This fixture plan does not
 approve that change.
 
+The local-only adapter dry-run skeleton is
+`burp_ai_redaction_gateway/mcp_adapter_dry_run.py`. It consumes this fixture and
+the implementation gate fixture for internal validation only. It is not an MCP
+server, not MCP transport, not a protocol handler, not actual tool execution,
+not a local evidence reader, and not runtime MCP exposure.
+
 ## Acceptance Evidence For Later Implementation
 
 A later implementation PR must show:
