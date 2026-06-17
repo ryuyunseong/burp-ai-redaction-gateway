@@ -16,6 +16,8 @@ registry, or add MCP tool handlers.
 
 The registry adapter design is tracked in
 [`MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md`](MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md).
+The registry adapter fixture plan is tracked in
+[`MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md`](MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md).
 
 ## Purpose
 
@@ -98,6 +100,8 @@ dashboard route, CLI command, POST action, or tool handler execution layer.
 A later adapter must consume the registry helper instead of defining a second
 independent allowlist. It must still return blocked responses through the
 blocked response helper and keep verify-first behavior.
+Its expected behavior cases must match the adapter fixture plan before runtime
+registration or execution is considered.
 
 ## Blocked Response Schema
 

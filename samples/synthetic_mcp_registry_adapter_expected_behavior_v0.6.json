@@ -1,0 +1,250 @@
+{
+  "schema_version": "mcp_registry_adapter_expected_behavior.v0.6",
+  "planning_only": true,
+  "mcp_server_implemented": false,
+  "mcp_transport_implemented": false,
+  "mcp_protocol_handler_implemented": false,
+  "mcp_tool_execution_implemented": false,
+  "local_evidence_reader_implemented": false,
+  "raw_data_included": false,
+  "allowed_tools": [
+    "get_gateway_status",
+    "list_verified_outputs",
+    "get_live_capture_status",
+    "get_safe_file_inventory",
+    "get_report_readiness",
+    "get_prompt_readiness",
+    "get_troubleshooting_categories",
+    "get_release_readiness"
+  ],
+  "forbidden_tools": [
+    "get_raw_request",
+    "get_raw_response",
+    "read_local_only_file",
+    "read_raw_vault",
+    "replay_request",
+    "active_scan",
+    "send_to_chatgpt",
+    "delete_files",
+    "show_hmac_secret",
+    "show_csrf_token",
+    "modify_burp_config",
+    "collaborator_payload_send"
+  ],
+  "blocked_response_codes": [
+    "not_verified",
+    "not_allowlisted",
+    "raw_access_blocked",
+    "state_change_blocked",
+    "local_path_blocked",
+    "secret_access_blocked"
+  ],
+  "blocked_response_allowed_fields": [
+    "ok",
+    "code",
+    "safe_reason",
+    "output_alias",
+    "remediation_hint"
+  ],
+  "safe_files": [
+    "analysis_packet.json",
+    "chatgpt_prompt.md",
+    "codex_task_prompt.md",
+    "report_draft.md"
+  ],
+  "adapter_cases": [
+    {
+      "name": "allowed_global_status_tool",
+      "input_kind": "global_status",
+      "expected_ok": true,
+      "expected_code": null,
+      "expected_fields": [
+        "tool_name",
+        "status",
+        "gateway_version",
+        "root_alias",
+        "verify_mode",
+        "raw_data_included"
+      ],
+      "raw_data_included": false,
+      "local_path_included": false,
+      "credential_values_included": false,
+      "target_identifiers_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "allowed_verified_output_specific_tool",
+      "input_kind": "verified_output_alias",
+      "expected_ok": true,
+      "expected_code": null,
+      "expected_fields": [
+        "tool_name",
+        "output_alias",
+        "verify_status",
+        "raw_data_included"
+      ],
+      "raw_data_included": false,
+      "local_path_included": false,
+      "credential_values_included": false,
+      "target_identifiers_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "unverified_output_alias_blocked",
+      "input_kind": "unverified_output_alias",
+      "expected_ok": false,
+      "expected_code": "not_verified",
+      "expected_fields": [
+        "ok",
+        "code",
+        "safe_reason",
+        "output_alias",
+        "remediation_hint"
+      ],
+      "raw_data_included": false,
+      "local_path_included": false,
+      "credential_values_included": false,
+      "target_identifiers_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "unknown_tool_blocked",
+      "input_kind": "unknown_tool",
+      "expected_ok": false,
+      "expected_code": "not_allowlisted",
+      "expected_fields": [
+        "ok",
+        "code",
+        "safe_reason",
+        "remediation_hint"
+      ],
+      "raw_data_included": false,
+      "local_path_included": false,
+      "credential_values_included": false,
+      "target_identifiers_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "forbidden_concept_blocked",
+      "input_kind": "forbidden_concept",
+      "expected_ok": false,
+      "expected_code": "not_allowlisted",
+      "expected_fields": [
+        "ok",
+        "code",
+        "safe_reason",
+        "remediation_hint"
+      ],
+      "raw_data_included": false,
+      "local_path_included": false,
+      "credential_values_included": false,
+      "target_identifiers_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "raw_access_request_blocked",
+      "input_kind": "raw_access",
+      "expected_ok": false,
+      "expected_code": "raw_access_blocked",
+      "expected_fields": [
+        "ok",
+        "code",
+        "safe_reason",
+        "remediation_hint"
+      ],
+      "raw_data_included": false,
+      "local_path_included": false,
+      "credential_values_included": false,
+      "target_identifiers_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "state_changing_request_blocked",
+      "input_kind": "state_change",
+      "expected_ok": false,
+      "expected_code": "state_change_blocked",
+      "expected_fields": [
+        "ok",
+        "code",
+        "safe_reason",
+        "remediation_hint"
+      ],
+      "raw_data_included": false,
+      "local_path_included": false,
+      "credential_values_included": false,
+      "target_identifiers_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "local_path_request_blocked",
+      "input_kind": "local_path",
+      "expected_ok": false,
+      "expected_code": "local_path_blocked",
+      "expected_fields": [
+        "ok",
+        "code",
+        "safe_reason",
+        "remediation_hint"
+      ],
+      "raw_data_included": false,
+      "local_path_included": false,
+      "credential_values_included": false,
+      "target_identifiers_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "secret_request_blocked",
+      "input_kind": "secret",
+      "expected_ok": false,
+      "expected_code": "secret_access_blocked",
+      "expected_fields": [
+        "ok",
+        "code",
+        "safe_reason",
+        "remediation_hint"
+      ],
+      "raw_data_included": false,
+      "local_path_included": false,
+      "credential_values_included": false,
+      "target_identifiers_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "safe_file_inventory_metadata_only",
+      "input_kind": "safe_file_inventory",
+      "expected_ok": true,
+      "expected_code": null,
+      "expected_fields": [
+        "tool_name",
+        "safe_files",
+        "exists",
+        "size_bytes",
+        "modified_at_utc",
+        "fingerprint",
+        "raw_data_included"
+      ],
+      "raw_data_included": false,
+      "local_path_included": false,
+      "credential_values_included": false,
+      "target_identifiers_included": false,
+      "state_change_performed": false
+    },
+    {
+      "name": "no_automatic_chatgpt_handoff",
+      "input_kind": "external_handoff",
+      "expected_ok": false,
+      "expected_code": "state_change_blocked",
+      "expected_fields": [
+        "ok",
+        "code",
+        "safe_reason",
+        "remediation_hint"
+      ],
+      "raw_data_included": false,
+      "local_path_included": false,
+      "credential_values_included": false,
+      "target_identifiers_included": false,
+      "state_change_performed": false
+    }
+  ]
+}

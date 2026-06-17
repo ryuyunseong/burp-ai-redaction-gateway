@@ -3,6 +3,9 @@
 This document defines the planning boundary for a future read-only MCP registry
 adapter. It is a design document only.
 
+The fixture plan for expected adapter behavior is tracked in
+[`MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md`](MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md).
+
 It does not implement an MCP server, MCP transport, protocol handler, tool
 handler, local evidence reader, upload or import action, dashboard POST action,
 collector forwarding change, receiver ingest change, raw preview or download,
@@ -157,8 +160,10 @@ A later implementation PR must keep these sources aligned:
 - `mcp_read_only_registry.py`
 - `samples/synthetic_mcp_read_only_tool_contract_matrix_v0.6.json`
 - `samples/synthetic_mcp_read_only_prototype_preflight_v0.6.json`
+- `samples/synthetic_mcp_registry_adapter_expected_behavior_v0.6.json`
 - `MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md`
 - `MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md`
+- `MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md`
 - This adapter design document.
 
 Required fixture checks:
