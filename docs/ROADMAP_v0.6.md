@@ -95,6 +95,10 @@ and `burp_ai_redaction_gateway/mcp_tool_schema_catalog.py`. It derives safe
 descriptor metadata from the registry and dry-run fixtures only. It is not an
 MCP server, not MCP transport, not a protocol handler, not actual tool
 execution, not a local evidence reader, and not runtime MCP exposure.
+The runtime boundary decision is tracked in
+[`MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md`](MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md).
+It keeps server, transport, protocol handling, tool execution, and local
+evidence reader work split before any runtime implementation is considered.
 
 Expected acceptance evidence:
 
@@ -132,7 +136,7 @@ Expected acceptance evidence before any implementation:
 
 1. Low-risk GUI and documentation UX polish.
 2. Read-only MCP contract matrix.
-3. Read-only MCP prototype for verified output aliases.
+3. MCP runtime boundary decision before any server work.
 4. Read-only release readiness status page.
 5. Security-sensitive design review for local evidence intake.
 
