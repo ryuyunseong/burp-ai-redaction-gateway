@@ -149,6 +149,12 @@ MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_FIXTURE = (
     ROOT / "samples" / "synthetic_mcp_read_only_tool_contract_matrix_v0.6.json"
 )
+MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_V06_DOC = (
+    ROOT / "docs" / "MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md"
+)
+MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_V06_FIXTURE = (
+    ROOT / "samples" / "synthetic_mcp_read_only_prototype_preflight_v0.6.json"
+)
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
@@ -3105,6 +3111,140 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("final_severity_cvss_manual_decision", serialized_fixture)
 
         combined = contract + "\n" + serialized_fixture
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_mcp_read_only_prototype_preflight_v06_is_planning_only_and_raw_free(self) -> None:
+        preflight = MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_V06_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(
+            MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_V06_FIXTURE.read_text(encoding="utf-8")
+        )
+        roadmap_v06 = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        contract = MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC.read_text(encoding="utf-8")
+        mcp_design = MCP_INTEGRATION_DESIGN_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        for linked_text in [roadmap_v06, contract, mcp_design, readme]:
+            self.assertIn("MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md", linked_text)
+
+        allowed_tools = [
+            "get_gateway_status",
+            "list_verified_outputs",
+            "get_live_capture_status",
+            "get_safe_file_inventory",
+            "get_report_readiness",
+            "get_prompt_readiness",
+            "get_troubleshooting_categories",
+            "get_release_readiness",
+        ]
+        forbidden_tools = [
+            "get_raw_request",
+            "get_raw_response",
+            "read_local_only_file",
+            "read_raw_vault",
+            "replay_request",
+            "active_scan",
+            "send_to_chatgpt",
+            "delete_files",
+            "show_hmac_secret",
+            "show_csrf_token",
+            "modify_burp_config",
+            "collaborator_payload_send",
+        ]
+        blocked_codes = [
+            "not_verified",
+            "not_allowlisted",
+            "raw_access_blocked",
+            "state_change_blocked",
+            "local_path_blocked",
+            "secret_access_blocked",
+        ]
+        safe_files = [
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+        ]
+
+        self.assertEqual(fixture["allowed_tools"], allowed_tools)
+        self.assertEqual(fixture["forbidden_tools"], forbidden_tools)
+        self.assertEqual(fixture["blocked_response_codes"], blocked_codes)
+        self.assertEqual(fixture["safe_files"], safe_files)
+        self.assertTrue(fixture["planning_only"])
+        self.assertFalse(fixture["runtime_registry_implemented"])
+        self.assertFalse(fixture["mcp_server_implemented"])
+        self.assertFalse(fixture["mcp_tool_handler_implemented"])
+        self.assertFalse(fixture["raw_data_included"])
+        self.assertFalse(fixture["local_paths_included"])
+        self.assertFalse(fixture["credential_values_included"])
+        self.assertFalse(fixture["target_identifiers_included"])
+
+        for required in [
+            "planning and test-design document only",
+            "does not implement an MCP server",
+            "implement an MCP runtime registry",
+            "add MCP tool handlers",
+            "Purpose",
+            "Non-goals",
+            "Allowed Runtime Registry Candidates",
+            "Forbidden Runtime Registry Concepts",
+            "Registry Drift Prevention",
+            "Blocked Response Schema",
+            "Verify-First Behavior",
+            "Safe File Allowlist",
+            "Acceptance Evidence For Later Implementation PR",
+            "no raw traffic",
+            "No automatic ChatGPT handoff",
+            "Candidate finding only",
+            "Risk draft only",
+            "Final severity/CVSS manual decision",
+        ]:
+            self.assertIn(required, preflight)
+        for item in allowed_tools + forbidden_tools + blocked_codes + safe_files:
+            self.assertIn(item, preflight)
+            self.assertIn(item, json.dumps(fixture))
+        for field in ["ok", "code", "safe_reason", "output_alias", "remediation_hint"]:
+            self.assertIn(field, preflight)
+            self.assertIn(field, json.dumps(fixture))
+
+        serialized_fixture = json.dumps(fixture)
+        for required in [
+            "allowlist_registry_test_required",
+            "forbidden_concept_absence_test_required",
+            "blocked_response_schema_test_required",
+            "verify_first_behavior_required",
+            "no_raw_traffic",
+            "no_automatic_chatgpt_handoff",
+            "candidate_finding_only",
+            "risk_draft_only",
+            "final_severity_cvss_manual_decision",
+        ]:
+            self.assertIn(required, serialized_fixture)
+
+        combined = preflight + "\n" + serialized_fixture
         for forbidden in [
             "safe-to-share",
             "guaranteed safe",

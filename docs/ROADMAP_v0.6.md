@@ -60,6 +60,8 @@ scan, or automatic handoff behavior.
 
 The first contract matrix slice is tracked in
 [`MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md`](MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md).
+The prototype preflight criteria are tracked in
+[`MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md`](MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md).
 
 Expected acceptance evidence:
 

@@ -1,0 +1,68 @@
+{
+  "schema_version": "mcp_read_only_prototype_preflight.v0.6",
+  "planning_only": true,
+  "runtime_registry_implemented": false,
+  "mcp_server_implemented": false,
+  "mcp_tool_handler_implemented": false,
+  "raw_data_included": false,
+  "local_paths_included": false,
+  "credential_values_included": false,
+  "target_identifiers_included": false,
+  "allowed_tools": [
+    "get_gateway_status",
+    "list_verified_outputs",
+    "get_live_capture_status",
+    "get_safe_file_inventory",
+    "get_report_readiness",
+    "get_prompt_readiness",
+    "get_troubleshooting_categories",
+    "get_release_readiness"
+  ],
+  "forbidden_tools": [
+    "get_raw_request",
+    "get_raw_response",
+    "read_local_only_file",
+    "read_raw_vault",
+    "replay_request",
+    "active_scan",
+    "send_to_chatgpt",
+    "delete_files",
+    "show_hmac_secret",
+    "show_csrf_token",
+    "modify_burp_config",
+    "collaborator_payload_send"
+  ],
+  "blocked_response_codes": [
+    "not_verified",
+    "not_allowlisted",
+    "raw_access_blocked",
+    "state_change_blocked",
+    "local_path_blocked",
+    "secret_access_blocked"
+  ],
+  "blocked_response_allowed_fields": [
+    "ok",
+    "code",
+    "safe_reason",
+    "output_alias",
+    "remediation_hint"
+  ],
+  "safe_files": [
+    "analysis_packet.json",
+    "chatgpt_prompt.md",
+    "codex_task_prompt.md",
+    "report_draft.md"
+  ],
+  "acceptance_evidence": {
+    "read_only_first": true,
+    "allowlist_registry_test_required": true,
+    "forbidden_concept_absence_test_required": true,
+    "blocked_response_schema_test_required": true,
+    "verify_first_behavior_required": true,
+    "no_raw_traffic": true,
+    "no_automatic_chatgpt_handoff": true,
+    "candidate_finding_only": true,
+    "risk_draft_only": true,
+    "final_severity_cvss_manual_decision": true
+  }
+}
