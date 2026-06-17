@@ -5,6 +5,9 @@ read-only MCP interface. It is a contract matrix only.
 
 Prototype preflight criteria are tracked in
 [`MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md`](MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md).
+The internal registry skeleton is a code-level consistency helper for this
+matrix. It is not MCP server registration, transport, protocol handling, local
+evidence reading, POST action handling, or tool execution.
 
 It does not implement an MCP server, register MCP tools, change runtime
 behavior, add a local evidence reader, add upload or import actions, add POST
