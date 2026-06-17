@@ -34,7 +34,9 @@ handling, integrity handling, or state-changing behavior.
 
 - Korean quickstart wording polish.
 - Safe files explanation cards.
-- Output alias selector.
+- Output alias selector for verified output aliases only. It should stay
+  read-only navigation and must not display local paths, actual target
+  identifiers, raw traffic, credential values, or state-changing actions.
 - Troubleshooting panel.
 - Demo and sample output guidance.
 

@@ -1649,6 +1649,115 @@ class RedactionGatewayTests(unittest.TestCase):
                 server.server_close()
                 thread.join(timeout=5)
 
+    def test_dashboard_output_alias_selector_uses_verified_aliases_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "out"
+            verified = root / "generated"
+            unverified = root / "unverified"
+            main(["generate", "--input", str(SAMPLE), "--output", str(verified), "--project", "client_alias_demo"])
+            main(["generate", "--input", str(SAMPLE), "--output", str(unverified), "--project", "client_alias_demo"])
+            (unverified / "unsafe.md").write_text(
+                "Authorization: Bearer DUMMY_BEARER_TOKEN\n",
+                encoding="utf-8",
+            )
+
+            server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = server.server_address[1]
+
+                def get(path: str) -> str:
+                    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                    connection.request("GET", path)
+                    response = connection.getresponse()
+                    body = response.read().decode("utf-8")
+                    connection.close()
+                    self.assertEqual(response.status, 200)
+                    return body
+
+                pages = {
+                    "/": get("/"),
+                    "/safe-files": get("/safe-files?project=generated"),
+                    "/triage": get("/triage?project=generated"),
+                    "/report-readiness": get("/report-readiness?project=generated"),
+                    "/workflow": get("/workflow?project=generated"),
+                    "/live-capture": get("/live-capture?project=generated"),
+                }
+
+                for body in pages.values():
+                    self.assertIn("검증된 output 산출물 선택", body)
+                    self.assertIn("Safe files는 AI 입력 후보이며 수동 검토가 필요합니다", body)
+                    self.assertIn("Finding은 후보, risk는 초안입니다", body)
+                    self.assertIn("Final severity와 CVSS는 사람이 수동 결정합니다", body)
+                    self.assertIn("Raw traffic은 표시하지 않습니다", body)
+                    self.assertIn("generated", body)
+                    self.assertIn("/safe-files?project=generated", body)
+                    self.assertIn("/triage?project=generated", body)
+                    self.assertIn("/report-readiness?project=generated", body)
+                    self.assertIn("/workflow?project=generated", body)
+                    self.assertNotIn("/safe-files?project=unverified", body)
+                    self.assertNotIn("/triage?project=unverified", body)
+                    self.assertNotIn("/report-readiness?project=unverified", body)
+                    self.assertNotIn("/workflow?project=unverified", body)
+                    self.assertNotIn(str(root), body)
+                    self.assertNotIn("raw_request", body)
+                    self.assertNotIn("raw_response", body)
+                    self.assertNotIn("DUMMY_COOKIE_VALUE", body)
+                    self.assertNotIn("DUMMY_BEARER_TOKEN", body)
+                    self.assertNotIn("Authorization:", body)
+                    self.assertNotIn("Cookie:", body)
+                    self.assertNotIn("safe-to-share", body)
+                    self.assertNotIn("safe to share", body.lower())
+                    self.assertNotIn("confirmed vulnerability", body.lower())
+                    self.assertNotIn("final CVSS confirmed", body)
+                    self.assertNotIn("severity confirmed", body.lower())
+                    self.assertNotIn("<form", body)
+                    self.assertNotIn("<button", body)
+                    self.assertNotIn('method="post"', body)
+                    self.assertNotIn('action="/action"', body)
+
+                self.assertIn("선택됨", pages["/safe-files"])
+                self.assertIn("별칭만 표시합니다. 로컬 경로와 target 식별자는 표시하지 않습니다.", pages["/"])
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
+    def test_dashboard_output_alias_selector_falls_back_when_no_verified_output_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "out"
+            root.mkdir()
+
+            server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = server.server_address[1]
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", "/")
+                response = connection.getresponse()
+                body = response.read().decode("utf-8")
+                connection.close()
+
+                self.assertEqual(response.status, 200)
+                self.assertIn("검증된 output 산출물 선택", body)
+                self.assertIn("검증을 통과한 output 별칭이 아직 없습니다.", body)
+                self.assertIn("운영 가이드 보기", body)
+                self.assertIn('href="/help"', body)
+                self.assertNotIn(str(root), body)
+                self.assertNotIn("raw_request", body)
+                self.assertNotIn("raw_response", body)
+                self.assertNotIn("DUMMY_COOKIE_VALUE", body)
+                self.assertNotIn("DUMMY_BEARER_TOKEN", body)
+                self.assertNotIn("<form", body)
+                self.assertNotIn("<button", body)
+                self.assertNotIn('method="post"', body)
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
     def test_dashboard_settings_page_shows_safe_status_only(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir) / "out"
@@ -3561,10 +3670,12 @@ class RedactionGatewayTests(unittest.TestCase):
                     self.assertIn("docs/LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md", body)
                     self.assertIn("docs/LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md", body)
                     self.assertIn("docs/TROUBLESHOOTING_v0.5.md", body)
-                    self.assertNotIn("/safe-files?project=generated", body)
+                    self.assertIn("검증된 output 산출물 선택", body)
+                    self.assertIn("/safe-files?project=generated", body)
 
                     linked_body = get("/live-capture?project=generated")
                     self.assertIn("Verified receiver output navigation", linked_body)
+                    self.assertIn("검증된 output 산출물 선택", linked_body)
                     self.assertIn("receiver output alias", linked_body)
                     self.assertIn("generated", linked_body)
                     self.assertIn("receiver verify status", linked_body)
