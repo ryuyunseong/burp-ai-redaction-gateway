@@ -5,6 +5,8 @@ read-only MCP interface. It is a contract matrix only.
 
 Prototype preflight criteria are tracked in
 [`MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md`](MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md).
+The registry adapter design is tracked in
+[`MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md`](MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md).
 The internal registry skeleton is a code-level consistency helper for this
 matrix. It is not MCP server registration, transport, protocol handling, local
 evidence reading, POST action handling, or tool execution.
@@ -109,6 +111,8 @@ values.
 A later implementation PR must prove the following before registering tools:
 
 - Runtime registry contains only allowlisted tools.
+- Registry adapter consumes the internal registry helper instead of a second
+  independent allowlist.
 - Forbidden tool concepts are absent from runtime registration.
 - Verify-first behavior blocks unverified outputs.
 - Blocked response codes match this matrix.
