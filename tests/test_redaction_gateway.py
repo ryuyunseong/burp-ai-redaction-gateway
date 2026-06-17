@@ -177,6 +177,12 @@ MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_V06_DOC = (
 MCP_REGISTRY_ADAPTER_EXPECTED_BEHAVIOR_V06_FIXTURE = (
     ROOT / "samples" / "synthetic_mcp_registry_adapter_expected_behavior_v0.6.json"
 )
+MCP_IMPLEMENTATION_GATE_DESIGN_V06_DOC = (
+    ROOT / "docs" / "MCP_IMPLEMENTATION_GATE_DESIGN_v0.6.md"
+)
+MCP_IMPLEMENTATION_GATE_V06_FIXTURE = (
+    ROOT / "samples" / "synthetic_mcp_implementation_gate_v0.6.json"
+)
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
@@ -3817,6 +3823,152 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, normalized)
         self.assertIsNone(re.search(r"https?://", normalized))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", normalized))
+
+    def test_mcp_implementation_gate_design_v06_is_planning_only_and_raw_free(self) -> None:
+        gate_doc = MCP_IMPLEMENTATION_GATE_DESIGN_V06_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(MCP_IMPLEMENTATION_GATE_V06_FIXTURE.read_text(encoding="utf-8"))
+        roadmap_v06 = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
+        contract = MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC.read_text(encoding="utf-8")
+        preflight = MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_V06_DOC.read_text(encoding="utf-8")
+        adapter = MCP_REGISTRY_ADAPTER_DESIGN_V06_DOC.read_text(encoding="utf-8")
+        fixture_plan = MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_V06_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        for linked_text in [
+            roadmap_v06,
+            fast_track,
+            contract,
+            preflight,
+            adapter,
+            fixture_plan,
+            readme,
+        ]:
+            self.assertIn("MCP_IMPLEMENTATION_GATE_DESIGN_v0.6.md", linked_text)
+        self.assertIn("synthetic_mcp_implementation_gate_v0.6.json", gate_doc)
+
+        for required in [
+            "design and gate document only",
+            "does not implement an MCP server",
+            "MCP transport",
+            "protocol handler",
+            "actual tool execution",
+            "No local evidence reader",
+            "No upload or import action",
+            "No dashboard POST action",
+            "No raw preview or raw download",
+            "No replay or active scan",
+            "No automatic ChatGPT handoff",
+            "No tag or GitHub Release",
+            "No implementation approval",
+            "Purpose",
+            "Non-goals",
+            "Required Preconditions",
+            "Required Implementation Gates",
+            "Required Blocked Cases",
+            "Required Review Evidence",
+            "Runtime Work That Remains Forbidden",
+            "Approval Checklist",
+            "Deferred Decisions",
+            "registry helper",
+            "adapter expected behavior fixture",
+            "blocked response helper",
+            "Verify-first behavior",
+            "If any required gate is missing, runtime implementation remains blocked",
+            "Candidate findings remain candidates",
+            "Risk values remain drafts",
+            "Severity and CVSS remain manual decisions",
+            "No tag or GitHub Release was created",
+        ]:
+            self.assertIn(required, gate_doc)
+
+        self.assertEqual(fixture["schema_version"], "mcp_implementation_gate.v0.6")
+        self.assertTrue(fixture["planning_only"])
+        self.assertFalse(fixture["implementation_approved"])
+        self.assertFalse(fixture["raw_data_included"])
+        runtime_flags = [
+            "mcp_server_implemented",
+            "mcp_transport_implemented",
+            "mcp_protocol_handler_implemented",
+            "mcp_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "upload_import_action_implemented",
+            "dashboard_post_action_implemented",
+            "collector_forwarding_changed",
+            "receiver_ingest_changed",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "tag_created",
+            "github_release_created",
+        ]
+        for flag in runtime_flags:
+            self.assertIn(flag, fixture)
+            self.assertIs(fixture[flag], False)
+
+        required_gate_names = {
+            "registry_helper_consumed",
+            "adapter_expected_behavior_fixture_consumed",
+            "allowed_tools_match_registry",
+            "forbidden_tools_absent",
+            "blocked_response_helper_used",
+            "blocked_response_fields_match_fixture",
+            "verify_first_for_output_specific_tools",
+            "unverified_alias_blocked",
+            "unknown_tool_blocked",
+            "forbidden_concept_blocked",
+            "raw_access_blocked",
+            "state_change_blocked",
+            "local_path_blocked",
+            "secret_access_blocked",
+            "no_automatic_chatgpt_handoff",
+            "no_local_evidence_reader",
+            "no_raw_file_body",
+            "no_target_identifier",
+            "no_credential_or_session_value",
+            "candidate_findings_only",
+            "risk_draft_only",
+            "severity_cvss_manual_decision",
+        }
+        gate_requirements = fixture["gate_requirements"]
+        self.assertEqual({gate["name"] for gate in gate_requirements}, required_gate_names)
+        for gate in gate_requirements:
+            self.assertIs(gate["required"], True)
+            self.assertIsInstance(gate["evidence_type"], str)
+            self.assertTrue(gate["evidence_type"])
+            self.assertIs(gate["blocks_runtime_if_missing"], True)
+            self.assertIs(gate["raw_data_included"], False)
+            self.assertIs(gate["state_change_performed"], False)
+
+        combined = gate_doc + "\n" + json.dumps(fixture, sort_keys=True)
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "token=",
+            "HMAC secret value",
+            "CSRF token value",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
     def test_mcp_read_only_registry_skeleton_v06_matches_fixtures_and_blocks_unsafe_metadata(self) -> None:
         contract_fixture = json.loads(
