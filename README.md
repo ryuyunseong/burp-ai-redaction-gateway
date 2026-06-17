@@ -247,6 +247,9 @@ For the Burp MCP upstream tool versus gateway safety boundary, see
 
 See the latest raw-free Montoya runtime smoke release evidence in
 [docs/V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md](docs/V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md).
+Post-v0.5 planning and v0.5.x hotfix boundaries are tracked in
+[docs/ROADMAP_v0.6.md](docs/ROADMAP_v0.6.md) and
+[docs/V0.5_HOTFIX_POLICY.md](docs/V0.5_HOTFIX_POLICY.md).
 
 ## Burp Montoya Collector
 
