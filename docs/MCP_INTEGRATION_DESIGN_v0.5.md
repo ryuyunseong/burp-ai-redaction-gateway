@@ -18,6 +18,8 @@ boundary is tracked in
 [`BURP_MCP_COMPATIBILITY_v0.5.md`](BURP_MCP_COMPATIBILITY_v0.5.md).
 The v0.6 read-only tool contract matrix is tracked in
 [`MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md`](MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md).
+The v0.6 prototype preflight criteria are tracked in
+[`MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md`](MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md).
 
 The intended flow is:
 
