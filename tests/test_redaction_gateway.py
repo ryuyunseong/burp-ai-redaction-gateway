@@ -4182,7 +4182,15 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("build_read_only_tool_registry", module_source)
         self.assertIn("evaluate_adapter_dry_run_fixture", module_source)
         self.assertNotIn("ALLOWED_TOOL_NAMES =", module_source)
-        for forbidden_import in ["http.server", "socketserver", "subprocess", "requests", "urllib"]:
+        for forbidden_import in [
+            "http.server",
+            "socketserver",
+            "http.client",
+            "socket",
+            "subprocess",
+            "requests",
+            "urllib",
+        ]:
             self.assertNotIn(forbidden_import, module_source)
 
         catalog = build_local_only_tool_schema_catalog()
