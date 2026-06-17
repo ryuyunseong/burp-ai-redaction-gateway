@@ -22,6 +22,16 @@ That helper is not an MCP server, not MCP transport, not a protocol handler,
 not actual tool execution, not a local evidence reader, and not runtime MCP
 exposure. It is gate and fixture consumption code only.
 
+The local-only tool schema catalog is:
+
+- `burp_ai_redaction_gateway/mcp_tool_schema_catalog.py`
+- `MCP_LOCAL_ONLY_TOOL_SCHEMA_CATALOG_v0.6.md`
+
+That helper derives descriptor metadata from the registry and dry-run fixtures
+only. It is not an MCP server, not MCP transport, not a protocol handler, not
+actual tool execution, not a local evidence reader, and not runtime MCP
+exposure.
+
 ## Purpose
 
 The purpose is to prevent the first MCP runtime implementation from bypassing
@@ -132,6 +142,9 @@ A future implementation PR must include:
 - Tests that prove verify-first behavior blocks unverified aliases.
 - Tests that prove the local-only adapter dry-run skeleton consumes the adapter
   fixture and implementation gate fixture before runtime behavior is considered.
+- Tests that prove the local-only tool schema catalog derives descriptors from
+  the registry helper and fixture gate instead of a second independent
+  allowlist.
 - Raw-free scans for returned metadata.
 - Documentation updates that keep the four AI candidate file boundary visible.
 - Review notes confirming that no local evidence reader, upload/import action,

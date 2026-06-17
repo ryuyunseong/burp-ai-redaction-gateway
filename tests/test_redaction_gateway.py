@@ -105,6 +105,13 @@ from burp_ai_redaction_gateway.mcp_read_only_registry import (
     build_read_only_tool_registry,
     validate_registry_against_contract_fixtures,
 )
+from burp_ai_redaction_gateway.mcp_tool_schema_catalog import (
+    McpToolSchemaCatalogError,
+    assert_tool_schema_catalog_raw_free,
+    build_local_only_tool_schema_catalog,
+    validate_tool_schema_catalog_against_fixtures,
+    validate_tool_schema_catalog_against_registry,
+)
 from burp_ai_redaction_gateway.models import HttpRequest, HttpResponse, RawEvent, SanitizedEvent
 from burp_ai_redaction_gateway.parser import load_events
 from burp_ai_redaction_gateway.policy import load_policy
@@ -191,6 +198,8 @@ MCP_IMPLEMENTATION_GATE_V06_FIXTURE = (
     ROOT / "samples" / "synthetic_mcp_implementation_gate_v0.6.json"
 )
 MCP_ADAPTER_DRY_RUN_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_adapter_dry_run.py"
+MCP_TOOL_SCHEMA_CATALOG_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_tool_schema_catalog.py"
+MCP_TOOL_SCHEMA_CATALOG_DOC = ROOT / "docs" / "MCP_LOCAL_ONLY_TOOL_SCHEMA_CATALOG_v0.6.md"
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
@@ -4160,6 +4169,155 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, normalized)
         self.assertIsNone(re.search(r"https?://", normalized))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", normalized))
+
+    def test_mcp_local_only_tool_schema_catalog_v06_stays_registry_based_and_raw_free(self) -> None:
+        adapter_fixture = json.loads(
+            MCP_REGISTRY_ADAPTER_EXPECTED_BEHAVIOR_V06_FIXTURE.read_text(encoding="utf-8")
+        )
+        gate_fixture = json.loads(MCP_IMPLEMENTATION_GATE_V06_FIXTURE.read_text(encoding="utf-8"))
+        module_source = MCP_TOOL_SCHEMA_CATALOG_MODULE.read_text(encoding="utf-8")
+        catalog_doc = MCP_TOOL_SCHEMA_CATALOG_DOC.read_text(encoding="utf-8")
+        registry = build_read_only_tool_registry()
+
+        self.assertIn("build_read_only_tool_registry", module_source)
+        self.assertIn("evaluate_adapter_dry_run_fixture", module_source)
+        self.assertNotIn("ALLOWED_TOOL_NAMES =", module_source)
+        for forbidden_import in ["http.server", "socketserver", "subprocess", "requests", "urllib"]:
+            self.assertNotIn(forbidden_import, module_source)
+
+        catalog = build_local_only_tool_schema_catalog()
+        validation = validate_tool_schema_catalog_against_registry(catalog)
+        fixture_validation = validate_tool_schema_catalog_against_fixtures(
+            adapter_fixture,
+            gate_fixture,
+            catalog,
+        )
+        self.assertEqual(
+            validation,
+            {
+                "ok": True,
+                "tool_count": len(ALLOWED_TOOL_NAMES),
+                "read_only": True,
+                "raw_data_included": False,
+            },
+        )
+        self.assertEqual(fixture_validation["tool_count"], len(ALLOWED_TOOL_NAMES))
+        self.assertEqual(fixture_validation["adapter_case_count"], len(adapter_fixture["adapter_cases"]))
+        self.assertEqual(fixture_validation["gate_requirement_count"], len(gate_fixture["gate_requirements"]))
+        self.assertFalse(fixture_validation["raw_data_included"])
+
+        self.assertEqual(tuple(tool["name"] for tool in catalog["tools"]), ALLOWED_TOOL_NAMES)
+        self.assertEqual(tuple(adapter_fixture["allowed_tools"]), ALLOWED_TOOL_NAMES)
+        self.assertTrue(catalog["planning_only"])
+        self.assertFalse(catalog["implementation_approved"])
+        self.assertFalse(catalog["mcp_runtime_implemented"])
+        self.assertFalse(catalog["raw_data_included"])
+        self.assertFalse(catalog["local_path_included"])
+        self.assertFalse(catalog["credential_values_included"])
+        self.assertFalse(catalog["target_identifiers_included"])
+        self.assertFalse(catalog["state_change_performed"])
+
+        global_metadata_tools = {"get_gateway_status", "get_release_readiness"}
+        unsafe_field_markers = [
+            "raw",
+            "request",
+            "response",
+            "body",
+            "path",
+            "url",
+            "domain",
+            "cookie",
+            "authorization",
+            "credential",
+            "token",
+            "session",
+            "secret",
+            "hmac",
+            "csrf",
+            "target",
+        ]
+        for descriptor in catalog["tools"]:
+            name = descriptor["name"]
+            entry = registry[name]
+            self.assertEqual(
+                set(descriptor),
+                {
+                    "name",
+                    "description",
+                    "read_only",
+                    "verify_first",
+                    "safe_input_fields",
+                    "safe_output_fields",
+                    "raw_data_included",
+                    "local_path_included",
+                    "credential_values_included",
+                    "target_identifiers_included",
+                    "state_change_performed",
+                },
+            )
+            self.assertEqual(descriptor["description"], entry.description)
+            self.assertTrue(descriptor["read_only"])
+            self.assertEqual(descriptor["verify_first"], entry.verify_first)
+            if name in global_metadata_tools:
+                self.assertFalse(descriptor["verify_first"])
+            else:
+                self.assertTrue(descriptor["verify_first"])
+            self.assertEqual(tuple(descriptor["safe_output_fields"]), entry.safe_output_fields)
+            self.assertFalse(descriptor["raw_data_included"])
+            self.assertFalse(descriptor["local_path_included"])
+            self.assertFalse(descriptor["credential_values_included"])
+            self.assertFalse(descriptor["target_identifiers_included"])
+            self.assertFalse(descriptor["state_change_performed"])
+            for field in descriptor["safe_input_fields"] + descriptor["safe_output_fields"]:
+                field_lower = field.lower()
+                self.assertFalse(any(marker in field_lower for marker in unsafe_field_markers), field)
+
+        assert_tool_schema_catalog_raw_free(catalog)
+        combined = json.dumps(catalog, sort_keys=True) + "\n" + catalog_doc
+        normalized = combined.replace("raw-free", "metadata-only").replace("read-only", "readonly")
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "token=",
+            "HMAC secret value",
+            "CSRF token value",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden, normalized)
+        self.assertIsNone(re.search(r"https?://", normalized))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", normalized))
+
+        changed_catalog = deepcopy(catalog)
+        changed_catalog["tools"][0]["safe_output_fields"].append("raw_body")
+        with self.assertRaises(McpToolSchemaCatalogError):
+            assert_tool_schema_catalog_raw_free(changed_catalog)
+
+        changed_catalog = deepcopy(catalog)
+        changed_catalog["tools"][0]["raw_data_included"] = True
+        with self.assertRaises(McpToolSchemaCatalogError):
+            validate_tool_schema_catalog_against_registry(changed_catalog)
+
+        changed_adapter_fixture = deepcopy(adapter_fixture)
+        changed_adapter_fixture["allowed_tools"] = list(reversed(changed_adapter_fixture["allowed_tools"]))
+        with self.assertRaises(McpToolSchemaCatalogError):
+            validate_tool_schema_catalog_against_fixtures(changed_adapter_fixture, gate_fixture, catalog)
 
     def test_mcp_read_only_registry_skeleton_v06_matches_fixtures_and_blocks_unsafe_metadata(self) -> None:
         contract_fixture = json.loads(

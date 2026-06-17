@@ -159,6 +159,13 @@ the implementation gate fixture for internal validation only. It is not an MCP
 server, not MCP transport, not a protocol handler, not actual tool execution,
 not a local evidence reader, and not runtime MCP exposure.
 
+The local-only tool schema catalog is
+`burp_ai_redaction_gateway/mcp_tool_schema_catalog.py`. It derives safe
+descriptor metadata from this fixture, the implementation gate fixture, and the
+registry helper only. It is not an MCP server, not MCP transport, not a protocol
+handler, not actual tool execution, not a local evidence reader, and not runtime
+MCP exposure.
+
 ## Acceptance Evidence For Later Implementation
 
 A later implementation PR must show:
@@ -177,6 +184,8 @@ A later implementation PR must show:
 - No runtime case returns raw traffic, target identifiers, credential or session
   values, secret values, or local path details.
 - The implementation gate fixture is consumed before runtime behavior is added.
+- The tool schema catalog consumes the registry helper and these fixtures
+  without creating a second independent allowlist.
 
 ## Deferred Runtime Decisions
 

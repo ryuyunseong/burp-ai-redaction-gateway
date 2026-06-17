@@ -89,6 +89,12 @@ The local-only adapter dry-run skeleton is
 consumption code only, not an MCP server, not MCP transport, not a protocol
 handler, not actual tool execution, not a local evidence reader, and not runtime
 MCP exposure.
+The local-only tool schema catalog is
+[`MCP_LOCAL_ONLY_TOOL_SCHEMA_CATALOG_v0.6.md`](MCP_LOCAL_ONLY_TOOL_SCHEMA_CATALOG_v0.6.md)
+and `burp_ai_redaction_gateway/mcp_tool_schema_catalog.py`. It derives safe
+descriptor metadata from the registry and dry-run fixtures only. It is not an
+MCP server, not MCP transport, not a protocol handler, not actual tool
+execution, not a local evidence reader, and not runtime MCP exposure.
 
 Expected acceptance evidence:
 
