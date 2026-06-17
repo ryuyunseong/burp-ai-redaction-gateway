@@ -13,6 +13,10 @@ metadata interface for an AI client. The AI client should inspect verified
 gateway status, safe file readiness, and troubleshooting guidance without
 reading raw Burp traffic or local-only artifacts.
 
+Burp MCP-style upstream tooling does not replace this gateway. The compatibility
+boundary is tracked in
+[`BURP_MCP_COMPATIBILITY_v0.5.md`](BURP_MCP_COMPATIBILITY_v0.5.md).
+
 The intended flow is:
 
 ```text

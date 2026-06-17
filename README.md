@@ -242,6 +242,8 @@ capture integration is not implemented yet. The read-only AI handoff checklist i
 참조하세요. v0.5 MCP 연동 설계와 한글 웹 UX 개선 계획은
 [docs/MCP_INTEGRATION_DESIGN_v0.5.md](docs/MCP_INTEGRATION_DESIGN_v0.5.md)와
 [docs/WEB_UX_KO_PLAN_v0.5.md](docs/WEB_UX_KO_PLAN_v0.5.md)를 참조하세요.
+For the Burp MCP upstream tool versus gateway safety boundary, see
+[docs/BURP_MCP_COMPATIBILITY_v0.5.md](docs/BURP_MCP_COMPATIBILITY_v0.5.md).
 
 See the latest raw-free Montoya runtime smoke release evidence in
 [docs/V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md](docs/V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md).

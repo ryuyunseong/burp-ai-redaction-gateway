@@ -142,6 +142,7 @@ V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE_DOC = (
     ROOT / "docs" / "V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md"
 )
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
+BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
@@ -2843,6 +2844,74 @@ class RedactionGatewayTests(unittest.TestCase):
 
         self.assertIsNone(re.search(r"https?://", evidence))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", evidence))
+
+    def test_burp_mcp_compatibility_doc_is_boundary_only_and_raw_free(self) -> None:
+        compatibility = BURP_MCP_COMPATIBILITY_DOC.read_text(encoding="utf-8")
+        mcp_design = MCP_INTEGRATION_DESIGN_DOC.read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
+        readiness = V05_RELEASE_READINESS_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        for linked_text in [mcp_design, roadmap, readiness, readme]:
+            self.assertIn("BURP_MCP_COMPATIBILITY_v0.5.md", linked_text)
+
+        for required in [
+            "Burp MCP does not replace this gateway",
+            "upstream tool",
+            "downstream safety gateway",
+            "redacts and verifies",
+            "manual AI input or future read-only MCP gateway",
+            "direct Burp MCP access",
+            "not approved for",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "read-only first",
+            "Deny by default",
+            "Allowlist tools only",
+            "No raw traffic",
+            "No credential, session, or token values",
+            "No local path exposure",
+            "No automatic external handoff",
+            "Candidate finding only",
+            "Risk draft only",
+            "Final severity and CVSS are manual decisions",
+            "Tag and GitHub Release actions need separate approval",
+            "AI directly reading Burp-side raw traffic through Burp MCP",
+            "AI sending or replaying requests through Burp MCP",
+            "Automatic active scan execution",
+            "Automatic ChatGPT handoff",
+            "Raw preview or raw download",
+            "HMAC secret or CSRF token exposure",
+            "Confirm no tag or GitHub Release is created",
+        ]:
+            self.assertIn(required, compatibility)
+
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "raw_request",
+            "raw_response",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden, compatibility)
+        self.assertIsNone(re.search(r"https?://", compatibility))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", compatibility))
 
     def test_mcp_and_web_ux_plan_docs_are_planning_only_and_raw_free(self) -> None:
         mcp_design = MCP_INTEGRATION_DESIGN_DOC.read_text(encoding="utf-8")
