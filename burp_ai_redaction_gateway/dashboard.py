@@ -414,8 +414,18 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             if parsed.path == "/live-capture":
                 output_id = _optional_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id) if output_id else None
+                alias_selector = _render_output_alias_selector(
+                    self.server.config.root,
+                    self.server.policy,
+                    output.output_id if output else "",
+                )
                 self._send_html(
-                    render_live_capture_readiness(self.server.csrf_token, self.server.live_capture_session, output=output)
+                    render_live_capture_readiness(
+                        self.server.csrf_token,
+                        self.server.live_capture_session,
+                        output=output,
+                        alias_selector_html=alias_selector,
+                    )
                 )
                 return
             if parsed.path == "/upload":
@@ -444,12 +454,21 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             if parsed.path == "/triage":
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
-                self._send_html(render_finding_triage_index(_build_finding_triage_index(output)))
+                alias_selector = _render_output_alias_selector(self.server.config.root, self.server.policy, output.output_id)
+                self._send_html(
+                    render_finding_triage_index(_build_finding_triage_index(output), alias_selector_html=alias_selector)
+                )
                 return
             if parsed.path == "/report-readiness":
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
-                self._send_html(render_report_readiness_index(_build_report_readiness_index(output)))
+                alias_selector = _render_output_alias_selector(self.server.config.root, self.server.policy, output.output_id)
+                self._send_html(
+                    render_report_readiness_index(
+                        _build_report_readiness_index(output),
+                        alias_selector_html=alias_selector,
+                    )
+                )
                 return
             if parsed.path == "/prompt-readiness":
                 output_id = _required_query_value(parsed.query, "project")
@@ -464,7 +483,10 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             if parsed.path == "/workflow":
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
-                self._send_html(render_workflow_status_index(_build_workflow_status_index(output)))
+                alias_selector = _render_output_alias_selector(self.server.config.root, self.server.policy, output.output_id)
+                self._send_html(
+                    render_workflow_status_index(_build_workflow_status_index(output), alias_selector_html=alias_selector)
+                )
                 return
             if parsed.path == "/operator-runbook":
                 output_id = _required_query_value(parsed.query, "project")
@@ -474,7 +496,13 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             if parsed.path == "/safe-files":
                 output_id = _required_query_value(parsed.query, "project")
                 output = _verified_output(self.server.config.root, self.server.policy, output_id)
-                self._send_html(render_safe_file_inventory_index(_build_safe_file_inventory_index(output)))
+                alias_selector = _render_output_alias_selector(self.server.config.root, self.server.policy, output.output_id)
+                self._send_html(
+                    render_safe_file_inventory_index(
+                        _build_safe_file_inventory_index(output),
+                        alias_selector_html=alias_selector,
+                    )
+                )
                 return
             if parsed.path == "/preview":
                 output_id = _required_query_value(parsed.query, "project")
@@ -1169,6 +1197,7 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
           </div>
         </section>
         {_safety_strip()}
+        {_render_output_alias_selector(root, policy, first_output_id, outputs)}
         <section class="grid">
           <div class="panel">
             <div class="panel-head"><h2>처음 시작하기</h2><span class="muted">PowerShell을 덜 쓰고 화면 순서대로 확인합니다.</span></div>
@@ -1399,6 +1428,7 @@ def render_live_capture_readiness(
     session: LiveCaptureSession,
     result: LiveCaptureActionResult | None = None,
     output: DashboardOutput | None = None,
+    alias_selector_html: str = "",
 ) -> str:
     safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
     receiver_evidence = _build_live_capture_receiver_output_evidence(output)
@@ -1481,6 +1511,7 @@ def render_live_capture_readiness(
           <div class="rail"><span>evidence source</span><strong>{_h(receiver_evidence.evidence_source)}</strong></div>
           <div class="rail"><span>raw_data_included</span><strong>{raw_data_included}</strong></div>
         </section>
+        {alias_selector_html}
         <section class="grid">
           {result_panel}
           <div class="panel">
@@ -1906,7 +1937,7 @@ def render_ai_handoff_index(index: AiHandoffIndex) -> str:
     )
 
 
-def render_finding_triage_index(index: FindingTriageIndex) -> str:
+def render_finding_triage_index(index: FindingTriageIndex, alias_selector_html: str = "") -> str:
     output = index.output
     candidate_rows = "\n".join(_triage_candidate_card(candidate) for candidate in index.candidates) or (
         '<div class="empty">분류할 finding 후보가 없습니다.</div>'
@@ -1942,6 +1973,7 @@ def render_finding_triage_index(index: FindingTriageIndex) -> str:
           <div class="rail"><span>finding 상태</span><strong>후보</strong></div>
           <div class="rail"><span>심각도 결정</span><strong>수동 검토 필요</strong></div>
         </section>
+        {alias_selector_html}
         <section class="grid">
           <div class="panel">
             <div class="panel-head"><h2>분류 요약</h2><span class="muted">안전 메타데이터만 표시합니다.</span></div>
@@ -1990,7 +2022,7 @@ def render_finding_triage_index(index: FindingTriageIndex) -> str:
     )
 
 
-def render_report_readiness_index(index: ReportReadinessIndex) -> str:
+def render_report_readiness_index(index: ReportReadinessIndex, alias_selector_html: str = "") -> str:
     output = index.output
     file_rows = "\n".join(_report_readiness_file_card(file) for file in index.files)
     checklist_items = "".join(
@@ -2037,6 +2069,7 @@ def render_report_readiness_index(index: ReportReadinessIndex) -> str:
           <div class="rail"><span>finding 후보</span><strong>{index.candidate_count}</strong></div>
           <div class="rail"><span>심각도 결정</span><strong>수동 검토 필요</strong></div>
         </section>
+        {alias_selector_html}
         <section class="grid">
           <div class="panel">
             <div class="panel-head"><h2>준비 상태 요약</h2><span class="muted">안전 메타데이터만 표시합니다.</span></div>
@@ -2405,7 +2438,7 @@ def render_operator_runbook_index(index: OperatorRunbookIndex) -> str:
     )
 
 
-def render_safe_file_inventory_index(index: SafeFileInventoryIndex) -> str:
+def render_safe_file_inventory_index(index: SafeFileInventoryIndex, alias_selector_html: str = "") -> str:
     output = index.output
     file_cards = "\n".join(_safe_file_inventory_card(file) for file in index.files)
     safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
@@ -2456,6 +2489,7 @@ def render_safe_file_inventory_index(index: SafeFileInventoryIndex) -> str:
           <div class="rail"><span>finding 후보 수</span><strong>{index.candidate_count}</strong></div>
           <div class="rail"><span>raw 표시</span><strong>false</strong></div>
         </section>
+        {alias_selector_html}
         <section class="grid">
           <div class="panel">
             <div class="panel-head"><h2>Inventory 요약</h2><span class="muted">본문 preview 없이 파일 메타데이터만 표시합니다.</span></div>
@@ -2506,7 +2540,7 @@ def render_safe_file_inventory_index(index: SafeFileInventoryIndex) -> str:
     )
 
 
-def render_workflow_status_index(index: WorkflowStatusIndex) -> str:
+def render_workflow_status_index(index: WorkflowStatusIndex, alias_selector_html: str = "") -> str:
     output = index.output
     step_cards = "\n".join(_workflow_step_card(step) for step in index.steps)
     file_rows = "\n".join(
@@ -2545,6 +2579,7 @@ def render_workflow_status_index(index: WorkflowStatusIndex) -> str:
           <div class="rail"><span>finding 후보 수</span><strong>{index.candidate_count}</strong></div>
           <div class="rail"><span>심각도 결정</span><strong>수동 검토 필요</strong></div>
         </section>
+        {alias_selector_html}
         <section class="grid">
           <div class="panel">
             <div class="panel-head"><h2>조회 전용 작업 흐름 점검</h2><span class="muted">안전 메타데이터만 표시합니다.</span></div>
@@ -2770,6 +2805,67 @@ def _verified_output(root: Path, policy: RedactionPolicy, output_id: str) -> Das
         candidate_count=len(_load_candidates(output_dir)),
         prompt_files=[name for name in SAFE_PREVIEW_FILES if (output_dir / name).is_file()],
         report_available=(output_dir / "report_draft.md").is_file(),
+    )
+
+
+def _render_output_alias_selector(
+    root: Path,
+    policy: RedactionPolicy,
+    current_output_id: str = "",
+    outputs: list[DashboardOutput] | None = None,
+) -> str:
+    verified_outputs = outputs if outputs is not None else _discover_outputs(root, policy)[0]
+    if not verified_outputs:
+        return """
+        <section class="panel output-alias-selector" aria-label="검증된 output 산출물 선택">
+          <div class="panel-head">
+            <h2>검증된 output 산출물 선택</h2>
+            <span class="muted">검증을 통과한 output 별칭이 아직 없습니다.</span>
+          </div>
+          <p class="muted">먼저 Burp export 또는 receiver output을 redaction/verify한 뒤 이 화면에서 별칭을 선택하세요. Raw traffic은 표시하지 않습니다.</p>
+          <a class="button secondary" href="/help">운영 가이드 보기</a>
+        </section>
+        """
+
+    cards = "\n".join(
+        _output_alias_selector_card(output, current_output_id)
+        for output in verified_outputs
+    )
+    return f"""
+        <section class="panel output-alias-selector" aria-label="검증된 output 산출물 선택">
+          <div class="panel-head">
+            <h2>검증된 output 산출물 선택</h2>
+            <span class="muted">verify를 통과한 별칭만 표시합니다.</span>
+          </div>
+          <p class="muted">Safe files는 AI 입력 후보이며 수동 검토가 필요합니다. Finding은 후보, risk는 초안입니다. Final severity와 CVSS는 사람이 수동 결정합니다. Raw traffic은 표시하지 않습니다.</p>
+          <div class="file-grid">{cards}</div>
+        </section>
+        """
+
+
+def _output_alias_selector_card(output: DashboardOutput, current_output_id: str) -> str:
+    selected_badge = '<span class="badge good">선택됨</span>' if output.output_id == current_output_id else ""
+    safe_file_count = len(output.prompt_files)
+    links = "".join(
+        f'<a class="button small secondary" href="{_h(href)}">{_h(label)}</a>'
+        for label, href in _output_alias_selector_links(output.output_id)
+    )
+    return f"""
+            <div class="guide-card output-alias-card">
+              <strong>{_h(output.label)}</strong>
+              <span>finding 후보 {output.candidate_count}개 · safe files {safe_file_count}/{len(SAFE_PREVIEW_FILES)}</span>
+              <small>별칭만 표시합니다. 로컬 경로와 target 식별자는 표시하지 않습니다. {selected_badge}</small>
+              <div class="actions">{links}</div>
+            </div>
+    """
+
+
+def _output_alias_selector_links(output_id: str) -> tuple[tuple[str, str], ...]:
+    return (
+        ("Safe files", _safe_files_href(output_id)),
+        ("Triage", _triage_href(output_id)),
+        ("Report readiness", _report_readiness_href(output_id)),
+        ("Workflow", _workflow_href(output_id)),
     )
 
 

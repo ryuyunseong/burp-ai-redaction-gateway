@@ -334,6 +334,13 @@ dashboard home `/`에는 한글 우선 quickstart landing이 있습니다. 첫 �
 링크만 제공하며 raw preview, replay, active scan, 자동 ChatGPT 전송은
 제공하지 않습니다.
 
+home, `/safe-files`, `/triage`, `/report-readiness`, `/workflow`,
+`/live-capture`에는 검증된 output 산출물 선택 영역이 있습니다. 이 selector는
+verify를 통과한 output alias만 보여 주는 read-only navigation이며, local path,
+actual target identifier, raw traffic, credential value를 표시하지 않습니다.
+Safe files는 AI 입력 후보이며 수동 검토가 필요하고, finding은 후보, risk는
+초안이며, severity와 CVSS는 사람이 수동 결정합니다.
+
 dashboard는 `127.0.0.1`에만 bind합니다. 설정된 root 아래 output directory를
 찾고, 선택한 output이 `verify`를 통과한 뒤에만 preview, download, 보호된
 안전 action을 허용합니다. 노출되는 안전 파일은 다음 4개뿐입니다.

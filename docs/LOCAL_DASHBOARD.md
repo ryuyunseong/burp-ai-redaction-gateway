@@ -31,6 +31,14 @@ active scan, 자동 ChatGPT 전송, file delete, retention 변경을 제공하�
 safe files가 모두 보여도 finding은 후보이고 risk는 초안이며 final severity와
 CVSS는 사람이 수동 결정합니다.
 
+home, `/safe-files`, `/triage`, `/report-readiness`, `/workflow`,
+`/live-capture`에는 검증된 output 산출물 선택 영역이 있습니다. 이 영역은
+verify를 통과한 output alias만 보여 주는 read-only navigation입니다. local path,
+actual target identifier, raw traffic, Cookie/Authorization/token/session 값,
+개인정보, HMAC secret, CSRF token 값을 표시하지 않습니다. Safe files는 AI 입력
+후보이며 수동 검토가 필요합니다. Finding은 후보, risk는 초안이며 final severity와
+CVSS는 사람이 수동 결정합니다.
+
 dashboard에는 조회 전용 운영 인덱스가 있습니다.
 
 ```text
