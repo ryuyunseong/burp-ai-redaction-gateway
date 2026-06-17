@@ -200,6 +200,7 @@ MCP_IMPLEMENTATION_GATE_V06_FIXTURE = (
 MCP_ADAPTER_DRY_RUN_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_adapter_dry_run.py"
 MCP_TOOL_SCHEMA_CATALOG_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_tool_schema_catalog.py"
 MCP_TOOL_SCHEMA_CATALOG_DOC = ROOT / "docs" / "MCP_LOCAL_ONLY_TOOL_SCHEMA_CATALOG_v0.6.md"
+MCP_RUNTIME_BOUNDARY_DECISION_V06_DOC = ROOT / "docs" / "MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md"
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
@@ -4326,6 +4327,138 @@ class RedactionGatewayTests(unittest.TestCase):
         changed_adapter_fixture["allowed_tools"] = list(reversed(changed_adapter_fixture["allowed_tools"]))
         with self.assertRaises(McpToolSchemaCatalogError):
             validate_tool_schema_catalog_against_fixtures(changed_adapter_fixture, gate_fixture, catalog)
+
+    def test_mcp_runtime_boundary_decision_v06_documents_split_before_server_work(self) -> None:
+        decision = MCP_RUNTIME_BOUNDARY_DECISION_V06_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
+        gate_doc = MCP_IMPLEMENTATION_GATE_DESIGN_V06_DOC.read_text(encoding="utf-8")
+        catalog_doc = MCP_TOOL_SCHEMA_CATALOG_DOC.read_text(encoding="utf-8")
+        fixture_plan = MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_V06_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(MCP_RUNTIME_BOUNDARY_DECISION_V06_DOC.exists())
+        for linked_text in [readme, roadmap, fast_track, gate_doc, catalog_doc, fixture_plan]:
+            self.assertIn("MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current Completed MCP Preparation",
+            "## Non-goals",
+            "## Runtime Boundary Decision",
+            "## Allowed Next Slice",
+            "## Forbidden Work",
+            "## Required Acceptance Criteria Before Server Work",
+            "## Required Test Evidence",
+            "## Split Plan For Later Runtime Work",
+            "## Deferred Decisions",
+        ]:
+            self.assertIn(section, decision)
+
+        for completed in [
+            "MCP contract matrix",
+            "MCP prototype preflight",
+            "Read-only registry skeleton",
+            "Registry adapter design",
+            "Adapter expected behavior fixture",
+            "Implementation gate fixture",
+            "Local-only adapter dry-run",
+            "Local-only tool schema catalog",
+        ]:
+            self.assertIn(completed, decision)
+
+        for non_goal in [
+            "It is a design and decision document only",
+            "No MCP server implementation",
+            "No MCP transport implementation",
+            "No protocol handler implementation",
+            "No actual tool execution",
+            "No local evidence reader implementation",
+            "No upload or import action",
+            "No dashboard POST action",
+            "No raw preview or raw download",
+            "No replay or active scan",
+            "No automatic ChatGPT handoff",
+            "No tag or GitHub Release",
+            "No runtime implementation approval",
+        ]:
+            self.assertIn(non_goal, decision)
+
+        for allowed_or_forbidden in [
+            "Server-free local-only runtime boundary skeleton",
+            "Server skeleton preflight",
+            "must not create a listener",
+            "External transport",
+            "Protocol handling",
+            "Actual tool execution",
+            "Local evidence reader",
+        ]:
+            self.assertIn(allowed_or_forbidden, decision)
+
+        for gate in [
+            "Registry helper consumed",
+            "Dry-run helper consumed",
+            "Tool schema catalog consumed",
+            "Implementation gate fixture consumed",
+            "Adapter expected behavior fixture consumed",
+            "Allowed tools match registry",
+            "Forbidden concepts absent",
+            "Blocked response helper used",
+            "Verify-first behavior tested",
+            "Raw-free metadata only",
+            "Local path absent",
+            "Credential, session, and token values absent",
+            "Target identifier absent",
+            "No automatic ChatGPT handoff",
+            "No local evidence reader",
+            "No state-changing action",
+            "Candidate finding only",
+            "Risk draft only",
+            "Severity and CVSS manual decision",
+        ]:
+            self.assertIn(gate, decision)
+
+        for split in [
+            "Server listener skeleton",
+            "Transport and protocol handler",
+            "Tool registration",
+            "Tool execution",
+            "Local evidence reader",
+            "Dashboard POST action",
+            "Upload or import action",
+            "Raw preview or raw download",
+            "Automatic ChatGPT handoff",
+            "Release or tag work",
+        ]:
+            self.assertIn(split, decision)
+
+        combined = "\n".join([decision, roadmap, fast_track, gate_doc, catalog_doc, fixture_plan])
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "token=",
+            "HMAC secret value",
+            "CSRF token value",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
     def test_mcp_read_only_registry_skeleton_v06_matches_fixtures_and_blocks_unsafe_metadata(self) -> None:
         contract_fixture = json.loads(

@@ -271,6 +271,10 @@ and `burp_ai_redaction_gateway/mcp_tool_schema_catalog.py`. It derives
 descriptor metadata from the registry and dry-run fixtures only. It is not an
 MCP server, transport, protocol handler, actual tool execution, local evidence
 reader, or runtime MCP exposure.
+The v0.6 MCP runtime boundary decision is tracked in
+[`docs/MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md`](docs/MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md).
+It separates server, transport, protocol, tool execution, and local evidence
+reader work before any runtime MCP implementation is considered.
 
 ## Burp Montoya Collector
 

@@ -19,6 +19,11 @@ The catalog converts the read-only registry into safe tool descriptor metadata
 before any runtime MCP layer exists. This keeps the next implementation step
 between the dry-run helper and a future server small and reviewable.
 
+The runtime boundary decision that follows this catalog is tracked in
+[`MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md`](MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md).
+That document must be reviewed before server, transport, protocol, tool
+execution, or local evidence reader work starts.
+
 The catalog consumes:
 
 - `build_read_only_tool_registry()`

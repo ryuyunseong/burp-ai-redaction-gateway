@@ -32,6 +32,13 @@ only. It is not an MCP server, not MCP transport, not a protocol handler, not
 actual tool execution, not a local evidence reader, and not runtime MCP
 exposure.
 
+The runtime boundary decision before server work is:
+
+- `MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md`
+
+That document separates server, transport, protocol, tool execution, and local
+evidence reader work before any runtime implementation is considered.
+
 ## Purpose
 
 The purpose is to prevent the first MCP runtime implementation from bypassing
@@ -145,6 +152,9 @@ A future implementation PR must include:
 - Tests that prove the local-only tool schema catalog derives descriptors from
   the registry helper and fixture gate instead of a second independent
   allowlist.
+- Tests or review evidence that consume the runtime boundary decision before
+  server, transport, protocol, tool execution, or local evidence reader work is
+  considered.
 - Raw-free scans for returned metadata.
 - Documentation updates that keep the four AI candidate file boundary visible.
 - Review notes confirming that no local evidence reader, upload/import action,

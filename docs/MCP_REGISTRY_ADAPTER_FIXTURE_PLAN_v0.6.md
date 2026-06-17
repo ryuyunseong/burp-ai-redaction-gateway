@@ -166,6 +166,11 @@ registry helper only. It is not an MCP server, not MCP transport, not a protocol
 handler, not actual tool execution, not a local evidence reader, and not runtime
 MCP exposure.
 
+The runtime boundary decision is
+`docs/MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md`. It must be reviewed before any
+server, transport, protocol, tool execution, or local evidence reader work
+starts.
+
 ## Acceptance Evidence For Later Implementation
 
 A later implementation PR must show:
@@ -186,6 +191,7 @@ A later implementation PR must show:
 - The implementation gate fixture is consumed before runtime behavior is added.
 - The tool schema catalog consumes the registry helper and these fixtures
   without creating a second independent allowlist.
+- The runtime boundary decision is consumed before server work is considered.
 
 ## Deferred Runtime Decisions
 
