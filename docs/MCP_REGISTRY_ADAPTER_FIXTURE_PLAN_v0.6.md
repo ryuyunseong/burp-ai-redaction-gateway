@@ -51,6 +51,7 @@ It records only safe metadata expectations:
 
 - schema version
 - planning-only and implementation flags
+- machine-readable non-goal flags
 - allowed tool names
 - forbidden tool concepts
 - blocked response codes
@@ -61,6 +62,19 @@ It records only safe metadata expectations:
 The fixture must not include raw traffic, target identifiers, credential or
 session values, secret values, local path details, file bodies, audit row bodies,
 archive contents, or generated output internals.
+
+The fixture keeps these top-level non-goal flags false as machine-readable
+guards against runtime boundary drift:
+
+- `upload_import_action_implemented`
+- `dashboard_post_action_implemented`
+- `collector_forwarding_changed`
+- `receiver_ingest_changed`
+- `raw_preview_download_implemented`
+- `replay_active_scan_implemented`
+- `automatic_chatgpt_handoff_implemented`
+- `tag_created`
+- `github_release_created`
 
 ## Adapter Expected Behavior Cases
 
@@ -87,6 +101,10 @@ Every case must keep:
 - `credential_values_included: false`
 - `target_identifiers_included: false`
 - `state_change_performed: false`
+
+Cases with `expected_ok: true` are fixture expectations only. They are not
+implementation approval and they do not approve an MCP server, transport,
+protocol handler, actual tool execution, or local evidence reader.
 
 ## Blocked Response Case Matrix
 
@@ -130,6 +148,10 @@ If a future PR changes any registry helper constant, it must update the fixture,
 document the reason, and keep the raw-free case flags false unless a separate
 security review explicitly approves a boundary change.
 
+If a future PR changes any top-level non-goal flag from false, it must be a
+separate runtime-affecting review with its own tests. This fixture plan does not
+approve that change.
+
 ## Acceptance Evidence For Later Implementation
 
 A later implementation PR must show:
@@ -160,4 +182,3 @@ The fixture does not decide:
 - Whether dashboard state-changing actions are allowed.
 
 Those decisions require separate design and review before implementation.
-

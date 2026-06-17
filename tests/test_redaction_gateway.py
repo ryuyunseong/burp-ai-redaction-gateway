@@ -3699,6 +3699,20 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertFalse(fixture["mcp_tool_execution_implemented"])
         self.assertFalse(fixture["local_evidence_reader_implemented"])
         self.assertFalse(fixture["raw_data_included"])
+        non_goal_flags = [
+            "upload_import_action_implemented",
+            "dashboard_post_action_implemented",
+            "collector_forwarding_changed",
+            "receiver_ingest_changed",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "tag_created",
+            "github_release_created",
+        ]
+        for flag in non_goal_flags:
+            self.assertIn(flag, fixture)
+            self.assertFalse(fixture[flag])
         self.assertEqual(tuple(fixture["allowed_tools"]), ALLOWED_TOOL_NAMES)
         self.assertEqual(tuple(fixture["forbidden_tools"]), FORBIDDEN_TOOL_CONCEPTS)
         self.assertEqual(tuple(fixture["blocked_response_codes"]), BLOCKED_RESPONSE_CODES)
@@ -3731,6 +3745,7 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertTrue(case["expected_fields"])
             if case["expected_code"] is None:
                 self.assertTrue(case["expected_ok"])
+                self.assertFalse(case["state_change_performed"])
             else:
                 self.assertFalse(case["expected_ok"])
                 self.assertIn(case["expected_code"], BLOCKED_RESPONSE_CODES)
@@ -3749,6 +3764,10 @@ class RedactionGatewayTests(unittest.TestCase):
             "No automatic ChatGPT handoff",
             "No tag or GitHub Release",
             "does not approve adapter implementation",
+            "machine-readable non-goal flags",
+            "runtime boundary drift",
+            "Cases with `expected_ok: true` are fixture expectations only",
+            "implementation approval",
             "Purpose",
             "Non-goals",
             "Fixture Scope",
@@ -3761,6 +3780,8 @@ class RedactionGatewayTests(unittest.TestCase):
             "state_change_performed: false",
         ]:
             self.assertIn(required, fixture_plan)
+        for flag in non_goal_flags:
+            self.assertIn(flag, fixture_plan)
 
         combined = fixture_plan + "\n" + json.dumps(fixture, sort_keys=True)
         normalized = (
