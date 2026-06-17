@@ -256,6 +256,8 @@ The v0.6 MCP prototype preflight criteria are tracked in
 [docs/MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md](docs/MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md).
 The v0.6 MCP registry adapter design is tracked in
 [docs/MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md](docs/MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md).
+The v0.6 MCP registry adapter fixture plan is tracked in
+[docs/MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md](docs/MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md).
 
 ## Burp Montoya Collector
 

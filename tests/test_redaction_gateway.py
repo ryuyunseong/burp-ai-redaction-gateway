@@ -171,6 +171,12 @@ MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_V06_FIXTURE = (
 MCP_REGISTRY_ADAPTER_DESIGN_V06_DOC = (
     ROOT / "docs" / "MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md"
 )
+MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_V06_DOC = (
+    ROOT / "docs" / "MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md"
+)
+MCP_REGISTRY_ADAPTER_EXPECTED_BEHAVIOR_V06_FIXTURE = (
+    ROOT / "samples" / "synthetic_mcp_registry_adapter_expected_behavior_v0.6.json"
+)
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
@@ -3661,6 +3667,156 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, adapter)
         self.assertIsNone(re.search(r"https?://", adapter))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", adapter))
+
+    def test_mcp_registry_adapter_fixture_plan_v06_matches_registry_and_is_raw_free(self) -> None:
+        fixture_plan = MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_V06_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(
+            MCP_REGISTRY_ADAPTER_EXPECTED_BEHAVIOR_V06_FIXTURE.read_text(encoding="utf-8")
+        )
+        adapter = MCP_REGISTRY_ADAPTER_DESIGN_V06_DOC.read_text(encoding="utf-8")
+        roadmap_v06 = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
+        contract = MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC.read_text(encoding="utf-8")
+        preflight = MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_V06_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        for linked_text in [adapter, roadmap_v06, fast_track, contract, preflight, readme]:
+            self.assertIn("MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md", linked_text)
+        self.assertIn(
+            "synthetic_mcp_registry_adapter_expected_behavior_v0.6.json",
+            fixture_plan,
+        )
+        self.assertIn(
+            "synthetic_mcp_registry_adapter_expected_behavior_v0.6.json",
+            adapter,
+        )
+
+        self.assertEqual(fixture["schema_version"], "mcp_registry_adapter_expected_behavior.v0.6")
+        self.assertTrue(fixture["planning_only"])
+        self.assertFalse(fixture["mcp_server_implemented"])
+        self.assertFalse(fixture["mcp_transport_implemented"])
+        self.assertFalse(fixture["mcp_protocol_handler_implemented"])
+        self.assertFalse(fixture["mcp_tool_execution_implemented"])
+        self.assertFalse(fixture["local_evidence_reader_implemented"])
+        self.assertFalse(fixture["raw_data_included"])
+        non_goal_flags = [
+            "upload_import_action_implemented",
+            "dashboard_post_action_implemented",
+            "collector_forwarding_changed",
+            "receiver_ingest_changed",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "tag_created",
+            "github_release_created",
+        ]
+        for flag in non_goal_flags:
+            self.assertIn(flag, fixture)
+            self.assertFalse(fixture[flag])
+        self.assertEqual(tuple(fixture["allowed_tools"]), ALLOWED_TOOL_NAMES)
+        self.assertEqual(tuple(fixture["forbidden_tools"]), FORBIDDEN_TOOL_CONCEPTS)
+        self.assertEqual(tuple(fixture["blocked_response_codes"]), BLOCKED_RESPONSE_CODES)
+        self.assertEqual(tuple(fixture["blocked_response_allowed_fields"]), BLOCKED_RESPONSE_ALLOWED_FIELDS)
+        self.assertEqual(tuple(fixture["safe_files"]), SAFE_FILE_ALLOWLIST)
+
+        expected_case_codes = {
+            "allowed_global_status_tool": None,
+            "allowed_verified_output_specific_tool": None,
+            "unverified_output_alias_blocked": "not_verified",
+            "unknown_tool_blocked": "not_allowlisted",
+            "forbidden_concept_blocked": "not_allowlisted",
+            "raw_access_request_blocked": "raw_access_blocked",
+            "state_changing_request_blocked": "state_change_blocked",
+            "local_path_request_blocked": "local_path_blocked",
+            "secret_request_blocked": "secret_access_blocked",
+            "safe_file_inventory_metadata_only": None,
+            "no_automatic_chatgpt_handoff": "state_change_blocked",
+        }
+        cases = fixture["adapter_cases"]
+        self.assertEqual({case["name"] for case in cases}, set(expected_case_codes))
+        for case in cases:
+            self.assertEqual(case["expected_code"], expected_case_codes[case["name"]])
+            self.assertIs(case["raw_data_included"], False)
+            self.assertIs(case["local_path_included"], False)
+            self.assertIs(case["credential_values_included"], False)
+            self.assertIs(case["target_identifiers_included"], False)
+            self.assertIs(case["state_change_performed"], False)
+            self.assertIsInstance(case["expected_fields"], list)
+            self.assertTrue(case["expected_fields"])
+            if case["expected_code"] is None:
+                self.assertTrue(case["expected_ok"])
+                self.assertFalse(case["state_change_performed"])
+            else:
+                self.assertFalse(case["expected_ok"])
+                self.assertIn(case["expected_code"], BLOCKED_RESPONSE_CODES)
+                self.assertLessEqual(set(case["expected_fields"]), set(BLOCKED_RESPONSE_ALLOWED_FIELDS))
+
+        for required in [
+            "planning and fixture document only",
+            "No MCP server implementation",
+            "No MCP transport implementation",
+            "No protocol handler implementation",
+            "No actual tool execution",
+            "No local evidence reader",
+            "No dashboard POST action",
+            "No raw preview or raw download",
+            "No replay or active scan",
+            "No automatic ChatGPT handoff",
+            "No tag or GitHub Release",
+            "does not approve adapter implementation",
+            "machine-readable non-goal flags",
+            "runtime boundary drift",
+            "Cases with `expected_ok: true` are fixture expectations only",
+            "implementation approval",
+            "Purpose",
+            "Non-goals",
+            "Fixture Scope",
+            "Adapter Expected Behavior Cases",
+            "Blocked Response Case Matrix",
+            "Drift Prevention",
+            "Acceptance Evidence For Later Implementation",
+            "Deferred Runtime Decisions",
+            "raw_data_included: false",
+            "state_change_performed: false",
+        ]:
+            self.assertIn(required, fixture_plan)
+        for flag in non_goal_flags:
+            self.assertIn(flag, fixture_plan)
+
+        combined = fixture_plan + "\n" + json.dumps(fixture, sort_keys=True)
+        normalized = (
+            combined.replace("get_raw_request", "")
+            .replace("get_raw_response", "")
+            .replace("show_csrf_token", "")
+        )
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "token=",
+            "HMAC secret value",
+            "CSRF token value",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden, normalized)
+        self.assertIsNone(re.search(r"https?://", normalized))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", normalized))
 
     def test_mcp_read_only_registry_skeleton_v06_matches_fixtures_and_blocks_unsafe_metadata(self) -> None:
         contract_fixture = json.loads(
