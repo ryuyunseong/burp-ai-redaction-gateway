@@ -257,7 +257,7 @@ def _require_sequence(name: str, actual: Any, expected: tuple[str, ...]) -> None
 
 def _safe_output_alias(value: str) -> str:
     text = _safe_metadata_text(value, "output")
-    if "\\" in text or ":" in text or ".." in text or text.startswith("/") or "://" in text:
+    if "\\" in text or "/" in text or ":" in text or ".." in text or "://" in text:
         raise McpReadOnlyRegistryError("unsafe_output_alias")
     return text
 

@@ -3381,6 +3381,8 @@ class RedactionGatewayTests(unittest.TestCase):
             build_blocked_response("raw_access_blocked", "raw request body blocked")
         with self.assertRaisesRegex(McpReadOnlyRegistryError, "unsafe_output_alias"):
             build_blocked_response("not_verified", "blocked", output_alias="..\\raw")
+        with self.assertRaisesRegex(McpReadOnlyRegistryError, "unsafe_output_alias"):
+            build_blocked_response("not_verified", "blocked", output_alias="safe/output")
 
     def test_mcp_and_web_ux_plan_docs_are_planning_only_and_raw_free(self) -> None:
         mcp_design = MCP_INTEGRATION_DESIGN_DOC.read_text(encoding="utf-8")
