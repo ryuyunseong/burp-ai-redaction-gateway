@@ -341,6 +341,13 @@ actual target identifier, raw traffic, credential value를 표시하지 않습�
 Safe files는 AI 입력 후보이며 수동 검토가 필요하고, finding은 후보, risk는
 초안이며, severity와 CVSS는 사람이 수동 결정합니다.
 
+home, `/help`, `/operations`, `/live-capture`에는 read-only troubleshooting
+categories와 release readiness status 안내가 표시됩니다. 이 영역은 setup,
+upload/export, verify/review/report, live-capture, safe-files, MCP boundary
+기존 route로 이동하는 링크와 문서 파일명 안내만 제공합니다. Dashboard는
+`docs/*.md`를 직접 serving하지 않으며, tag 생성, GitHub Release 생성, raw
+preview, replay, active scan, 자동 ChatGPT 전송, POST action은 제공하지 않습니다.
+
 dashboard는 `127.0.0.1`에만 bind합니다. 설정된 root 아래 output directory를
 찾고, 선택한 output이 `verify`를 통과한 뒤에만 preview, download, 보호된
 안전 action을 허용합니다. 노출되는 안전 파일은 다음 4개뿐입니다.
