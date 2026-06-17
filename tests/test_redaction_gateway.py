@@ -168,6 +168,9 @@ MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_V06_DOC = (
 MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_V06_FIXTURE = (
     ROOT / "samples" / "synthetic_mcp_read_only_prototype_preflight_v0.6.json"
 )
+MCP_REGISTRY_ADAPTER_DESIGN_V06_DOC = (
+    ROOT / "docs" / "MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md"
+)
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
@@ -3581,6 +3584,83 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_mcp_registry_adapter_design_v06_is_design_only_and_raw_free(self) -> None:
+        adapter = MCP_REGISTRY_ADAPTER_DESIGN_V06_DOC.read_text(encoding="utf-8")
+        roadmap_v06 = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
+        contract = MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC.read_text(encoding="utf-8")
+        preflight = MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_V06_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        for linked_text in [roadmap_v06, fast_track, contract, preflight, readme]:
+            self.assertIn("MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md", linked_text)
+
+        for required in [
+            "design document only",
+            "does not implement an MCP server",
+            "No MCP transport implementation",
+            "No protocol handler implementation",
+            "No tool handler implementation",
+            "No local evidence reader",
+            "No automatic ChatGPT handoff",
+            "Purpose",
+            "Non-goals",
+            "Adapter Boundary",
+            "Registry Consumption Flow",
+            "Verify-First Behavior",
+            "Blocked Response Handling",
+            "Forbidden Actions",
+            "Safe Metadata Boundary",
+            "Fixture Consistency Requirements",
+            "Acceptance Evidence For Later Implementation",
+            "mcp_read_only_registry.py",
+            "build_read_only_tool_registry()",
+            "build_blocked_response()",
+            "second independent allowlist",
+            "verified output alias",
+            "raw_data_included: false",
+            "four AI input candidate file names",
+            "Candidate finding only check",
+            "Risk draft only check",
+            "Final severity/CVSS manual decision check",
+        ]:
+            self.assertIn(required, adapter)
+
+        for safe_file in [
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+        ]:
+            self.assertIn(safe_file, adapter)
+
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "token=",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden, adapter)
+        self.assertIsNone(re.search(r"https?://", adapter))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", adapter))
 
     def test_mcp_read_only_registry_skeleton_v06_matches_fixtures_and_blocks_unsafe_metadata(self) -> None:
         contract_fixture = json.loads(

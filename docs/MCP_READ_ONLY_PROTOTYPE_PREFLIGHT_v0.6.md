@@ -14,6 +14,9 @@ automatic ChatGPT handoff, create a tag, or create a GitHub Release.
 This preflight does not implement an MCP server, implement an MCP runtime
 registry, or add MCP tool handlers.
 
+The registry adapter design is tracked in
+[`MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md`](MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md).
+
 ## Purpose
 
 The purpose is to prevent drift between the v0.6 read-only MCP contract matrix
@@ -91,6 +94,10 @@ consistency helper. That helper may define allowlist constants, forbidden
 concept constants, safe file constants, and blocked response schema helpers, but
 it is not an MCP server, transport, protocol handler, local evidence reader,
 dashboard route, CLI command, POST action, or tool handler execution layer.
+
+A later adapter must consume the registry helper instead of defining a second
+independent allowlist. It must still return blocked responses through the
+blocked response helper and keep verify-first behavior.
 
 ## Blocked Response Schema
 

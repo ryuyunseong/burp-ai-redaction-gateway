@@ -74,6 +74,8 @@ The first contract matrix slice is tracked in
 [`MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md`](MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md).
 The prototype preflight criteria are tracked in
 [`MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md`](MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md).
+The registry adapter design is tracked in
+[`MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md`](MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md).
 The first code slice is an internal registry skeleton and fixture consistency
 helper only. It should not add MCP transport, protocol handling, tool execution,
 local evidence reading, POST actions, raw preview, replay, active scan, or
