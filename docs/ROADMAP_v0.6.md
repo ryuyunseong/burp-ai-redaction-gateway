@@ -84,6 +84,11 @@ The first code slice is an internal registry skeleton and fixture consistency
 helper only. It should not add MCP transport, protocol handling, tool execution,
 local evidence reading, POST actions, raw preview, replay, active scan, or
 automatic ChatGPT handoff.
+The local-only adapter dry-run skeleton is
+`burp_ai_redaction_gateway/mcp_adapter_dry_run.py`. It is gate and fixture
+consumption code only, not an MCP server, not MCP transport, not a protocol
+handler, not actual tool execution, not a local evidence reader, and not runtime
+MCP exposure.
 
 Expected acceptance evidence:
 

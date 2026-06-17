@@ -14,6 +14,14 @@ The machine-readable planning fixture is:
 
 - `samples/synthetic_mcp_implementation_gate_v0.6.json`
 
+The first local-only adapter dry-run skeleton is:
+
+- `burp_ai_redaction_gateway/mcp_adapter_dry_run.py`
+
+That helper is not an MCP server, not MCP transport, not a protocol handler,
+not actual tool execution, not a local evidence reader, and not runtime MCP
+exposure. It is gate and fixture consumption code only.
+
 ## Purpose
 
 The purpose is to prevent the first MCP runtime implementation from bypassing
@@ -122,6 +130,8 @@ A future implementation PR must include:
 - Unit tests that prove forbidden concepts are absent.
 - Tests that prove blocked responses use the helper and allowed field shape.
 - Tests that prove verify-first behavior blocks unverified aliases.
+- Tests that prove the local-only adapter dry-run skeleton consumes the adapter
+  fixture and implementation gate fixture before runtime behavior is considered.
 - Raw-free scans for returned metadata.
 - Documentation updates that keep the four AI candidate file boundary visible.
 - Review notes confirming that no local evidence reader, upload/import action,

@@ -86,6 +86,13 @@ from burp_ai_redaction_gateway.live_capture_receiver_scope import (
     evaluate_receiver_scope_dry_run,
 )
 from burp_ai_redaction_gateway.mcp_server import ReadOnlyMcpGateway, ReadOnlyMcpServer, _next_rotated_audit_path
+from burp_ai_redaction_gateway.mcp_adapter_dry_run import (
+    McpAdapterDryRunError,
+    build_adapter_blocked_response_for_case,
+    build_adapter_dry_run_plan,
+    evaluate_adapter_dry_run_case,
+    evaluate_adapter_dry_run_fixture,
+)
 from burp_ai_redaction_gateway.mcp_read_only_registry import (
     ALLOWED_TOOL_NAMES,
     BLOCKED_RESPONSE_ALLOWED_FIELDS,
@@ -183,6 +190,7 @@ MCP_IMPLEMENTATION_GATE_DESIGN_V06_DOC = (
 MCP_IMPLEMENTATION_GATE_V06_FIXTURE = (
     ROOT / "samples" / "synthetic_mcp_implementation_gate_v0.6.json"
 )
+MCP_ADAPTER_DRY_RUN_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_adapter_dry_run.py"
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
@@ -3969,6 +3977,159 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_mcp_adapter_dry_run_v06_consumes_fixtures_without_runtime_boundary_changes(self) -> None:
+        adapter_fixture = json.loads(
+            MCP_REGISTRY_ADAPTER_EXPECTED_BEHAVIOR_V06_FIXTURE.read_text(encoding="utf-8")
+        )
+        gate_fixture = json.loads(MCP_IMPLEMENTATION_GATE_V06_FIXTURE.read_text(encoding="utf-8"))
+        module_source = MCP_ADAPTER_DRY_RUN_MODULE.read_text(encoding="utf-8")
+        gate_doc = MCP_IMPLEMENTATION_GATE_DESIGN_V06_DOC.read_text(encoding="utf-8")
+        fixture_plan = MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_V06_DOC.read_text(encoding="utf-8")
+        roadmap_v06 = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        for linked_text in [gate_doc, fixture_plan, roadmap_v06, fast_track, readme]:
+            self.assertIn("mcp_adapter_dry_run.py", linked_text)
+        for required in [
+            "local-only adapter dry-run skeleton",
+            "not an MCP server",
+            "not MCP transport",
+            "not a protocol handler",
+            "not actual tool execution",
+            "not a local evidence reader",
+            "not runtime MCP exposure",
+            "gate and fixture consumption",
+        ]:
+            self.assertIn(required, gate_doc + "\n" + fixture_plan)
+
+        self.assertIn("build_read_only_tool_registry", module_source)
+        self.assertIn("build_blocked_response", module_source)
+        self.assertNotIn("ALLOWED_TOOL_NAMES =", module_source)
+        self.assertNotIn("FORBIDDEN_TOOL_CONCEPTS =", module_source)
+        self.assertNotIn("http.server", module_source)
+        self.assertNotIn("socketserver", module_source)
+        self.assertNotIn("subprocess", module_source)
+
+        plan = build_adapter_dry_run_plan(adapter_fixture, gate_fixture)
+        self.assertEqual(
+            plan,
+            {
+                "ok": True,
+                "case_count": len(adapter_fixture["adapter_cases"]),
+                "gate_requirement_count": len(gate_fixture["gate_requirements"]),
+                "registry_tool_count": len(ALLOWED_TOOL_NAMES),
+                "implementation_approved": False,
+                "mcp_runtime_implemented": False,
+                "raw_data_included": False,
+                "local_path_included": False,
+                "credential_values_included": False,
+                "target_identifiers_included": False,
+                "state_change_performed": False,
+            },
+        )
+
+        evaluated = evaluate_adapter_dry_run_fixture(adapter_fixture, gate_fixture)
+        self.assertTrue(evaluated["ok"])
+        self.assertEqual(evaluated["case_count"], len(adapter_fixture["adapter_cases"]))
+        self.assertEqual(evaluated["gate_requirement_count"], len(gate_fixture["gate_requirements"]))
+        self.assertFalse(evaluated["raw_data_included"])
+        self.assertFalse(evaluated["local_path_included"])
+        self.assertFalse(evaluated["credential_values_included"])
+        self.assertFalse(evaluated["target_identifiers_included"])
+        self.assertFalse(evaluated["state_change_performed"])
+
+        expected_case_codes = {
+            "allowed_global_status_tool": None,
+            "allowed_verified_output_specific_tool": None,
+            "unverified_output_alias_blocked": "not_verified",
+            "unknown_tool_blocked": "not_allowlisted",
+            "forbidden_concept_blocked": "not_allowlisted",
+            "raw_access_request_blocked": "raw_access_blocked",
+            "state_changing_request_blocked": "state_change_blocked",
+            "local_path_request_blocked": "local_path_blocked",
+            "secret_request_blocked": "secret_access_blocked",
+            "safe_file_inventory_metadata_only": None,
+            "no_automatic_chatgpt_handoff": "state_change_blocked",
+        }
+        self.assertEqual(
+            {result["case_name"]: result["observed_code"] for result in evaluated["case_results"]},
+            expected_case_codes,
+        )
+        for result in evaluated["case_results"]:
+            self.assertTrue(result["gate_passed"])
+            self.assertFalse(result["raw_data_included"])
+            self.assertFalse(result["local_path_included"])
+            self.assertFalse(result["credential_values_included"])
+            self.assertFalse(result["target_identifiers_included"])
+            self.assertFalse(result["state_change_performed"])
+
+        for case in adapter_fixture["adapter_cases"]:
+            result = evaluate_adapter_dry_run_case(case)
+            self.assertEqual(result["observed_code"], expected_case_codes[case["name"]])
+            if case["expected_code"] is None:
+                with self.assertRaises(McpAdapterDryRunError):
+                    build_adapter_blocked_response_for_case(case)
+            else:
+                blocked = build_adapter_blocked_response_for_case(case)
+                self.assertLessEqual(set(blocked), set(BLOCKED_RESPONSE_ALLOWED_FIELDS))
+                self.assertFalse(blocked["ok"])
+                self.assertEqual(blocked["code"], case["expected_code"])
+
+        changed_gate_fixture = deepcopy(gate_fixture)
+        changed_gate_fixture["implementation_approved"] = True
+        with self.assertRaises(McpAdapterDryRunError):
+            evaluate_adapter_dry_run_fixture(adapter_fixture, changed_gate_fixture)
+
+        changed_adapter_fixture = deepcopy(adapter_fixture)
+        changed_adapter_fixture["mcp_server_implemented"] = True
+        with self.assertRaises(McpAdapterDryRunError):
+            evaluate_adapter_dry_run_fixture(changed_adapter_fixture, gate_fixture)
+
+        combined = (
+            module_source
+            + "\n"
+            + json.dumps(plan, sort_keys=True)
+            + "\n"
+            + json.dumps(evaluated, sort_keys=True)
+        )
+        normalized = (
+            combined.replace("raw_access_request_blocked", "")
+            .replace("raw_access_blocked", "")
+            .replace("local_path_request_blocked", "")
+            .replace("local_path_blocked", "")
+            .replace("secret_request_blocked", "")
+            .replace("secret_access_blocked", "")
+        )
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "token=",
+            "HMAC secret value",
+            "CSRF token value",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden, normalized)
+        self.assertIsNone(re.search(r"https?://", normalized))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", normalized))
 
     def test_mcp_read_only_registry_skeleton_v06_matches_fixtures_and_blocks_unsafe_metadata(self) -> None:
         contract_fixture = json.loads(
