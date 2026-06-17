@@ -154,6 +154,7 @@ V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE_DOC = (
     ROOT / "docs" / "V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md"
 )
 ROADMAP_V06_DOC = ROOT / "docs" / "ROADMAP_v0.6.md"
+V06_FAST_TRACK_PLAN_DOC = ROOT / "docs" / "V0.6_FAST_TRACK_PLAN.md"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
     ROOT / "docs" / "MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md"
@@ -3070,6 +3071,71 @@ class RedactionGatewayTests(unittest.TestCase):
 
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v06_fast_track_plan_is_planning_only_and_raw_free(self) -> None:
+        plan = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
+        roadmap_v06 = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+
+        self.assertIn("V0.6_FAST_TRACK_PLAN.md", roadmap_v06)
+
+        for required in [
+            "v0.6 Fast-Track Plan",
+            "planning only",
+            "Fast-Track Slices",
+            "Two-Week Candidate Sequence",
+            "Required Completion Criteria Per PR",
+            "Work That Must Stay Separate",
+            "Boundary Checklist",
+            "Output alias selector follow-up UX",
+            "Troubleshooting panel read-only UX",
+            "Release readiness status page",
+            "MCP registry adapter design",
+            "MCP read-only prototype skeleton plan",
+            "MCP server implementation",
+            "MCP transport implementation",
+            "Tool handler implementation",
+            "Local evidence reader",
+            "Upload or import evidence action",
+            "Dashboard POST action",
+            "Raw preview or raw download",
+            "Replay",
+            "Active scan",
+            "Automatic ChatGPT handoff",
+            "File delete or retention behavior change",
+            "HMAC behavior change",
+            "CSRF behavior change",
+            "Candidate findings are not treated as confirmed issues",
+            "Draft risk values are not treated as final severity",
+            "Severity and CVSS decisions remain manual",
+            "Tags and GitHub Releases remain separate",
+        ]:
+            self.assertIn(required, plan)
+
+        for forbidden in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "raw_request",
+            "raw_response",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden, plan)
+
+        self.assertIsNone(re.search(r"https?://", plan))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", plan))
 
     def test_burp_mcp_compatibility_doc_is_boundary_only_and_raw_free(self) -> None:
         compatibility = BURP_MCP_COMPATIBILITY_DOC.read_text(encoding="utf-8")

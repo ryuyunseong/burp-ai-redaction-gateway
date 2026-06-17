@@ -11,6 +11,8 @@ automatic ChatGPT handoff, new tag, or GitHub Release.
 
 The v0.5.x maintenance boundary is tracked in
 [`V0.5_HOTFIX_POLICY.md`](V0.5_HOTFIX_POLICY.md).
+The near-term read-only work grouping is tracked in
+[`V0.6_FAST_TRACK_PLAN.md`](V0.6_FAST_TRACK_PLAN.md).
 
 ## Planning Principles
 
