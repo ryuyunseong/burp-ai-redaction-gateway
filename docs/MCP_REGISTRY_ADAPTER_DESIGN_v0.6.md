@@ -7,6 +7,8 @@ The fixture plan for expected adapter behavior is tracked in
 [`MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md`](MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md).
 The implementation gate for any later runtime PR is tracked in
 [`MCP_IMPLEMENTATION_GATE_DESIGN_v0.6.md`](MCP_IMPLEMENTATION_GATE_DESIGN_v0.6.md).
+The local-only schema catalog step is tracked in
+[`MCP_LOCAL_ONLY_TOOL_SCHEMA_CATALOG_v0.6.md`](MCP_LOCAL_ONLY_TOOL_SCHEMA_CATALOG_v0.6.md).
 
 It does not implement an MCP server, MCP transport, protocol handler, tool
 handler, local evidence reader, upload or import action, dashboard POST action,
@@ -64,6 +66,12 @@ The only allowed source of tool identity is
 The adapter must not define a second independent allowlist. If the adapter
 needs derived metadata, it must derive that metadata from the registry helper
 and keep fixture consistency checks in place.
+
+The first derived metadata helper is
+`burp_ai_redaction_gateway/mcp_tool_schema_catalog.py`. It is an internal
+schema catalog only, not an MCP server, not MCP transport, not a protocol
+handler, not actual tool execution, not a local evidence reader, and not runtime
+MCP exposure.
 
 ## Registry Consumption Flow
 
