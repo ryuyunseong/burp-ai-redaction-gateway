@@ -230,6 +230,8 @@ Candidate tasks:
 
 - Keep MCP integration read-only first:
   [`MCP_INTEGRATION_DESIGN_v0.5.md`](MCP_INTEGRATION_DESIGN_v0.5.md).
+- Keep the Burp MCP compatibility boundary explicit:
+  [`BURP_MCP_COMPATIBILITY_v0.5.md`](BURP_MCP_COMPATIBILITY_v0.5.md).
 - Keep web UX improvements Korean-first and raw-free:
   [`WEB_UX_KO_PLAN_v0.5.md`](WEB_UX_KO_PLAN_v0.5.md).
 - Separate design, prototype, and state-changing action PRs.
