@@ -86,6 +86,12 @@ against the contract fixture:
 - Tool handlers must keep candidate finding, risk draft, and manual
   severity/CVSS boundaries visible.
 
+The first implementation step after this preflight may add an internal registry
+consistency helper. That helper may define allowlist constants, forbidden
+concept constants, safe file constants, and blocked response schema helpers, but
+it is not an MCP server, transport, protocol handler, local evidence reader,
+dashboard route, CLI command, POST action, or tool handler execution layer.
+
 ## Blocked Response Schema
 
 Blocked responses may contain only raw-free metadata:

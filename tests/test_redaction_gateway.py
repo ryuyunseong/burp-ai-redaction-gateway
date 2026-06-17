@@ -86,6 +86,18 @@ from burp_ai_redaction_gateway.live_capture_receiver_scope import (
     evaluate_receiver_scope_dry_run,
 )
 from burp_ai_redaction_gateway.mcp_server import ReadOnlyMcpGateway, ReadOnlyMcpServer, _next_rotated_audit_path
+from burp_ai_redaction_gateway.mcp_read_only_registry import (
+    ALLOWED_TOOL_NAMES,
+    BLOCKED_RESPONSE_ALLOWED_FIELDS,
+    BLOCKED_RESPONSE_CODES,
+    FORBIDDEN_TOOL_CONCEPTS,
+    SAFE_FILE_ALLOWLIST,
+    McpReadOnlyRegistryError,
+    ReadOnlyRegistryEntry,
+    build_blocked_response,
+    build_read_only_tool_registry,
+    validate_registry_against_contract_fixtures,
+)
 from burp_ai_redaction_gateway.models import HttpRequest, HttpResponse, RawEvent, SanitizedEvent
 from burp_ai_redaction_gateway.parser import load_events
 from burp_ai_redaction_gateway.policy import load_policy
@@ -3270,6 +3282,105 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_mcp_read_only_registry_skeleton_v06_matches_fixtures_and_blocks_unsafe_metadata(self) -> None:
+        contract_fixture = json.loads(
+            MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_FIXTURE.read_text(encoding="utf-8")
+        )
+        preflight_fixture = json.loads(
+            MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_V06_FIXTURE.read_text(encoding="utf-8")
+        )
+        registry = build_read_only_tool_registry()
+
+        self.assertEqual(tuple(registry), ALLOWED_TOOL_NAMES)
+        self.assertEqual(tuple(contract_fixture["allowed_candidate_tools"]), ALLOWED_TOOL_NAMES)
+        self.assertEqual(tuple(preflight_fixture["allowed_tools"]), ALLOWED_TOOL_NAMES)
+        self.assertEqual(tuple(contract_fixture["forbidden_tool_concepts"]), FORBIDDEN_TOOL_CONCEPTS)
+        self.assertEqual(tuple(preflight_fixture["forbidden_tools"]), FORBIDDEN_TOOL_CONCEPTS)
+        self.assertEqual(tuple(contract_fixture["blocked_response_codes"]), BLOCKED_RESPONSE_CODES)
+        self.assertEqual(tuple(preflight_fixture["blocked_response_codes"]), BLOCKED_RESPONSE_CODES)
+        self.assertEqual(tuple(contract_fixture["safe_file_allowlist"]), SAFE_FILE_ALLOWLIST)
+        self.assertEqual(tuple(preflight_fixture["safe_files"]), SAFE_FILE_ALLOWLIST)
+        self.assertEqual(
+            tuple(preflight_fixture["blocked_response_allowed_fields"]),
+            BLOCKED_RESPONSE_ALLOWED_FIELDS,
+        )
+        self.assertFalse(preflight_fixture["runtime_registry_implemented"])
+        self.assertFalse(preflight_fixture["mcp_server_implemented"])
+        self.assertFalse(preflight_fixture["mcp_tool_handler_implemented"])
+
+        for forbidden in FORBIDDEN_TOOL_CONCEPTS:
+            self.assertNotIn(forbidden, registry)
+        for entry in registry.values():
+            self.assertIsInstance(entry, ReadOnlyRegistryEntry)
+            self.assertTrue(entry.read_only)
+            self.assertIsInstance(entry.verify_first, bool)
+            serialized = json.dumps(entry.to_safe_metadata(), sort_keys=True)
+            self.assertIn("raw_data_included", serialized)
+            for forbidden in [
+                "raw request",
+                "raw response",
+                "raw_request",
+                "raw_response",
+                "Cookie:",
+                "Authorization:",
+                "Bearer ",
+                "JWT",
+                "session=",
+                "token=",
+                "C:\\coding\\",
+                "C:\\Users\\",
+            ]:
+                self.assertNotIn(forbidden, serialized)
+            self.assertIsNone(re.search(r"https?://", serialized))
+            self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", serialized))
+
+        validation = validate_registry_against_contract_fixtures(contract_fixture, preflight_fixture)
+        self.assertEqual(
+            validation,
+            {
+                "ok": True,
+                "tool_count": 8,
+                "read_only": True,
+                "raw_data_included": False,
+            },
+        )
+
+        blocked = build_blocked_response(
+            "not_verified",
+            "verification required",
+            output_alias="verified-output-alias",
+            remediation_hint="run verify before reading metadata",
+        )
+        self.assertEqual(set(blocked), set(BLOCKED_RESPONSE_ALLOWED_FIELDS))
+        self.assertFalse(blocked["ok"])
+        self.assertEqual(blocked["code"], "not_verified")
+        self.assertEqual(blocked["output_alias"], "verified-output-alias")
+        serialized_blocked = json.dumps(blocked, sort_keys=True)
+        for forbidden in [
+            "raw request",
+            "raw response",
+            "raw_request",
+            "raw_response",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "token=",
+            "C:\\coding\\",
+            "C:\\Users\\",
+        ]:
+            self.assertNotIn(forbidden, serialized_blocked)
+        self.assertIsNone(re.search(r"https?://", serialized_blocked))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", serialized_blocked))
+
+        with self.assertRaisesRegex(McpReadOnlyRegistryError, "unknown_blocked_response_code"):
+            build_blocked_response("unknown_code", "blocked")
+        with self.assertRaisesRegex(McpReadOnlyRegistryError, "unsafe_metadata_marker"):
+            build_blocked_response("raw_access_blocked", "raw request body blocked")
+        with self.assertRaisesRegex(McpReadOnlyRegistryError, "unsafe_output_alias"):
+            build_blocked_response("not_verified", "blocked", output_alias="..\\raw")
 
     def test_mcp_and_web_ux_plan_docs_are_planning_only_and_raw_free(self) -> None:
         mcp_design = MCP_INTEGRATION_DESIGN_DOC.read_text(encoding="utf-8")
