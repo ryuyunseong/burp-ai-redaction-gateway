@@ -39,6 +39,12 @@ actual target identifier, raw traffic, Cookie/Authorization/token/session 값,
 후보이며 수동 검토가 필요합니다. Finding은 후보, risk는 초안이며 final severity와
 CVSS는 사람이 수동 결정합니다.
 
+home, `/help`, `/operations`, `/live-capture`의 read-only troubleshooting
+categories와 release readiness status 안내는 setup, upload/export,
+verify/review/report, live-capture, safe-files, MCP boundary를 빠르게 찾기 위한
+링크만 제공합니다. 이 영역은 tag 생성, GitHub Release 생성, raw preview, replay,
+active scan, 자동 ChatGPT 전송, POST action을 제공하지 않습니다.
+
 dashboard에는 조회 전용 운영 인덱스가 있습니다.
 
 ```text

@@ -1198,6 +1198,8 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
         </section>
         {_safety_strip()}
         {_render_output_alias_selector(root, policy, first_output_id, outputs)}
+        {_read_only_troubleshooting_panel()}
+        {_release_readiness_status_panel()}
         <section class="grid">
           <div class="panel">
             <div class="panel-head"><h2>처음 시작하기</h2><span class="muted">PowerShell을 덜 쓰고 화면 순서대로 확인합니다.</span></div>
@@ -1374,6 +1376,8 @@ def render_operations_help() -> str:
           <div class="rail"><span>finding</span><strong>후보</strong></div>
           <div class="rail"><span>위험도</span><strong>초안</strong></div>
         </section>
+        {_read_only_troubleshooting_panel()}
+        {_release_readiness_status_panel()}
         <section class="grid">
           <div class="panel">
             <div class="panel-head"><h2>빠른 흐름</h2><span class="muted">CLI와 GUI 병행 사용 순서입니다.</span></div>
@@ -1512,6 +1516,7 @@ def render_live_capture_readiness(
           <div class="rail"><span>raw_data_included</span><strong>{raw_data_included}</strong></div>
         </section>
         {alias_selector_html}
+        {_read_only_troubleshooting_panel()}
         <section class="grid">
           {result_panel}
           <div class="panel">
@@ -2822,7 +2827,7 @@ def _render_output_alias_selector(
             <h2>검증된 output 산출물 선택</h2>
             <span class="muted">검증을 통과한 output 별칭이 아직 없습니다.</span>
           </div>
-          <p class="muted">먼저 Burp export 또는 receiver output을 redaction/verify한 뒤 이 화면에서 별칭을 선택하세요. Raw traffic은 표시하지 않습니다.</p>
+          <p class="muted">먼저 Burp export 또는 receiver output을 redaction/verify한 뒤 이 화면에서 별칭을 선택하세요. Output alias는 안전한 표시용 이름이며 전체 로컬 경로나 실제 target을 표시하지 않습니다. Raw traffic은 표시하지 않습니다.</p>
           <a class="button secondary" href="/help">운영 가이드 보기</a>
         </section>
         """
@@ -2838,6 +2843,7 @@ def _render_output_alias_selector(
             <span class="muted">verify를 통과한 별칭만 표시합니다.</span>
           </div>
           <p class="muted">Safe files는 AI 입력 후보이며 수동 검토가 필요합니다. Finding은 후보, risk는 초안입니다. Final severity와 CVSS는 사람이 수동 결정합니다. Raw traffic은 표시하지 않습니다.</p>
+          <p class="muted">Output alias는 안전한 표시용 이름입니다. 전체 로컬 경로, 실제 target 식별자, raw traffic, credential 값은 표시하지 않습니다.</p>
           <div class="file-grid">{cards}</div>
         </section>
         """
@@ -4090,6 +4096,110 @@ def _audit_panel(status: dict[str, str]) -> str:
       <div><dt>표시 내용</dt><dd>메타데이터만</dd></div>
     </dl>
     """
+
+
+def _read_only_troubleshooting_panel() -> str:
+    categories = (
+        (
+            "setup friction",
+            "Windows 실행, 포트 충돌, dashboard 시작 문제를 먼저 확인합니다.",
+            "docs/WINDOWS_LAUNCHER_GUIDE.md",
+        ),
+        (
+            "upload/export friction",
+            "Burp export 입력과 Upload Wizard 경계를 확인합니다.",
+            "docs/GUI_UPLOAD_WIZARD.md",
+        ),
+        (
+            "verify/review/report friction",
+            "verify 실패, 후보 finding, report draft 생성 흐름을 점검합니다.",
+            "docs/USER_QUICKSTART.md",
+        ),
+        (
+            "live-capture friction",
+            "Live Capture는 상태 확인과 runtime evidence만 read-only로 봅니다.",
+            "/live-capture",
+        ),
+        (
+            "safe-files friction",
+            "AI 입력 후보 파일 4개와 수동 검토 경계를 확인합니다.",
+            "docs/GUI_SAFE_FILE_INVENTORY_INDEX.md",
+        ),
+        (
+            "MCP boundary friction",
+            "MCP는 read-only 경계와 별도 구현 단위를 먼저 확인합니다.",
+            "docs/READ_ONLY_MCP.md",
+        ),
+    )
+    cards = "\n".join(
+        f"""
+              <a class="guide-card" href="{_h(href)}">
+                <strong>{_h(title)}</strong>
+                <span>{_h(summary)}</span>
+                <small>read-only navigation only; raw traffic은 표시하지 않습니다.</small>
+              </a>
+        """
+        for title, summary, href in categories
+    )
+    return f"""
+        <section class="panel read-only-troubleshooting-panel" aria-label="read-only troubleshooting categories">
+          <div class="panel-head">
+            <h2>Read-only troubleshooting categories</h2>
+            <span class="muted">setup, upload, verify, live-capture, safe-files, MCP boundary를 빠르게 찾습니다.</span>
+          </div>
+          <p class="muted">이 패널은 안내 링크만 제공합니다. POST action, 실행 버튼, raw preview, replay, active scan, ChatGPT 자동 전송은 없습니다.</p>
+          <div class="file-grid">{cards}</div>
+        </section>
+        """
+
+
+def _release_readiness_status_panel() -> str:
+    readiness_items = (
+        (
+            "v0.5 local-use baseline",
+            "published; local-use 기준선으로 유지합니다.",
+            "docs/RELEASE_READINESS_v0.5.md",
+        ),
+        (
+            "v0.6 planning",
+            "read-only UX와 MCP read-only 준비를 분리해서 진행합니다.",
+            "docs/ROADMAP_v0.6.md",
+        ),
+        (
+            "v0.5 hotfix policy",
+            "기능 추가 없이 회귀, 문서, 실행 마찰만 고칩니다.",
+            "docs/V0.5_HOTFIX_POLICY.md",
+        ),
+        (
+            "Montoya runtime smoke evidence",
+            "release 판단 근거는 raw-free metadata로만 기록합니다.",
+            "docs/V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md",
+        ),
+    )
+    rows = "\n".join(
+        f"""
+              <div>
+                <dt>{_h(title)}</dt>
+                <dd><a href="{_h(href)}">{_h(summary)}</a></dd>
+              </div>
+        """
+        for title, summary, href in readiness_items
+    )
+    return f"""
+        <section class="panel release-readiness-status-panel" aria-label="release readiness status">
+          <div class="panel-head">
+            <h2>Release readiness status</h2>
+            <span class="muted">문서 링크와 상태 metadata만 표시합니다.</span>
+          </div>
+          <dl class="facts">
+            {rows}
+            <div><dt>tag action</dt><dd>not available in dashboard</dd></div>
+            <div><dt>GitHub Release action</dt><dd>not available in dashboard</dd></div>
+            <div><dt>raw_data_included</dt><dd>false</dd></div>
+          </dl>
+          <p class="muted">Tag와 GitHub Release는 별도 승인 후 CLI/GitHub 흐름에서만 처리합니다.</p>
+        </section>
+        """
 
 
 def _safety_strip() -> str:
