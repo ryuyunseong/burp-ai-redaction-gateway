@@ -4087,6 +4087,36 @@ class RedactionGatewayTests(unittest.TestCase):
         with self.assertRaises(McpAdapterDryRunError):
             evaluate_adapter_dry_run_fixture(changed_adapter_fixture, gate_fixture)
 
+        changed_adapter_fixture = deepcopy(adapter_fixture)
+        changed_adapter_fixture["raw_data_included"] = True
+        with self.assertRaises(McpAdapterDryRunError):
+            evaluate_adapter_dry_run_fixture(changed_adapter_fixture, gate_fixture)
+
+        changed_gate_fixture = deepcopy(gate_fixture)
+        changed_gate_fixture["raw_data_included"] = True
+        with self.assertRaises(McpAdapterDryRunError):
+            evaluate_adapter_dry_run_fixture(adapter_fixture, changed_gate_fixture)
+
+        changed_adapter_fixture = deepcopy(adapter_fixture)
+        changed_adapter_fixture["blocked_response_codes"] = ["not_verified"]
+        with self.assertRaises(McpAdapterDryRunError):
+            evaluate_adapter_dry_run_fixture(changed_adapter_fixture, gate_fixture)
+
+        changed_adapter_fixture = deepcopy(adapter_fixture)
+        changed_adapter_fixture["adapter_cases"][2]["expected_fields"].append("raw_body")
+        with self.assertRaises(McpAdapterDryRunError):
+            evaluate_adapter_dry_run_fixture(changed_adapter_fixture, gate_fixture)
+
+        changed_adapter_fixture = deepcopy(adapter_fixture)
+        changed_adapter_fixture["adapter_cases"][2]["expected_fields"].remove("remediation_hint")
+        with self.assertRaises(McpAdapterDryRunError):
+            evaluate_adapter_dry_run_fixture(changed_adapter_fixture, gate_fixture)
+
+        changed_adapter_fixture = deepcopy(adapter_fixture)
+        changed_adapter_fixture["adapter_cases"][0]["expected_ok"] = "true"
+        with self.assertRaises(McpAdapterDryRunError):
+            evaluate_adapter_dry_run_fixture(changed_adapter_fixture, gate_fixture)
+
         combined = (
             module_source
             + "\n"

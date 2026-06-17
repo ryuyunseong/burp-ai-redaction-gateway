@@ -4,6 +4,7 @@ from typing import Any, Mapping
 
 from .mcp_read_only_registry import (
     BLOCKED_RESPONSE_ALLOWED_FIELDS,
+    BLOCKED_RESPONSE_CODES,
     FORBIDDEN_TOOL_CONCEPTS,
     SAFE_FILE_ALLOWLIST,
     McpReadOnlyRegistryError,
@@ -27,6 +28,26 @@ RUNTIME_FLAG_FIELDS = (
     "automatic_chatgpt_handoff_implemented",
     "tag_created",
     "github_release_created",
+)
+
+UNSAFE_EXPECTED_FIELD_MARKERS = (
+    "raw",
+    "request",
+    "response",
+    "body",
+    "path",
+    "url",
+    "domain",
+    "ip",
+    "cookie",
+    "authorization",
+    "credential",
+    "token",
+    "session",
+    "secret",
+    "hmac",
+    "csrf",
+    "target",
 )
 
 
@@ -93,6 +114,9 @@ def evaluate_adapter_dry_run_case(
     expected_code = case.get("expected_code")
     expected_ok = case.get("expected_ok")
     expected_fields = set(_required_list(case, "expected_fields"))
+    if not isinstance(expected_ok, bool):
+        raise McpAdapterDryRunError("case_expected_ok_not_bool")
+    _assert_expected_fields_safe(expected_fields)
     if expected_ok is True:
         observed_code = None
         gate_passed = expected_code is None and _allowed_case_matches_registry(name, registry)
@@ -100,7 +124,9 @@ def evaluate_adapter_dry_run_case(
     else:
         blocked = build_adapter_blocked_response_for_case(case)
         observed_code = blocked["code"]
-        gate_passed = observed_code == expected_code and set(blocked).issubset(expected_fields)
+        if set(blocked) != expected_fields:
+            raise McpAdapterDryRunError("blocked_response_expected_field_drift")
+        gate_passed = observed_code == expected_code
         remediation_hint = blocked.get("remediation_hint", "blocked by dry-run gate")
     _assert_case_safe_flags(case)
     return {
@@ -144,6 +170,8 @@ def _validate_adapter_fixture_boundary(
 ) -> None:
     if adapter_fixture.get("planning_only") is not True:
         raise McpAdapterDryRunError("adapter_fixture_not_planning_only")
+    if adapter_fixture.get("raw_data_included") is not False:
+        raise McpAdapterDryRunError("adapter_fixture_raw_data_changed")
     for flag in RUNTIME_FLAG_FIELDS:
         if adapter_fixture.get(flag) is not False:
             raise McpAdapterDryRunError(f"adapter_fixture_{flag}_changed")
@@ -151,6 +179,8 @@ def _validate_adapter_fixture_boundary(
         raise McpAdapterDryRunError("adapter_fixture_allowed_tool_drift")
     if tuple(_required_list(adapter_fixture, "forbidden_tools")) != FORBIDDEN_TOOL_CONCEPTS:
         raise McpAdapterDryRunError("adapter_fixture_forbidden_tool_drift")
+    if tuple(_required_list(adapter_fixture, "blocked_response_codes")) != BLOCKED_RESPONSE_CODES:
+        raise McpAdapterDryRunError("adapter_fixture_blocked_code_drift")
     if tuple(_required_list(adapter_fixture, "blocked_response_allowed_fields")) != BLOCKED_RESPONSE_ALLOWED_FIELDS:
         raise McpAdapterDryRunError("adapter_fixture_blocked_field_drift")
     if tuple(_required_list(adapter_fixture, "safe_files")) != SAFE_FILE_ALLOWLIST:
@@ -162,6 +192,8 @@ def _validate_implementation_gate_fixture(implementation_gate_fixture: Mapping[s
         raise McpAdapterDryRunError("implementation_gate_not_planning_only")
     if implementation_gate_fixture.get("implementation_approved") is not False:
         raise McpAdapterDryRunError("implementation_gate_approval_changed")
+    if implementation_gate_fixture.get("raw_data_included") is not False:
+        raise McpAdapterDryRunError("implementation_gate_raw_data_changed")
     for flag in RUNTIME_FLAG_FIELDS:
         if implementation_gate_fixture.get(flag) is not False:
             raise McpAdapterDryRunError(f"implementation_gate_{flag}_changed")
@@ -206,6 +238,17 @@ def _assert_case_safe_flags(case: Mapping[str, Any]) -> None:
     ):
         if case.get(flag) is not False:
             raise McpAdapterDryRunError(f"case_{flag}_changed")
+
+
+def _assert_expected_fields_safe(fields: set[Any]) -> None:
+    for field in fields:
+        if not isinstance(field, str) or not field:
+            raise McpAdapterDryRunError("unsafe_expected_field")
+        if field == "raw_data_included":
+            continue
+        normalized = field.lower()
+        if any(marker in normalized for marker in UNSAFE_EXPECTED_FIELD_MARKERS):
+            raise McpAdapterDryRunError("unsafe_expected_field")
 
 
 def _required_list(value: Mapping[str, Any], field: str) -> list[Any]:
