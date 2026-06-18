@@ -161,6 +161,10 @@ The `v0.6.1` hotfix triage criteria are tracked in
 [`V0.6.1_HOTFIX_TRIAGE.md`](V0.6.1_HOTFIX_TRIAGE.md). They define patch
 candidate boundaries after the `v0.6` release and keep v0.7 scope out of
 hotfix PRs.
+The v0.7 scope planning boundary is tracked in
+[`V0.7_SCOPE_PLAN.md`](V0.7_SCOPE_PLAN.md). It records v0.7 goals, non-goals,
+PR split rules, MCP listener planning, UX polish candidates, and local evidence
+reader design boundaries without approving runtime implementation.
 
 Expected acceptance evidence:
 

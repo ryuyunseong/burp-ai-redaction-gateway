@@ -175,6 +175,7 @@ V06_RELEASE_NOTES_DRAFT_DOC = ROOT / "docs" / "V0.6_RELEASE_NOTES_DRAFT.md"
 V06_RC_FINAL_GATE_RUN_DOC = ROOT / "docs" / "V0.6_RC_FINAL_GATE_RUN.md"
 V06_RELEASE_APPROVAL_PACKET_DOC = ROOT / "docs" / "V0.6_RELEASE_APPROVAL_PACKET.md"
 V061_HOTFIX_TRIAGE_DOC = ROOT / "docs" / "V0.6.1_HOTFIX_TRIAGE.md"
+V07_SCOPE_PLAN_DOC = ROOT / "docs" / "V0.7_SCOPE_PLAN.md"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
     ROOT / "docs" / "MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md"
@@ -3813,6 +3814,117 @@ class RedactionGatewayTests(unittest.TestCase):
 
         self.assertIsNone(re.search(r"https?://", hotfix_triage))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", hotfix_triage))
+
+    def test_v07_scope_plan_is_planning_only_and_raw_free(self) -> None:
+        scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        hotfix_triage = V061_HOTFIX_TRIAGE_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(V07_SCOPE_PLAN_DOC.exists())
+        for linked_text in [readme, roadmap, hotfix_triage]:
+            self.assertIn("V0.7_SCOPE_PLAN.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## v0.6 Completed Baseline",
+            "## v0.6.1 Hotfix Boundary",
+            "## v0.7 Candidate Goals",
+            "## v0.7 Non-Goals",
+            "## MCP Listener Path",
+            "## UX Improvement Path",
+            "## Local Evidence Reader Decision Boundary",
+            "## PR Split Rules",
+            "## Security Review Requirements",
+            "## Test Requirements",
+            "## Deferred Work",
+            "## Explicitly Out of Scope",
+        ]:
+            self.assertIn(section, scope_plan)
+
+        for required in [
+            "Four-file AI input candidate output bundle",
+            "findings as candidates",
+            "risk values as drafts",
+            "final severity and CVSS as manual decisions",
+            "hotfix/v0.6.x-<short-topic>",
+            "MCP listener skeleton planning",
+            "UX Improvement Path",
+            "Output bundle usability improvements",
+            "Threat boundary decision for local evidence reader work",
+            "Listener work must not imply transport, protocol handling, tool execution, or",
+            "local evidence reading",
+            "Each PR should state whether it changes runtime behavior",
+            "Runtime work should include a clear negative test for blocked behavior",
+        ]:
+            self.assertIn(required, scope_plan)
+
+        for non_goal in [
+            "MCP server listener",
+            "MCP transport",
+            "MCP protocol handler",
+            "Executable tool registration",
+            "Actual tool execution",
+            "Local evidence reader",
+            "Safe file body reader",
+            "Raw preview or raw download",
+            "Replay or active scan",
+            "Automatic ChatGPT handoff",
+            "`v0.6` tag modification",
+            "GitHub Release `v0.6` modification",
+            "Output bundle four-file structure change",
+            "Large refactor",
+        ]:
+            self.assertIn(non_goal, scope_plan)
+
+        for split_rule in [
+            "MCP listener skeleton",
+            "Transport or protocol handler",
+            "Executable tool registration",
+            "Actual tool execution",
+            "Local evidence reader",
+            "Raw preview or raw download",
+            "Dashboard state-changing action",
+            "Upload or import action",
+            "Automatic ChatGPT handoff",
+            "Large refactor",
+            "UX copy-only changes",
+        ]:
+            self.assertIn(split_rule, scope_plan)
+
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, scope_plan)
+
+        self.assertIsNone(re.search(r"https?://", scope_plan))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", scope_plan))
 
     def test_burp_mcp_compatibility_doc_is_boundary_only_and_raw_free(self) -> None:
         compatibility = BURP_MCP_COMPATIBILITY_DOC.read_text(encoding="utf-8")

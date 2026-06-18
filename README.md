@@ -322,6 +322,10 @@ Post-release `v0.6.1` hotfix triage criteria are tracked in
 [`docs/V0.6.1_HOTFIX_TRIAGE.md`](docs/V0.6.1_HOTFIX_TRIAGE.md). They define
 which post-release issues may be considered hotfix candidates and keep MCP
 runtime work out of patch scope.
+The v0.7 scope planning boundary is tracked in
+[`docs/V0.7_SCOPE_PLAN.md`](docs/V0.7_SCOPE_PLAN.md). It separates v0.7 goals,
+non-goals, PR split rules, MCP listener planning, UX polish candidates, and
+local evidence reader design boundaries without implementing runtime behavior.
 
 ## Burp Montoya Collector
 
