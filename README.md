@@ -293,6 +293,11 @@ The v0.6 MCP listener skeleton acceptance criteria are tracked in
 [`docs/MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md`](docs/MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md).
 They add fixture and source-check policy only; they do not implement a listener,
 transport, protocol handler, tool execution, or local evidence reader.
+The v0.6 MCP listener runtime-facing source check guard is tracked in
+[`docs/MCP_LISTENER_RUNTIME_SOURCE_CHECK_v0.6.md`](docs/MCP_LISTENER_RUNTIME_SOURCE_CHECK_v0.6.md).
+It keeps future listener-facing files declared before they can enter the
+source-check scope; it still does not implement a listener, transport, protocol
+handler, tool execution, or local evidence reader.
 
 ## Burp Montoya Collector
 

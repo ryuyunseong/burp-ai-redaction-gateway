@@ -91,6 +91,10 @@ The listener skeleton acceptance criteria are tracked in
 [`MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md`](MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md).
 They must remain acceptance criteria, fixture, and source-check planning only
 before any listener implementation is considered.
+The runtime-facing source check guard is tracked in
+[`MCP_LISTENER_RUNTIME_SOURCE_CHECK_v0.6.md`](MCP_LISTENER_RUNTIME_SOURCE_CHECK_v0.6.md).
+It requires future listener-facing files to be declared in source-check scope
+before they can land and does not approve listener implementation.
 
 The next slice must still avoid:
 
