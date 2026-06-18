@@ -59,10 +59,10 @@ SAFE_PREVIEW_FILES = (
     "report_draft.md",
 )
 SAFE_FILE_PURPOSES = (
-    ("analysis_packet.json", "정제된 분석 metadata 후보"),
-    ("chatgpt_prompt.md", "ChatGPT 검토용 prompt 후보"),
-    ("codex_task_prompt.md", "Codex 후속 작업용 prompt 후보"),
-    ("report_draft.md", "사람이 편집할 보고서 초안"),
+    ("analysis_packet.json", "고급 산출물: 구조화된 분석 packet"),
+    ("chatgpt_prompt.md", "기본 보기: ChatGPT용 프롬프트"),
+    ("codex_task_prompt.md", "고급 산출물: Codex 작업 프롬프트"),
+    ("report_draft.md", "기본 보기: 보고서 초안"),
 )
 OUTPUT_MARKER_FILE = "analysis_packet.json"
 FINDINGS_FILE = "finding_candidates.json"
@@ -1836,7 +1836,7 @@ def render_simple_dashboard(output: DashboardOutput) -> str:
             </dl>
           </div>
           <div class="panel">
-            <div class="panel-head"><h2>AI에 넣을 후보 파일</h2><span class="muted">exists 또는 missing만 표시합니다. 파일 본문과 전체 경로는 표시하지 않습니다.</span></div>
+            <div class="panel-head"><h2>기본 보기와 고급 산출물</h2><span class="muted">기본 2개를 먼저 보고, 고급 2개는 필요할 때만 확인합니다. 자동 전송 없음. 파일 본문과 전체 경로는 표시하지 않습니다.</span></div>
             <table>
               <thead>
                 <tr><th>파일</th><th>상태</th></tr>

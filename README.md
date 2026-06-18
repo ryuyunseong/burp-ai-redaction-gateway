@@ -14,6 +14,12 @@ HAR-style JSON, 기본 Burp XML export 형태를 지원합니다.
 [docs/USER_QUICKSTART.md](docs/USER_QUICKSTART.md)를
 참조하세요.
 
+처음 사용하는 사용자를 위한 한글 빠른 시작 흐름은
+[docs/USER_QUICKSTART_KO_v0.6.md](docs/USER_QUICKSTART_KO_v0.6.md)를
+참조하세요. AI 투입 후보 4개를 기본 보기와 고급 보기로 나누어 읽는 방법은
+[docs/OUTPUT_BUNDLE_GUIDE_KO_v0.6.md](docs/OUTPUT_BUNDLE_GUIDE_KO_v0.6.md)에
+정리되어 있습니다.
+
 브라우저에서 Burp export 파일을 선택해 redaction, verify, review, report를
 한 번에 실행하는 v0.5 Upload Wizard는
 [docs/GUI_UPLOAD_WIZARD.md](docs/GUI_UPLOAD_WIZARD.md)를
