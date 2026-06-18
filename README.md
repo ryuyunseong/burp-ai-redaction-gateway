@@ -318,6 +318,10 @@ in [`docs/V0.6_RC_FINAL_GATE_RUN.md`](docs/V0.6_RC_FINAL_GATE_RUN.md) and
 [`docs/V0.6_RELEASE_APPROVAL_PACKET.md`](docs/V0.6_RELEASE_APPROVAL_PACKET.md).
 They organize release decision evidence only and still do not create a tag or
 GitHub Release.
+Post-release `v0.6.1` hotfix triage criteria are tracked in
+[`docs/V0.6.1_HOTFIX_TRIAGE.md`](docs/V0.6.1_HOTFIX_TRIAGE.md). They define
+which post-release issues may be considered hotfix candidates and keep MCP
+runtime work out of patch scope.
 
 ## Burp Montoya Collector
 

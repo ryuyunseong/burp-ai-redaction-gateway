@@ -29,6 +29,9 @@ in [`V0.6_RC_FINAL_GATE_RUN.md`](V0.6_RC_FINAL_GATE_RUN.md) and
 [`V0.6_RELEASE_APPROVAL_PACKET.md`](V0.6_RELEASE_APPROVAL_PACKET.md). They
 organize release decision evidence only and still do not create a tag or
 GitHub Release.
+The post-release `v0.6.1` hotfix triage criteria are tracked in
+[`V0.6.1_HOTFIX_TRIAGE.md`](V0.6.1_HOTFIX_TRIAGE.md). They keep reproducible
+post-release fixes separate from v0.7 feature work and MCP runtime work.
 
 ## Planning Principles
 
@@ -154,6 +157,10 @@ The RC final gate evidence and release approval packet draft are tracked in
 [`V0.6_RELEASE_APPROVAL_PACKET.md`](V0.6_RELEASE_APPROVAL_PACKET.md). They
 remain decision evidence only and do not approve tag, GitHub Release, listener,
 transport, protocol handling, execution, or local evidence reader work.
+The `v0.6.1` hotfix triage criteria are tracked in
+[`V0.6.1_HOTFIX_TRIAGE.md`](V0.6.1_HOTFIX_TRIAGE.md). They define patch
+candidate boundaries after the `v0.6` release and keep v0.7 scope out of
+hotfix PRs.
 
 Expected acceptance evidence:
 
