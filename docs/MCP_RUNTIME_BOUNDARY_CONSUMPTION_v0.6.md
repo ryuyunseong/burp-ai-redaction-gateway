@@ -156,3 +156,8 @@ The following work remains deferred:
 
 Each deferred item needs its own tests and boundary review before
 implementation.
+
+The listener skeleton decision is tracked in
+[`MCP_LISTENER_SKELETON_DECISION_v0.6.md`](MCP_LISTENER_SKELETON_DECISION_v0.6.md).
+It keeps listener skeleton work at the design and acceptance criteria stage and
+requires source-check scope expansion for any new runtime-facing MCP file.

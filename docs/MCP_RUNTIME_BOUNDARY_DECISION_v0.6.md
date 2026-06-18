@@ -86,6 +86,11 @@ The runtime boundary consumption fixture is tracked in
 It adds source-check evidence that the existing pre-runtime helpers still do
 not contain listener, transport, protocol, execution, or local evidence reader
 code.
+The listener skeleton decision is tracked in
+[`MCP_LISTENER_SKELETON_DECISION_v0.6.md`](MCP_LISTENER_SKELETON_DECISION_v0.6.md).
+It is a design and acceptance criteria document only. It does not approve a
+listener implementation and requires source-check scope expansion for any new
+runtime-facing MCP file.
 
 ## Forbidden Work
 
@@ -153,6 +158,7 @@ Later work must be split into separate PRs:
 
 - Server skeleton preflight.
 - Server listener skeleton.
+- Listener skeleton decision.
 - Transport and protocol handler.
 - Tool registration.
 - Tool execution.

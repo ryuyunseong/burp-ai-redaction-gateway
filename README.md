@@ -284,6 +284,11 @@ The v0.6 MCP runtime boundary consumption fixture is tracked in
 [`docs/MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md`](docs/MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md).
 It adds fixture, test, and source-check evidence only; it does not approve a
 listener, transport, protocol handler, tool execution, or local evidence reader.
+The v0.6 MCP listener skeleton decision is tracked in
+[`docs/MCP_LISTENER_SKELETON_DECISION_v0.6.md`](docs/MCP_LISTENER_SKELETON_DECISION_v0.6.md).
+It is a design and acceptance criteria document only; it does not approve a
+listener implementation or expand transport, protocol, execution, or evidence
+reader scope.
 
 ## Burp Montoya Collector
 
