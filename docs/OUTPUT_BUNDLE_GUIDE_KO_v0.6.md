@@ -47,3 +47,10 @@ finding이고, risk는 draft risk이며, severity/CVSS는 사람이 수동 판�
 3. 필요하면 고급 보기 2개를 추가로 봅니다.
 4. AI에 넣을 내용은 사람이 직접 선택합니다.
 5. 최종 보고서와 severity/CVSS는 사람이 결정합니다.
+
+## RC readiness 참고
+
+v0.6 RC 후보 판단에서 이 산출물 묶음은
+[`V0.6_RC_READINESS_CHECKLIST.md`](V0.6_RC_READINESS_CHECKLIST.md)의 output
+bundle criteria로 다시 확인합니다. 이 안내는 tag 또는 GitHub Release를 만들지
+않습니다.

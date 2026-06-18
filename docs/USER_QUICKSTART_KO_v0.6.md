@@ -100,3 +100,9 @@ AI에 넣을 수 있는 후보는 아래 4개뿐입니다.
 - severity/CVSS는 사람이 수동 판단합니다.
 - actual export smoke 통과는 외부 공유 승인이 아닙니다.
 - 자동 ChatGPT 전송은 없습니다.
+
+## RC readiness 참고
+
+v0.6 RC 후보 판단 기준은
+[`V0.6_RC_READINESS_CHECKLIST.md`](V0.6_RC_READINESS_CHECKLIST.md)에 정리되어
+있습니다. 이 checklist는 tag 또는 GitHub Release를 만들지 않습니다.
