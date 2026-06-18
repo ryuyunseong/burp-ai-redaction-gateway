@@ -104,6 +104,11 @@ The server skeleton preflight is tracked in
 It consumes the registry, dry-run, schema catalog, implementation gate, adapter
 fixture, and runtime boundary decision without adding listener, transport,
 protocol handling, tool execution, or local evidence reading.
+The runtime boundary consumption fixture is tracked in
+[`MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md`](MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md).
+It adds fixture, test, and source-check evidence that the existing pre-runtime
+helpers still do not contain listener, transport, protocol, execution, or local
+evidence reader code.
 
 Expected acceptance evidence:
 
@@ -143,8 +148,9 @@ Expected acceptance evidence before any implementation:
 2. Read-only MCP contract matrix.
 3. MCP runtime boundary decision before any server work.
 4. MCP server skeleton preflight before listener work.
-5. Read-only release readiness status page.
-6. Security-sensitive design review for local evidence intake.
+5. MCP runtime boundary consumption fixture before listener work.
+6. Read-only release readiness status page.
+7. Security-sensitive design review for local evidence intake.
 
 ## v0.5.x Versus v0.6 Decision Rules
 

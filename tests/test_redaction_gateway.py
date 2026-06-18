@@ -207,6 +207,12 @@ MCP_SERVER_SKELETON_PREFLIGHT_V06_DOC = (
 MCP_SERVER_SKELETON_PREFLIGHT_V06_FIXTURE = (
     ROOT / "tests" / "fixtures" / "mcp_server_skeleton_preflight_v0.6.json"
 )
+MCP_RUNTIME_BOUNDARY_CONSUMPTION_V06_DOC = (
+    ROOT / "docs" / "MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md"
+)
+MCP_RUNTIME_BOUNDARY_CONSUMPTION_V06_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "mcp_runtime_boundary_consumption_v0.6.json"
+)
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
@@ -4612,6 +4618,149 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn(forbidden_surface, fixture["forbidden_runtime_surfaces"])
 
         combined = preflight + "\n" + fixture_text
+        for forbidden_marker in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie",
+            "Authorization",
+            "Bearer ",
+            "JWT",
+            "session",
+            "token",
+            "HMAC secret value",
+            "CSRF token value",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden_marker, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_mcp_runtime_boundary_consumption_v06_blocks_runtime_source_drift(self) -> None:
+        consumption_doc = MCP_RUNTIME_BOUNDARY_CONSUMPTION_V06_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(MCP_RUNTIME_BOUNDARY_CONSUMPTION_V06_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
+        decision = MCP_RUNTIME_BOUNDARY_DECISION_V06_DOC.read_text(encoding="utf-8")
+        preflight = MCP_SERVER_SKELETON_PREFLIGHT_V06_DOC.read_text(encoding="utf-8")
+        gate_doc = MCP_IMPLEMENTATION_GATE_DESIGN_V06_DOC.read_text(encoding="utf-8")
+        catalog_doc = MCP_TOOL_SCHEMA_CATALOG_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(MCP_RUNTIME_BOUNDARY_CONSUMPTION_V06_DOC.exists())
+        self.assertTrue(MCP_RUNTIME_BOUNDARY_CONSUMPTION_V06_FIXTURE.exists())
+        for linked_text in [readme, roadmap, fast_track, decision, preflight, gate_doc, catalog_doc]:
+            self.assertIn("MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Non-goals",
+            "## Consumption Fixture Scope",
+            "## Required Consumed Artifacts",
+            "## Source Check Scope",
+            "## Forbidden Source Markers",
+            "## Boundary Flags",
+            "## Acceptance Evidence",
+            "## Deferred Runtime Work",
+        ]:
+            self.assertIn(section, consumption_doc)
+
+        for non_goal in [
+            "fixture, test, source-check, and documentation boundary only",
+            "No MCP server listener implementation",
+            "No MCP transport implementation",
+            "No protocol handler implementation",
+            "No executable tool registration",
+            "No actual tool execution",
+            "No local evidence reader implementation",
+            "No safe file body reader implementation",
+            "No upload or import action",
+            "No dashboard POST action",
+            "No raw preview or raw download",
+            "No replay or active scan",
+            "No automatic ChatGPT handoff",
+            "No tag or GitHub Release",
+            "No runtime implementation approval",
+        ]:
+            self.assertIn(non_goal, consumption_doc)
+
+        self.assertEqual(fixture["schema_version"], "mcp_runtime_boundary_consumption.v0.6")
+        self.assertIs(fixture["planning_only"], True)
+        for consumed_flag in [
+            "runtime_boundary_decision_consumed",
+            "server_skeleton_preflight_consumed",
+            "implementation_gate_consumed",
+            "adapter_fixture_consumed",
+            "dry_run_consumed",
+            "tool_schema_catalog_consumed",
+            "registry_helper_consumed",
+        ]:
+            self.assertIs(fixture[consumed_flag], True)
+
+        for blocked_flag in [
+            "mcp_server_listener_implemented",
+            "mcp_transport_implemented",
+            "mcp_protocol_handler_implemented",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "dashboard_post_action_implemented",
+            "upload_import_action_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "tag_created",
+            "github_release_created",
+            "raw_data_included",
+        ]:
+            self.assertIs(fixture[blocked_flag], False)
+
+        expected_scope = [
+            "burp_ai_redaction_gateway/mcp_adapter_dry_run.py",
+            "burp_ai_redaction_gateway/mcp_tool_schema_catalog.py",
+            "burp_ai_redaction_gateway/mcp_read_only_registry.py",
+        ]
+        self.assertEqual(fixture["source_check_scope"], expected_scope)
+        self.assertEqual(
+            fixture["forbidden_source_markers"],
+            [
+                "http.server",
+                "socketserver",
+                "http.client",
+                "socket",
+                "subprocess",
+                "requests",
+                "urllib",
+                "bind(",
+                "serve_forever",
+                "listen(",
+                "accept(",
+                "run_server",
+                "create_server",
+            ],
+        )
+
+        for source_path in fixture["source_check_scope"]:
+            source_file = ROOT / source_path
+            self.assertTrue(source_file.exists(), source_path)
+            source_text = source_file.read_text(encoding="utf-8")
+            for marker in fixture["forbidden_source_markers"]:
+                self.assertNotIn(marker, source_text, f"{marker} found in {source_path}")
+
+        for required_doc in fixture["required_documents"]:
+            self.assertTrue((ROOT / required_doc).exists(), required_doc)
+
+        combined = consumption_doc + "\n" + fixture_text
         for forbidden_marker in [
             "safe-to-share",
             "guaranteed safe",
