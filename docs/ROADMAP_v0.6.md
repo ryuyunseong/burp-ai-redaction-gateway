@@ -120,6 +120,11 @@ The listener skeleton acceptance criteria are tracked in
 They add fixture and source-check policy for the next listener-facing slice and
 still do not implement listener, transport, protocol handling, execution, or
 local evidence reading.
+The listener runtime-facing source check guard is tracked in
+[`MCP_LISTENER_RUNTIME_SOURCE_CHECK_v0.6.md`](MCP_LISTENER_RUNTIME_SOURCE_CHECK_v0.6.md).
+It makes future listener-facing files declare source-check scope before landing
+and keeps listener, transport, protocol handling, execution, and local evidence
+reading deferred.
 
 Expected acceptance evidence:
 
