@@ -17,6 +17,7 @@
   "v06_release_modified": false,
   "output_bundle_structure_changed": false,
   "raw_data_included": false,
+  "metadata_only_skeleton_module_declared": true,
   "source_check_scope_declared": true,
   "future_listener_files_must_be_declared": true,
   "source_check_scope": {
@@ -25,7 +26,9 @@
       "burp_ai_redaction_gateway/mcp_tool_schema_catalog.py",
       "burp_ai_redaction_gateway/mcp_read_only_registry.py"
     ],
-    "planned_listener_skeleton_files": [],
+    "planned_listener_skeleton_files": [
+      "burp_ai_redaction_gateway/mcp_listener_skeleton.py"
+    ],
     "existing_excluded_baseline_files": [
       "burp_ai_redaction_gateway/mcp_server.py"
     ]

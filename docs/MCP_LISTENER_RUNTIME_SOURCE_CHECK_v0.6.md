@@ -112,7 +112,10 @@ scope.
 
 ## Declared Source-check Scope
 
-The current declared runtime-facing source scope is empty.
+The current declared runtime-facing source scope contains only the
+metadata-only listener skeleton helper:
+
+- `burp_ai_redaction_gateway/mcp_listener_skeleton.py`
 
 Future PRs may add files to `declared_runtime_facing_source_scope` only when the
 same PR adds the matching source-check policy and proves the declared files do
@@ -162,7 +165,8 @@ A future listener-facing PR must prove:
 - Runtime-facing file detection is enabled.
 - Future runtime-facing files must be declared.
 - Undeclared runtime-facing files fail tests.
-- Declared runtime-facing source scope is currently empty.
+- Declared runtime-facing source scope is limited to the metadata-only listener
+  skeleton helper.
 - Existing pre-runtime helpers do not contain forbidden source markers.
 - Declared runtime-facing files do not contain forbidden source markers.
 - No listener implementation.
@@ -195,7 +199,8 @@ This slice requires tests proving:
 - Undeclared runtime-facing files fail tests.
 - Existing pre-runtime helper files exist.
 - Existing excluded baseline files exist or are explicitly explained.
-- Current declared runtime-facing source scope is empty.
+- Current declared runtime-facing source scope is limited to the metadata-only
+  listener skeleton helper.
 - Existing pre-runtime helper files do not contain forbidden source markers.
 - Declared runtime-facing files do not contain forbidden source markers.
 - The document and fixture avoid target identifiers, local path detail,
