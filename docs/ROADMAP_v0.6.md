@@ -115,6 +115,11 @@ It is a design and acceptance criteria document only. It decides that any later
 listener skeleton work must expand source-check scope for new runtime-facing
 files and must keep transport, protocol handling, tool execution, and local
 evidence reading separate.
+The listener skeleton acceptance criteria are tracked in
+[`MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md`](MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md).
+They add fixture and source-check policy for the next listener-facing slice and
+still do not implement listener, transport, protocol handling, execution, or
+local evidence reading.
 
 Expected acceptance evidence:
 
@@ -156,8 +161,9 @@ Expected acceptance evidence before any implementation:
 4. MCP server skeleton preflight before listener work.
 5. MCP runtime boundary consumption fixture before listener work.
 6. MCP listener skeleton decision before any listener implementation.
-7. Read-only release readiness status page.
-8. Security-sensitive design review for local evidence intake.
+7. MCP listener skeleton acceptance criteria before any listener implementation.
+8. Read-only release readiness status page.
+9. Security-sensitive design review for local evidence intake.
 
 ## v0.5.x Versus v0.6 Decision Rules
 

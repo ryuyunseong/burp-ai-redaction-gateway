@@ -87,6 +87,11 @@ The next allowed slice is a listener skeleton acceptance PR that remains
 planning-first. It may add documentation, fixture fields, source-check scope,
 and tests for names and blocked behavior.
 
+The listener skeleton acceptance criteria are tracked in
+[`MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md`](MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md).
+They must remain acceptance criteria, fixture, and source-check planning only
+before any listener implementation is considered.
+
 The next slice must still avoid:
 
 - Binding or opening a listener.
