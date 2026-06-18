@@ -54,3 +54,8 @@ v0.6 RC 후보 판단에서 이 산출물 묶음은
 [`V0.6_RC_READINESS_CHECKLIST.md`](V0.6_RC_READINESS_CHECKLIST.md)의 output
 bundle criteria로 다시 확인합니다. 이 안내는 tag 또는 GitHub Release를 만들지
 않습니다.
+quickstart smoke 절차는
+[`V0.6_QUICKSTART_SMOKE.md`](V0.6_QUICKSTART_SMOKE.md)를 사용하고,
+release notes 초안은
+[`V0.6_RELEASE_NOTES_DRAFT.md`](V0.6_RELEASE_NOTES_DRAFT.md)를 사용합니다.
+두 문서도 output bundle 4개 구조를 변경하지 않습니다.

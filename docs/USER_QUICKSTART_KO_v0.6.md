@@ -106,3 +106,8 @@ AI에 넣을 수 있는 후보는 아래 4개뿐입니다.
 v0.6 RC 후보 판단 기준은
 [`V0.6_RC_READINESS_CHECKLIST.md`](V0.6_RC_READINESS_CHECKLIST.md)에 정리되어
 있습니다. 이 checklist는 tag 또는 GitHub Release를 만들지 않습니다.
+quickstart smoke 절차는
+[`V0.6_QUICKSTART_SMOKE.md`](V0.6_QUICKSTART_SMOKE.md)에서 확인합니다.
+release notes 초안은
+[`V0.6_RELEASE_NOTES_DRAFT.md`](V0.6_RELEASE_NOTES_DRAFT.md)에서 확인합니다.
+두 문서도 tag 또는 GitHub Release를 만들지 않습니다.
