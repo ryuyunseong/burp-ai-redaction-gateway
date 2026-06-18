@@ -19,6 +19,11 @@ The v0.6 RC readiness checklist is tracked in
 [`V0.6_RC_READINESS_CHECKLIST.md`](V0.6_RC_READINESS_CHECKLIST.md). It records
 gate, smoke, UX, output bundle, MCP boundary, blocker, tag, and GitHub Release
 decision criteria without creating a tag or release.
+The v0.6 quickstart smoke procedure and release notes draft are tracked in
+[`V0.6_QUICKSTART_SMOKE.md`](V0.6_QUICKSTART_SMOKE.md) and
+[`V0.6_RELEASE_NOTES_DRAFT.md`](V0.6_RELEASE_NOTES_DRAFT.md). They document
+the operator smoke path and release copy without creating a tag or GitHub
+Release.
 
 ## Planning Principles
 
@@ -134,6 +139,11 @@ The RC readiness checklist is tracked in
 readiness evidence only and still does not approve tag, GitHub Release,
 listener, transport, protocol handling, execution, or local evidence reader
 work.
+The quickstart smoke procedure and release notes draft are tracked in
+[`V0.6_QUICKSTART_SMOKE.md`](V0.6_QUICKSTART_SMOKE.md) and
+[`V0.6_RELEASE_NOTES_DRAFT.md`](V0.6_RELEASE_NOTES_DRAFT.md). They remain
+documentation evidence only and do not approve tag, GitHub Release, listener,
+transport, protocol handling, execution, or local evidence reader work.
 
 Expected acceptance evidence:
 

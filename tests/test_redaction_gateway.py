@@ -170,6 +170,8 @@ V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE_DOC = (
 ROADMAP_V06_DOC = ROOT / "docs" / "ROADMAP_v0.6.md"
 V06_FAST_TRACK_PLAN_DOC = ROOT / "docs" / "V0.6_FAST_TRACK_PLAN.md"
 V06_RC_READINESS_CHECKLIST_DOC = ROOT / "docs" / "V0.6_RC_READINESS_CHECKLIST.md"
+V06_QUICKSTART_SMOKE_DOC = ROOT / "docs" / "V0.6_QUICKSTART_SMOKE.md"
+V06_RELEASE_NOTES_DRAFT_DOC = ROOT / "docs" / "V0.6_RELEASE_NOTES_DRAFT.md"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
     ROOT / "docs" / "MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md"
@@ -3475,6 +3477,120 @@ class RedactionGatewayTests(unittest.TestCase):
 
         self.assertIsNone(re.search(r"https?://", checklist))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", checklist))
+
+    def test_v06_quickstart_smoke_and_release_notes_draft_are_raw_free(self) -> None:
+        quickstart_smoke = V06_QUICKSTART_SMOKE_DOC.read_text(encoding="utf-8")
+        release_notes = V06_RELEASE_NOTES_DRAFT_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        checklist = V06_RC_READINESS_CHECKLIST_DOC.read_text(encoding="utf-8")
+        roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        quickstart_ko = USER_QUICKSTART_KO_V06_DOC.read_text(encoding="utf-8")
+        output_guide_ko = OUTPUT_BUNDLE_GUIDE_KO_V06_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(V06_QUICKSTART_SMOKE_DOC.exists())
+        self.assertTrue(V06_RELEASE_NOTES_DRAFT_DOC.exists())
+        for linked_text in [readme, checklist, roadmap, quickstart_ko, output_guide_ko]:
+            self.assertIn("V0.6_QUICKSTART_SMOKE.md", linked_text)
+            self.assertIn("V0.6_RELEASE_NOTES_DRAFT.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Smoke Scope",
+            "## Preconditions",
+            "## Commands",
+            "## Expected Output",
+            "## Dashboard Simple Check",
+            "## Output Bundle Check",
+            "## Security Checks",
+            "## Failure Handling",
+            "## Non-Goals",
+        ]:
+            self.assertIn(section, quickstart_smoke)
+
+        for section in [
+            "## Purpose",
+            "## Draft Release Summary",
+            "## User-Visible Changes",
+            "## Security And Privacy Boundaries",
+            "## Output Bundle",
+            "## Dashboard UX",
+            "## MCP Status",
+            "## Verification Evidence Required Before Release",
+            "## Known Limitations",
+            "## Explicit Non-Goals",
+            "## Release Action Status",
+        ]:
+            self.assertIn(section, release_notes)
+
+        combined = "\n".join([quickstart_smoke, release_notes])
+        for required in [
+            "generate",
+            "verify",
+            "review",
+            "report",
+            "/simple?project=quickstart_smoke",
+            "Simple Dashboard",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "Basic view",
+            "Advanced view",
+            "Manual review required",
+            "candidate finding",
+            "draft risk",
+            "draft report",
+            "Severity/CVSS",
+            "manual decision",
+            "No automatic ChatGPT handoff",
+            "release notes draft only",
+            "No tag",
+            "No GitHub Release",
+            "MCP server listener",
+            "MCP transport",
+            "MCP protocol handler",
+            "Executable tool registration",
+            "Actual tool execution",
+            "Local evidence reader",
+            "Safe file body reader",
+            "Raw preview or raw download",
+            "Replay or active scan",
+            "Automatic ChatGPT handoff",
+        ]:
+            self.assertIn(required, combined)
+
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
     def test_burp_mcp_compatibility_doc_is_boundary_only_and_raw_free(self) -> None:
         compatibility = BURP_MCP_COMPATIBILITY_DOC.read_text(encoding="utf-8")
