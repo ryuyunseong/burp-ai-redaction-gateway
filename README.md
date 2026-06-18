@@ -326,6 +326,10 @@ The v0.7 scope planning boundary is tracked in
 [`docs/V0.7_SCOPE_PLAN.md`](docs/V0.7_SCOPE_PLAN.md). It separates v0.7 goals,
 non-goals, PR split rules, MCP listener planning, UX polish candidates, and
 local evidence reader design boundaries without implementing runtime behavior.
+The v0.7 MCP listener skeleton plan is tracked in
+[`docs/V0.7_MCP_LISTENER_SKELETON_PLAN.md`](docs/V0.7_MCP_LISTENER_SKELETON_PLAN.md).
+It fixes source-check scope and acceptance criteria before any listener,
+transport, protocol, execution, or local evidence reader implementation.
 
 ## Burp Montoya Collector
 

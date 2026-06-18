@@ -176,6 +176,10 @@ V06_RC_FINAL_GATE_RUN_DOC = ROOT / "docs" / "V0.6_RC_FINAL_GATE_RUN.md"
 V06_RELEASE_APPROVAL_PACKET_DOC = ROOT / "docs" / "V0.6_RELEASE_APPROVAL_PACKET.md"
 V061_HOTFIX_TRIAGE_DOC = ROOT / "docs" / "V0.6.1_HOTFIX_TRIAGE.md"
 V07_SCOPE_PLAN_DOC = ROOT / "docs" / "V0.7_SCOPE_PLAN.md"
+V07_MCP_LISTENER_SKELETON_PLAN_DOC = ROOT / "docs" / "V0.7_MCP_LISTENER_SKELETON_PLAN.md"
+V07_MCP_LISTENER_SKELETON_PLAN_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v07_mcp_listener_skeleton_plan.json"
+)
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
     ROOT / "docs" / "MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md"
@@ -3925,6 +3929,167 @@ class RedactionGatewayTests(unittest.TestCase):
 
         self.assertIsNone(re.search(r"https?://", scope_plan))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", scope_plan))
+
+    def test_v07_mcp_listener_skeleton_plan_is_source_check_only(self) -> None:
+        plan = V07_MCP_LISTENER_SKELETON_PLAN_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V07_MCP_LISTENER_SKELETON_PLAN_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(V07_MCP_LISTENER_SKELETON_PLAN_DOC.exists())
+        self.assertTrue(V07_MCP_LISTENER_SKELETON_PLAN_FIXTURE.exists())
+        for linked_text in [readme, roadmap, scope_plan]:
+            self.assertIn("V0.7_MCP_LISTENER_SKELETON_PLAN.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## v0.7 Scope Baseline",
+            "## Listener Skeleton Goal",
+            "## Non-goals",
+            "## Source-check Scope",
+            "## Forbidden Source Markers",
+            "## Acceptance Criteria",
+            "## Required Tests",
+            "## PR Split Requirements",
+            "## Security Review Checklist",
+            "## Deferred Runtime Work",
+            "## Explicitly Out of Scope",
+        ]:
+            self.assertIn(section, plan)
+
+        for required_text in [
+            "planning, fixture, and source-check document only",
+            "not implementation approval",
+            "No MCP server listener implementation",
+            "No MCP transport implementation",
+            "No MCP protocol handler implementation",
+            "No executable tool registration implementation",
+            "No actual tool execution implementation",
+            "No local evidence reader implementation",
+            "No safe file body reader implementation",
+            "No raw preview or raw download implementation",
+            "No replay or active scan implementation",
+            "No automatic ChatGPT handoff implementation",
+            "No v0.6 tag modification",
+            "No GitHub Release v0.6 modification",
+            "No output bundle four-file structure change",
+            "future listener-facing file must be declared",
+            "The planned listener skeleton file list is empty",
+            "Listener skeleton implementation",
+            "Transport or protocol handler",
+            "Executable tool registration",
+            "Actual tool execution",
+            "Local evidence reader",
+            "Dashboard state-changing action",
+            "Upload or import action",
+            "Automatic ChatGPT handoff",
+        ]:
+            self.assertIn(required_text, plan)
+
+        self.assertEqual(fixture["schema_version"], "v07_mcp_listener_skeleton_plan.v1")
+        self.assertIs(fixture["planning_only"], True)
+        self.assertIs(fixture["v07_scope_plan_consumed"], True)
+        self.assertIs(fixture["source_check_scope_declared"], True)
+        self.assertIs(fixture["future_listener_files_must_be_declared"], True)
+
+        for blocked_flag in [
+            "listener_skeleton_implemented",
+            "mcp_server_listener_implemented",
+            "transport_implemented",
+            "protocol_handler_implemented",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "v06_tag_modified",
+            "v06_release_modified",
+            "output_bundle_structure_changed",
+            "raw_data_included",
+        ]:
+            self.assertIs(fixture[blocked_flag], False)
+
+        scope = fixture["source_check_scope"]
+        expected_helpers = [
+            "burp_ai_redaction_gateway/mcp_adapter_dry_run.py",
+            "burp_ai_redaction_gateway/mcp_tool_schema_catalog.py",
+            "burp_ai_redaction_gateway/mcp_read_only_registry.py",
+        ]
+        self.assertEqual(scope["existing_pre_runtime_helpers"], expected_helpers)
+        self.assertEqual(scope["planned_listener_skeleton_files"], [])
+        self.assertEqual(scope["existing_excluded_baseline_files"], ["burp_ai_redaction_gateway/mcp_server.py"])
+
+        forbidden_markers = [
+            "http.server",
+            "socketserver",
+            "http.client",
+            "socket",
+            "subprocess",
+            "requests",
+            "urllib",
+            "bind(",
+            "serve_forever",
+            "listen(",
+            "accept(",
+            "run_server",
+            "create_server",
+            "register_tool",
+            "dispatch_tool",
+            "tool_execute",
+            "execute_tool",
+            "read_local_evidence",
+            "read_file_body",
+        ]
+        self.assertEqual(fixture["forbidden_source_markers"], forbidden_markers)
+
+        for source_path in scope["existing_pre_runtime_helpers"]:
+            source_file = ROOT / source_path
+            self.assertTrue(source_file.exists(), source_path)
+            source_text = source_file.read_text(encoding="utf-8")
+            for marker in forbidden_markers:
+                self.assertNotIn(marker, source_text, f"{marker} found in {source_path}")
+
+        for source_path in scope["existing_excluded_baseline_files"]:
+            self.assertTrue((ROOT / source_path).exists(), source_path)
+
+        combined = plan + "\n" + fixture_text
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
     def test_burp_mcp_compatibility_doc_is_boundary_only_and_raw_free(self) -> None:
         compatibility = BURP_MCP_COMPATIBILITY_DOC.read_text(encoding="utf-8")
