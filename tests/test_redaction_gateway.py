@@ -201,6 +201,12 @@ MCP_ADAPTER_DRY_RUN_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_adapter_d
 MCP_TOOL_SCHEMA_CATALOG_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_tool_schema_catalog.py"
 MCP_TOOL_SCHEMA_CATALOG_DOC = ROOT / "docs" / "MCP_LOCAL_ONLY_TOOL_SCHEMA_CATALOG_v0.6.md"
 MCP_RUNTIME_BOUNDARY_DECISION_V06_DOC = ROOT / "docs" / "MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md"
+MCP_SERVER_SKELETON_PREFLIGHT_V06_DOC = (
+    ROOT / "docs" / "MCP_SERVER_SKELETON_PREFLIGHT_v0.6.md"
+)
+MCP_SERVER_SKELETON_PREFLIGHT_V06_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "mcp_server_skeleton_preflight_v0.6.json"
+)
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
@@ -4457,6 +4463,179 @@ class RedactionGatewayTests(unittest.TestCase):
             "example.com",
         ]:
             self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_mcp_server_skeleton_preflight_v06_consumes_boundary_without_runtime_surface(self) -> None:
+        preflight = MCP_SERVER_SKELETON_PREFLIGHT_V06_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(MCP_SERVER_SKELETON_PREFLIGHT_V06_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
+        decision = MCP_RUNTIME_BOUNDARY_DECISION_V06_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(MCP_SERVER_SKELETON_PREFLIGHT_V06_DOC.exists())
+        self.assertTrue(MCP_SERVER_SKELETON_PREFLIGHT_V06_FIXTURE.exists())
+        for linked_text in [readme, roadmap, fast_track, decision]:
+            self.assertIn("MCP_SERVER_SKELETON_PREFLIGHT_v0.6.md", linked_text)
+        self.assertIn("MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md", preflight)
+
+        for section in [
+            "## Purpose",
+            "## Required Input Baseline",
+            "## Acceptance Inputs",
+            "## Allowed Preflight Work",
+            "## Forbidden Work",
+            "## Fixture Contract",
+            "## Required Test Evidence",
+            "## Later Runtime Split",
+            "## Deferred Decisions",
+        ]:
+            self.assertIn(section, preflight)
+
+        for consumed in [
+            "MCP contract matrix",
+            "MCP prototype preflight",
+            "Read-only registry skeleton",
+            "Registry adapter design",
+            "Adapter expected behavior fixture",
+            "Implementation gate fixture",
+            "Local-only adapter dry-run",
+            "Local-only tool schema catalog",
+            "Runtime boundary decision",
+            "Registry helper",
+            "Dry-run helper",
+            "Tool schema catalog",
+            "Blocked response contract",
+            "Verify-first behavior",
+        ]:
+            self.assertIn(consumed, preflight)
+
+        for forbidden in [
+            "Server listener",
+            "Socket bind",
+            "Stdio transport",
+            "HTTP transport",
+            "JSON-RPC protocol handler",
+            "MCP protocol message parser",
+            "Executable tool registration",
+            "Actual tool execution",
+            "Local evidence reader",
+            "Safe file body reader",
+            "Upload or import action",
+            "Dashboard POST action",
+            "Collector forwarding change",
+            "Receiver ingest change",
+            "Raw preview or download",
+            "Replay or active scan",
+            "Automatic ChatGPT handoff",
+            "Tag or GitHub Release",
+        ]:
+            self.assertIn(forbidden, preflight)
+
+        self.assertEqual(fixture["schema_version"], "mcp_server_skeleton_preflight.v0.6")
+        for consumed_field in [
+            "consumes_registry_helper",
+            "consumes_dry_run_helper",
+            "consumes_tool_schema_catalog",
+            "consumes_implementation_gate_fixture",
+            "consumes_adapter_expected_behavior_fixture",
+            "consumes_runtime_boundary_decision",
+            "consumes_blocked_response_contract",
+            "consumes_verify_first_behavior",
+        ]:
+            self.assertIs(fixture[consumed_field], True)
+
+        for blocked_field in [
+            "server_listener_allowed",
+            "socket_bind_allowed",
+            "stdio_transport_allowed",
+            "http_transport_allowed",
+            "transport_allowed",
+            "json_rpc_protocol_handler_allowed",
+            "protocol_handler_allowed",
+            "mcp_protocol_message_parser_allowed",
+            "executable_tool_registration_allowed",
+            "tool_execution_allowed",
+            "local_evidence_reader_allowed",
+            "safe_file_body_reader_allowed",
+            "upload_import_action_allowed",
+            "dashboard_post_action_allowed",
+            "collector_forwarding_change_allowed",
+            "receiver_ingest_change_allowed",
+            "raw_preview_download_allowed",
+            "replay_active_scan_allowed",
+            "automatic_chatgpt_handoff_allowed",
+            "tag_allowed",
+            "github_release_allowed",
+            "raw_data_included",
+            "target_identifiers_included",
+            "local_path_details_included",
+            "credential_values_included",
+            "external_sharing_approval_included",
+        ]:
+            self.assertIs(fixture[blocked_field], False)
+
+        for required_item in [
+            "registry_helper",
+            "dry_run_helper",
+            "tool_schema_catalog",
+            "implementation_gate_fixture",
+            "adapter_expected_behavior_fixture",
+            "runtime_boundary_decision",
+            "blocked_response_contract",
+            "verify_first_behavior",
+        ]:
+            self.assertIn(required_item, fixture["preflight_acceptance_inputs"])
+
+        for forbidden_surface in [
+            "server_listener",
+            "socket_bind",
+            "stdio_transport",
+            "http_transport",
+            "json_rpc_protocol_handler",
+            "mcp_protocol_message_parser",
+            "executable_tool_registration",
+            "actual_tool_execution",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "upload_import_action",
+            "dashboard_post_action",
+            "collector_forwarding_change",
+            "receiver_ingest_change",
+            "raw_preview_download",
+            "replay_active_scan",
+            "automatic_chatgpt_handoff",
+            "tag_or_github_release",
+        ]:
+            self.assertIn(forbidden_surface, fixture["forbidden_runtime_surfaces"])
+
+        combined = preflight + "\n" + fixture_text
+        for forbidden_marker in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie",
+            "Authorization",
+            "Bearer ",
+            "JWT",
+            "session",
+            "token",
+            "HMAC secret value",
+            "CSRF token value",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden_marker, combined)
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 

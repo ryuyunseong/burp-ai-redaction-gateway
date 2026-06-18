@@ -76,6 +76,12 @@ The slice may add design text, fixture expectations, and tests that prove later
 runtime work must consume the existing catalog and gate. It may not add the
 runtime itself.
 
+The server skeleton preflight is tracked in
+[`MCP_SERVER_SKELETON_PREFLIGHT_v0.6.md`](MCP_SERVER_SKELETON_PREFLIGHT_v0.6.md).
+It must consume this decision, the registry, dry-run, schema catalog,
+implementation gate fixture, and adapter expected behavior fixture before
+listener work is considered.
+
 ## Forbidden Work
 
 The following work must stay out of the next slice unless separately approved:

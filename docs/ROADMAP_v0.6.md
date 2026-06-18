@@ -99,6 +99,11 @@ The runtime boundary decision is tracked in
 [`MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md`](MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md).
 It keeps server, transport, protocol handling, tool execution, and local
 evidence reader work split before any runtime implementation is considered.
+The server skeleton preflight is tracked in
+[`MCP_SERVER_SKELETON_PREFLIGHT_v0.6.md`](MCP_SERVER_SKELETON_PREFLIGHT_v0.6.md).
+It consumes the registry, dry-run, schema catalog, implementation gate, adapter
+fixture, and runtime boundary decision without adding listener, transport,
+protocol handling, tool execution, or local evidence reading.
 
 Expected acceptance evidence:
 
@@ -137,8 +142,9 @@ Expected acceptance evidence before any implementation:
 1. Low-risk GUI and documentation UX polish.
 2. Read-only MCP contract matrix.
 3. MCP runtime boundary decision before any server work.
-4. Read-only release readiness status page.
-5. Security-sensitive design review for local evidence intake.
+4. MCP server skeleton preflight before listener work.
+5. Read-only release readiness status page.
+6. Security-sensitive design review for local evidence intake.
 
 ## v0.5.x Versus v0.6 Decision Rules
 

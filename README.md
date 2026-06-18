@@ -275,6 +275,11 @@ The v0.6 MCP runtime boundary decision is tracked in
 [`docs/MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md`](docs/MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md).
 It separates server, transport, protocol, tool execution, and local evidence
 reader work before any runtime MCP implementation is considered.
+The v0.6 MCP server skeleton preflight is tracked in
+[`docs/MCP_SERVER_SKELETON_PREFLIGHT_v0.6.md`](docs/MCP_SERVER_SKELETON_PREFLIGHT_v0.6.md).
+It consumes the registry, dry-run, schema catalog, implementation gate, adapter
+fixture, and runtime boundary decision before any listener or transport work is
+considered.
 
 ## Burp Montoya Collector
 
