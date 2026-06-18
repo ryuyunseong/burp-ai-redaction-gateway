@@ -1,0 +1,54 @@
+{
+  "schema_version": "v07_mcp_listener_skeleton_plan.v1",
+  "planning_only": true,
+  "v07_scope_plan_consumed": true,
+  "listener_skeleton_implemented": false,
+  "mcp_server_listener_implemented": false,
+  "transport_implemented": false,
+  "protocol_handler_implemented": false,
+  "executable_tool_registration_implemented": false,
+  "actual_tool_execution_implemented": false,
+  "local_evidence_reader_implemented": false,
+  "safe_file_body_reader_implemented": false,
+  "raw_preview_download_implemented": false,
+  "replay_active_scan_implemented": false,
+  "automatic_chatgpt_handoff_implemented": false,
+  "v06_tag_modified": false,
+  "v06_release_modified": false,
+  "output_bundle_structure_changed": false,
+  "raw_data_included": false,
+  "source_check_scope_declared": true,
+  "future_listener_files_must_be_declared": true,
+  "source_check_scope": {
+    "existing_pre_runtime_helpers": [
+      "burp_ai_redaction_gateway/mcp_adapter_dry_run.py",
+      "burp_ai_redaction_gateway/mcp_tool_schema_catalog.py",
+      "burp_ai_redaction_gateway/mcp_read_only_registry.py"
+    ],
+    "planned_listener_skeleton_files": [],
+    "existing_excluded_baseline_files": [
+      "burp_ai_redaction_gateway/mcp_server.py"
+    ]
+  },
+  "forbidden_source_markers": [
+    "http.server",
+    "socketserver",
+    "http.client",
+    "socket",
+    "subprocess",
+    "requests",
+    "urllib",
+    "bind(",
+    "serve_forever",
+    "listen(",
+    "accept(",
+    "run_server",
+    "create_server",
+    "register_tool",
+    "dispatch_tool",
+    "tool_execute",
+    "execute_tool",
+    "read_local_evidence",
+    "read_file_body"
+  ]
+}
