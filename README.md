@@ -330,6 +330,9 @@ The v0.7 MCP listener skeleton plan is tracked in
 [`docs/V0.7_MCP_LISTENER_SKELETON_PLAN.md`](docs/V0.7_MCP_LISTENER_SKELETON_PLAN.md).
 It fixes source-check scope and acceptance criteria before any listener,
 transport, protocol, execution, or local evidence reader implementation.
+The first listener-facing helper is metadata-only and does not enable listener
+runtime behavior, transport, protocol handling, tool execution, raw preview, or
+automatic ChatGPT handoff.
 
 ## Burp Montoya Collector
 
