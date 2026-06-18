@@ -172,6 +172,8 @@ V06_FAST_TRACK_PLAN_DOC = ROOT / "docs" / "V0.6_FAST_TRACK_PLAN.md"
 V06_RC_READINESS_CHECKLIST_DOC = ROOT / "docs" / "V0.6_RC_READINESS_CHECKLIST.md"
 V06_QUICKSTART_SMOKE_DOC = ROOT / "docs" / "V0.6_QUICKSTART_SMOKE.md"
 V06_RELEASE_NOTES_DRAFT_DOC = ROOT / "docs" / "V0.6_RELEASE_NOTES_DRAFT.md"
+V06_RC_FINAL_GATE_RUN_DOC = ROOT / "docs" / "V0.6_RC_FINAL_GATE_RUN.md"
+V06_RELEASE_APPROVAL_PACKET_DOC = ROOT / "docs" / "V0.6_RELEASE_APPROVAL_PACKET.md"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
     ROOT / "docs" / "MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md"
@@ -3564,6 +3566,121 @@ class RedactionGatewayTests(unittest.TestCase):
             "safe to share",
             "guaranteed safe",
             "confirmed vulnerability",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v06_final_gate_and_release_approval_packet_are_raw_free(self) -> None:
+        final_gate = V06_RC_FINAL_GATE_RUN_DOC.read_text(encoding="utf-8")
+        approval_packet = V06_RELEASE_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        checklist = V06_RC_READINESS_CHECKLIST_DOC.read_text(encoding="utf-8")
+        roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        release_notes = V06_RELEASE_NOTES_DRAFT_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(V06_RC_FINAL_GATE_RUN_DOC.exists())
+        self.assertTrue(V06_RELEASE_APPROVAL_PACKET_DOC.exists())
+        for linked_text in [readme, checklist, roadmap, release_notes]:
+            self.assertIn("V0.6_RC_FINAL_GATE_RUN.md", linked_text)
+            self.assertIn("V0.6_RELEASE_APPROVAL_PACKET.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Run Label",
+            "## Required Gate Commands",
+            "## Gate Evidence Summary",
+            "## Quickstart Smoke Evidence",
+            "## Output Bundle Evidence",
+            "## Release Blocker Check",
+            "## MCP Boundary Check",
+            "## Release Decision Status",
+            "## Follow-Up",
+        ]:
+            self.assertIn(section, final_gate)
+
+        for section in [
+            "## Purpose",
+            "## Current Candidate Summary",
+            "## Required Inputs",
+            "## Approval Criteria",
+            "## Required Human Decision",
+            "## Security And Privacy Boundary",
+            "## MCP Status",
+            "## Release Action Status",
+            "## Blockers Before Release Action",
+            "## Rollback Plan",
+            "## Final Approval Status",
+        ]:
+            self.assertIn(section, approval_packet)
+
+        combined = "\n".join([final_gate, approval_packet])
+        for required in [
+            "v0.6-rc-final-gate-docs-pr",
+            "fa909f1",
+            "python -m compileall burp_ai_redaction_gateway tests",
+            "python -m unittest discover -s tests",
+            "python -m burp_ai_redaction_gateway verify --input out",
+            "python -m burp_ai_redaction_gateway review --input out\\demo",
+            "python -m burp_ai_redaction_gateway report --input out\\demo --output out\\demo\\report_draft.md --profile conservative",
+            "extensions\\montoya-collector\\gradlew.bat clean build",
+            "gitleaks dir -v --redact=100 --config .gitleaks.toml .",
+            "gitleaks git -v --redact=100 --config .gitleaks.toml .",
+            "scripts\\git_safety_check.bat",
+            "git diff --check",
+            "git status --short --untracked-files=all",
+            "Quickstart smoke",
+            "Simple Dashboard",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "Manual review",
+            "candidate finding",
+            "draft risk",
+            "draft report",
+            "severity/CVSS",
+            "MCP server listener remains not implemented",
+            "MCP transport remains not implemented",
+            "MCP protocol handler remains not implemented",
+            "Actual tool execution remains not implemented",
+            "Local evidence reader remains not implemented",
+            "Tag action status: not created",
+            "GitHub Release action status: not created",
+            "Release approval status: pending",
+            "requires separate explicit approval",
+        ]:
+            self.assertIn(required, combined)
+
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
             "confirmed issue count",
             "final CVSS",
             "\"raw_request\"",

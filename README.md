@@ -313,6 +313,11 @@ The v0.6 quickstart smoke procedure and release notes draft are tracked in
 [`docs/V0.6_RELEASE_NOTES_DRAFT.md`](docs/V0.6_RELEASE_NOTES_DRAFT.md).
 They document the generate, verify, review, report, and Simple Dashboard path
 without creating a tag or GitHub Release.
+The v0.6 RC final gate evidence and release approval packet draft are tracked
+in [`docs/V0.6_RC_FINAL_GATE_RUN.md`](docs/V0.6_RC_FINAL_GATE_RUN.md) and
+[`docs/V0.6_RELEASE_APPROVAL_PACKET.md`](docs/V0.6_RELEASE_APPROVAL_PACKET.md).
+They organize release decision evidence only and still do not create a tag or
+GitHub Release.
 
 ## Burp Montoya Collector
 
