@@ -63,6 +63,11 @@ The follow-up runtime boundary consumption fixture is tracked in
 It must remain fixture, test, and source-check evidence only before listener
 work is considered.
 
+The listener skeleton decision is tracked in
+[`MCP_LISTENER_SKELETON_DECISION_v0.6.md`](MCP_LISTENER_SKELETON_DECISION_v0.6.md).
+It remains a design and acceptance criteria document only and does not approve
+listener implementation.
+
 ## Allowed Preflight Work
 
 This preflight allows:

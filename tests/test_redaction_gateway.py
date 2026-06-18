@@ -213,6 +213,9 @@ MCP_RUNTIME_BOUNDARY_CONSUMPTION_V06_DOC = (
 MCP_RUNTIME_BOUNDARY_CONSUMPTION_V06_FIXTURE = (
     ROOT / "tests" / "fixtures" / "mcp_runtime_boundary_consumption_v0.6.json"
 )
+MCP_LISTENER_SKELETON_DECISION_V06_DOC = (
+    ROOT / "docs" / "MCP_LISTENER_SKELETON_DECISION_v0.6.md"
+)
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
@@ -4787,6 +4790,128 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden_marker, combined)
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_mcp_listener_skeleton_decision_v06_stays_design_only(self) -> None:
+        listener_decision = MCP_LISTENER_SKELETON_DECISION_V06_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
+        runtime_decision = MCP_RUNTIME_BOUNDARY_DECISION_V06_DOC.read_text(encoding="utf-8")
+        consumption_doc = MCP_RUNTIME_BOUNDARY_CONSUMPTION_V06_DOC.read_text(encoding="utf-8")
+        preflight = MCP_SERVER_SKELETON_PREFLIGHT_V06_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(MCP_LISTENER_SKELETON_DECISION_V06_DOC.exists())
+        for linked_text in [
+            readme,
+            roadmap,
+            fast_track,
+            runtime_decision,
+            consumption_doc,
+            preflight,
+        ]:
+            self.assertIn("MCP_LISTENER_SKELETON_DECISION_v0.6.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Non-goals",
+            "## Listener Skeleton Decision",
+            "## Allowed Next Slice",
+            "## Forbidden Work",
+            "## Source-check Scope Expansion Rule",
+            "## Required Acceptance Criteria",
+            "## Required Test Evidence",
+            "## Split Plan",
+            "## Deferred Decisions",
+        ]:
+            self.assertIn(section, listener_decision)
+
+        for baseline in [
+            "Runtime boundary decision",
+            "Server skeleton preflight",
+            "Runtime boundary consumption fixture",
+            "Implementation gate",
+            "Local-only tool schema catalog",
+            "Local-only adapter dry-run",
+            "Registry helper",
+            "Adapter expected behavior fixture",
+        ]:
+            self.assertIn(baseline, listener_decision)
+
+        for required_text in [
+            "design and acceptance criteria document only",
+            "not listener implementation approval",
+            "No MCP server listener implementation",
+            "No MCP transport implementation",
+            "No protocol handler implementation",
+            "No executable tool registration",
+            "No actual tool execution",
+            "No local evidence reader implementation",
+            "No upload or import action",
+            "No dashboard POST action",
+            "No raw preview or raw download",
+            "No replay or active scan",
+            "No automatic ChatGPT handoff",
+            "No tag or GitHub Release",
+            "source-check scope must expand",
+            "Runtime boundary consumption fixture consumed",
+            "Server skeleton preflight consumed",
+            "Implementation gate fixture consumed",
+            "Tool schema catalog consumed",
+            "Dry-run helper consumed",
+            "Registry helper consumed",
+            "Source-check scope expanded for any new runtime file",
+            "No transport",
+            "No protocol handler",
+            "No executable tool registration",
+            "No actual tool execution",
+            "No local evidence reader",
+            "No raw file body",
+            "No state-changing action",
+            "No automatic ChatGPT handoff",
+            "Candidate finding only",
+            "Risk draft only",
+            "Severity and CVSS require manual decision",
+        ]:
+            self.assertIn(required_text, listener_decision)
+
+        for split_item in [
+            "Listener skeleton decision",
+            "Listener skeleton acceptance criteria",
+            "Listener source-check scope extension",
+            "Listener runtime skeleton",
+            "Transport selection and implementation",
+            "Protocol message representation",
+            "Executable tool registration",
+            "Tool execution",
+            "Local evidence reader",
+            "Dashboard or upload state-changing action",
+        ]:
+            self.assertIn(split_item, listener_decision)
+
+        for forbidden_marker in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie",
+            "Authorization",
+            "Bearer ",
+            "JWT",
+            "session",
+            "token",
+            "HMAC secret value",
+            "CSRF token value",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden_marker, listener_decision)
+        self.assertIsNone(re.search(r"https?://", listener_decision))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", listener_decision))
 
     def test_mcp_read_only_registry_skeleton_v06_matches_fixtures_and_blocks_unsafe_metadata(self) -> None:
         contract_fixture = json.loads(
