@@ -58,6 +58,11 @@ runtime surface is considered:
 The server skeleton preflight fixture is
 `tests/fixtures/mcp_server_skeleton_preflight_v0.6.json`.
 
+The follow-up runtime boundary consumption fixture is tracked in
+[`MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md`](MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md).
+It must remain fixture, test, and source-check evidence only before listener
+work is considered.
+
 ## Allowed Preflight Work
 
 This preflight allows:

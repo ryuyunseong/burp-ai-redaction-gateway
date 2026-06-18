@@ -21,6 +21,10 @@ between the dry-run helper and a future server small and reviewable.
 
 The runtime boundary decision that follows this catalog is tracked in
 [`MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md`](MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md).
+The follow-up server preflight and boundary consumption evidence are tracked in
+[`MCP_SERVER_SKELETON_PREFLIGHT_v0.6.md`](MCP_SERVER_SKELETON_PREFLIGHT_v0.6.md)
+and
+[`MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md`](MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md).
 That document must be reviewed before server, transport, protocol, tool
 execution, or local evidence reader work starts.
 

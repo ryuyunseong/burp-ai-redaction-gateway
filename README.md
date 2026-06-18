@@ -280,6 +280,10 @@ The v0.6 MCP server skeleton preflight is tracked in
 It consumes the registry, dry-run, schema catalog, implementation gate, adapter
 fixture, and runtime boundary decision before any listener or transport work is
 considered.
+The v0.6 MCP runtime boundary consumption fixture is tracked in
+[`docs/MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md`](docs/MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md).
+It adds fixture, test, and source-check evidence only; it does not approve a
+listener, transport, protocol handler, tool execution, or local evidence reader.
 
 ## Burp Montoya Collector
 

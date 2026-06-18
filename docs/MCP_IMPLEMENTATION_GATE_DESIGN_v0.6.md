@@ -36,6 +36,12 @@ The runtime boundary decision before server work is:
 
 - `MCP_RUNTIME_BOUNDARY_DECISION_v0.6.md`
 
+The server preflight and runtime boundary consumption evidence before listener
+work are:
+
+- `MCP_SERVER_SKELETON_PREFLIGHT_v0.6.md`
+- `MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md`
+
 That document separates server, transport, protocol, tool execution, and local
 evidence reader work before any runtime implementation is considered.
 

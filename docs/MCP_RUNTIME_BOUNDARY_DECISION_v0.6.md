@@ -81,6 +81,11 @@ The server skeleton preflight is tracked in
 It must consume this decision, the registry, dry-run, schema catalog,
 implementation gate fixture, and adapter expected behavior fixture before
 listener work is considered.
+The runtime boundary consumption fixture is tracked in
+[`MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md`](MCP_RUNTIME_BOUNDARY_CONSUMPTION_v0.6.md).
+It adds source-check evidence that the existing pre-runtime helpers still do
+not contain listener, transport, protocol, execution, or local evidence reader
+code.
 
 ## Forbidden Work
 
