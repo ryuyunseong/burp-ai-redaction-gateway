@@ -169,6 +169,7 @@ V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE_DOC = (
 )
 ROADMAP_V06_DOC = ROOT / "docs" / "ROADMAP_v0.6.md"
 V06_FAST_TRACK_PLAN_DOC = ROOT / "docs" / "V0.6_FAST_TRACK_PLAN.md"
+V06_RC_READINESS_CHECKLIST_DOC = ROOT / "docs" / "V0.6_RC_READINESS_CHECKLIST.md"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
     ROOT / "docs" / "MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md"
@@ -3322,6 +3323,158 @@ class RedactionGatewayTests(unittest.TestCase):
 
         self.assertIsNone(re.search(r"https?://", plan))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", plan))
+
+    def test_v06_rc_readiness_checklist_is_gate_based_and_raw_free(self) -> None:
+        checklist = V06_RC_READINESS_CHECKLIST_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
+        quickstart_ko = USER_QUICKSTART_KO_V06_DOC.read_text(encoding="utf-8")
+        output_guide_ko = OUTPUT_BUNDLE_GUIDE_KO_V06_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(V06_RC_READINESS_CHECKLIST_DOC.exists())
+        for linked_text in [readme, roadmap, fast_track, quickstart_ko, output_guide_ko]:
+            self.assertIn("V0.6_RC_READINESS_CHECKLIST.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current Completed Baseline",
+            "## RC Readiness Criteria",
+            "## Required Smoke Evidence",
+            "## Required Security Evidence",
+            "## Required UX Evidence",
+            "## Output Bundle Criteria",
+            "## MCP Boundary Criteria",
+            "## Release Blockers",
+            "## Explicit Non-Goals",
+            "## Tag And GitHub Release Decision",
+            "## Deferred Work After v0.6",
+        ]:
+            self.assertIn(section, checklist)
+
+        for completed in [
+            "v0.5 release completed",
+            "Local redaction, verify, review, and report flow",
+            "Upload Wizard baseline",
+            "Simple Dashboard copy-only UX",
+            "Korean quickstart",
+            "Output bundle guide",
+            "Montoya collector build gate",
+            "MCP contract matrix",
+            "MCP registry, adapter design, adapter dry-run, and schema catalog",
+            "MCP runtime boundary decision",
+            "MCP server skeleton preflight",
+            "MCP runtime boundary consumption",
+            "MCP listener decision, acceptance criteria, and runtime-facing source-check",
+        ]:
+            self.assertIn(completed, checklist)
+
+        for gate in [
+            "python -m compileall burp_ai_redaction_gateway tests",
+            "python -m unittest discover -s tests",
+            "python -m burp_ai_redaction_gateway verify --input out",
+            "python -m burp_ai_redaction_gateway review --input out\\demo",
+            "python -m burp_ai_redaction_gateway report --input out\\demo --output out\\demo\\report_draft.md --profile conservative",
+            "extensions\\montoya-collector\\gradlew.bat clean build",
+            "gitleaks dir -v --redact=100 --config .gitleaks.toml .",
+            "gitleaks git -v --redact=100 --config .gitleaks.toml .",
+            "scripts\\git_safety_check.bat",
+            "git diff --check",
+            "git status --short --untracked-files=all",
+        ]:
+            self.assertIn(gate, checklist)
+
+        for required in [
+            "Output bundle 4 files remain unchanged",
+            "Basic view: `report_draft.md`, `chatgpt_prompt.md`",
+            "Advanced view: `analysis_packet.json`, `codex_task_prompt.md`",
+            "Manual review required",
+            "Candidate finding only",
+            "Draft risk only",
+            "Draft report only",
+            "Severity/CVSS manual decision",
+            "No automatic ChatGPT handoff",
+            "No direct raw traffic handoff",
+            "`analysis_packet.json`",
+            "`chatgpt_prompt.md`",
+            "`codex_task_prompt.md`",
+            "`report_draft.md`",
+            "MCP server listener remains not implemented",
+            "MCP transport remains not implemented",
+            "MCP protocol handler remains not implemented",
+            "Executable tool registration remains not implemented",
+            "Actual tool execution remains not implemented",
+            "Local evidence reader remains not implemented",
+            "Safe file body reader remains not implemented",
+            "Tag or GitHub Release is created without explicit approval",
+            "No tag until explicit approval",
+            "No GitHub Release until explicit approval",
+        ]:
+            self.assertIn(required, checklist)
+
+        for blocker in [
+            "Full gate failure",
+            "Gitleaks failure",
+            "Git safety failure",
+            "Raw request or raw response marker appears",
+            "Actual target, domain, IP, credential, token, or session values appear",
+            "Full local path appears",
+            "Sharing guarantee wording appears",
+            "Confirmed issue or CVSS certainty wording appears",
+            "Automatic ChatGPT handoff is added",
+            "Raw preview or raw download is added",
+        ]:
+            self.assertIn(blocker, checklist)
+
+        for non_goal in [
+            "MCP server listener implementation",
+            "MCP transport implementation",
+            "MCP protocol handler implementation",
+            "Executable tool registration implementation",
+            "Actual tool execution implementation",
+            "Local evidence reader implementation",
+            "Safe file body reader implementation",
+            "Upload, import, or dashboard POST action implementation",
+            "Collector forwarding behavior change",
+            "Receiver ingest behavior change",
+            "Raw preview or raw download implementation",
+            "Replay or active scan implementation",
+            "Automatic ChatGPT handoff implementation",
+            "Output bundle four-file structure change",
+            "New tag creation",
+            "GitHub Release creation",
+        ]:
+            self.assertIn(non_goal, checklist)
+
+        combined = "\n".join([checklist, roadmap, fast_track])
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "cookie_value",
+            "authorization_value",
+            "Authorization:",
+            "Cookie:",
+            "Bearer ",
+            "JWT",
+            "session=",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden, combined)
+
+        self.assertIsNone(re.search(r"https?://", checklist))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", checklist))
 
     def test_burp_mcp_compatibility_doc_is_boundary_only_and_raw_free(self) -> None:
         compatibility = BURP_MCP_COMPATIBILITY_DOC.read_text(encoding="utf-8")

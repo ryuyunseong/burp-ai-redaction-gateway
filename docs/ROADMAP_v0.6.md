@@ -15,6 +15,10 @@ The near-term read-only work grouping is tracked in
 [`V0.6_FAST_TRACK_PLAN.md`](V0.6_FAST_TRACK_PLAN.md). That plan also tracks the
 completed read-only dashboard UX bundle as the current v0.6 UX baseline before
 MCP read-only design work starts.
+The v0.6 RC readiness checklist is tracked in
+[`V0.6_RC_READINESS_CHECKLIST.md`](V0.6_RC_READINESS_CHECKLIST.md). It records
+gate, smoke, UX, output bundle, MCP boundary, blocker, tag, and GitHub Release
+decision criteria without creating a tag or release.
 
 ## Planning Principles
 
@@ -125,6 +129,11 @@ The listener runtime-facing source check guard is tracked in
 It makes future listener-facing files declare source-check scope before landing
 and keeps listener, transport, protocol handling, execution, and local evidence
 reading deferred.
+The RC readiness checklist is tracked in
+[`V0.6_RC_READINESS_CHECKLIST.md`](V0.6_RC_READINESS_CHECKLIST.md). It is
+readiness evidence only and still does not approve tag, GitHub Release,
+listener, transport, protocol handling, execution, or local evidence reader
+work.
 
 Expected acceptance evidence:
 
@@ -168,7 +177,8 @@ Expected acceptance evidence before any implementation:
 6. MCP listener skeleton decision before any listener implementation.
 7. MCP listener skeleton acceptance criteria before any listener implementation.
 8. Read-only release readiness status page.
-9. Security-sensitive design review for local evidence intake.
+9. v0.6 RC readiness checklist.
+10. Security-sensitive design review for local evidence intake.
 
 ## v0.5.x Versus v0.6 Decision Rules
 

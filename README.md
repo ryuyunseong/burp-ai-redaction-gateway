@@ -304,6 +304,10 @@ The v0.6 MCP listener runtime-facing source check guard is tracked in
 It keeps future listener-facing files declared before they can enter the
 source-check scope; it still does not implement a listener, transport, protocol
 handler, tool execution, or local evidence reader.
+The v0.6 RC readiness checklist is tracked in
+[`docs/V0.6_RC_READINESS_CHECKLIST.md`](docs/V0.6_RC_READINESS_CHECKLIST.md).
+It records gate, smoke, UX, output bundle, MCP boundary, blocker, tag, and
+GitHub Release decision criteria without creating a tag or release.
 
 ## Burp Montoya Collector
 
