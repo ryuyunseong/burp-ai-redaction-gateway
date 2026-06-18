@@ -24,6 +24,11 @@ The v0.6 quickstart smoke procedure and release notes draft are tracked in
 [`V0.6_RELEASE_NOTES_DRAFT.md`](V0.6_RELEASE_NOTES_DRAFT.md). They document
 the operator smoke path and release copy without creating a tag or GitHub
 Release.
+The v0.6 RC final gate evidence and release approval packet draft are tracked
+in [`V0.6_RC_FINAL_GATE_RUN.md`](V0.6_RC_FINAL_GATE_RUN.md) and
+[`V0.6_RELEASE_APPROVAL_PACKET.md`](V0.6_RELEASE_APPROVAL_PACKET.md). They
+organize release decision evidence only and still do not create a tag or
+GitHub Release.
 
 ## Planning Principles
 
@@ -143,6 +148,11 @@ The quickstart smoke procedure and release notes draft are tracked in
 [`V0.6_QUICKSTART_SMOKE.md`](V0.6_QUICKSTART_SMOKE.md) and
 [`V0.6_RELEASE_NOTES_DRAFT.md`](V0.6_RELEASE_NOTES_DRAFT.md). They remain
 documentation evidence only and do not approve tag, GitHub Release, listener,
+transport, protocol handling, execution, or local evidence reader work.
+The RC final gate evidence and release approval packet draft are tracked in
+[`V0.6_RC_FINAL_GATE_RUN.md`](V0.6_RC_FINAL_GATE_RUN.md) and
+[`V0.6_RELEASE_APPROVAL_PACKET.md`](V0.6_RELEASE_APPROVAL_PACKET.md). They
+remain decision evidence only and do not approve tag, GitHub Release, listener,
 transport, protocol handling, execution, or local evidence reader work.
 
 Expected acceptance evidence:
