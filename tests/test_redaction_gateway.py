@@ -231,6 +231,8 @@ MCP_LISTENER_RUNTIME_SOURCE_CHECK_V06_FIXTURE = (
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
+USER_QUICKSTART_KO_V06_DOC = ROOT / "docs" / "USER_QUICKSTART_KO_v0.6.md"
+OUTPUT_BUNDLE_GUIDE_KO_V06_DOC = ROOT / "docs" / "OUTPUT_BUNDLE_GUIDE_KO_v0.6.md"
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
     "missing_security_headers",
@@ -1032,7 +1034,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertIn("간단 대시보드", simple)
                 self.assertIn("read-only 간단 체크 화면", simple)
                 self.assertIn("현재 상태", simple)
-                self.assertIn("AI에 넣을 후보 파일", simple)
+                self.assertIn("기본 보기와 고급 산출물", simple)
                 self.assertIn("다음 행동", simple)
                 self.assertIn("고급 화면", simple)
                 self.assertIn("project alias", simple)
@@ -8134,7 +8136,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "/dashboard-simple?project=<alias>",
             "read-only 간단 체크 화면",
             "현재 상태",
-            "AI에 넣을 후보 파일",
+            "기본 보기와 고급 산출물",
             "다음 행동",
             "project alias",
             "verify 결과",
@@ -8733,6 +8735,93 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("승인 완료", guide)
         self.assertNotIn("안전 보장", guide)
         self.assertNotIn("This guide explains", guide)
+
+    def test_ko_quickstart_and_output_bundle_v06_are_raw_free_and_operator_focused(self) -> None:
+        quickstart = USER_QUICKSTART_KO_V06_DOC.read_text(encoding="utf-8")
+        output_guide = OUTPUT_BUNDLE_GUIDE_KO_V06_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        dashboard = (ROOT / "burp_ai_redaction_gateway" / "dashboard.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("USER_QUICKSTART_KO_v0.6.md", readme)
+        self.assertIn("OUTPUT_BUNDLE_GUIDE_KO_v0.6.md", readme)
+        self.assertIn("기본 보기: 보고서 초안", dashboard)
+        self.assertIn("기본 보기: ChatGPT용 프롬프트", dashboard)
+        self.assertIn("고급 산출물: 구조화된 분석 packet", dashboard)
+        self.assertIn("고급 산출물: Codex 작업 프롬프트", dashboard)
+        self.assertIn("자동 전송 없음", dashboard)
+
+        for required in [
+            "사용자 빠른 시작 가이드 v0.6",
+            "1단계: Burp export 또는 collector 결과 준비",
+            "2단계: 로컬 redaction 실행",
+            "3단계: verify 실행",
+            "4단계: review 실행",
+            "5단계: report 생성",
+            "6단계: 사람이 결과 확인",
+            "7단계: 필요한 파일만 수동 복사",
+            "자동 ChatGPT 전송은 없습니다",
+            "AI 투입 전 사람이 최종 확인합니다",
+            "finding은 candidate finding입니다",
+            "risk는 draft risk입니다",
+            "report는 draft report입니다",
+            "severity/CVSS는 사람이 수동 판단합니다",
+        ]:
+            self.assertIn(required, quickstart)
+
+        for required in [
+            "산출물 묶음 안내 v0.6",
+            "기본 보기",
+            "고급 보기",
+            "보고서 초안",
+            "ChatGPT용 프롬프트",
+            "고급 산출물",
+            "원문 포함 여부",
+            "자동 전송 없음",
+            "수동 검토",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+        ]:
+            self.assertIn(required, output_guide)
+
+        combined = "\n".join([quickstart, output_guide])
+        for safe_file in [
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+        ]:
+            self.assertIn(safe_file, combined)
+
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "confirmed vulnerability",
+            "final CVSS",
+            "raw_request",
+            "raw_response",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "ready to submit",
+            "approved for external sharing",
+            "guaranteed safe",
+        ]:
+            self.assertNotIn(forbidden, combined)
+
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
     def test_release_checklist_v04_documents_hardening_flow(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

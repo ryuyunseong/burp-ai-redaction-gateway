@@ -24,16 +24,23 @@ Simple Dashboard는 처음 보는 사용자가 복잡한 운영 인덱스를 모
 - safe files 4개 준비 여부
 - 후보 finding, 초안 risk, 최종 심각도 수동 검토 경계
 
-### AI에 넣을 후보 파일
+### 기본 보기와 고급 산출물
 
-다음 4개 파일의 `exists` 또는 `missing` 상태만 표시합니다.
+다음 4개 파일의 `exists` 또는 `missing` 상태만 표시합니다. 처음 사용하는
+사용자는 기본 보기 2개를 먼저 보고, 고급 산출물 2개는 필요할 때만 확인합니다.
+
+기본 보기:
+
+- `report_draft.md`
+- `chatgpt_prompt.md`
+
+고급 산출물:
 
 - `analysis_packet.json`
-- `chatgpt_prompt.md`
 - `codex_task_prompt.md`
-- `report_draft.md`
 
 파일 본문, prompt 본문, report 본문, 전체 로컬 경로는 표시하지 않습니다.
+자동 ChatGPT 전송은 없습니다.
 
 ### 다음 행동
 
