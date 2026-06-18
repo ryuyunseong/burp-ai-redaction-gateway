@@ -161,3 +161,7 @@ The listener skeleton decision is tracked in
 [`MCP_LISTENER_SKELETON_DECISION_v0.6.md`](MCP_LISTENER_SKELETON_DECISION_v0.6.md).
 It keeps listener skeleton work at the design and acceptance criteria stage and
 requires source-check scope expansion for any new runtime-facing MCP file.
+The listener skeleton acceptance criteria are tracked in
+[`MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md`](MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md).
+They keep the next listener-facing work limited to fixture and source-check
+policy before implementation.

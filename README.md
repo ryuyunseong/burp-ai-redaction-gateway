@@ -289,6 +289,10 @@ The v0.6 MCP listener skeleton decision is tracked in
 It is a design and acceptance criteria document only; it does not approve a
 listener implementation or expand transport, protocol, execution, or evidence
 reader scope.
+The v0.6 MCP listener skeleton acceptance criteria are tracked in
+[`docs/MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md`](docs/MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md).
+They add fixture and source-check policy only; they do not implement a listener,
+transport, protocol handler, tool execution, or local evidence reader.
 
 ## Burp Montoya Collector
 

@@ -67,6 +67,10 @@ The listener skeleton decision is tracked in
 [`MCP_LISTENER_SKELETON_DECISION_v0.6.md`](MCP_LISTENER_SKELETON_DECISION_v0.6.md).
 It remains a design and acceptance criteria document only and does not approve
 listener implementation.
+The listener skeleton acceptance criteria are tracked in
+[`MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md`](MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md).
+They remain fixture and source-check planning only before listener
+implementation.
 
 ## Allowed Preflight Work
 

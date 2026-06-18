@@ -216,6 +216,12 @@ MCP_RUNTIME_BOUNDARY_CONSUMPTION_V06_FIXTURE = (
 MCP_LISTENER_SKELETON_DECISION_V06_DOC = (
     ROOT / "docs" / "MCP_LISTENER_SKELETON_DECISION_v0.6.md"
 )
+MCP_LISTENER_SKELETON_ACCEPTANCE_V06_DOC = (
+    ROOT / "docs" / "MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md"
+)
+MCP_LISTENER_SKELETON_ACCEPTANCE_V06_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "mcp_listener_skeleton_acceptance_v0.6.json"
+)
 MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
@@ -4912,6 +4918,162 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden_marker, listener_decision)
         self.assertIsNone(re.search(r"https?://", listener_decision))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", listener_decision))
+
+    def test_mcp_listener_skeleton_acceptance_v06_blocks_runtime_scope_drift(self) -> None:
+        acceptance_doc = MCP_LISTENER_SKELETON_ACCEPTANCE_V06_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(MCP_LISTENER_SKELETON_ACCEPTANCE_V06_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+        fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
+        decision = MCP_LISTENER_SKELETON_DECISION_V06_DOC.read_text(encoding="utf-8")
+        consumption = MCP_RUNTIME_BOUNDARY_CONSUMPTION_V06_DOC.read_text(encoding="utf-8")
+        preflight = MCP_SERVER_SKELETON_PREFLIGHT_V06_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(MCP_LISTENER_SKELETON_ACCEPTANCE_V06_DOC.exists())
+        self.assertTrue(MCP_LISTENER_SKELETON_ACCEPTANCE_V06_FIXTURE.exists())
+        for linked_text in [readme, roadmap, fast_track, decision, consumption, preflight]:
+            self.assertIn("MCP_LISTENER_SKELETON_ACCEPTANCE_v0.6.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Non-goals",
+            "## Acceptance Fixture Scope",
+            "## Required Consumed Artifacts",
+            "## Source-check Scope Expansion",
+            "## Forbidden Source Markers",
+            "## Listener Skeleton Boundaries",
+            "## Required Acceptance Criteria",
+            "## Required Test Evidence",
+            "## Deferred Runtime Work",
+        ]:
+            self.assertIn(section, acceptance_doc)
+
+        for required_text in [
+            "acceptance criteria, fixture, and source-check planning document only",
+            "not listener implementation approval",
+            "No MCP server listener implementation",
+            "No MCP transport implementation",
+            "No protocol handler implementation",
+            "No executable tool registration",
+            "No actual tool execution",
+            "No local evidence reader implementation",
+            "No safe file body reader implementation",
+            "No upload or import action",
+            "No dashboard POST action",
+            "No raw preview or raw download",
+            "No replay or active scan",
+            "No automatic ChatGPT handoff",
+            "No tag or GitHub Release",
+            "Future runtime-facing files must be added to source-check scope",
+            "Listener skeleton file allowed only after acceptance",
+            "Existing `mcp_server.py` excluded from this scope",
+            "Candidate finding only",
+            "Risk draft only",
+            "Severity and CVSS require manual decision",
+        ]:
+            self.assertIn(required_text, acceptance_doc)
+
+        self.assertEqual(fixture["schema_version"], "mcp_listener_skeleton_acceptance.v0.6")
+        self.assertIs(fixture["planning_only"], True)
+        for consumed_flag in [
+            "listener_skeleton_decision_consumed",
+            "runtime_boundary_consumption_consumed",
+            "server_skeleton_preflight_consumed",
+            "implementation_gate_consumed",
+            "tool_schema_catalog_consumed",
+            "dry_run_consumed",
+            "registry_helper_consumed",
+        ]:
+            self.assertIs(fixture[consumed_flag], True)
+
+        for blocked_flag in [
+            "mcp_server_listener_implemented",
+            "mcp_transport_implemented",
+            "mcp_protocol_handler_implemented",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "dashboard_post_action_implemented",
+            "upload_import_action_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "tag_created",
+            "github_release_created",
+            "raw_data_included",
+        ]:
+            self.assertIs(fixture[blocked_flag], False)
+
+        policy = fixture["source_check_scope_policy"]
+        expected_helpers = [
+            "burp_ai_redaction_gateway/mcp_adapter_dry_run.py",
+            "burp_ai_redaction_gateway/mcp_tool_schema_catalog.py",
+            "burp_ai_redaction_gateway/mcp_read_only_registry.py",
+        ]
+        self.assertEqual(policy["existing_pre_runtime_helpers"], expected_helpers)
+        self.assertIs(policy["future_runtime_facing_files_must_be_added"], True)
+        self.assertIs(policy["listener_skeleton_file_allowed_only_after_acceptance"], True)
+        self.assertIs(policy["existing_mcp_server_py_excluded_from_this_scope"], True)
+
+        self.assertEqual(
+            fixture["forbidden_source_markers"],
+            [
+                "http.server",
+                "socketserver",
+                "http.client",
+                "socket",
+                "subprocess",
+                "requests",
+                "urllib",
+                "bind(",
+                "serve_forever",
+                "listen(",
+                "accept(",
+                "run_server",
+                "create_server",
+                "tool_execute",
+                "execute_tool",
+                "read_local_evidence",
+                "read_file_body",
+            ],
+        )
+
+        for source_path in policy["existing_pre_runtime_helpers"]:
+            source_file = ROOT / source_path
+            self.assertTrue(source_file.exists(), source_path)
+            source_text = source_file.read_text(encoding="utf-8")
+            for marker in fixture["forbidden_source_markers"]:
+                self.assertNotIn(marker, source_text, f"{marker} found in {source_path}")
+
+        combined = acceptance_doc + "\n" + fixture_text
+        for forbidden_marker in [
+            "safe-to-share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie",
+            "Authorization",
+            "Bearer ",
+            "JWT",
+            "session",
+            "token",
+            "HMAC secret value",
+            "CSRF token value",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+        ]:
+            self.assertNotIn(forbidden_marker, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
     def test_mcp_read_only_registry_skeleton_v06_matches_fixtures_and_blocks_unsafe_metadata(self) -> None:
         contract_fixture = json.loads(
