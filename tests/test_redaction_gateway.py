@@ -174,6 +174,7 @@ V06_QUICKSTART_SMOKE_DOC = ROOT / "docs" / "V0.6_QUICKSTART_SMOKE.md"
 V06_RELEASE_NOTES_DRAFT_DOC = ROOT / "docs" / "V0.6_RELEASE_NOTES_DRAFT.md"
 V06_RC_FINAL_GATE_RUN_DOC = ROOT / "docs" / "V0.6_RC_FINAL_GATE_RUN.md"
 V06_RELEASE_APPROVAL_PACKET_DOC = ROOT / "docs" / "V0.6_RELEASE_APPROVAL_PACKET.md"
+V061_HOTFIX_TRIAGE_DOC = ROOT / "docs" / "V0.6.1_HOTFIX_TRIAGE.md"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
     ROOT / "docs" / "MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md"
@@ -3708,6 +3709,110 @@ class RedactionGatewayTests(unittest.TestCase):
 
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v061_hotfix_triage_is_patch_scoped_and_raw_free(self) -> None:
+        hotfix_triage = V061_HOTFIX_TRIAGE_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(V061_HOTFIX_TRIAGE_DOC.exists())
+        for linked_text in [readme, roadmap]:
+            self.assertIn("V0.6.1_HOTFIX_TRIAGE.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## v0.6 Release Baseline",
+            "## Hotfix Candidate Criteria",
+            "## Not A Hotfix",
+            "## Required Reproduction Evidence",
+            "## Required Security Checks",
+            "## Required Release Note Impact Check",
+            "## Branch Naming Rule",
+            "## PR Size Rule",
+            "## Deferred Work",
+            "## Explicit Non-Goals",
+        ]:
+            self.assertIn(section, hotfix_triage)
+
+        for candidate in [
+            "Reproducible error discovered after the `v0.6` release",
+            "Error that blocks the redaction, verify, review, or report flow",
+            "Simple Dashboard copy-only display error",
+            "Regression in creating or displaying the four-file output bundle",
+            "Broken release body wording, README link, or documentation link",
+            "Documentation hygiene issue that affects Gitleaks or git safety results",
+        ]:
+            self.assertIn(candidate, hotfix_triage)
+
+        for non_goal in [
+            "MCP server listener implementation",
+            "MCP transport implementation",
+            "MCP protocol handler implementation",
+            "Executable tool registration",
+            "Actual tool execution",
+            "Local evidence reader implementation",
+            "Raw preview or raw download",
+            "Replay or active scan",
+            "Automatic ChatGPT handoff",
+            "Output bundle four-file structure change",
+            "Large refactor",
+            "New UX feature",
+            "v0.7 scope work",
+        ]:
+            self.assertIn(non_goal, hotfix_triage)
+
+        for required in [
+            "hotfix/v0.6.x-<short-topic>",
+            "one reproducible bug",
+            "one documentation correction",
+            "Release version or tag",
+            "Affected command, document, or read-only route alias",
+            "Minimal reproduction step summary",
+            "Expected result",
+            "Actual result summary",
+            "Candidate finding wording remains candidate-only",
+            "Draft risk wording remains draft-only",
+            "Draft report wording remains visible",
+            "Severity and CVSS remain manual decisions",
+            "Secret scanning remains part of the verification path",
+            "No runtime MCP surface added",
+            "No new dashboard state-changing action",
+        ]:
+            self.assertIn(required, hotfix_triage)
+
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, hotfix_triage)
+
+        self.assertIsNone(re.search(r"https?://", hotfix_triage))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", hotfix_triage))
 
     def test_burp_mcp_compatibility_doc_is_boundary_only_and_raw_free(self) -> None:
         compatibility = BURP_MCP_COMPATIBILITY_DOC.read_text(encoding="utf-8")
