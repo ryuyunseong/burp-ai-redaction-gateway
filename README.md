@@ -356,6 +356,10 @@ The v0.7 minimal listener runtime implementation design is tracked in
 It fixes local-only, loopback-only, disabled-by-default, raw-free error,
 source-check, negative-test, rollback, and PR split requirements before any
 listener runtime implementation is added.
+The v0.7 runtime source-check consumption guard is tracked in
+[`docs/V0.7_RUNTIME_SOURCE_CHECK_CONSUMPTION.md`](docs/V0.7_RUNTIME_SOURCE_CHECK_CONSUMPTION.md).
+It connects the design fixture to declared runtime-facing source scope and
+keeps future runtime-facing files from bypassing forbidden surface checks.
 
 ## Burp Montoya Collector
 
