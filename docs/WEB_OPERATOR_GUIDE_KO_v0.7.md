@@ -1,5 +1,12 @@
 # Web Operator Guide KO v0.7
 
+## Manual smoke checklist
+
+웹 화면 수동 점검 절차는
+[`WEB_OPERATOR_SMOKE_CHECKLIST_KO_v0.7.md`](WEB_OPERATOR_SMOKE_CHECKLIST_KO_v0.7.md)에
+정리되어 있습니다. 이 checklist는 Upload Wizard, safe files, triage, report
+readiness, failure screen을 raw-free evidence만으로 확인합니다.
+
 ## 목적
 
 이 문서는 CLI 명령을 직접 입력하지 않고 로컬 웹 화면에서 할 수 있는

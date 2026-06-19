@@ -30,6 +30,9 @@ CLI 없이 웹에서 가능한 작업과 아직 불가능한 작업의 한글 �
 참조하세요. 이 가이드는 Local Dashboard, Upload Wizard, safe files,
 triage/report readiness, Windows launcher, localhost receiver, read-only MCP
 stdio server 범위와 v0.7 MCP listener runtime 금지 경계를 분리합니다.
+웹 화면 수동 점검 절차는
+[docs/WEB_OPERATOR_SMOKE_CHECKLIST_KO_v0.7.md](docs/WEB_OPERATOR_SMOKE_CHECKLIST_KO_v0.7.md)를
+참조하세요.
 Burp browsing based live capture is now a session state placeholder.
 `/live-capture` provides CSRF-protected start/stop placeholders and safe
 session aliases only. collector/receiver behavior, actual traffic capture, and automatic ChatGPT handoff remain separate PR scope.
