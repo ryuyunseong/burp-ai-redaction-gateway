@@ -185,6 +185,12 @@ V07_MCP_LISTENER_SKELETON_PLAN_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v07_mcp_listener_skeleton_plan.json"
 )
 MCP_LISTENER_SKELETON_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_skeleton.py"
+V07_LISTENER_RUNTIME_DECISION_PREFLIGHT_DOC = (
+    ROOT / "docs" / "V0.7_LISTENER_RUNTIME_DECISION_PREFLIGHT.md"
+)
+V07_LISTENER_RUNTIME_DECISION_PREFLIGHT_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v07_listener_runtime_decision_preflight.json"
+)
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
     ROOT / "docs" / "MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md"
@@ -4169,6 +4175,161 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("unsafe user supplied reason", str(unknown))
 
         combined = module_text + "\n" + json.dumps(metadata, sort_keys=True) + "\n" + json.dumps(blocked, sort_keys=True)
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v07_listener_runtime_decision_preflight_is_planning_only(self) -> None:
+        preflight = V07_LISTENER_RUNTIME_DECISION_PREFLIGHT_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V07_LISTENER_RUNTIME_DECISION_PREFLIGHT_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
+        skeleton_plan = V07_MCP_LISTENER_SKELETON_PLAN_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(V07_LISTENER_RUNTIME_DECISION_PREFLIGHT_DOC.exists())
+        self.assertTrue(V07_LISTENER_RUNTIME_DECISION_PREFLIGHT_FIXTURE.exists())
+        for linked_text in [readme, scope_plan, skeleton_plan]:
+            self.assertIn("V0.7_LISTENER_RUNTIME_DECISION_PREFLIGHT.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Decision Scope",
+            "## Explicit Non-goals",
+            "## Runtime Preflight Fixture",
+            "## Allowed Future Listener Boundary",
+            "## Forbidden Runtime Surfaces",
+            "## Required Acceptance Criteria",
+            "## Required Negative Tests",
+            "## Source-check Requirements",
+            "## PR Split Requirements",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, preflight)
+
+        for required_text in [
+            "documentation, fixture, and source-check",
+            "does not approve that runtime PR",
+            "No listener runtime implementation",
+            "No socket, bind, listen, or accept implementation",
+            "No transport implementation",
+            "No protocol handler implementation",
+            "No executable tool registration implementation",
+            "No actual tool execution implementation",
+            "No local evidence reader implementation",
+            "No safe file body reader implementation",
+            "No raw preview or raw download implementation",
+            "No replay or active scan implementation",
+            "No automatic ChatGPT handoff implementation",
+            "No `v0.6` tag modification",
+            "No GitHub Release `v0.6` modification",
+            "No output bundle four-file structure change",
+            "Source-check is required before runtime",
+            "Negative tests are required before runtime",
+            "Listener runtime implementation",
+            "Transport or protocol handler",
+            "Executable tool registration",
+            "Actual tool execution",
+            "Local evidence reader",
+            "Dashboard state-changing action",
+            "Upload or import action",
+            "Automatic ChatGPT handoff",
+        ]:
+            self.assertIn(required_text, preflight)
+
+        self.assertEqual(fixture["schema_version"], "v07_listener_runtime_decision_preflight.v1")
+        self.assertIs(fixture["planning_only"], True)
+        self.assertIs(fixture["metadata_only_skeleton_consumed"], True)
+        self.assertIs(fixture["v07_listener_skeleton_plan_consumed"], True)
+        self.assertIs(fixture["source_check_required_before_runtime"], True)
+        self.assertIs(fixture["negative_tests_required_before_runtime"], True)
+        self.assertEqual(
+            fixture["existing_metadata_only_files"],
+            ["burp_ai_redaction_gateway/mcp_listener_skeleton.py"],
+        )
+
+        for blocked_flag in [
+            "listener_runtime_approved",
+            "listener_runtime_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "transport_implemented",
+            "protocol_handler_implemented",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "v06_tag_modified",
+            "v06_release_modified",
+            "output_bundle_structure_changed",
+            "raw_data_included",
+        ]:
+            self.assertIs(fixture[blocked_flag], False)
+
+        forbidden_markers = [
+            "http.server",
+            "socketserver",
+            "http.client",
+            "socket",
+            "subprocess",
+            "requests",
+            "urllib",
+            "bind(",
+            "listen(",
+            "accept(",
+            "serve_forever",
+            "run_server",
+            "create_server",
+            "register_tool",
+            "dispatch_tool",
+            "tool_execute",
+            "execute_tool",
+            "read_local_evidence",
+            "read_file_body",
+        ]
+        self.assertEqual(fixture["forbidden_source_markers"], forbidden_markers)
+
+        for source_path in fixture["existing_metadata_only_files"]:
+            source_file = ROOT / source_path
+            self.assertTrue(source_file.exists(), source_path)
+            source_text = source_file.read_text(encoding="utf-8")
+            for marker in forbidden_markers:
+                self.assertNotIn(marker, source_text, f"{marker} found in {source_path}")
+
+        combined = preflight + "\n" + fixture_text
         for forbidden in [
             "safe-to-share",
             "safe to share",

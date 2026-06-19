@@ -333,6 +333,11 @@ transport, protocol, execution, or local evidence reader implementation.
 The first listener-facing helper is metadata-only and does not enable listener
 runtime behavior, transport, protocol handling, tool execution, raw preview, or
 automatic ChatGPT handoff.
+The v0.7 listener runtime decision preflight is tracked in
+[`docs/V0.7_LISTENER_RUNTIME_DECISION_PREFLIGHT.md`](docs/V0.7_LISTENER_RUNTIME_DECISION_PREFLIGHT.md).
+It fixes the next planning guard before any listener runtime work and still does
+not implement socket bind, transport, protocol handling, tool execution, local
+evidence reading, raw preview, or automatic ChatGPT handoff.
 
 ## Burp Montoya Collector
 
