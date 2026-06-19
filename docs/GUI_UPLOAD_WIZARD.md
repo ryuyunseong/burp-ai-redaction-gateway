@@ -6,6 +6,12 @@ a local Burp export from the dashboard instead of typing each CLI command.
 It is still a local-only workflow. It does not send anything to ChatGPT, does
 not publish files, and does not make findings final.
 
+The Korean web operator guide is
+[`WEB_OPERATOR_GUIDE_KO_v0.7.md`](WEB_OPERATOR_GUIDE_KO_v0.7.md). Use that guide
+when an operator needs to distinguish current web UI behavior from unavailable
+MCP listener runtime, raw preview, replay, active scan, and automatic handoff
+work.
+
 ## Route
 
 ```text
@@ -41,6 +47,15 @@ upload validation
 If `verify` fails, the wizard stops safely. Review and report are skipped, and
 the page does not show safe file links.
 
+The upload form now states this boundary directly:
+
+- the workflow is local-only
+- ChatGPT automatic handoff is absent
+- output must pass `verify` before any AI candidate file is used
+- raw preview/download, replay, and active scan are absent
+- MCP listener runtime, transport/protocol handling, and tool execution are not
+  part of the Upload Wizard
+
 ## Result Links
 
 When the full flow succeeds, the result page links to:
@@ -58,6 +73,14 @@ The safe files remain limited to:
 - `report_draft.md`
 
 These files are AI input candidates only after manual review.
+
+The success page should guide the operator to:
+
+1. open Simple Dashboard for the overall status
+2. check Safe Files for the four candidate files
+3. use Triage for candidate finding review
+4. use Report Readiness for draft report boundaries
+5. copy only the manually reviewed subset
 
 ## Security Boundary
 
@@ -116,6 +139,10 @@ Common categories:
 
 Failure output is not an AI input candidate. Do not copy failed output files,
 raw uploads, local-only files, or audit artifacts into ChatGPT.
+
+When verification or processing fails, the result page must not show review,
+report, or safe file links. It should say that output before verify is not an AI
+input candidate.
 
 ## Interpretation Boundary
 

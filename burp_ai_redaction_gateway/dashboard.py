@@ -1600,7 +1600,7 @@ def render_upload_wizard(csrf_token: str) -> str:
           <div>
             <a class="back" href="/">산출물 목록으로</a>
             <h1>업로드 마법사</h1>
-            <p class="subtitle">Burp export 파일을 로컬에서 받아 redaction, verify, review, report까지 실행한 뒤 AI 입력 후보 파일 4개만 안내합니다.</p>
+            <p class="subtitle">Burp export 파일을 로컬에서 받아 redaction, verify, review, report까지 실행한 뒤 사람이 확인할 AI 입력 후보 파일 4개만 안내합니다.</p>
           </div>
           <div class="status-stack">
             <span class="badge warning">state-changing POST</span>
@@ -1610,9 +1610,9 @@ def render_upload_wizard(csrf_token: str) -> str:
           </div>
         </section>
         <section class="safety-strip">
-          <div class="rail"><span>저장 위치</span><strong>ignored local_only alias</strong></div>
+          <div class="rail"><span>workflow</span><strong>local-only</strong></div>
           <div class="rail"><span>업로드 형식</span><strong>.xml 또는 .json</strong></div>
-          <div class="rail"><span>최대 크기</span><strong>{MAX_UPLOAD_BYTES // (1024 * 1024)} MB</strong></div>
+          <div class="rail"><span>safe files</span><strong>4개로 제한</strong></div>
           <div class="rail"><span>자동 전송</span><strong>false</strong></div>
         </section>
         <section class="grid">
@@ -1626,8 +1626,9 @@ def render_upload_wizard(csrf_token: str) -> str:
               <label>프로젝트 별칭
                 <input type="text" name="project" required pattern="[A-Za-z0-9][A-Za-z0-9_-]{{0,63}}" placeholder="client_alias_demo">
               </label>
-              <button type="submit">마스킹 및 검증 시작</button>
+              <button type="submit">로컬 마스킹 및 검증 시작</button>
               <small>POST에는 CSRF 보호가 적용됩니다. ChatGPT API 자동 전송은 수행하지 않습니다.</small>
+              <small>verify 통과 전에는 AI 후보 파일을 사용하지 마세요.</small>
             </form>
           </div>
           <div class="panel">
@@ -1644,6 +1645,7 @@ def render_upload_wizard(csrf_token: str) -> str:
           <div class="panel">
             <div class="panel-head"><h2>AI 입력 후보 파일</h2><span class="muted">성공 후 직접 확인할 수 있는 후보 파일입니다.</span></div>
             <ul class="safe-list">{safe_files}</ul>
+            <p class="muted">safe files 4개도 외부 공유 보장이 아니며, 사람이 필요한 범위만 확인 후 사용합니다.</p>
           </div>
           <div class="panel">
             <div class="panel-head"><h2>표시하지 않는 값</h2><span class="muted">실패 결과에도 원본 값과 내부 경로는 표시하지 않습니다.</span></div>
@@ -1654,6 +1656,16 @@ def render_upload_wizard(csrf_token: str) -> str:
               <li>무결성 비밀값과 요청 위조 방지 보호값</li>
               <li>전체 로컬 경로와 실제 local-only 파일명</li>
               <li>prompt/report 본문 미리보기</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>운영자 안내</h2><span class="muted">웹에서 가능한 작업과 금지된 작업을 분리합니다.</span></div>
+            <ul class="safe-list">
+              <li>Web Operator Guide: docs/WEB_OPERATOR_GUIDE_KO_v0.7.md</li>
+              <li>Upload Wizard는 local-only workflow입니다.</li>
+              <li>raw preview/download 없음, replay/active scan 없음.</li>
+              <li>automatic ChatGPT handoff 없음.</li>
+              <li>MCP listener runtime, socket/bind/listen, transport/protocol, tool execution은 별도 PR 전까지 사용할 수 없습니다.</li>
             </ul>
           </div>
         </section>
@@ -1689,7 +1701,8 @@ def render_upload_result(result: UploadWizardResult, csrf_token: str) -> str:
           {retry}
           <a class="button secondary" href="/">산출물 목록</a>
         </div>
-        <p class="muted">검증 또는 처리 실패 상태에서는 safe file 링크를 제공하지 않습니다.</p>
+        <p class="muted">검증 또는 처리 실패 상태에서는 review/report/safe file link를 제공하지 않습니다.</p>
+        <p class="muted">verify 통과 전 output은 AI 입력 후보가 아닙니다.</p>
         """
     return _page(
         result.title,
@@ -1724,6 +1737,7 @@ def render_upload_result(result: UploadWizardResult, csrf_token: str) -> str:
           <div class="panel">
             <div class="panel-head"><h2>AI 입력 후보 파일 4개</h2><span class="muted">성공 상태에서만 확인 대상으로 안내합니다.</span></div>
             <table><tbody>{safe_rows}</tbody></table>
+            <p class="muted">safe files 4개는 AI 입력 후보일 뿐이며 사람이 직접 확인해야 합니다.</p>
           </div>
           <div class="panel">
             <div class="panel-head"><h2>해석 경계</h2><span class="muted">자동 처리 결과는 수동 검토 전 초안입니다.</span></div>
@@ -1733,6 +1747,16 @@ def render_upload_result(result: UploadWizardResult, csrf_token: str) -> str:
               <li>final severity와 CVSS는 수동 결정입니다.</li>
               <li>upload 성공은 외부 공유 가능 보장이 아닙니다.</li>
             </ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h2>다음 확인 순서</h2><span class="muted">성공 후에도 본문 preview나 자동 전송은 제공하지 않습니다.</span></div>
+            <ol class="safe-list">
+              <li>Simple Dashboard에서 전체 상태를 확인합니다.</li>
+              <li>Safe Files에서 4개 후보 파일의 존재 여부를 확인합니다.</li>
+              <li>Triage에서 candidate finding을 수동 검토합니다.</li>
+              <li>Report Readiness에서 draft report 경계를 확인합니다.</li>
+              <li>필요한 범위만 사람이 복사합니다.</li>
+            </ol>
           </div>
         </section>
         """,
