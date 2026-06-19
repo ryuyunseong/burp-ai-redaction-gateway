@@ -1,0 +1,89 @@
+{
+  "schema_version": "web_upload_wizard_browser_smoke.v0.7",
+  "browser_smoke_only": true,
+  "route": "/upload",
+  "method": "GET",
+  "expected_status": 200,
+  "expected_form_counts": {
+    "form_count": 1,
+    "post_form_count": 1,
+    "file_input_count": 1
+  },
+  "required_page_markers": [
+    "local-only workflow",
+    "Web Operator Guide: docs/WEB_OPERATOR_GUIDE_KO_v0.7.md",
+    "raw preview/download",
+    "replay/active scan",
+    "automatic ChatGPT handoff",
+    "MCP listener runtime",
+    "analysis_packet.json",
+    "chatgpt_prompt.md",
+    "codex_task_prompt.md",
+    "report_draft.md",
+    "enctype=\"multipart/form-data\"",
+    "method=\"post\"",
+    "action=\"/upload\"",
+    "name=\"csrf_token\"",
+    "name=\"burp_export\"",
+    "name=\"project\""
+  ],
+  "invalid_post_cases": [
+    {
+      "case": "missing_csrf",
+      "expected_status": 400,
+      "expected_error": "csrf_token_missing",
+      "project_alias": "browser_smoke_missing_csrf",
+      "file_name": "browser-smoke-missing-csrf.xml"
+    },
+    {
+      "case": "invalid_alias",
+      "expected_status": 400,
+      "expected_error": "invalid_project_alias",
+      "project_alias": "../local_only",
+      "file_name": "browser-smoke-invalid-alias.xml"
+    }
+  ],
+  "forbidden_response_markers": [
+    "raw_request",
+    "raw_response",
+    "Cookie:",
+    "Authorization:",
+    "token=",
+    "JWT",
+    "session=",
+    "HMAC secret",
+    "CSRF token",
+    "Traceback",
+    "stack trace",
+    "dashboard_upload_",
+    "browser-smoke-missing-csrf.xml",
+    "browser-smoke-invalid-alias.xml",
+    "local_only/dashboard_uploads"
+  ],
+  "failure_safe_links_forbidden": [
+    "/safe-files?project=",
+    "/triage?project=",
+    "/report-readiness?project=",
+    "/simple?project="
+  ],
+  "expected_non_blocking_browser_errors": [
+    "favicon_404",
+    "safe_400_invalid_post"
+  ],
+  "new_post_action_added": false,
+  "upload_processing_logic_changed": false,
+  "storage_policy_changed": false,
+  "retention_delete_policy_changed": false,
+  "raw_preview_download_implemented": false,
+  "replay_active_scan_implemented": false,
+  "automatic_chatgpt_handoff_implemented": false,
+  "mcp_listener_runtime_implemented": false,
+  "mcp_transport_implemented": false,
+  "mcp_protocol_handler_implemented": false,
+  "mcp_tool_execution_implemented": false,
+  "local_evidence_reader_implemented": false,
+  "raw_data_included": false,
+  "actual_target_identifiers_included": false,
+  "credential_values_included": false,
+  "full_local_paths_included": false
+}
