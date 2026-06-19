@@ -260,6 +260,7 @@ MCP_INTEGRATION_DESIGN_DOC = ROOT / "docs" / "MCP_INTEGRATION_DESIGN_v0.5.md"
 BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
 USER_QUICKSTART_KO_V06_DOC = ROOT / "docs" / "USER_QUICKSTART_KO_v0.6.md"
+WEB_OPERATOR_GUIDE_KO_V07_DOC = ROOT / "docs" / "WEB_OPERATOR_GUIDE_KO_v0.7.md"
 OUTPUT_BUNDLE_GUIDE_KO_V06_DOC = ROOT / "docs" / "OUTPUT_BUNDLE_GUIDE_KO_v0.6.md"
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
@@ -10034,6 +10035,102 @@ class RedactionGatewayTests(unittest.TestCase):
 
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_web_operator_guide_ko_v07_is_raw_free_and_scope_clear(self) -> None:
+        guide = WEB_OPERATOR_GUIDE_KO_V07_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        quickstart = USER_QUICKSTART_KO_V06_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(WEB_OPERATOR_GUIDE_KO_V07_DOC.exists())
+        for linked_text in [readme, quickstart]:
+            self.assertIn("WEB_OPERATOR_GUIDE_KO_v0.7.md", linked_text)
+
+        for section in [
+            "## 목적",
+            "## 현재 웹에서 가능한 작업",
+            "## 현재 웹에서 불가능한 작업",
+            "## Local Dashboard 시작 방법",
+            "## Upload Wizard 사용 흐름",
+            "## safe files 4개 확인 방법",
+            "## triage/report readiness 화면의 의미",
+            "## Windows launcher 사용 범위",
+            "## localhost receiver 사용 범위",
+            "## read-only MCP stdio server와 dashboard의 차이",
+            "## v0.7 MCP listener runtime 경계",
+            "## 보안 경계",
+            "## 실패 처리",
+            "## 운영자 체크리스트",
+            "## 다음 단계",
+        ]:
+            self.assertIn(section, guide)
+
+        for required in [
+            "Local Dashboard",
+            "Upload Wizard",
+            "safe files 4개",
+            "triage/report readiness",
+            "Windows launcher",
+            "localhost receiver",
+            "read-only MCP stdio server",
+            "GET /upload",
+            "POST /upload",
+            "upload validation",
+            "local-only storage",
+            "generate",
+            "verify",
+            "review",
+            "report draft",
+            "safe file status",
+            "verify`가 실패하면 Wizard는 안전하게 중단합니다",
+            "review, report, safe file link를 제공하지 않습니다",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "finding은 candidate",
+            "risk는 draft",
+            "final severity와 CVSS는 사람이 별도로 결정",
+            "v0.7 MCP listener runtime은 아직 사용할 수 없습니다",
+            "socket, bind, listen 기반 endpoint",
+            "MCP transport 또는 protocol handler",
+            "executable tool registration",
+            "actual tool execution",
+            "local evidence reader",
+            "raw preview/download",
+            "replay/active scan",
+            "automatic ChatGPT handoff",
+        ]:
+            self.assertIn(required, guide)
+
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "final CVSS confirmed",
+            "raw_request",
+            "raw_response",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "ready to submit",
+            "approved for external sharing",
+        ]:
+            self.assertNotIn(forbidden, guide)
+
+        self.assertIsNone(re.search(r"https?://", guide))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", guide))
 
     def test_release_checklist_v04_documents_hardening_flow(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
