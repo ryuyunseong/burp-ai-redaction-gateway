@@ -264,6 +264,9 @@ WEB_OPERATOR_GUIDE_KO_V07_DOC = ROOT / "docs" / "WEB_OPERATOR_GUIDE_KO_v0.7.md"
 WEB_OPERATOR_SMOKE_CHECKLIST_KO_V07_DOC = (
     ROOT / "docs" / "WEB_OPERATOR_SMOKE_CHECKLIST_KO_v0.7.md"
 )
+WEB_UPLOAD_WIZARD_BROWSER_SMOKE_V07_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "web_upload_wizard_browser_smoke_v0.7.json"
+)
 OUTPUT_BUNDLE_GUIDE_KO_V06_DOC = ROOT / "docs" / "OUTPUT_BUNDLE_GUIDE_KO_v0.6.md"
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
@@ -7110,6 +7113,122 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn("raw_response", audit_text)
                 audit_review = review_audit_path(audit_path)
                 self.assertTrue(audit_review.passed, audit_review.findings)
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+
+    def test_web_upload_wizard_browser_smoke_fixture_matches_route_and_safe_failures(self) -> None:
+        fixture = json.loads(WEB_UPLOAD_WIZARD_BROWSER_SMOKE_V07_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        self.assertEqual(fixture["schema_version"], "web_upload_wizard_browser_smoke.v0.7")
+        self.assertIs(fixture["browser_smoke_only"], True)
+        self.assertEqual(fixture["route"], "/upload")
+        self.assertEqual(fixture["method"], "GET")
+        self.assertEqual(fixture["expected_status"], 200)
+        self.assertEqual(
+            fixture["expected_form_counts"],
+            {"form_count": 1, "post_form_count": 1, "file_input_count": 1},
+        )
+        self.assertEqual(
+            {case["case"] for case in fixture["invalid_post_cases"]},
+            {"missing_csrf", "invalid_alias"},
+        )
+        for false_flag in [
+            "new_post_action_added",
+            "upload_processing_logic_changed",
+            "storage_policy_changed",
+            "retention_delete_policy_changed",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "mcp_listener_runtime_implemented",
+            "mcp_transport_implemented",
+            "mcp_protocol_handler_implemented",
+            "mcp_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "raw_data_included",
+            "actual_target_identifiers_included",
+            "credential_values_included",
+            "full_local_paths_included",
+        ]:
+            self.assertIn(false_flag, fixture)
+            self.assertIs(fixture[false_flag], False)
+        for unsafe_value in [
+            "http://",
+            "https://",
+            "Cookie: value",
+            "Authorization: Bearer",
+            "secret=",
+            "safe-to-share",
+            "confirmed vulnerability",
+            "final CVSS",
+        ]:
+            self.assertNotIn(unsafe_value, fixture_text)
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", fixture_text))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "out"
+            root.mkdir()
+            server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=root))
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            try:
+                port = server.server_address[1]
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                connection.request("GET", fixture["route"])
+                response = connection.getresponse()
+                upload_page = response.read().decode("utf-8")
+                self.assertEqual(response.status, fixture["expected_status"])
+                self.assertEqual(upload_page.count("<form "), fixture["expected_form_counts"]["form_count"])
+                self.assertEqual(upload_page.count('method="post"'), fixture["expected_form_counts"]["post_form_count"])
+                self.assertEqual(upload_page.count('type="file"'), fixture["expected_form_counts"]["file_input_count"])
+                for marker in fixture["required_page_markers"]:
+                    self.assertIn(marker, upload_page)
+                for marker in [
+                    "raw_request",
+                    "raw_response",
+                    "dashboard_upload_",
+                    "browser-smoke-missing-csrf.xml",
+                    "browser-smoke-invalid-alias.xml",
+                    "local_only/dashboard_uploads",
+                    "Traceback",
+                    "stack trace",
+                ]:
+                    self.assertNotIn(marker, upload_page)
+                self.assertNotIn(str(root), upload_page)
+                self.assertNotIn(str(Path(temp_dir)), upload_page)
+                token_match = re.search(r'name="csrf_token" value="([0-9a-f]{32})"', upload_page)
+                self.assertIsNotNone(token_match)
+                csrf_token = token_match.group(1)
+                connection.close()
+
+                for case in fixture["invalid_post_cases"]:
+                    fields = {"project": case["project_alias"]}
+                    if case["case"] != "missing_csrf":
+                        fields["csrf_token"] = csrf_token
+                    body, content_type = self.multipart_form(
+                        fields,
+                        "burp_export",
+                        case["file_name"],
+                        BURP_XML.read_bytes(),
+                        content_type="application/xml",
+                    )
+                    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                    connection.request("POST", "/upload", body=body, headers={"Content-Type": content_type})
+                    response = connection.getresponse()
+                    result = response.read().decode("utf-8")
+                    self.assertEqual(response.status, case["expected_status"])
+                    self.assertIn(case["expected_error"], result)
+                    self.assertNotIn(case["file_name"], result)
+                    self.assertNotIn(csrf_token, result)
+                    self.assertNotIn(str(root), result)
+                    self.assertNotIn(str(Path(temp_dir)), result)
+                    for marker in fixture["forbidden_response_markers"]:
+                        self.assertNotIn(marker, result)
+                    for link in fixture["failure_safe_links_forbidden"]:
+                        self.assertNotIn(link, result)
+                    connection.close()
             finally:
                 server.shutdown()
                 server.server_close()
