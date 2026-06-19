@@ -235,6 +235,10 @@ V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DOC = (
 V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v07_minimal_listener_runtime_implementation.json"
 )
+V07_LISTENER_LOCAL_SMOKE_EVIDENCE_DOC = ROOT / "docs" / "V0.7_LISTENER_LOCAL_SMOKE_EVIDENCE.md"
+V07_LISTENER_LOCAL_SMOKE_EVIDENCE_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v07_listener_local_smoke_evidence.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -5641,6 +5645,265 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(absent_name, module_text)
 
         combined = implementation_doc + "\n" + fixture_text
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v07_listener_local_smoke_evidence_is_raw_free_and_boundary_only(self) -> None:
+        evidence_doc = V07_LISTENER_LOCAL_SMOKE_EVIDENCE_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V07_LISTENER_LOCAL_SMOKE_EVIDENCE_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
+        implementation_doc = V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DOC.read_text(encoding="utf-8")
+        decision_doc = V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(V07_LISTENER_LOCAL_SMOKE_EVIDENCE_DOC.exists())
+        self.assertTrue(V07_LISTENER_LOCAL_SMOKE_EVIDENCE_FIXTURE.exists())
+        for linked_text in [readme, scope_plan, implementation_doc, decision_doc]:
+            self.assertIn("V0.7_LISTENER_LOCAL_SMOKE_EVIDENCE.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Smoke Evidence Scope",
+            "## Consumed Runtime Helper",
+            "## Expected Smoke Results",
+            "## Raw-free Response Checks",
+            "## Explicit Non-goals",
+            "## Release Readiness Use",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, evidence_doc)
+
+        for required_text in [
+            "release-readiness evidence only",
+            "does not start a listener",
+            "disabled-by-default",
+            "loopback-only",
+            "all-interface bind rejection metadata",
+            "raw-free blocked or disabled responses",
+            "burp_ai_redaction_gateway/mcp_listener_runtime.py",
+            "No MCP transport implementation",
+            "No MCP protocol handler implementation",
+            "No JSON-RPC parser implementation",
+            "No executable tool registration",
+            "No actual tool execution",
+            "No local evidence reader",
+            "No safe file body reader",
+            "No raw preview or raw download",
+            "No replay or active scan",
+            "No automatic ChatGPT handoff",
+            "No dashboard start or stop control",
+            "No upload or import action",
+            "No arbitrary local file read",
+            "No external network call",
+            "No environment secret access",
+            "No `v0.6` tag modification",
+            "No GitHub Release `v0.6` modification",
+            "No `v0.7` tag creation",
+            "No GitHub Release `v0.7` creation",
+            "No output bundle structure change",
+        ]:
+            self.assertIn(required_text, evidence_doc)
+
+        self.assertEqual(fixture["schema_version"], "v07_listener_local_smoke_evidence.v1")
+        for true_flag in [
+            "smoke_evidence_only",
+            "runtime_helper_consumed",
+            "minimal_listener_runtime_implemented",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        for false_flag in [
+            "actual_listener_startup_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "socket_accept_implemented",
+            "long_running_server_loop_implemented",
+            "transport_implemented",
+            "protocol_handler_implemented",
+            "json_rpc_parser_implemented",
+            "tool_registration_implemented",
+            "tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+            "v06_tag_modified",
+            "v06_release_modified",
+            "v07_tag_created",
+            "v07_release_created",
+            "output_bundle_structure_changed",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        self.assertEqual(
+            fixture["smoke_expectations"],
+            [
+                "default_disabled",
+                "loopback_allowed",
+                "non_loopback_blocked",
+                "all_interface_blocked",
+                "protocol_like_input_blocked_when_enabled",
+                "protocol_like_input_not_interpreted_when_disabled",
+                "status_allowlisted",
+                "reason_code_allowlisted",
+                "raw_data_included_false",
+                "manual_review_required_true",
+                "listener_started_false",
+                "no_caller_body_echo",
+                "no_host_value_echo",
+                "no_credential_value_echo",
+                "no_local_path_echo",
+                "no_stack_trace_body",
+                "no_safe_file_body_preview",
+            ],
+        )
+        self.assertEqual(
+            fixture["allowed_smoke_reason_codes"],
+            [
+                "listener_disabled",
+                "local_loopback_validation_passed",
+                "remote_bind_blocked",
+                "non_loopback_host_rejected",
+                "protocol_message_rejected",
+            ],
+        )
+        self.assertEqual(fixture["allowed_statuses"], ["disabled", "blocked", "ready"])
+        self.assertEqual(
+            fixture["output_bundle_files"],
+            [
+                "analysis_packet.json",
+                "chatgpt_prompt.md",
+                "codex_task_prompt.md",
+                "report_draft.md",
+            ],
+        )
+
+        metadata = build_listener_runtime_metadata()
+        smoke = build_minimal_listener_local_smoke_summary()
+        self.assertIs(smoke["disabled_by_default"], True)
+        self.assertIs(smoke["loopback_allowed"], True)
+        self.assertIs(smoke["non_loopback_blocked"], True)
+        self.assertIs(smoke["raw_data_included"], False)
+        self.assertIs(smoke["listener_started"], False)
+        self.assertIs(smoke["manual_review_required"], True)
+        self.assertEqual(metadata["output_bundle_files"], fixture["output_bundle_files"])
+
+        caller_body = {"jsonrpc": "2.0", "method": "caller_controlled_value"}
+        disabled_protocol_response = validate_minimal_listener_startup(
+            MinimalListenerRuntimeConfig(enabled=False, host="localhost"),
+            input_body=caller_body,
+        )
+        self.assertEqual(disabled_protocol_response["status"], "disabled")
+        self.assertEqual(disabled_protocol_response["reason_code"], "listener_disabled")
+
+        enabled_protocol_response = validate_minimal_listener_startup(
+            MinimalListenerRuntimeConfig(enabled=True, host="localhost"),
+            input_body=caller_body,
+        )
+        self.assertEqual(enabled_protocol_response["status"], "blocked")
+        self.assertEqual(enabled_protocol_response["reason_code"], "protocol_message_rejected")
+
+        unsafe_response = build_listener_runtime_response(
+            status="caller_controlled_value",
+            reason_code="unknown",
+            enabled=True,
+            startup_permitted=False,
+        )
+        self.assertIn(unsafe_response["status"], fixture["allowed_statuses"])
+        self.assertEqual(unsafe_response["status"], "blocked")
+        self.assertIn(unsafe_response["reason_code"], fixture["allowed_smoke_reason_codes"])
+        self.assertEqual(unsafe_response["reason_code"], "listener_disabled")
+
+        all_interface_responses = []
+        for all_interface_host in ["", "*", "0.0.0.0", "::", "[::]"]:
+            self.assertIs(is_all_interface_host(all_interface_host), True)
+            all_interface_response = validate_minimal_listener_startup(
+                MinimalListenerRuntimeConfig(enabled=True, host=all_interface_host)
+            )
+            self.assertEqual(all_interface_response["status"], "blocked")
+            self.assertEqual(all_interface_response["reason_code"], "remote_bind_blocked")
+            self.assertIs(all_interface_response["startup_permitted"], False)
+            self.assertIs(all_interface_response["listener_started"], False)
+            all_interface_response_text = json.dumps(all_interface_response, sort_keys=True)
+            if all_interface_host:
+                self.assertNotIn(all_interface_host, all_interface_response_text)
+            all_interface_responses.append(all_interface_response)
+
+        non_loopback_response = validate_minimal_listener_startup(
+            MinimalListenerRuntimeConfig(enabled=True, host="remote-host")
+        )
+        self.assertEqual(non_loopback_response["status"], "blocked")
+        self.assertEqual(non_loopback_response["reason_code"], "non_loopback_host_rejected")
+
+        for response in [
+            disabled_protocol_response,
+            enabled_protocol_response,
+            unsafe_response,
+            non_loopback_response,
+            *all_interface_responses,
+        ]:
+            response_text = json.dumps(response, sort_keys=True)
+            self.assertIs(response["raw_data_included"], False)
+            self.assertIs(response["manual_review_required"], True)
+            self.assertIs(response["listener_started"], False)
+            self.assertIn(response["status"], fixture["allowed_statuses"])
+            self.assertIn(response["reason_code"], fixture["allowed_smoke_reason_codes"])
+            self.assertIs(response["transport_enabled"], False)
+            self.assertIs(response["protocol_handler_enabled"], False)
+            self.assertIs(response["actual_tool_execution_enabled"], False)
+            self.assertIs(response["local_evidence_reader_enabled"], False)
+            for forbidden_echo in [
+                "caller_controlled_value",
+                "jsonrpc",
+                "method",
+                "remote-host",
+                "Cookie",
+                "Authorization",
+                "Bearer",
+                "JWT",
+                "session=",
+                "token=",
+                "safe file body",
+                "stack trace",
+            ]:
+                self.assertNotIn(forbidden_echo, response_text)
+
+        combined = evidence_doc + "\n" + fixture_text
         for forbidden in [
             "safe-to-share",
             "safe to share",
