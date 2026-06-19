@@ -100,8 +100,10 @@ from burp_ai_redaction_gateway.mcp_listener_skeleton import (
 from burp_ai_redaction_gateway.mcp_listener_runtime import (
     MinimalListenerRuntimeConfig,
     build_default_listener_runtime_config,
+    build_listener_runtime_response,
     build_minimal_listener_local_smoke_summary,
     build_listener_runtime_metadata,
+    is_all_interface_host,
     is_loopback_host,
     validate_minimal_listener_startup,
 )
@@ -5461,6 +5463,9 @@ class RedactionGatewayTests(unittest.TestCase):
             "source_check_consumed",
             "negative_harness_consumed",
             "implementation_decision_consumed",
+            "disabled_first_input_handling",
+            "all_interface_hosts_blocked",
+            "status_allowlist_enforced",
         ]:
             self.assertIs(fixture[true_flag], True)
 
@@ -5492,6 +5497,7 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn(fixture["runtime_module"], source_check_fixture["declared_runtime_facing_source_scope"])
         self.assertIn(fixture["runtime_module"], source_check_fixture["planned_runtime_files"])
         self.assertEqual(fixture["required_negative_tests"], harness_fixture["required_negative_tests"])
+        self.assertEqual(fixture["allowed_statuses"], ["disabled", "blocked", "ready"])
 
         default_config = build_default_listener_runtime_config()
         self.assertIs(default_config.enabled, False)
@@ -5499,6 +5505,12 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIs(is_loopback_host("localhost"), True)
         self.assertIs(is_loopback_host("::1"), True)
         self.assertIs(is_loopback_host("remote-host"), False)
+        self.assertIs(is_all_interface_host(""), True)
+        self.assertIs(is_all_interface_host("*"), True)
+        self.assertIs(is_all_interface_host("0.0.0.0"), True)
+        self.assertIs(is_all_interface_host("::"), True)
+        self.assertIs(is_all_interface_host("[::]"), True)
+        self.assertIs(is_all_interface_host("localhost"), False)
 
         metadata = build_listener_runtime_metadata()
         self.assertEqual(metadata["schema_version"], "v07_minimal_listener_runtime.v1")
@@ -5541,6 +5553,13 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertEqual(non_loopback_response["reason_code"], "non_loopback_host_rejected")
 
         caller_body = {"jsonrpc": "2.0", "method": "caller_controlled_value"}
+        disabled_protocol_response = validate_minimal_listener_startup(
+            MinimalListenerRuntimeConfig(enabled=False, host="localhost"),
+            input_body=caller_body,
+        )
+        self.assertEqual(disabled_protocol_response["status"], "disabled")
+        self.assertEqual(disabled_protocol_response["reason_code"], "listener_disabled")
+
         protocol_response = validate_minimal_listener_startup(
             MinimalListenerRuntimeConfig(enabled=True, host="localhost"),
             input_body=caller_body,
@@ -5548,7 +5567,41 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertEqual(protocol_response["status"], "blocked")
         self.assertEqual(protocol_response["reason_code"], "protocol_message_rejected")
 
-        for response in [disabled_response, local_response, remote_bind_response, non_loopback_response, protocol_response]:
+        unsafe_status_response = build_listener_runtime_response(
+            status="caller_controlled_value",
+            reason_code="unknown",
+            enabled=True,
+            startup_permitted=False,
+        )
+        self.assertIn(unsafe_status_response["status"], {"disabled", "blocked", "ready"})
+        self.assertEqual(unsafe_status_response["status"], "blocked")
+        self.assertEqual(unsafe_status_response["reason_code"], "listener_disabled")
+        self.assertIs(unsafe_status_response["startup_permitted"], False)
+
+        all_interface_responses = []
+        for all_interface_host in ["", "*", "0.0.0.0", "::", "[::]"]:
+            all_interface_response = validate_minimal_listener_startup(
+                MinimalListenerRuntimeConfig(enabled=True, host=all_interface_host)
+            )
+            self.assertEqual(all_interface_response["status"], "blocked")
+            self.assertEqual(all_interface_response["reason_code"], "remote_bind_blocked")
+            self.assertIs(all_interface_response["startup_permitted"], False)
+            self.assertIs(all_interface_response["listener_started"], False)
+            all_interface_response_text = json.dumps(all_interface_response, sort_keys=True)
+            if all_interface_host:
+                self.assertNotIn(all_interface_host, all_interface_response_text)
+            all_interface_responses.append(all_interface_response)
+
+        for response in [
+            disabled_response,
+            disabled_protocol_response,
+            local_response,
+            remote_bind_response,
+            non_loopback_response,
+            protocol_response,
+            unsafe_status_response,
+            *all_interface_responses,
+        ]:
             self.assertIs(response["metadata_only"], True)
             self.assertIs(response["raw_data_included"], False)
             self.assertIs(response["manual_review_required"], True)
@@ -5559,6 +5612,14 @@ class RedactionGatewayTests(unittest.TestCase):
             response_text = json.dumps(response, sort_keys=True)
             self.assertNotIn("caller_controlled_value", response_text)
             self.assertNotIn("remote-host", response_text)
+            self.assertNotIn("jsonrpc", response_text)
+            self.assertNotIn("method", response_text)
+            self.assertNotIn("Cookie", response_text)
+            self.assertNotIn("Authorization", response_text)
+            self.assertNotIn("token", response_text.lower())
+            self.assertNotIn("session", response_text.lower())
+            self.assertNotIn("safe body preview", response_text.lower())
+            self.assertNotIn("stack", response_text.lower())
 
         smoke = build_minimal_listener_local_smoke_summary()
         self.assertIs(smoke["disabled_by_default"], True)

@@ -8,6 +8,9 @@
   "source_check_consumed": true,
   "negative_harness_consumed": true,
   "implementation_decision_consumed": true,
+  "disabled_first_input_handling": true,
+  "all_interface_hosts_blocked": true,
+  "status_allowlist_enforced": true,
   "runtime_module": "burp_ai_redaction_gateway/mcp_listener_runtime.py",
   "default_status": "disabled",
   "allowed_startup_validation_status": "ready",
@@ -62,5 +65,10 @@
     "remote_bind_blocked",
     "non_loopback_host_rejected",
     "protocol_message_rejected"
+  ],
+  "allowed_statuses": [
+    "disabled",
+    "blocked",
+    "ready"
   ]
 }

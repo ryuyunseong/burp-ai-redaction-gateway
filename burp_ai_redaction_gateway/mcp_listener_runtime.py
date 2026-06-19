@@ -25,6 +25,8 @@ ALLOWED_REASON_CODES = frozenset(
     }
 )
 
+ALLOWED_STATUSES = frozenset({"disabled", "blocked", "ready"})
+
 PROTOCOL_MESSAGE_KEYS = frozenset({"jsonrpc", "method", "params", "id"})
 
 RUNTIME_BOUNDARY_FLAGS = MappingProxyType(
@@ -66,6 +68,16 @@ def is_loopback_host(host: str) -> bool:
         return False
 
 
+def is_all_interface_host(host: str) -> bool:
+    normalized_host = host.strip().lower().removeprefix("[").removesuffix("]")
+    if normalized_host in {"", "*"}:
+        return True
+    try:
+        return ip_address(normalized_host).is_unspecified
+    except (AddressValueError, ValueError):
+        return False
+
+
 def is_protocol_message(value: Any) -> bool:
     if isinstance(value, Mapping):
         return bool(PROTOCOL_MESSAGE_KEYS.intersection(str(key).lower() for key in value.keys()))
@@ -94,9 +106,10 @@ def build_listener_runtime_response(
     startup_permitted: bool = False,
 ) -> dict[str, Any]:
     safe_reason_code = reason_code if reason_code in ALLOWED_REASON_CODES else "listener_disabled"
+    safe_status = status if status in ALLOWED_STATUSES else "blocked"
     return {
         "schema_version": SCHEMA_VERSION,
-        "status": status,
+        "status": safe_status,
         "reason_code": safe_reason_code,
         "metadata_only": True,
         "raw_data_included": False,
@@ -123,6 +136,8 @@ def validate_minimal_listener_startup(
     input_body: Any = None,
 ) -> dict[str, Any]:
     runtime_config = config or build_default_listener_runtime_config()
+    if not runtime_config.enabled:
+        return build_disabled_listener_runtime_response()
     if is_protocol_message(input_body):
         return build_listener_runtime_response(
             status="blocked",
@@ -130,9 +145,7 @@ def validate_minimal_listener_startup(
             enabled=runtime_config.enabled,
             startup_permitted=False,
         )
-    if not runtime_config.enabled:
-        return build_disabled_listener_runtime_response()
-    if runtime_config.host.strip() in {"", "*"}:
+    if is_all_interface_host(runtime_config.host):
         return build_listener_runtime_response(
             status="blocked",
             reason_code="remote_bind_blocked",
