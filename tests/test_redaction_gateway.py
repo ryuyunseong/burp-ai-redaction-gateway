@@ -213,6 +213,12 @@ V07_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN_DOC = (
 V07_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v07_listener_negative_test_harness_design.json"
 )
+V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION_DOC = (
+    ROOT / "docs" / "V0.7_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION.md"
+)
+V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v07_minimal_listener_runtime_implementation_decision.json"
+)
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
     ROOT / "docs" / "MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md"
@@ -5140,6 +5146,194 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertTrue(set(consumption_fixture["blocked_surfaces"]).issubset(set(fixture["blocked_surfaces"])))
 
         combined = harness_doc + "\n" + fixture_text
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v07_minimal_listener_runtime_implementation_decision_is_decision_only(self) -> None:
+        decision_doc = V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
+        design_doc = V07_MINIMAL_LISTENER_RUNTIME_DESIGN_DOC.read_text(encoding="utf-8")
+        consumption_doc = V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_DOC.read_text(encoding="utf-8")
+        harness_doc = V07_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN_DOC.read_text(encoding="utf-8")
+        harness_fixture = json.loads(V07_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN_FIXTURE.read_text(encoding="utf-8"))
+
+        self.assertTrue(V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION_DOC.exists())
+        self.assertTrue(V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION_FIXTURE.exists())
+        for linked_text in [readme, scope_plan, design_doc, consumption_doc, harness_doc]:
+            self.assertIn("V0.7_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Implementation Decision",
+            "## Required Preconditions",
+            "## Allowed Next PR Scope",
+            "## Explicit Non-goals",
+            "## Required Negative Tests for Implementation PR",
+            "## Required Source-check Consumption",
+            "## Required Security Review",
+            "## Required Rollback and Disablement",
+            "## PR Split Requirements",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, decision_doc)
+
+        for required_text in [
+            "documentation, fixture, and test scope only",
+            "does not implement listener runtime behavior",
+            "`minimal_listener_runtime_may_be_proposed_next: true`",
+            "This PR itself is not runtime implementation",
+            "The next implementation PR must be local-only",
+            "The next implementation PR must be loopback-only",
+            "The next implementation PR must be disabled by default",
+            "The next implementation PR must not include transport",
+            "The next implementation PR must not include protocol handling",
+            "The next implementation PR must not include executable tool registration",
+            "The next implementation PR must not include actual tool execution",
+            "The next implementation PR must not include local evidence reading",
+            "V0.7_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN.md",
+            "V0.7_RUNTIME_SOURCE_CHECK_CONSUMPTION.md",
+            "No listener runtime implementation",
+            "No socket bind, listen, or accept implementation",
+            "No long-running server loop",
+            "No MCP transport implementation",
+            "No MCP protocol handler implementation",
+            "No executable tool registration",
+            "No actual tool execution",
+            "No local evidence reader",
+            "No safe file body reader",
+            "No raw preview or raw download",
+            "No replay or active scan",
+            "No automatic ChatGPT handoff",
+            "No dashboard start or stop control",
+            "No upload or import action",
+            "No `v0.6` tag modification",
+            "No GitHub Release `v0.6` modification",
+            "No new tag or GitHub Release creation",
+            "No output bundle structure change",
+        ]:
+            self.assertIn(required_text, decision_doc)
+
+        self.assertEqual(fixture["schema_version"], "v07_minimal_listener_runtime_implementation_decision.v1")
+        for true_flag in [
+            "decision_only",
+            "minimal_listener_runtime_may_be_proposed_next",
+            "implementation_requires_explicit_followup_pr",
+            "source_check_consumption_guard_consumed",
+            "negative_harness_design_consumed",
+            "minimal_listener_runtime_design_consumed",
+            "approval_packet_consumed",
+            "disabled_by_default_required",
+            "local_only_required",
+            "loopback_only_required",
+            "raw_free_error_required",
+            "source_check_required",
+            "negative_tests_required",
+            "rollback_plan_required",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        for false_flag in [
+            "runtime_implementation_included",
+            "listener_runtime_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "socket_accept_implemented",
+            "long_running_server_loop_implemented",
+            "transport_implemented",
+            "protocol_handler_implemented",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+            "v06_tag_modified",
+            "v06_release_modified",
+            "new_tag_or_release_created",
+            "output_bundle_structure_changed",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        self.assertEqual(
+            fixture["allowed_next_pr_scope"],
+            [
+                "minimal_listener_runtime_only",
+                "local_loopback_binding_only",
+                "disabled_by_default_only",
+                "raw_free_blocked_response_only",
+                "source_check_consumption_tests",
+                "negative_tests_from_fixture",
+                "local_smoke_only",
+            ],
+        )
+        self.assertEqual(
+            fixture["blocked_next_pr_scope"],
+            [
+                "remote_bind",
+                "non_loopback_host",
+                "protocol_message",
+                "transport",
+                "protocol_handler",
+                "tool_registration",
+                "tool_execution",
+                "local_evidence_reader",
+                "safe_file_body_reader",
+                "raw_preview_download",
+                "replay_active_scan",
+                "automatic_chatgpt_handoff",
+                "dashboard_state_changing_control",
+                "upload_import_action",
+                "output_bundle_structure_change",
+                "tag_or_release_action",
+            ],
+        )
+        self.assertTrue(set(harness_fixture["blocked_surfaces"]).issubset(set(fixture["blocked_next_pr_scope"])))
+        for allowed in fixture["allowed_next_pr_scope"]:
+            self.assertIn(allowed, decision_doc)
+        for blocked in fixture["blocked_next_pr_scope"]:
+            self.assertIn(blocked, fixture_text)
+
+        for test_name in harness_fixture["required_negative_tests"]:
+            self.assertIn(f"`{test_name}`", decision_doc)
+
+        combined = decision_doc + "\n" + fixture_text
         for forbidden in [
             "safe-to-share",
             "safe to share",
