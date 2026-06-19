@@ -364,6 +364,10 @@ The v0.7 listener negative test harness design is tracked in
 [`docs/V0.7_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN.md`](docs/V0.7_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN.md).
 It fixes blocked and disabled response expectations before any listener runtime
 implementation is added.
+The v0.7 minimal listener runtime implementation decision is tracked in
+[`docs/V0.7_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION.md`](docs/V0.7_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION.md).
+It records that a narrow follow-up runtime PR may be proposed, while this
+decision itself still does not implement listener runtime behavior.
 
 ## Burp Montoya Collector
 
