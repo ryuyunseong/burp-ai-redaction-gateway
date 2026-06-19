@@ -191,6 +191,12 @@ V07_LISTENER_RUNTIME_DECISION_PREFLIGHT_DOC = (
 V07_LISTENER_RUNTIME_DECISION_PREFLIGHT_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v07_listener_runtime_decision_preflight.json"
 )
+V07_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET_DOC = (
+    ROOT / "docs" / "V0.7_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET.md"
+)
+V07_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v07_minimal_listener_runtime_approval_packet.json"
+)
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
     ROOT / "docs" / "MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md"
@@ -4330,6 +4336,169 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn(marker, source_text, f"{marker} found in {source_path}")
 
         combined = preflight + "\n" + fixture_text
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v07_minimal_listener_runtime_approval_packet_is_approval_only(self) -> None:
+        packet = V07_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V07_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
+        preflight = V07_LISTENER_RUNTIME_DECISION_PREFLIGHT_DOC.read_text(encoding="utf-8")
+        skeleton_plan = V07_MCP_LISTENER_SKELETON_PLAN_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(V07_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET_DOC.exists())
+        self.assertTrue(V07_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET_FIXTURE.exists())
+        for linked_text in [readme, scope_plan, preflight, skeleton_plan]:
+            self.assertIn("V0.7_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Approval Scope",
+            "## Explicit Non-goals",
+            "## Allowed Future Minimal Listener Boundary",
+            "## Required Runtime Constraints",
+            "## Required Negative Tests",
+            "## Source-check Requirements",
+            "## Security Review Checklist",
+            "## PR Split Requirements",
+            "## Rollback and Disablement Expectations",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, packet)
+
+        for required_text in [
+            "approval evidence required before a separate minimal",
+            "does not implement listener",
+            "This approval packet does not approve",
+            "Listener runtime implementation",
+            "Socket bind, listen, or accept implementation",
+            "Transport implementation",
+            "Protocol handler implementation",
+            "Executable tool registration implementation",
+            "Actual tool execution implementation",
+            "Local evidence reader implementation",
+            "Safe file body reader implementation",
+            "Raw preview or raw download implementation",
+            "Replay or active scan implementation",
+            "Automatic ChatGPT handoff implementation",
+            "`v0.6` tag modification",
+            "GitHub Release `v0.6` modification",
+            "Output bundle structure change",
+            "Local-only or loopback-only",
+            "Disabled by default",
+            "protocol parsing beyond blocked placeholder metadata",
+            "source-check declared file scope",
+            "raw-free error responses",
+            "remote_bind_blocked",
+            "protocol_message_rejected",
+            "tool_registration_absent",
+            "tool_execution_absent",
+            "local_evidence_read_absent",
+            "raw_preview_absent",
+            "automatic_handoff_absent",
+            "disabled_by_default",
+            "A documented disablement path",
+        ]:
+            self.assertIn(required_text, packet)
+
+        self.assertEqual(fixture["schema_version"], "v07_minimal_listener_runtime_approval_packet.v1")
+        self.assertIs(fixture["approval_packet_only"], True)
+        for false_flag in [
+            "runtime_implementation_approved",
+            "listener_runtime_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "socket_accept_implemented",
+            "long_running_server_loop_implemented",
+            "transport_implemented",
+            "protocol_handler_implemented",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "v06_tag_modified",
+            "v06_release_modified",
+            "output_bundle_structure_changed",
+            "raw_data_included",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        for true_flag in [
+            "metadata_only_skeleton_consumed",
+            "runtime_decision_preflight_consumed",
+            "negative_tests_required_before_runtime",
+            "source_check_required_before_runtime",
+            "disabled_by_default_required",
+            "local_only_required",
+            "raw_free_error_required",
+            "rollback_plan_required",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        self.assertEqual(
+            fixture["blocked_future_surfaces"],
+            [
+                "transport",
+                "protocol_handler",
+                "tool_registration",
+                "tool_execution",
+                "local_evidence_reader",
+                "raw_preview_download",
+                "replay_active_scan",
+                "automatic_chatgpt_handoff",
+            ],
+        )
+        self.assertEqual(
+            fixture["required_negative_tests"],
+            [
+                "remote_bind_blocked",
+                "protocol_message_rejected",
+                "tool_registration_absent",
+                "tool_execution_absent",
+                "local_evidence_read_absent",
+                "raw_preview_absent",
+                "automatic_handoff_absent",
+                "disabled_by_default",
+            ],
+        )
+
+        combined = packet + "\n" + fixture_text
         for forbidden in [
             "safe-to-share",
             "safe to share",
