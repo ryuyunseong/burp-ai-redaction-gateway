@@ -338,6 +338,11 @@ The v0.7 listener runtime decision preflight is tracked in
 It fixes the next planning guard before any listener runtime work and still does
 not implement socket bind, transport, protocol handling, tool execution, local
 evidence reading, raw preview, or automatic ChatGPT handoff.
+The v0.7 minimal listener runtime approval packet is tracked in
+[`docs/V0.7_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET.md`](docs/V0.7_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET.md).
+It records approval criteria and negative-test expectations only; it does not
+implement listener runtime behavior, transport, protocol handling, tool
+execution, local evidence reading, raw preview, or automatic ChatGPT handoff.
 
 ## Burp Montoya Collector
 
