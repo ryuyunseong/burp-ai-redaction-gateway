@@ -101,6 +101,18 @@ AI에 넣을 수 있는 후보는 아래 4개뿐입니다.
 - actual export smoke 통과는 외부 공유 승인이 아닙니다.
 - 자동 ChatGPT 전송은 없습니다.
 
+## 웹 운영자 가이드
+
+CLI 없이 Local Dashboard와 Upload Wizard로 처리할 수 있는 작업 범위는
+[`WEB_OPERATOR_GUIDE_KO_v0.7.md`](WEB_OPERATOR_GUIDE_KO_v0.7.md)에 정리되어
+있습니다. 이 문서는 웹에서 가능한 작업과 아직 불가능한 작업을 분리합니다.
+
+- 가능한 작업: Upload Wizard, safe files 4개 확인, triage/report readiness,
+  Windows launcher, localhost receiver, read-only MCP stdio server 확인.
+- 아직 불가능한 작업: v0.7 MCP listener runtime, socket/bind/listen endpoint,
+  transport/protocol handler, tool registration/tool execution, local evidence
+  reader, raw preview/download, replay/active scan, automatic ChatGPT handoff.
+
 ## RC readiness 참고
 
 v0.6 RC 후보 판단 기준은
