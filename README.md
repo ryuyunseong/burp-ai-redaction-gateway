@@ -360,6 +360,10 @@ The v0.7 runtime source-check consumption guard is tracked in
 [`docs/V0.7_RUNTIME_SOURCE_CHECK_CONSUMPTION.md`](docs/V0.7_RUNTIME_SOURCE_CHECK_CONSUMPTION.md).
 It connects the design fixture to declared runtime-facing source scope and
 keeps future runtime-facing files from bypassing forbidden surface checks.
+The v0.7 listener negative test harness design is tracked in
+[`docs/V0.7_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN.md`](docs/V0.7_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN.md).
+It fixes blocked and disabled response expectations before any listener runtime
+implementation is added.
 
 ## Burp Montoya Collector
 

@@ -207,6 +207,12 @@ V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_DOC = ROOT / "docs" / "V0.7_RUNTIME_SOURCE_
 V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v07_runtime_source_check_consumption.json"
 )
+V07_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN_DOC = (
+    ROOT / "docs" / "V0.7_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN.md"
+)
+V07_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v07_listener_negative_test_harness_design.json"
+)
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
     ROOT / "docs" / "MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md"
@@ -4930,6 +4936,210 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertTrue((ROOT / source_path).exists(), source_path)
 
         combined = consumption_doc + "\n" + fixture_text
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v07_listener_negative_test_harness_design_is_design_only(self) -> None:
+        harness_doc = V07_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V07_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
+        design_doc = V07_MINIMAL_LISTENER_RUNTIME_DESIGN_DOC.read_text(encoding="utf-8")
+        consumption_doc = V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_DOC.read_text(encoding="utf-8")
+        consumption_fixture = json.loads(V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_FIXTURE.read_text(encoding="utf-8"))
+
+        self.assertTrue(V07_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN_DOC.exists())
+        self.assertTrue(V07_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN_FIXTURE.exists())
+        for linked_text in [readme, scope_plan, design_doc, consumption_doc]:
+            self.assertIn("V0.7_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Harness Scope",
+            "## Explicit Non-goals",
+            "## Required Negative Tests",
+            "## Expected Blocked Responses",
+            "## Source-check Requirements",
+            "## Security Review Checklist",
+            "## PR Split Requirements",
+            "## Rollback and Disablement Expectations",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, harness_doc)
+
+        for required_text in [
+            "documentation, fixture, and test scope only",
+            "does not implement listener runtime behavior",
+            "raw-free blocked and disabled responses",
+            "V0.7_RUNTIME_SOURCE_CHECK_CONSUMPTION.md",
+            "No listener runtime implementation",
+            "No socket bind, listen, or accept implementation",
+            "No long-running server loop",
+            "No MCP transport implementation",
+            "No MCP protocol handler implementation",
+            "No executable tool registration",
+            "No actual tool execution",
+            "No local evidence reader",
+            "No safe file body reader",
+            "No raw preview or raw download",
+            "No replay or active scan",
+            "No automatic ChatGPT handoff",
+            "No dashboard start or stop control",
+            "No upload or import action",
+            "No `v0.6` tag modification",
+            "No GitHub Release `v0.6` modification",
+            "No new tag or GitHub Release creation",
+            "No output bundle structure change",
+        ]:
+            self.assertIn(required_text, harness_doc)
+
+        self.assertEqual(fixture["schema_version"], "v07_listener_negative_test_harness_design.v1")
+        for true_flag in [
+            "design_only",
+            "negative_harness_only",
+            "source_check_consumption_guard_consumed",
+            "minimal_listener_runtime_design_consumed",
+            "disabled_by_default_required",
+            "local_only_required",
+            "loopback_only_required",
+            "raw_free_error_required",
+            "negative_tests_required",
+            "source_check_required",
+            "rollback_plan_required",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        for false_flag in [
+            "runtime_implementation_included",
+            "listener_runtime_approved_for_next_pr",
+            "listener_runtime_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "socket_accept_implemented",
+            "long_running_server_loop_implemented",
+            "transport_implemented",
+            "protocol_handler_implemented",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+            "v06_tag_modified",
+            "v06_release_modified",
+            "new_tag_or_release_created",
+            "output_bundle_structure_changed",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        required_negative_tests = [
+            "remote_bind_blocked",
+            "non_loopback_host_rejected",
+            "disabled_by_default",
+            "protocol_message_rejected",
+            "transport_absent",
+            "tool_registration_absent",
+            "tool_execution_absent",
+            "local_evidence_read_absent",
+            "safe_file_body_read_absent",
+            "raw_preview_absent",
+            "replay_active_scan_absent",
+            "automatic_handoff_absent",
+            "dashboard_control_absent",
+            "upload_import_absent",
+        ]
+        self.assertEqual(fixture["required_negative_tests"], required_negative_tests)
+        for test_name in required_negative_tests:
+            self.assertIn(f"`{test_name}`", harness_doc)
+
+        self.assertEqual(
+            fixture["expected_blocked_response_fields"],
+            [
+                "status",
+                "reason_code",
+                "raw_data_included",
+                "manual_review_required",
+                "metadata_only",
+            ],
+        )
+        self.assertIn("Use stable `blocked` or `disabled` status codes", harness_doc)
+        self.assertIn("Set `raw_data_included` to `false`", harness_doc)
+        self.assertIn("Set `manual_review_required` to `true`", harness_doc)
+
+        self.assertEqual(
+            fixture["forbidden_response_markers"],
+            [
+                "caller body echo",
+                "target identifier",
+                "url value",
+                "ip address value",
+                "credential value",
+                "local path value",
+                "stack trace body",
+                "safe file body preview",
+            ],
+        )
+        harness_doc_lower = harness_doc.lower()
+        for marker in fixture["forbidden_response_markers"]:
+            self.assertIn(marker, harness_doc_lower)
+
+        self.assertEqual(
+            fixture["blocked_surfaces"],
+            [
+                "remote_bind",
+                "non_loopback_host",
+                "protocol_message",
+                "protocol_handler",
+                "transport",
+                "tool_registration",
+                "tool_execution",
+                "local_evidence_reader",
+                "safe_file_body_reader",
+                "raw_preview_download",
+                "replay_active_scan",
+                "automatic_chatgpt_handoff",
+                "dashboard_state_changing_control",
+                "upload_import_action",
+            ],
+        )
+        self.assertTrue(set(consumption_fixture["blocked_surfaces"]).issubset(set(fixture["blocked_surfaces"])))
+
+        combined = harness_doc + "\n" + fixture_text
         for forbidden in [
             "safe-to-share",
             "safe to share",
