@@ -368,6 +368,12 @@ The v0.7 minimal listener runtime implementation decision is tracked in
 [`docs/V0.7_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION.md`](docs/V0.7_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION.md).
 It records that a narrow follow-up runtime PR may be proposed, while this
 decision itself still does not implement listener runtime behavior.
+The v0.7 minimal listener runtime implementation is tracked in
+[`docs/V0.7_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION.md`](docs/V0.7_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION.md).
+It adds disabled-by-default, loopback-only startup validation and raw-free
+blocked/disabled response helpers only. It does not add transport, protocol
+handling, tool execution, local evidence reading, dashboard state-changing
+control, upload/import behavior, or automatic ChatGPT handoff.
 
 ## Burp Montoya Collector
 

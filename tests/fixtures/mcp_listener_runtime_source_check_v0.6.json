@@ -36,7 +36,8 @@
     "runtime_facing_file_detection_enabled": true,
     "future_runtime_facing_files_must_be_declared": true,
     "declared_runtime_facing_source_scope": [
-      "burp_ai_redaction_gateway/mcp_listener_skeleton.py"
+      "burp_ai_redaction_gateway/mcp_listener_skeleton.py",
+      "burp_ai_redaction_gateway/mcp_listener_runtime.py"
     ],
     "fail_on_undeclared_runtime_facing_file": true
   },
