@@ -374,6 +374,11 @@ It adds disabled-by-default, loopback-only startup validation and raw-free
 blocked/disabled response helpers only. It does not add transport, protocol
 handling, tool execution, local evidence reading, dashboard state-changing
 control, upload/import behavior, or automatic ChatGPT handoff.
+The v0.7 listener local smoke evidence is tracked in
+[`docs/V0.7_LISTENER_LOCAL_SMOKE_EVIDENCE.md`](docs/V0.7_LISTENER_LOCAL_SMOKE_EVIDENCE.md).
+It records metadata-only smoke evidence for the minimal listener runtime helper
+without starting a listener, adding transport, parsing protocol messages,
+executing tools, reading local evidence, or creating a tag or GitHub Release.
 
 ## Burp Montoya Collector
 
