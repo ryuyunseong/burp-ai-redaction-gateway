@@ -351,6 +351,11 @@ The v0.7 minimal listener runtime approval packet is tracked in
 It records approval criteria and negative-test expectations only; it does not
 implement listener runtime behavior, transport, protocol handling, tool
 execution, local evidence reading, raw preview, or automatic ChatGPT handoff.
+The v0.7 minimal listener runtime implementation design is tracked in
+[`docs/V0.7_MINIMAL_LISTENER_RUNTIME_DESIGN.md`](docs/V0.7_MINIMAL_LISTENER_RUNTIME_DESIGN.md).
+It fixes local-only, loopback-only, disabled-by-default, raw-free error,
+source-check, negative-test, rollback, and PR split requirements before any
+listener runtime implementation is added.
 
 ## Burp Montoya Collector
 
