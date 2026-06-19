@@ -97,6 +97,14 @@ from burp_ai_redaction_gateway.mcp_listener_skeleton import (
     build_blocked_listener_response,
     build_listener_skeleton_metadata,
 )
+from burp_ai_redaction_gateway.mcp_listener_runtime import (
+    MinimalListenerRuntimeConfig,
+    build_default_listener_runtime_config,
+    build_minimal_listener_local_smoke_summary,
+    build_listener_runtime_metadata,
+    is_loopback_host,
+    validate_minimal_listener_startup,
+)
 from burp_ai_redaction_gateway.mcp_read_only_registry import (
     ALLOWED_TOOL_NAMES,
     BLOCKED_RESPONSE_ALLOWED_FIELDS,
@@ -219,6 +227,13 @@ V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION_DOC = (
 V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v07_minimal_listener_runtime_implementation_decision.json"
 )
+V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DOC = (
+    ROOT / "docs" / "V0.7_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION.md"
+)
+V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v07_minimal_listener_runtime_implementation.json"
+)
+MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
     ROOT / "docs" / "MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md"
@@ -4747,10 +4762,11 @@ class RedactionGatewayTests(unittest.TestCase):
         scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
         design_doc = V07_MINIMAL_LISTENER_RUNTIME_DESIGN_DOC.read_text(encoding="utf-8")
         approval = V07_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
+        implementation_doc = V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DOC.read_text(encoding="utf-8")
 
         self.assertTrue(V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_DOC.exists())
         self.assertTrue(V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_FIXTURE.exists())
-        for linked_text in [readme, scope_plan, design_doc, approval]:
+        for linked_text in [readme, scope_plan, design_doc, approval, implementation_doc]:
             self.assertIn("V0.7_RUNTIME_SOURCE_CHECK_CONSUMPTION.md", linked_text)
 
         for section in [
@@ -4777,10 +4793,11 @@ class RedactionGatewayTests(unittest.TestCase):
             "v07_listener_runtime_decision_preflight.json",
             "v07_mcp_listener_skeleton_plan.json",
             "v07_runtime_source_check_consumption.json",
+            "V0.7_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION.md",
             "burp_ai_redaction_gateway/mcp_listener_skeleton.py",
+            "burp_ai_redaction_gateway/mcp_listener_runtime.py",
             "burp_ai_redaction_gateway/mcp_server.py",
             "Future runtime-facing files must be declared",
-            "No listener runtime implementation",
             "No socket bind, listen, or accept implementation",
             "No long-running server loop",
             "No transport implementation",
@@ -4841,9 +4858,12 @@ class RedactionGatewayTests(unittest.TestCase):
 
         self.assertEqual(
             fixture["declared_runtime_facing_source_scope"],
-            ["burp_ai_redaction_gateway/mcp_listener_skeleton.py"],
+            [
+                "burp_ai_redaction_gateway/mcp_listener_skeleton.py",
+                "burp_ai_redaction_gateway/mcp_listener_runtime.py",
+            ],
         )
-        self.assertEqual(fixture["planned_runtime_files"], [])
+        self.assertEqual(fixture["planned_runtime_files"], ["burp_ai_redaction_gateway/mcp_listener_runtime.py"])
         self.assertEqual(
             fixture["existing_excluded_baseline_files"],
             ["burp_ai_redaction_gateway/mcp_server.py"],
@@ -5334,6 +5354,232 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn(f"`{test_name}`", decision_doc)
 
         combined = decision_doc + "\n" + fixture_text
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v07_minimal_listener_runtime_implementation_is_guarded(self) -> None:
+        implementation_doc = V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
+        decision_doc = V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION_DOC.read_text(encoding="utf-8")
+        source_check_doc = V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_DOC.read_text(encoding="utf-8")
+        harness_doc = V07_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN_DOC.read_text(encoding="utf-8")
+        source_check_fixture = json.loads(V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_FIXTURE.read_text(encoding="utf-8"))
+        harness_fixture = json.loads(V07_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN_FIXTURE.read_text(encoding="utf-8"))
+
+        self.assertTrue(V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DOC.exists())
+        self.assertTrue(V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_FIXTURE.exists())
+        self.assertTrue(MCP_LISTENER_RUNTIME_MODULE.exists())
+        for linked_text in [readme, scope_plan, decision_doc, source_check_doc, harness_doc]:
+            self.assertIn("V0.7_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Implemented Boundary",
+            "## Disabled-by-default Behavior",
+            "## Loopback-only Behavior",
+            "## Raw-free Response Contract",
+            "## Source-check Consumption",
+            "## Negative Tests",
+            "## Explicit Non-goals",
+            "## Local Smoke",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, implementation_doc)
+
+        for required_text in [
+            "disabled-by-default",
+            "loopback-only",
+            "raw-free blocked or disabled response",
+            "burp_ai_redaction_gateway/mcp_listener_runtime.py",
+            "transport, protocol handling, executable tool registration, actual tool execution",
+            "local evidence reading, safe file body reading",
+            "dashboard state-changing control",
+            "upload or import action",
+            "automatic ChatGPT handoff",
+            "No MCP transport implementation",
+            "No MCP protocol handler implementation",
+            "No JSON-RPC parser implementation",
+            "No executable tool registration",
+            "No actual tool execution",
+            "No local evidence reader",
+            "No safe file body reader",
+            "No raw preview or raw download",
+            "No replay or active scan",
+            "No automatic ChatGPT handoff",
+            "No dashboard start or stop control",
+            "No upload or import action",
+            "No arbitrary local file read",
+            "No external network call",
+            "No environment secret access",
+            "No `v0.6` tag modification",
+            "No GitHub Release `v0.6` modification",
+            "No new tag or GitHub Release creation",
+            "No output bundle structure change",
+        ]:
+            self.assertIn(required_text, implementation_doc)
+
+        self.assertEqual(fixture["schema_version"], "v07_minimal_listener_runtime_implementation.v1")
+        for true_flag in [
+            "minimal_listener_runtime_implemented",
+            "disabled_by_default",
+            "local_only",
+            "loopback_only",
+            "raw_free_blocked_response",
+            "source_check_consumed",
+            "negative_harness_consumed",
+            "implementation_decision_consumed",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        for false_flag in [
+            "listener_started_by_helper",
+            "long_running_server_loop_implemented",
+            "transport_implemented",
+            "protocol_handler_implemented",
+            "tool_registration_implemented",
+            "tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+            "external_network_call_implemented",
+            "arbitrary_local_file_read_implemented",
+            "environment_secret_access_implemented",
+            "v06_tag_modified",
+            "v06_release_modified",
+            "new_tag_or_release_created",
+            "output_bundle_structure_changed",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        self.assertEqual(fixture["runtime_module"], "burp_ai_redaction_gateway/mcp_listener_runtime.py")
+        self.assertIn(fixture["runtime_module"], source_check_fixture["declared_runtime_facing_source_scope"])
+        self.assertIn(fixture["runtime_module"], source_check_fixture["planned_runtime_files"])
+        self.assertEqual(fixture["required_negative_tests"], harness_fixture["required_negative_tests"])
+
+        default_config = build_default_listener_runtime_config()
+        self.assertIs(default_config.enabled, False)
+        self.assertEqual(default_config.host, "localhost")
+        self.assertIs(is_loopback_host("localhost"), True)
+        self.assertIs(is_loopback_host("::1"), True)
+        self.assertIs(is_loopback_host("remote-host"), False)
+
+        metadata = build_listener_runtime_metadata()
+        self.assertEqual(metadata["schema_version"], "v07_minimal_listener_runtime.v1")
+        self.assertIs(metadata["minimal_listener_runtime_implemented"], True)
+        self.assertIs(metadata["listener_started"], False)
+        self.assertEqual(
+            metadata["output_bundle_files"],
+            [
+                "analysis_packet.json",
+                "chatgpt_prompt.md",
+                "codex_task_prompt.md",
+                "report_draft.md",
+            ],
+        )
+
+        disabled_response = validate_minimal_listener_startup()
+        self.assertEqual(disabled_response["status"], "disabled")
+        self.assertEqual(disabled_response["reason_code"], "listener_disabled")
+        self.assertIs(disabled_response["raw_data_included"], False)
+        self.assertIs(disabled_response["manual_review_required"], True)
+        self.assertIs(disabled_response["listener_started"], False)
+        self.assertIs(disabled_response["startup_permitted"], False)
+
+        local_response = validate_minimal_listener_startup(
+            MinimalListenerRuntimeConfig(enabled=True, host="localhost")
+        )
+        self.assertEqual(local_response["status"], "ready")
+        self.assertEqual(local_response["reason_code"], "local_loopback_validation_passed")
+        self.assertIs(local_response["startup_permitted"], True)
+        self.assertIs(local_response["listener_started"], False)
+
+        remote_bind_response = validate_minimal_listener_startup(MinimalListenerRuntimeConfig(enabled=True, host="*"))
+        self.assertEqual(remote_bind_response["status"], "blocked")
+        self.assertEqual(remote_bind_response["reason_code"], "remote_bind_blocked")
+
+        non_loopback_response = validate_minimal_listener_startup(
+            MinimalListenerRuntimeConfig(enabled=True, host="remote-host")
+        )
+        self.assertEqual(non_loopback_response["status"], "blocked")
+        self.assertEqual(non_loopback_response["reason_code"], "non_loopback_host_rejected")
+
+        caller_body = {"jsonrpc": "2.0", "method": "caller_controlled_value"}
+        protocol_response = validate_minimal_listener_startup(
+            MinimalListenerRuntimeConfig(enabled=True, host="localhost"),
+            input_body=caller_body,
+        )
+        self.assertEqual(protocol_response["status"], "blocked")
+        self.assertEqual(protocol_response["reason_code"], "protocol_message_rejected")
+
+        for response in [disabled_response, local_response, remote_bind_response, non_loopback_response, protocol_response]:
+            self.assertIs(response["metadata_only"], True)
+            self.assertIs(response["raw_data_included"], False)
+            self.assertIs(response["manual_review_required"], True)
+            self.assertIs(response["transport_enabled"], False)
+            self.assertIs(response["protocol_handler_enabled"], False)
+            self.assertIs(response["actual_tool_execution_enabled"], False)
+            self.assertIs(response["local_evidence_reader_enabled"], False)
+            response_text = json.dumps(response, sort_keys=True)
+            self.assertNotIn("caller_controlled_value", response_text)
+            self.assertNotIn("remote-host", response_text)
+
+        smoke = build_minimal_listener_local_smoke_summary()
+        self.assertIs(smoke["disabled_by_default"], True)
+        self.assertIs(smoke["loopback_allowed"], True)
+        self.assertIs(smoke["non_loopback_blocked"], True)
+        self.assertIs(smoke["raw_data_included"], False)
+        self.assertIs(smoke["listener_started"], False)
+
+        module_text = MCP_LISTENER_RUNTIME_MODULE.read_text(encoding="utf-8")
+        for marker in source_check_fixture["forbidden_source_markers"]:
+            self.assertNotIn(marker, module_text, f"{marker} found in mcp_listener_runtime.py")
+        for absent_name in [
+            "register_tool",
+            "execute_tool",
+            "read_local_evidence",
+            "read_file_body",
+            "dashboard_start",
+        ]:
+            self.assertNotIn(absent_name, module_text)
+
+        combined = implementation_doc + "\n" + fixture_text
         for forbidden in [
             "safe-to-share",
             "safe to share",
@@ -7228,7 +7474,10 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIs(policy["future_runtime_facing_files_must_be_declared"], True)
         self.assertEqual(
             policy["declared_runtime_facing_source_scope"],
-            ["burp_ai_redaction_gateway/mcp_listener_skeleton.py"],
+            [
+                "burp_ai_redaction_gateway/mcp_listener_skeleton.py",
+                "burp_ai_redaction_gateway/mcp_listener_runtime.py",
+            ],
         )
         self.assertIs(policy["fail_on_undeclared_runtime_facing_file"], True)
 

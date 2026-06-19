@@ -11,9 +11,12 @@
   "fail_on_undeclared_runtime_facing_file": true,
   "future_runtime_files_must_be_declared": true,
   "declared_runtime_facing_source_scope": [
-    "burp_ai_redaction_gateway/mcp_listener_skeleton.py"
+    "burp_ai_redaction_gateway/mcp_listener_skeleton.py",
+    "burp_ai_redaction_gateway/mcp_listener_runtime.py"
   ],
-  "planned_runtime_files": [],
+  "planned_runtime_files": [
+    "burp_ai_redaction_gateway/mcp_listener_runtime.py"
+  ],
   "existing_excluded_baseline_files": [
     "burp_ai_redaction_gateway/mcp_server.py"
   ],
