@@ -261,6 +261,9 @@ BURP_MCP_COMPATIBILITY_DOC = ROOT / "docs" / "BURP_MCP_COMPATIBILITY_v0.5.md"
 WEB_UX_KO_PLAN_DOC = ROOT / "docs" / "WEB_UX_KO_PLAN_v0.5.md"
 USER_QUICKSTART_KO_V06_DOC = ROOT / "docs" / "USER_QUICKSTART_KO_v0.6.md"
 WEB_OPERATOR_GUIDE_KO_V07_DOC = ROOT / "docs" / "WEB_OPERATOR_GUIDE_KO_v0.7.md"
+WEB_OPERATOR_SMOKE_CHECKLIST_KO_V07_DOC = (
+    ROOT / "docs" / "WEB_OPERATOR_SMOKE_CHECKLIST_KO_v0.7.md"
+)
 OUTPUT_BUNDLE_GUIDE_KO_V06_DOC = ROOT / "docs" / "OUTPUT_BUNDLE_GUIDE_KO_v0.6.md"
 RECEIVER_DOC = ROOT / "docs" / "LOCALHOST_RECEIVER.md"
 EXPECTED_PASSIVE_FINDING_TYPES = {
@@ -10144,6 +10147,103 @@ class RedactionGatewayTests(unittest.TestCase):
 
         self.assertIsNone(re.search(r"https?://", guide))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", guide))
+
+    def test_web_operator_smoke_checklist_ko_v07_is_raw_free_and_scope_clear(self) -> None:
+        checklist = WEB_OPERATOR_SMOKE_CHECKLIST_KO_V07_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        web_operator_guide = WEB_OPERATOR_GUIDE_KO_V07_DOC.read_text(encoding="utf-8")
+        upload_wizard = (ROOT / "docs" / "GUI_UPLOAD_WIZARD.md").read_text(encoding="utf-8")
+
+        self.assertTrue(WEB_OPERATOR_SMOKE_CHECKLIST_KO_V07_DOC.exists())
+        for linked_text in [readme, web_operator_guide, upload_wizard]:
+            self.assertIn("WEB_OPERATOR_SMOKE_CHECKLIST_KO_v0.7.md", linked_text)
+
+        for section in [
+            "## 목적",
+            "## 전제 조건",
+            "## 금지 범위",
+            "## Dashboard 시작 확인",
+            "## Upload Wizard 접근 확인",
+            "## invalid upload 실패 확인",
+            "## safe sample upload 확인",
+            "## verify-first 경계 확인",
+            "## safe files 4개 확인",
+            "## triage 화면 확인",
+            "## report readiness 화면 확인",
+            "## 실패 화면 확인",
+            "## raw-free 확인 항목",
+            "## no automatic handoff 확인 항목",
+            "## browser smoke 기록 양식",
+            "## 운영자 최종 체크리스트",
+            "## 다음 단계",
+        ]:
+            self.assertIn(section, checklist)
+
+        for required in [
+            "manual smoke checklist",
+            "Local Dashboard",
+            "Upload Wizard",
+            "Dashboard 시작",
+            "safe files 4개",
+            "triage",
+            "report readiness",
+            "failure screen",
+            "local-only workflow",
+            "verify 통과 전 output은 AI 입력 후보가 아닙니다",
+            "analysis_packet.json",
+            "chatgpt_prompt.md",
+            "codex_task_prompt.md",
+            "report_draft.md",
+            "finding은 candidate",
+            "report는 draft",
+            "risk는 draft",
+            "severity와 CVSS는 수동 결정",
+            "raw preview/download",
+            "replay/active scan",
+            "automatic ChatGPT handoff",
+            "MCP listener runtime",
+            "socket/bind/listen endpoint",
+            "transport/protocol handler",
+            "tool registration/tool execution",
+            "local evidence reader",
+            "`favicon.ico` 404는 현재 blocker가 아닙니다",
+            "favicon 404 blocker: no",
+            "actual target identifiers recorded: no",
+            "raw traffic recorded: no",
+            "credential values recorded: no",
+            "full local path recorded: no",
+        ]:
+            self.assertIn(required, checklist)
+
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "final CVSS confirmed",
+            "raw_request",
+            "raw_response",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "ready to submit",
+            "approved for external sharing",
+        ]:
+            self.assertNotIn(forbidden, checklist)
+
+        self.assertIsNone(re.search(r"https?://", checklist))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", checklist))
 
     def test_release_checklist_v04_documents_hardening_flow(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

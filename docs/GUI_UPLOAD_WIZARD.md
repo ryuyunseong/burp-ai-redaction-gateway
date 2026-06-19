@@ -12,6 +12,11 @@ when an operator needs to distinguish current web UI behavior from unavailable
 MCP listener runtime, raw preview, replay, active scan, and automatic handoff
 work.
 
+The Korean manual smoke checklist is
+[`WEB_OPERATOR_SMOKE_CHECKLIST_KO_v0.7.md`](WEB_OPERATOR_SMOKE_CHECKLIST_KO_v0.7.md).
+Use it when checking the browser flow from Upload Wizard to safe files, triage,
+and report readiness without recording raw values.
+
 ## Route
 
 ```text
