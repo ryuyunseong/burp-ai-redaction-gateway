@@ -383,6 +383,10 @@ The v0.7 RC readiness checklist is tracked in
 [`docs/V0.7_RC_READINESS_CHECKLIST.md`](docs/V0.7_RC_READINESS_CHECKLIST.md).
 It ties release-readiness gates and smoke evidence together without approving
 or creating any tag or GitHub Release.
+The v0.7 release approval packet is tracked in
+[`docs/V0.7_RELEASE_APPROVAL_PACKET.md`](docs/V0.7_RELEASE_APPROVAL_PACKET.md).
+It records release approval inputs only and still does not create a tag or
+GitHub Release.
 
 ## Burp Montoya Collector
 
