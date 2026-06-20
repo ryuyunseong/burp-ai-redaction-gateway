@@ -239,6 +239,8 @@ V07_LISTENER_LOCAL_SMOKE_EVIDENCE_DOC = ROOT / "docs" / "V0.7_LISTENER_LOCAL_SMO
 V07_LISTENER_LOCAL_SMOKE_EVIDENCE_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v07_listener_local_smoke_evidence.json"
 )
+V07_RC_READINESS_CHECKLIST_DOC = ROOT / "docs" / "V0.7_RC_READINESS_CHECKLIST.md"
+V07_RC_READINESS_CHECKLIST_FIXTURE = ROOT / "tests" / "fixtures" / "v07_rc_readiness_checklist.json"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -5904,6 +5906,196 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn(forbidden_echo, response_text)
 
         combined = evidence_doc + "\n" + fixture_text
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v07_rc_readiness_checklist_is_release_boundary_only(self) -> None:
+        checklist = V07_RC_READINESS_CHECKLIST_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V07_RC_READINESS_CHECKLIST_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
+        smoke_evidence = V07_LISTENER_LOCAL_SMOKE_EVIDENCE_DOC.read_text(encoding="utf-8")
+        implementation_doc = V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(V07_RC_READINESS_CHECKLIST_DOC.exists())
+        self.assertTrue(V07_RC_READINESS_CHECKLIST_FIXTURE.exists())
+        for linked_text in [readme, scope_plan, smoke_evidence, implementation_doc]:
+            self.assertIn("V0.7_RC_READINESS_CHECKLIST.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Included v0.7 Scope",
+            "## Explicitly Deferred Scope",
+            "## Required Release Gates",
+            "## Required Security Checks",
+            "## Required Smoke Evidence",
+            "## Required Documentation Checks",
+            "## Tag and Release Approval Boundary",
+            "## Failure Handling",
+            "## Final Go/No-Go Checklist",
+        ]:
+            self.assertIn(section, checklist)
+
+        for required_text in [
+            "evidence checklist only",
+            "does not approve a tag",
+            "does not start a service",
+            "CLI generate, verify, review, and report flows",
+            "Upload Wizard browser smoke evidence",
+            "Read-only dashboard copy and troubleshooting panels",
+            "Minimal listener runtime helper metadata",
+            "Listener local smoke evidence",
+            "Four-file AI input candidate output bundle",
+            "actual listener startup",
+            "MCP transport",
+            "MCP protocol handler",
+            "JSON-RPC parser",
+            "Executable tool registration",
+            "Actual tool execution",
+            "Local evidence reader",
+            "Safe file body reader",
+            "Raw preview or raw download",
+            "Replay or active scan",
+            "Automatic ChatGPT handoff",
+            "Dashboard start or stop control",
+            "Upload or import action",
+            "tag or GitHub Release action without explicit approval",
+            "final severity and CVSS remain manual decisions",
+            "release body hygiene",
+            "target commit",
+        ]:
+            self.assertIn(required_text, checklist)
+
+        self.assertEqual(fixture["schema_version"], "v07_rc_readiness_checklist.v1")
+        for true_flag in [
+            "rc_readiness_only",
+            "minimal_listener_runtime_helper_included",
+            "listener_local_smoke_evidence_consumed",
+            "upload_wizard_browser_smoke_consumed",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        for false_flag in [
+            "release_approval_included",
+            "tag_created",
+            "github_release_created",
+            "v06_tag_modified",
+            "v06_release_modified",
+            "v07_tag_created",
+            "v07_release_created",
+            "output_bundle_structure_changed",
+            "actual_listener_startup_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "socket_accept_implemented",
+            "long_running_server_loop_implemented",
+            "transport_implemented",
+            "protocol_handler_implemented",
+            "json_rpc_parser_implemented",
+            "tool_registration_implemented",
+            "tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        self.assertEqual(fixture["safe_files_count"], 4)
+        self.assertEqual(
+            fixture["required_gates"],
+            [
+                "compileall",
+                "unittest",
+                "verify_out",
+                "review_demo",
+                "report_demo",
+                "montoya_gradle_build",
+                "gitleaks_dir",
+                "gitleaks_git",
+                "git_safety_check",
+                "git_diff_check",
+                "git_status_clean",
+                "pr_body_hygiene",
+                "release_body_hygiene_before_release",
+                "tag_target_verification_before_release",
+            ],
+        )
+        self.assertEqual(
+            fixture["required_smoke_evidence"],
+            [
+                "listener_local_smoke_evidence",
+                "upload_wizard_browser_smoke",
+                "safe_file_bundle_four_files",
+                "raw_free_review_report",
+            ],
+        )
+
+        for included in [
+            "cli_generate_verify_review_report",
+            "upload_wizard_browser_smoke_evidence",
+            "read_only_dashboard_copy_and_troubleshooting",
+            "minimal_listener_runtime_helper",
+            "listener_local_smoke_evidence",
+            "four_file_ai_candidate_output_bundle",
+        ]:
+            self.assertIn(included, fixture["included_scope"])
+
+        for deferred in [
+            "actual_listener_startup",
+            "socket_bind_listen_accept",
+            "mcp_transport",
+            "mcp_protocol_handler",
+            "json_rpc_parser",
+            "executable_tool_registration",
+            "actual_tool_execution",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "raw_preview_download",
+            "replay_active_scan",
+            "automatic_chatgpt_handoff",
+            "dashboard_state_changing_control",
+            "upload_import_action",
+            "tag_or_github_release_action_without_explicit_approval",
+        ]:
+            self.assertIn(deferred, fixture["deferred_scope"])
+
+        combined = checklist + "\n" + fixture_text
         for forbidden in [
             "safe-to-share",
             "safe to share",

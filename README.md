@@ -379,6 +379,10 @@ The v0.7 listener local smoke evidence is tracked in
 It records metadata-only smoke evidence for the minimal listener runtime helper
 without starting a listener, adding transport, parsing protocol messages,
 executing tools, reading local evidence, or creating a tag or GitHub Release.
+The v0.7 RC readiness checklist is tracked in
+[`docs/V0.7_RC_READINESS_CHECKLIST.md`](docs/V0.7_RC_READINESS_CHECKLIST.md).
+It ties release-readiness gates and smoke evidence together without approving
+or creating any tag or GitHub Release.
 
 ## Burp Montoya Collector
 
