@@ -387,6 +387,10 @@ The v0.7 release approval packet is tracked in
 [`docs/V0.7_RELEASE_APPROVAL_PACKET.md`](docs/V0.7_RELEASE_APPROVAL_PACKET.md).
 It records release approval inputs only and still does not create a tag or
 GitHub Release.
+The v0.7 final gate execution evidence is tracked in
+[`docs/V0.7_FINAL_GATE_EXECUTION.md`](docs/V0.7_FINAL_GATE_EXECUTION.md).
+It records pre-release gate results and target checks only; it still does not
+create a tag or GitHub Release.
 
 ## Burp Montoya Collector
 

@@ -245,6 +245,10 @@ V07_RELEASE_APPROVAL_PACKET_DOC = ROOT / "docs" / "V0.7_RELEASE_APPROVAL_PACKET.
 V07_RELEASE_APPROVAL_PACKET_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v07_release_approval_packet.json"
 )
+V07_FINAL_GATE_EXECUTION_DOC = ROOT / "docs" / "V0.7_FINAL_GATE_EXECUTION.md"
+V07_FINAL_GATE_EXECUTION_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v07_final_gate_execution.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -6280,6 +6284,201 @@ class RedactionGatewayTests(unittest.TestCase):
         )
 
         combined = approval_packet + "\n" + fixture_text
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v07_final_gate_execution_is_evidence_only_and_raw_free(self) -> None:
+        final_gate = V07_FINAL_GATE_EXECUTION_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V07_FINAL_GATE_EXECUTION_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        approval_packet = V07_RELEASE_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
+        rc_checklist = V07_RC_READINESS_CHECKLIST_DOC.read_text(encoding="utf-8")
+        scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(V07_FINAL_GATE_EXECUTION_DOC.exists())
+        self.assertTrue(V07_FINAL_GATE_EXECUTION_FIXTURE.exists())
+        for linked_text in [readme, approval_packet, rc_checklist, scope_plan]:
+            self.assertIn("V0.7_FINAL_GATE_EXECUTION.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current target candidate",
+            "## Final gate scope",
+            "## Executed gates",
+            "## Tag and release absence checks",
+            "## Release body hygiene checks",
+            "## Runtime and deferred scope checks",
+            "## Go/hold decision input",
+            "## Explicit non-goals",
+            "## Next approval boundary",
+        ]:
+            self.assertIn(section, final_gate)
+
+        for required_text in [
+            "release-readiness evidence document only",
+            "does not create a tag",
+            "does not create a GitHub Release",
+            "2c9829f6c21793e5b980add7bf1ecbeccc759a67",
+            "approval_packet_merge_commit_or_later_explicit_main_head",
+            "Target commit must be rechecked before release",
+            "No local v0.7 tag",
+            "No remote v0.7 tag",
+            "No GitHub Release v0.7",
+            "Existing v0.6 tag remains unchanged",
+            "Existing GitHub Release v0.6 remains unchanged",
+            "Candidate findings only",
+            "Draft risk only",
+            "Manual review required",
+            "Actual listener startup",
+            "MCP transport",
+            "MCP protocol handler",
+            "JSON-RPC parser",
+            "Executable tool registration",
+            "Actual tool execution",
+            "Local evidence reader",
+            "Safe file body reader",
+            "Raw preview or raw download",
+            "Replay or active scan",
+            "Dashboard start or stop control",
+            "Upload or import action",
+            "Automatic ChatGPT handoff",
+            "separate explicit human approval",
+        ]:
+            self.assertIn(required_text, final_gate)
+
+        self.assertEqual(fixture["schema_version"], "v07_final_gate_execution.v1")
+        for true_flag in [
+            "final_gate_execution_only",
+            "target_commit_must_be_rechecked_before_release",
+            "approval_packet_consumed",
+            "rc_readiness_checklist_consumed",
+            "listener_local_smoke_evidence_consumed",
+            "minimal_listener_runtime_helper_included",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        for false_flag in [
+            "release_executed",
+            "tag_created",
+            "github_release_created",
+            "v06_tag_modified",
+            "v06_release_modified",
+            "v07_tag_created",
+            "v07_release_created",
+            "output_bundle_structure_changed",
+            "actual_listener_startup_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "socket_accept_implemented",
+            "long_running_server_loop_implemented",
+            "transport_implemented",
+            "protocol_handler_implemented",
+            "json_rpc_parser_implemented",
+            "tool_registration_implemented",
+            "tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        self.assertEqual(fixture["target_commit_rule"], "approval_packet_merge_commit_or_later_explicit_main_head")
+        self.assertEqual(
+            fixture["pr118_merge_commit"],
+            "2c9829f6c21793e5b980add7bf1ecbeccc759a67",
+        )
+        self.assertEqual(fixture["safe_files_count"], 4)
+        self.assertEqual(
+            fixture["required_final_gates"],
+            [
+                "compileall",
+                "unittest",
+                "verify_out",
+                "review_demo",
+                "report_demo",
+                "montoya_gradle_build",
+                "gitleaks_dir",
+                "gitleaks_git",
+                "git_safety_check",
+                "git_diff_check",
+                "git_status_clean",
+                "release_body_hygiene",
+                "tag_target_verification",
+                "release_target_verification",
+            ],
+        )
+        for expected_result in [
+            "compileall_passed",
+            "unittest_passed",
+            "verify_out_passed",
+            "review_demo_passed",
+            "report_demo_passed",
+            "montoya_gradle_build_passed",
+            "gitleaks_dir_passed",
+            "gitleaks_git_passed",
+            "git_safety_check_passed",
+            "git_diff_check_passed",
+            "git_status_clean_passed",
+            "v07_tag_absent",
+            "v07_release_absent",
+            "v06_tag_unchanged",
+            "v06_release_unchanged",
+        ]:
+            self.assertIn(expected_result, fixture["expected_gate_results"])
+
+        for hygiene_rule in [
+            "no_raw_request_response",
+            "no_target_identifier",
+            "no_cookie_authorization_token_session",
+            "no_hmac_secret",
+            "no_csrf_token",
+            "no_full_local_path",
+            "no_safe_to_share_claim",
+            "no_confirmed_vulnerability_claim",
+            "no_final_cvss_claim",
+            "candidate_findings_only",
+            "draft_risk_only",
+            "manual_review_required",
+            "no_automatic_chatgpt_handoff_claim",
+        ]:
+            self.assertIn(hygiene_rule, fixture["release_body_hygiene_rules"])
+
+        combined = final_gate + "\n" + fixture_text
         for forbidden in [
             "safe-to-share",
             "safe to share",
