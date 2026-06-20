@@ -6627,7 +6627,6 @@ class RedactionGatewayTests(unittest.TestCase):
             "no_safe_to_share_claim",
             "no_confirmed_vulnerability_claim",
             "no_final_cvss_claim",
-            "no_final_cvSS_claim",
             "candidate_findings_only",
             "draft_risk_only",
             "manual_review_required",
