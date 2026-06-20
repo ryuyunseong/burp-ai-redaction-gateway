@@ -249,6 +249,10 @@ V07_FINAL_GATE_EXECUTION_DOC = ROOT / "docs" / "V0.7_FINAL_GATE_EXECUTION.md"
 V07_FINAL_GATE_EXECUTION_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v07_final_gate_execution.json"
 )
+V07_RELEASE_NOTES_DRAFT_DOC = ROOT / "docs" / "V0.7_RELEASE_NOTES_DRAFT.md"
+V07_RELEASE_NOTES_DRAFT_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v07_release_notes_draft.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -6479,6 +6483,158 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn(hygiene_rule, fixture["release_body_hygiene_rules"])
 
         combined = final_gate + "\n" + fixture_text
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v07_release_notes_draft_is_review_only_and_raw_free(self) -> None:
+        notes = V07_RELEASE_NOTES_DRAFT_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V07_RELEASE_NOTES_DRAFT_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        final_gate = V07_FINAL_GATE_EXECUTION_DOC.read_text(encoding="utf-8")
+        approval_packet = V07_RELEASE_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
+        rc_checklist = V07_RC_READINESS_CHECKLIST_DOC.read_text(encoding="utf-8")
+
+        self.assertTrue(V07_RELEASE_NOTES_DRAFT_DOC.exists())
+        self.assertTrue(V07_RELEASE_NOTES_DRAFT_FIXTURE.exists())
+        for linked_text in [readme, final_gate, approval_packet, rc_checklist]:
+            self.assertIn("V0.7_RELEASE_NOTES_DRAFT.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Release title draft",
+            "## Release target rule",
+            "## Summary",
+            "## Included changes",
+            "## Security and privacy boundaries",
+            "## Deferred scope",
+            "## Validation evidence",
+            "## Manual review boundaries",
+            "## Not a release execution",
+            "## Final approval requirements",
+        ]:
+            self.assertIn(section, notes)
+
+        for required_text in [
+            "GitHub Release body draft",
+            "does not create a tag",
+            "does not create a GitHub Release",
+            "`v0.7`",
+            "approval_packet_merge_commit_or_later_explicit_main_head",
+            "target commit must be rechecked before release",
+            "redaction, verification, review, and report generation",
+            "Upload Wizard",
+            "RC readiness checklist",
+            "minimal listener runtime helper",
+            "disabled-first, loopback-only, and metadata-only",
+            "Candidate findings only",
+            "Draft risk only",
+            "Manual review required",
+            "four-file structure",
+            "Actual listener startup",
+            "MCP transport",
+            "MCP protocol handler",
+            "JSON-RPC parser",
+            "Executable tool registration",
+            "Actual tool execution",
+            "Local evidence reader",
+            "Raw preview or raw download",
+            "Replay or active scan",
+            "Automatic ChatGPT handoff",
+            "separate explicit human approval",
+        ]:
+            self.assertIn(required_text, notes)
+
+        self.assertEqual(fixture["schema_version"], "v07_release_notes_draft.v1")
+        for true_flag in [
+            "release_notes_draft_only",
+            "target_commit_must_be_rechecked_before_release",
+            "final_gate_execution_consumed",
+            "release_approval_packet_consumed",
+            "rc_readiness_checklist_consumed",
+            "listener_local_smoke_evidence_consumed",
+            "minimal_listener_runtime_helper_included",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        for false_flag in [
+            "release_executed",
+            "tag_created",
+            "github_release_created",
+            "output_bundle_structure_changed",
+            "actual_listener_startup_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "socket_accept_implemented",
+            "long_running_server_loop_implemented",
+            "transport_implemented",
+            "protocol_handler_implemented",
+            "json_rpc_parser_implemented",
+            "tool_registration_implemented",
+            "tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        self.assertEqual(fixture["proposed_release_version"], "v0.7")
+        self.assertEqual(fixture["release_title_draft"], "v0.7")
+        self.assertEqual(fixture["target_commit_rule"], "approval_packet_merge_commit_or_later_explicit_main_head")
+        self.assertEqual(fixture["safe_files_count"], 4)
+
+        for hygiene_rule in [
+            "no_raw_request_response",
+            "no_target_identifier",
+            "no_cookie_authorization_token_session",
+            "no_hmac_secret",
+            "no_csrf_token",
+            "no_full_local_path",
+            "no_safe_to_share_claim",
+            "no_confirmed_vulnerability_claim",
+            "no_final_cvss_claim",
+            "candidate_findings_only",
+            "draft_risk_only",
+            "manual_review_required",
+            "no_automatic_chatgpt_handoff_claim",
+        ]:
+            self.assertIn(hygiene_rule, fixture["release_body_hygiene_rules"])
+
+        combined = notes + "\n" + fixture_text
         for forbidden in [
             "safe-to-share",
             "safe to share",

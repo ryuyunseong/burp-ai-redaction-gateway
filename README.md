@@ -391,6 +391,10 @@ The v0.7 final gate execution evidence is tracked in
 [`docs/V0.7_FINAL_GATE_EXECUTION.md`](docs/V0.7_FINAL_GATE_EXECUTION.md).
 It records pre-release gate results and target checks only; it still does not
 create a tag or GitHub Release.
+The v0.7 release notes draft is tracked in
+[`docs/V0.7_RELEASE_NOTES_DRAFT.md`](docs/V0.7_RELEASE_NOTES_DRAFT.md).
+It prepares a release body for review only and still does not create a tag or
+GitHub Release.
 
 ## Burp Montoya Collector
 
