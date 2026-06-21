@@ -459,6 +459,11 @@ It recommends v0.8 as a boundary/helper release candidate and keeps listener
 startup, socket behavior, transport, parser, dispatcher, tool runtime, evidence
 reader, raw preview, dashboard action, upload/import, replay, active scan,
 automatic handoff, tag creation, and GitHub Release creation out of scope.
+The v0.8 release approval packet is tracked in
+[`docs/V0.8_RELEASE_APPROVAL_PACKET.md`](docs/V0.8_RELEASE_APPROVAL_PACKET.md).
+It records target commit, baseline PRs, release body hygiene, rollback
+requirements, and explicit approval boundaries without creating a tag or
+GitHub Release.
 
 ## Burp Montoya Collector
 

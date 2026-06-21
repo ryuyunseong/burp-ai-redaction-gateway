@@ -302,6 +302,10 @@ V08_SCOPE_FREEZE_RC_READINESS_DOC = ROOT / "docs" / "V0.8_SCOPE_FREEZE_RC_READIN
 V08_SCOPE_FREEZE_RC_READINESS_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v08_scope_freeze_rc_readiness.json"
 )
+V08_RELEASE_APPROVAL_PACKET_DOC = ROOT / "docs" / "V0.8_RELEASE_APPROVAL_PACKET.md"
+V08_RELEASE_APPROVAL_PACKET_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v08_release_approval_packet.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -3540,6 +3544,233 @@ class RedactionGatewayTests(unittest.TestCase):
             "token=",
             "HMAC secret:",
             "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v08_release_approval_packet_is_approval_only_and_raw_free(self) -> None:
+        approval_packet = V08_RELEASE_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V08_RELEASE_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        scope_freeze = V08_SCOPE_FREEZE_RC_READINESS_DOC.read_text(encoding="utf-8")
+        combined = "\n".join([approval_packet, fixture_text])
+        normalized = " ".join(approval_packet.split())
+        normalized_lower = normalized.lower()
+
+        self.assertTrue(V08_RELEASE_APPROVAL_PACKET_DOC.exists())
+        self.assertTrue(V08_RELEASE_APPROVAL_PACKET_FIXTURE.exists())
+        self.assertIn("V0.8_RELEASE_APPROVAL_PACKET.md", readme)
+        self.assertIn("V0.8_RELEASE_APPROVAL_PACKET.md", scope_freeze)
+
+        for section in [
+            "## Purpose",
+            "## Target commit",
+            "## Baseline PRs",
+            "## Release type",
+            "## Included scope",
+            "## Excluded scope",
+            "## Release blockers",
+            "## Required final gate",
+            "## Proposed release note body",
+            "## Required release body hygiene",
+            "## Required tag checks",
+            "## Required GitHub Release checks",
+            "## Rollback requirements",
+            "## Human approval boundary",
+            "## Deferred work",
+        ]:
+            self.assertIn(section, approval_packet)
+
+        for required_text in [
+            "release approval packet only",
+            "does not create a tag",
+            "does not create a github release",
+            "does not approve release execution by itself",
+            "58c7190e5cde43ca2ae4bddf056360eda649622b",
+            "fcc0dd947ec9c62410cc5715cce7ae623bc32aa8",
+            "bb484ea21d90759125a7224fedaec6a9ee7b75fc",
+            "boundary_helper",
+            "not as a read-only mcp runtime release",
+            "four ai input candidate files",
+            "dashboard read-only and raw-free baseline",
+            "disabled-by-default mcp helper files",
+            "post-merge boundary note",
+            "scope freeze / rc readiness evidence",
+            "listener startup",
+            "socket, bind, listen, or accept behavior",
+            "stdio runtime",
+            "http runtime",
+            "protocol parser",
+            "json-rpc parser",
+            "request dispatcher",
+            "executable tool registration",
+            "tool registry runtime",
+            "actual tool execution",
+            "local evidence reader",
+            "safe file body reader",
+            "raw preview or download",
+            "replay or active scan",
+            "dashboard state-changing control",
+            "upload or import action",
+            "automatic chatgpt handoff",
+            "unit tests fail",
+            "gitleaks directory scan reports a finding",
+            "gitleaks git scan reports a finding",
+            "git safety check fails",
+            "working tree is dirty",
+            "v0.8 tag already exists unexpectedly",
+            "github release v0.8 already exists unexpectedly",
+            "raw marker or credential marker",
+            "output bundle structure changes",
+            "unreviewed runtime surface",
+            "separate explicit human approval",
+            "after a tag or github release exists",
+        ]:
+            self.assertIn(required_text, normalized_lower)
+
+        self.assertEqual(fixture["schema_version"], "v08_release_approval_packet.v1")
+        self.assertIs(fixture["release_approval_packet_only"], True)
+        self.assertEqual(fixture["release_type"], "boundary_helper")
+        self.assertEqual(
+            fixture["target_commit"], "58c7190e5cde43ca2ae4bddf056360eda649622b"
+        )
+        self.assertEqual(
+            fixture["pr130_merge_commit"], "fcc0dd947ec9c62410cc5715cce7ae623bc32aa8"
+        )
+        self.assertEqual(
+            fixture["pr131_merge_commit"], "bb484ea21d90759125a7224fedaec6a9ee7b75fc"
+        )
+        self.assertEqual(
+            fixture["pr132_merge_commit"], "58c7190e5cde43ca2ae4bddf056360eda649622b"
+        )
+        self.assertIs(fixture["tag_created"], False)
+        self.assertIs(fixture["github_release_created"], False)
+        self.assertIs(fixture["explicit_release_approval_required"], True)
+        self.assertIs(fixture["manual_review_required"], True)
+        self.assertIs(fixture["raw_data_included"], False)
+        self.assertIs(fixture["output_bundle_structure_changed"], False)
+        self.assertIs(fixture["read_only_mcp_runtime_release"], False)
+        self.assertEqual(
+            fixture["output_bundle_files"],
+            ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"],
+        )
+
+        for included in [
+            "redaction_verify_review_report_pipeline",
+            "four_ai_input_candidate_files",
+            "dashboard_read_only_raw_free_baseline",
+            "disabled_by_default_mcp_helper_files",
+            "post_merge_boundary_note",
+            "scope_freeze_rc_readiness_evidence",
+        ]:
+            self.assertIn(included, fixture["included_scope"])
+
+        for excluded in [
+            "listener_startup",
+            "socket_bind_listen_accept",
+            "stdio_runtime",
+            "http_runtime",
+            "protocol_parser",
+            "json_rpc_parser",
+            "request_dispatcher",
+            "executable_tool_registration",
+            "tool_registry_runtime",
+            "tool_discovery_runtime",
+            "actual_tool_execution",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "raw_preview_download",
+            "replay_active_scan",
+            "dashboard_state_changing_control",
+            "upload_import_action",
+            "automatic_chatgpt_handoff",
+        ]:
+            self.assertIn(excluded, fixture["excluded_scope"])
+
+        for blocker in [
+            "unittest_failure",
+            "gitleaks_dir_finding",
+            "gitleaks_git_finding",
+            "git_safety_failure",
+            "dirty_working_tree",
+            "unexpected_v08_tag_exists",
+            "unexpected_github_release_v08_exists",
+            "raw_marker_or_credential_marker_in_docs_or_fixtures",
+            "output_bundle_structure_drift",
+            "unreviewed_runtime_surface_present",
+        ]:
+            self.assertIn(blocker, fixture["release_blockers"])
+
+        for final_gate in [
+            "python_compileall",
+            "python_unittest_discover",
+            "gitleaks_dir",
+            "gitleaks_git",
+            "git_safety_check",
+            "git_diff_check",
+            "git_status_clean",
+            "v08_tag_absence_check",
+            "github_release_v08_absence_check",
+            "release_body_hygiene_check",
+            "tag_target_verification",
+            "release_target_verification",
+        ]:
+            self.assertIn(final_gate, fixture["required_final_gate"])
+
+        for release_section in [
+            "summary",
+            "included_boundary_helper_scope",
+            "not_included",
+            "safety_and_privacy_boundaries",
+            "verification_evidence",
+            "manual_review_requirements",
+            "known_limitations",
+            "rollback_notes",
+        ]:
+            self.assertIn(release_section, fixture["proposed_release_note_sections"])
+
+        for rollback_requirement in [
+            "before_tag_revert_approval_packet_pr_and_recheck_main_head",
+            "after_tag_or_release_requires_explicit_rollback_plan",
+            "no_tag_movement_in_this_packet",
+            "no_github_release_mutation_in_this_packet",
+        ]:
+            self.assertIn(rollback_requirement, fixture["rollback_requirements"])
+
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "HMAC secret",
+            "CSRF token",
             "C:\\coding\\",
             "C:\\Users\\",
             "local_only/",
