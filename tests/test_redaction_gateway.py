@@ -253,6 +253,8 @@ V07_RELEASE_NOTES_DRAFT_DOC = ROOT / "docs" / "V0.7_RELEASE_NOTES_DRAFT.md"
 V07_RELEASE_NOTES_DRAFT_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v07_release_notes_draft.json"
 )
+V08_BACKLOG_SPLIT_DOC = ROOT / "docs" / "V0.8_BACKLOG_SPLIT.md"
+V08_BACKLOG_SPLIT_FIXTURE = ROOT / "tests" / "fixtures" / "v08_backlog_split.json"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -6635,6 +6637,176 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn(hygiene_rule, fixture["release_body_hygiene_rules"])
 
         combined = notes + "\n" + fixture_text
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v08_backlog_split_is_planning_only_and_raw_free(self) -> None:
+        doc = V08_BACKLOG_SPLIT_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V08_BACKLOG_SPLIT_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        release_notes = V07_RELEASE_NOTES_DRAFT_DOC.read_text(encoding="utf-8")
+        final_gate = V07_FINAL_GATE_EXECUTION_DOC.read_text(encoding="utf-8")
+        normalized_doc = " ".join(doc.split())
+
+        self.assertTrue(V08_BACKLOG_SPLIT_DOC.exists())
+        self.assertTrue(V08_BACKLOG_SPLIT_FIXTURE.exists())
+        for linked_text in [readme, release_notes, final_gate]:
+            self.assertIn("V0.8_BACKLOG_SPLIT.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current v0.7 baseline",
+            "## v0.8 candidate surfaces",
+            "## Risk ranking",
+            "## Required PR split",
+            "## Explicit non-goals",
+            "## Security review requirements",
+            "## Testing requirements",
+            "## Recommended order",
+            "## Deferred decisions",
+        ]:
+            self.assertIn(section, doc)
+
+        for required_text in [
+            "planning and review-boundary document only",
+            "published v0.7 release",
+            "post-release tag checkout smoke",
+            "local-only operational smoke",
+            "four-file candidate bundle",
+            "MCP transport",
+            "MCP protocol handler and JSON-RPC parser",
+            "Executable tool registration",
+            "Actual tool execution",
+            "Local evidence reader",
+            "Safe file body reader",
+            "Raw preview or raw download",
+            "Dashboard start or stop control",
+            "Upload or import action",
+            "Replay or active scan",
+            "Automatic ChatGPT handoff",
+            "Very high risk",
+            "High risk",
+            "Medium risk",
+            "Transport design",
+            "Protocol handler design",
+            "Tool execution approval packet",
+            "Local evidence reader threat model",
+            "Dashboard state-changing control threat model",
+            "Transport design only",
+            "Protocol handler design only",
+            "Actual implementation stays blocked",
+        ]:
+            self.assertIn(required_text, normalized_doc)
+
+        self.assertEqual(fixture["schema_version"], "v08_backlog_split.v1")
+        for true_flag in [
+            "backlog_split_only",
+            "v07_release_consumed",
+            "v07_operational_smoke_consumed",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        for false_flag in [
+            "implementation_included",
+            "transport_implemented",
+            "protocol_handler_implemented",
+            "json_rpc_parser_implemented",
+            "tool_registration_implemented",
+            "tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        for surface in [
+            "mcp_transport",
+            "mcp_protocol_handler_json_rpc_parser",
+            "executable_tool_registration",
+            "actual_tool_execution",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "raw_preview_download",
+            "dashboard_start_stop_control",
+            "upload_import_action",
+            "replay_active_scan",
+            "automatic_chatgpt_handoff",
+        ]:
+            self.assertIn(surface, fixture["candidate_surfaces"])
+
+        for very_high in [
+            "actual_tool_execution",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "raw_preview_download",
+            "automatic_chatgpt_handoff",
+        ]:
+            self.assertIn(very_high, fixture["very_high_risk_surfaces"])
+
+        for high in [
+            "mcp_transport",
+            "mcp_protocol_handler_json_rpc_parser",
+            "dashboard_start_stop_control",
+            "upload_import_action",
+            "replay_active_scan",
+        ]:
+            self.assertIn(high, fixture["high_risk_surfaces"])
+
+        for split in [
+            "transport_design",
+            "protocol_handler_design",
+            "tool_registration_design",
+            "tool_execution_approval_packet",
+            "local_evidence_reader_threat_model",
+            "raw_preview_download_decision",
+            "dashboard_state_changing_control_threat_model",
+            "upload_import_action_threat_model",
+            "replay_active_scan_decision",
+            "automatic_chatgpt_handoff_decision",
+        ]:
+            self.assertIn(split, fixture["required_pr_splits"])
+
+        self.assertEqual(
+            fixture["recommended_order"][:2],
+            ["transport_design_only", "protocol_handler_design_only"],
+        )
+
+        combined = doc + "\n" + fixture_text
         for forbidden in [
             "safe-to-share",
             "safe to share",

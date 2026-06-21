@@ -395,6 +395,12 @@ The v0.7 release notes draft is tracked in
 [`docs/V0.7_RELEASE_NOTES_DRAFT.md`](docs/V0.7_RELEASE_NOTES_DRAFT.md).
 It prepares a release body for review only and still does not create a tag or
 GitHub Release.
+The v0.8 backlog split is tracked in
+[`docs/V0.8_BACKLOG_SPLIT.md`](docs/V0.8_BACKLOG_SPLIT.md). It separates MCP
+transport, protocol handling, tool registration, tool execution, local evidence
+reading, raw preview/download, dashboard state-changing control, upload/import,
+replay/active scan, and automatic ChatGPT handoff into separate design or
+approval PRs before implementation.
 
 ## Burp Montoya Collector
 

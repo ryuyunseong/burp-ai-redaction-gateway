@@ -1,0 +1,71 @@
+{
+  "schema_version": "v08_backlog_split.v1",
+  "backlog_split_only": true,
+  "implementation_included": false,
+  "v07_release_consumed": true,
+  "v07_operational_smoke_consumed": true,
+  "transport_implemented": false,
+  "protocol_handler_implemented": false,
+  "json_rpc_parser_implemented": false,
+  "tool_registration_implemented": false,
+  "tool_execution_implemented": false,
+  "local_evidence_reader_implemented": false,
+  "safe_file_body_reader_implemented": false,
+  "raw_preview_download_implemented": false,
+  "dashboard_state_changing_control_implemented": false,
+  "upload_import_action_implemented": false,
+  "replay_active_scan_implemented": false,
+  "automatic_chatgpt_handoff_implemented": false,
+  "candidate_surfaces": [
+    "mcp_transport",
+    "mcp_protocol_handler_json_rpc_parser",
+    "executable_tool_registration",
+    "actual_tool_execution",
+    "local_evidence_reader",
+    "safe_file_body_reader",
+    "raw_preview_download",
+    "dashboard_start_stop_control",
+    "upload_import_action",
+    "replay_active_scan",
+    "automatic_chatgpt_handoff"
+  ],
+  "very_high_risk_surfaces": [
+    "actual_tool_execution",
+    "local_evidence_reader",
+    "safe_file_body_reader",
+    "raw_preview_download",
+    "automatic_chatgpt_handoff"
+  ],
+  "high_risk_surfaces": [
+    "mcp_transport",
+    "mcp_protocol_handler_json_rpc_parser",
+    "dashboard_start_stop_control",
+    "upload_import_action",
+    "replay_active_scan"
+  ],
+  "medium_risk_surfaces": [
+    "documentation_ux_polish",
+    "smoke_evidence_expansion"
+  ],
+  "required_pr_splits": [
+    "transport_design",
+    "protocol_handler_design",
+    "tool_registration_design",
+    "tool_execution_approval_packet",
+    "local_evidence_reader_threat_model",
+    "raw_preview_download_decision",
+    "dashboard_state_changing_control_threat_model",
+    "upload_import_action_threat_model",
+    "replay_active_scan_decision",
+    "automatic_chatgpt_handoff_decision"
+  ],
+  "recommended_order": [
+    "transport_design_only",
+    "protocol_handler_design_only",
+    "protocol_negative_test_harness",
+    "transport_protocol_minimal_skeleton_disabled_by_default",
+    "dashboard_ux_docs_polish",
+    "local_evidence_reader_threat_model",
+    "tool_execution_approval_packet"
+  ]
+}
