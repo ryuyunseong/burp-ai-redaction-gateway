@@ -308,6 +308,10 @@ V08_RELEASE_APPROVAL_PACKET_FIXTURE = (
 )
 V08_FINAL_GATE_EVIDENCE_DOC = ROOT / "docs" / "V0.8_FINAL_GATE_EVIDENCE.md"
 V08_FINAL_GATE_EVIDENCE_FIXTURE = ROOT / "tests" / "fixtures" / "v08_final_gate_evidence.json"
+V09_RUNTIME_SCOPE_DECISION_DOC = ROOT / "docs" / "V0.9_RUNTIME_SCOPE_DECISION.md"
+V09_RUNTIME_SCOPE_DECISION_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v09_runtime_scope_decision.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -3991,6 +3995,172 @@ class RedactionGatewayTests(unittest.TestCase):
             "CSRF token:",
             "HMAC secret",
             "CSRF token",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v09_runtime_scope_decision_is_planning_only_and_raw_free(self) -> None:
+        decision = V09_RUNTIME_SCOPE_DECISION_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V09_RUNTIME_SCOPE_DECISION_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        normalized = " ".join(decision.split())
+
+        self.assertTrue(V09_RUNTIME_SCOPE_DECISION_DOC.exists())
+        self.assertTrue(V09_RUNTIME_SCOPE_DECISION_FIXTURE.exists())
+        self.assertIn("V0.9_RUNTIME_SCOPE_DECISION.md", readme)
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Decision Scope",
+            "## Explicit Non-goals",
+            "## v0.9 Candidate Options",
+            "## Recommended First Step",
+            "## Security Risk Summary",
+            "## Test Requirements",
+            "## PR Split Rules",
+            "## Forbidden Scope",
+            "## Required Acceptance Criteria",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, decision)
+
+        for required_text in [
+            "planning-only decision record",
+            "v0.8 tag and GitHub Release are published",
+            "946db3dca6d2fa9988f847648041e4a45fcd2f9d",
+            "v0.8 remains a boundary/helper release",
+            "It is not a read-only MCP runtime release",
+            "Option A: Protocol Parser Approval Packet First",
+            "Option B: Transport And Listener Approval Packet First",
+            "Option C: Read-only Tool Registry Contract First",
+            "Option D: Local Evidence Reader Deferred",
+            "The recommended first v0.9 step is Option A",
+            "listener and transport from protocol parser",
+            "protocol parser from dispatcher",
+            "dispatcher from tool execution",
+            "read-only tool registry contract from actual tool execution",
+            "local evidence reader from all runtime, parser, dispatcher, and registry work",
+            "automatic ChatGPT handoff from every v0.9 runtime path",
+        ]:
+            self.assertIn(required_text, normalized)
+
+        self.assertEqual(fixture["schema_version"], "v09_runtime_scope_decision.v1")
+        self.assertIs(fixture["planning_only"], True)
+        self.assertIs(fixture["implementation_pr"], False)
+        self.assertIs(fixture["v08_release_completed"], True)
+        self.assertEqual(fixture["v08_release_type"], "boundary_helper")
+        self.assertEqual(
+            fixture["v08_release_target_commit"],
+            "946db3dca6d2fa9988f847648041e4a45fcd2f9d",
+        )
+        self.assertEqual(
+            fixture["recommended_first_step"], "protocol_parser_approval_packet_first"
+        )
+        self.assertIs(fixture["metadata_only_decision"], True)
+        self.assertIs(fixture["raw_data_included"], False)
+        self.assertIs(fixture["manual_review_required"], True)
+        self.assertIs(fixture["source_check_required_before_runtime"], True)
+        self.assertIs(fixture["negative_tests_required_before_runtime"], True)
+        self.assertIs(fixture["output_bundle_structure_changed"], False)
+        self.assertEqual(
+            fixture["output_bundle_files"],
+            ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"],
+        )
+
+        for false_flag in [
+            "runtime_implemented",
+            "listener_startup_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "socket_accept_implemented",
+            "transport_implemented",
+            "protocol_parser_implemented",
+            "json_rpc_parser_implemented",
+            "dispatcher_implemented",
+            "tool_registry_runtime_implemented",
+            "tool_discovery_runtime_implemented",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "dashboard_state_changing_action_implemented",
+            "upload_import_action_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "tag_github_release_modified",
+        ]:
+            self.assertIn(false_flag, fixture)
+            self.assertIs(fixture[false_flag], False)
+
+        self.assertEqual(
+            {option["id"] for option in fixture["candidate_options"]},
+            {"option_a", "option_b", "option_c", "option_d"},
+        )
+        recommended_options = {
+            option["name"] for option in fixture["candidate_options"] if option["recommended"]
+        }
+        self.assertIn("protocol_parser_approval_packet_first", recommended_options)
+        self.assertIn("local_evidence_reader_deferred", recommended_options)
+
+        for split_rule in [
+            "listener_transport_split_from_protocol_parser",
+            "protocol_parser_split_from_dispatcher",
+            "dispatcher_split_from_tool_execution",
+            "tool_registry_contract_split_from_actual_tool_execution",
+            "local_evidence_reader_deferred_until_threat_boundary",
+            "raw_preview_download_requires_separate_approval",
+            "automatic_chatgpt_handoff_requires_separate_approval",
+        ]:
+            self.assertIn(split_rule, fixture["required_split_rules"])
+
+        for negative_test in [
+            "planning_only_flag_check",
+            "runtime_implementation_flag_false_check",
+            "listener_startup_marker_check",
+            "protocol_parser_marker_check",
+            "dispatcher_marker_check",
+            "tool_execution_marker_check",
+            "local_evidence_reader_marker_check",
+            "four_file_output_bundle_check",
+            "raw_free_hygiene_check",
+        ]:
+            self.assertIn(negative_test, fixture["required_negative_tests"])
+
+        combined = decision + "\n" + fixture_text
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
             "C:\\coding\\",
             "C:\\Users\\",
             "local_only/",

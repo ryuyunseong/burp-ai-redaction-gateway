@@ -469,6 +469,12 @@ The v0.8 final gate evidence is tracked in
 It records the post-approval-packet target commit, gate results, release body
 hygiene requirements, and tag/release absence without creating a tag or GitHub
 Release.
+The v0.9 runtime scope decision is tracked in
+[`docs/V0.9_RUNTIME_SCOPE_DECISION.md`](docs/V0.9_RUNTIME_SCOPE_DECISION.md).
+It starts the post-v0.8 planning path by comparing protocol parser,
+transport/listener, read-only tool registry, and local evidence reader options
+without implementing runtime startup, parser behavior, dispatch, tool
+execution, local evidence reading, raw preview, or automatic handoff.
 
 ## Burp Montoya Collector
 
