@@ -269,6 +269,10 @@ V08_TOOL_REGISTRATION_DESIGN_DOC = ROOT / "docs" / "V0.8_TOOL_REGISTRATION_DESIG
 V08_TOOL_REGISTRATION_DESIGN_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v08_tool_registration_design.json"
 )
+V08_READ_ONLY_TOOL_CONTRACT_DOC = ROOT / "docs" / "V0.8_READ_ONLY_TOOL_CONTRACT.md"
+V08_READ_ONLY_TOOL_CONTRACT_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v08_read_only_tool_contract.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -7630,6 +7634,229 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertEqual(
             fixture["recommended_next_order"][:2],
             ["read_only_tool_contract_v08", "transport_protocol_minimal_skeleton_planning"],
+        )
+
+        combined = doc + "\n" + fixture_text
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v08_read_only_tool_contract_is_planning_only_and_raw_free(self) -> None:
+        doc = V08_READ_ONLY_TOOL_CONTRACT_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V08_READ_ONLY_TOOL_CONTRACT_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        backlog = V08_BACKLOG_SPLIT_DOC.read_text(encoding="utf-8")
+        registration = V08_TOOL_REGISTRATION_DESIGN_DOC.read_text(encoding="utf-8")
+        normalized_doc = " ".join(doc.split())
+        normalized_doc_lower = normalized_doc.lower()
+
+        self.assertTrue(V08_READ_ONLY_TOOL_CONTRACT_DOC.exists())
+        self.assertTrue(V08_READ_ONLY_TOOL_CONTRACT_FIXTURE.exists())
+        for linked_text in [readme, backlog, registration]:
+            self.assertIn("V0.8_READ_ONLY_TOOL_CONTRACT.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current v0.8 baseline",
+            "## Read-only tool contract scope",
+            "## Explicit non-goals",
+            "## Allowed future read-only metadata tools",
+            "## Forbidden tool surfaces",
+            "## Raw-free response contract",
+            "## Candidate-only finding contract",
+            "## Required negative tests",
+            "## Source-check requirements",
+            "## Security review requirements",
+            "## Rollback expectations",
+            "## Deferred decisions",
+        ]:
+            self.assertIn(section, doc)
+
+        for required_text in [
+            "planning and review-boundary document",
+            "v0.8 backlog split",
+            "v0.8 transport design",
+            "v0.8 protocol handler design",
+            "v0.8 protocol negative test harness",
+            "v0.8 tool registration design",
+            "metadata-only future read-only tool candidates",
+            "gateway_status",
+            "verified_output_aliases",
+            "safe_file_inventory",
+            "prompt_readiness",
+            "report_readiness",
+            "triage_summary_metadata",
+            "workflow_status",
+            "troubleshooting_categories",
+            "release_readiness_metadata",
+            "raw_exchange_lookup",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "arbitrary_file_reader",
+            "replay_request",
+            "active_scan",
+            "external_handoff",
+            "automatic_chatgpt_handoff",
+            "dashboard_start_stop_control",
+            "upload_import_action",
+            "tag_or_release_action",
+            "no raw request or response",
+            "no credential value",
+            "no session value",
+            "no token value",
+            "no full local path",
+            "no actual target identifier",
+            "no file body",
+            "candidate findings only",
+            "risk draft only",
+            "final severity is manual",
+            "final scoring is manual",
+        ]:
+            self.assertIn(required_text.lower(), normalized_doc_lower)
+
+        self.assertEqual(fixture["schema_version"], "v08_read_only_tool_contract.v1")
+        for true_flag in [
+            "read_only_tool_contract_only",
+            "v08_backlog_split_consumed",
+            "v08_transport_design_consumed",
+            "v08_protocol_handler_design_consumed",
+            "v08_protocol_negative_harness_consumed",
+            "v08_tool_registration_design_consumed",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        for false_flag in [
+            "implementation_included",
+            "tool_implementation_included",
+            "tool_registration_runtime_implemented",
+            "tool_discovery_runtime_implemented",
+            "tool_execution_implemented",
+            "request_dispatcher_implemented",
+            "protocol_handler_implemented",
+            "json_rpc_parser_implemented",
+            "transport_runtime_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+            "raw_data_included",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        for candidate in [
+            "gateway_status",
+            "verified_output_aliases",
+            "safe_file_inventory",
+            "prompt_readiness",
+            "report_readiness",
+        ]:
+            self.assertIn(candidate, fixture["allowed_metadata_tool_candidates"])
+
+        for surface in [
+            "raw_exchange_lookup",
+            "raw_request_response_reader",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "arbitrary_file_reader",
+            "replay_request",
+            "active_scan",
+            "external_handoff",
+            "automatic_chatgpt_handoff",
+            "dashboard_start_stop_control",
+            "upload_import_action",
+            "tag_or_release_action",
+        ]:
+            self.assertIn(surface, fixture["forbidden_tool_surfaces"])
+
+        for contract in [
+            "no_raw_request_response",
+            "no_credential_value",
+            "no_session_value",
+            "no_token_value",
+            "no_hmac_secret",
+            "no_csrf_token_value",
+            "no_full_local_path",
+            "no_actual_target_identifier",
+            "no_stack_trace",
+            "no_file_body",
+            "no_external_handoff",
+            "candidate_findings_only",
+            "risk_draft_only",
+            "final_severity_manual",
+            "final_cvss_manual",
+        ]:
+            self.assertIn(contract, fixture["raw_free_response_contract"])
+
+        for negative in [
+            "raw_exchange_lookup_tool_marker_check",
+            "local_evidence_reader_tool_marker_check",
+            "safe_file_body_reader_tool_marker_check",
+            "arbitrary_file_reader_tool_marker_check",
+            "file_write_delete_edit_tool_marker_check",
+            "replay_active_scan_tool_marker_check",
+            "external_handoff_tool_marker_check",
+            "automatic_chatgpt_handoff_marker_check",
+            "dashboard_state_changing_tool_marker_check",
+            "upload_import_tool_marker_check",
+            "tag_release_action_marker_check",
+        ]:
+            self.assertIn(negative, fixture["required_negative_tests"])
+
+        for requirement in [
+            "declare_tool_facing_files_before_implementation",
+            "block_raw_exchange_lookup_tool_markers",
+            "block_local_evidence_reader_tool_markers",
+            "block_safe_file_body_reader_tool_markers",
+            "block_arbitrary_file_reader_tool_markers",
+            "block_file_write_delete_edit_tool_markers",
+            "block_replay_active_scan_tool_markers",
+            "block_external_handoff_tool_markers",
+            "block_automatic_chatgpt_handoff_markers",
+            "block_dashboard_state_changing_tool_markers",
+            "block_upload_import_tool_markers",
+            "block_tag_release_action_markers",
+            "block_request_dispatcher_markers",
+            "block_executable_tool_registration_markers",
+            "block_actual_tool_execution_markers",
+        ]:
+            self.assertIn(requirement, fixture["source_check_requirements"])
+
+        self.assertEqual(
+            fixture["recommended_next_order"][:2],
+            ["transport_protocol_minimal_skeleton_planning", "disabled_by_default_skeleton_approval_packet"],
         )
 
         combined = doc + "\n" + fixture_text

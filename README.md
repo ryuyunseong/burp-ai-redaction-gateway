@@ -424,6 +424,12 @@ It separates registration metadata from actual tool execution and keeps tool
 registry runtime, discovery runtime, dispatcher, local evidence reader, raw
 preview, replay, active scan, dashboard state-changing control, upload/import,
 and automatic handoff behavior out of scope.
+The v0.8 read-only tool contract is tracked in
+[`docs/V0.8_READ_ONLY_TOOL_CONTRACT.md`](docs/V0.8_READ_ONLY_TOOL_CONTRACT.md).
+It defines metadata-only future tool candidates and forbidden tool surfaces
+without implementing tool registration runtime, discovery runtime, dispatcher,
+tool execution, local evidence reader, safe file body reader, raw preview,
+replay, active scan, dashboard action, upload/import, or automatic handoff.
 
 ## Burp Montoya Collector
 
