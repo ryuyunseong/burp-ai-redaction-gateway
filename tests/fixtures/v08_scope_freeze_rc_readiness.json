@@ -1,0 +1,83 @@
+{
+  "schema_version": "v08_scope_freeze_rc_readiness.v1",
+  "scope_freeze_recommended": true,
+  "recommended_release_type": "boundary_helper",
+  "pr130_merge_commit": "fcc0dd947ec9c62410cc5715cce7ae623bc32aa8",
+  "pr131_merge_commit": "bb484ea21d90759125a7224fedaec6a9ee7b75fc",
+  "tag_github_release_modified": false,
+  "release_created": false,
+  "included_scope": [
+    "redaction_verify_review_report_pipeline",
+    "four_ai_input_candidate_files",
+    "dashboard_read_only_raw_free_baseline",
+    "disabled_by_default_mcp_helper_files",
+    "post_merge_boundary_note",
+    "source_check_fixture_guard_evidence",
+    "release_readiness_evidence"
+  ],
+  "excluded_scope": [
+    "listener_startup",
+    "socket_bind_listen_accept",
+    "stdio_runtime",
+    "http_runtime",
+    "protocol_parser",
+    "json_rpc_parser",
+    "request_dispatcher",
+    "executable_tool_registration",
+    "tool_registry_runtime",
+    "tool_discovery_runtime",
+    "actual_tool_execution",
+    "local_evidence_reader",
+    "safe_file_body_reader",
+    "raw_preview_download",
+    "replay_active_scan",
+    "dashboard_state_changing_control",
+    "upload_import_action",
+    "automatic_chatgpt_handoff",
+    "v08_tag_creation",
+    "github_release_creation"
+  ],
+  "release_blockers": [
+    "unittest_failure",
+    "gitleaks_dir_finding",
+    "gitleaks_git_finding",
+    "git_safety_failure",
+    "raw_marker_or_credential_marker_in_docs_or_fixtures",
+    "unexpected_v08_tag_exists",
+    "unexpected_github_release_v08_exists",
+    "unreviewed_runtime_surface_present",
+    "output_bundle_structure_changed",
+    "tag_or_release_mutation_before_explicit_approval"
+  ],
+  "required_final_gate": [
+    "python_compileall",
+    "python_unittest_discover",
+    "gitleaks_dir",
+    "gitleaks_git",
+    "git_safety_check",
+    "git_diff_check",
+    "git_status_clean",
+    "v08_tag_absence_check",
+    "github_release_v08_absence_check"
+  ],
+  "deferred_work": [
+    "protocol_parser_approval_packet",
+    "protocol_negative_harness",
+    "transport_approval_packet",
+    "dispatcher_approval_packet",
+    "read_only_tool_registry_contract_follow_up",
+    "local_evidence_reader_approval_packet",
+    "dashboard_state_changing_action_approval_packet",
+    "upload_import_action_approval_packet",
+    "automatic_chatgpt_handoff_decision"
+  ],
+  "output_bundle_files": [
+    "analysis_packet.json",
+    "chatgpt_prompt.md",
+    "codex_task_prompt.md",
+    "report_draft.md"
+  ],
+  "manual_review_required": true,
+  "raw_data_included": false,
+  "output_bundle_structure_changed": false
+}

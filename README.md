@@ -453,6 +453,12 @@ It records the PR #130 helper-only merge baseline and keeps listener startup,
 transport, protocol parsing, request dispatch, tool execution, local evidence
 reading, raw preview, dashboard action, upload/import, replay, active scan,
 automatic handoff, tag changes, and GitHub Release changes out of scope.
+The v0.8 scope freeze and RC readiness boundary is tracked in
+[`docs/V0.8_SCOPE_FREEZE_RC_READINESS.md`](docs/V0.8_SCOPE_FREEZE_RC_READINESS.md).
+It recommends v0.8 as a boundary/helper release candidate and keeps listener
+startup, socket behavior, transport, parser, dispatcher, tool runtime, evidence
+reader, raw preview, dashboard action, upload/import, replay, active scan,
+automatic handoff, tag creation, and GitHub Release creation out of scope.
 
 ## Burp Montoya Collector
 
