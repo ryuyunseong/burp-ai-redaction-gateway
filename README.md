@@ -430,6 +430,12 @@ It defines metadata-only future tool candidates and forbidden tool surfaces
 without implementing tool registration runtime, discovery runtime, dispatcher,
 tool execution, local evidence reader, safe file body reader, raw preview,
 replay, active scan, dashboard action, upload/import, or automatic handoff.
+The v0.8 minimal skeleton planning boundary is tracked in
+[`docs/V0.8_MINIMAL_SKELETON_PLANNING.md`](docs/V0.8_MINIMAL_SKELETON_PLANNING.md).
+It fixes disabled-by-default, contract-consumption, source-check, and rollback
+requirements before any socket, stdio, HTTP, protocol parser, dispatcher, tool
+runtime, local evidence reader, raw preview, dashboard action, upload/import,
+replay, active scan, or automatic handoff behavior is implemented.
 
 ## Burp Montoya Collector
 

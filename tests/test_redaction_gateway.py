@@ -273,6 +273,10 @@ V08_READ_ONLY_TOOL_CONTRACT_DOC = ROOT / "docs" / "V0.8_READ_ONLY_TOOL_CONTRACT.
 V08_READ_ONLY_TOOL_CONTRACT_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v08_read_only_tool_contract.json"
 )
+V08_MINIMAL_SKELETON_PLANNING_DOC = ROOT / "docs" / "V0.8_MINIMAL_SKELETON_PLANNING.md"
+V08_MINIMAL_SKELETON_PLANNING_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v08_minimal_skeleton_planning.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -7858,6 +7862,239 @@ class RedactionGatewayTests(unittest.TestCase):
             fixture["recommended_next_order"][:2],
             ["transport_protocol_minimal_skeleton_planning", "disabled_by_default_skeleton_approval_packet"],
         )
+
+    def test_v08_minimal_skeleton_planning_is_planning_only_and_raw_free(self) -> None:
+        doc = V08_MINIMAL_SKELETON_PLANNING_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V08_MINIMAL_SKELETON_PLANNING_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        backlog = V08_BACKLOG_SPLIT_DOC.read_text(encoding="utf-8")
+        contract = V08_READ_ONLY_TOOL_CONTRACT_DOC.read_text(encoding="utf-8")
+        normalized_doc = " ".join(doc.split())
+        normalized_doc_lower = normalized_doc.lower()
+
+        self.assertTrue(V08_MINIMAL_SKELETON_PLANNING_DOC.exists())
+        self.assertTrue(V08_MINIMAL_SKELETON_PLANNING_FIXTURE.exists())
+        for linked_text in [readme, backlog, contract]:
+            self.assertIn("V0.8_MINIMAL_SKELETON_PLANNING.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current v0.8 baseline",
+            "## Minimal skeleton planning scope",
+            "## Explicit non-goals",
+            "## Disabled-by-default requirements",
+            "## Transport/protocol separation",
+            "## Contract consumption requirements",
+            "## Forbidden runtime behaviors",
+            "## Required negative tests",
+            "## Source-check requirements",
+            "## Security review requirements",
+            "## Rollback expectations",
+            "## Deferred decisions",
+        ]:
+            self.assertIn(section, doc)
+
+        for required_text in [
+            "planning and review-boundary document",
+            "v0.8 backlog split",
+            "v0.8 transport design",
+            "v0.8 protocol handler design",
+            "v0.8 protocol negative test harness",
+            "v0.8 tool registration design",
+            "v0.8 read-only tool contract",
+            "disabled by default",
+            "loopback-only if any runtime is later approved",
+            "does not parse protocol messages",
+            "does not dispatch tools",
+            "does not read local evidence",
+            "does not return file bodies",
+            "raw-free blocked or disabled responses",
+            "manual review",
+            "four-file safe candidate boundary",
+            "socket bind, listen, or accept",
+            "stdio runtime",
+            "http runtime",
+            "protocol parser",
+            "json-rpc parser",
+            "request dispatcher",
+            "executable tool registration",
+            "actual tool execution",
+            "local evidence reader",
+            "safe file body reader",
+            "raw preview",
+            "replay or active scan",
+            "automatic chatgpt handoff",
+            "dashboard state-changing control",
+            "upload or import action",
+        ]:
+            self.assertIn(required_text.lower(), normalized_doc_lower)
+
+        self.assertEqual(fixture["schema_version"], "v08_minimal_skeleton_planning.v1")
+        for true_flag in [
+            "minimal_skeleton_planning_only",
+            "v08_backlog_split_consumed",
+            "v08_transport_design_consumed",
+            "v08_protocol_handler_design_consumed",
+            "v08_protocol_negative_harness_consumed",
+            "v08_tool_registration_design_consumed",
+            "v08_read_only_tool_contract_consumed",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        for false_flag in [
+            "implementation_included",
+            "skeleton_runtime_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "socket_accept_implemented",
+            "stdio_transport_runtime_implemented",
+            "http_transport_runtime_implemented",
+            "protocol_parser_implemented",
+            "json_rpc_parser_implemented",
+            "request_dispatcher_implemented",
+            "tool_registration_runtime_implemented",
+            "tool_discovery_runtime_implemented",
+            "tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+            "tag_github_release_modified",
+            "output_bundle_structure_changed",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        for requirement in [
+            "disabled_by_default",
+            "loopback_only_if_approved",
+            "no_protocol_parser_same_pr",
+            "no_request_dispatcher",
+            "no_tool_dispatch",
+            "no_local_evidence_reader",
+            "no_file_body_response",
+            "raw_free_blocked_or_disabled_response",
+            "manual_review_required",
+            "preserve_four_file_safe_candidate_boundary",
+        ]:
+            self.assertIn(requirement, fixture["disabled_by_default_requirements"])
+
+        for consumed in [
+            "v08_backlog_split",
+            "v08_transport_design",
+            "v08_protocol_handler_design",
+            "v08_protocol_negative_harness",
+            "v08_tool_registration_design",
+            "v08_read_only_tool_contract",
+        ]:
+            self.assertIn(consumed, fixture["contract_consumption_requirements"])
+
+        for behavior in [
+            "skeleton_runtime_startup",
+            "socket_bind_listen_accept",
+            "stdio_runtime",
+            "http_runtime",
+            "protocol_parser",
+            "json_rpc_parser",
+            "request_dispatcher",
+            "executable_tool_registration",
+            "tool_registry_runtime",
+            "tool_discovery_runtime",
+            "actual_tool_execution",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "raw_preview_download",
+            "replay_active_scan",
+            "automatic_chatgpt_handoff",
+            "dashboard_state_changing_control",
+            "upload_import_action",
+        ]:
+            self.assertIn(behavior, fixture["forbidden_runtime_behaviors"])
+
+        for negative in [
+            "skeleton_runtime_marker_check",
+            "socket_bind_listen_accept_marker_check",
+            "stdio_http_runtime_marker_check",
+            "protocol_parser_marker_check",
+            "json_rpc_parser_marker_check",
+            "request_dispatcher_marker_check",
+            "tool_registration_runtime_marker_check",
+            "tool_execution_marker_check",
+            "local_evidence_reader_marker_check",
+            "safe_file_body_reader_marker_check",
+            "raw_preview_download_marker_check",
+            "replay_active_scan_marker_check",
+            "automatic_handoff_marker_check",
+            "dashboard_state_changing_marker_check",
+            "upload_import_marker_check",
+        ]:
+            self.assertIn(negative, fixture["required_negative_tests"])
+
+        for requirement in [
+            "declare_runtime_facing_files_before_implementation",
+            "block_skeleton_runtime_markers",
+            "block_socket_bind_listen_accept_markers",
+            "block_stdio_http_runtime_markers",
+            "block_protocol_parser_markers",
+            "block_json_rpc_parser_markers",
+            "block_request_dispatcher_markers",
+            "block_executable_tool_registration_markers",
+            "block_actual_tool_execution_markers",
+            "block_local_evidence_reader_markers",
+            "block_safe_file_body_reader_markers",
+            "block_raw_preview_download_markers",
+            "block_replay_active_scan_markers",
+            "block_automatic_handoff_markers",
+            "block_dashboard_state_changing_markers",
+            "block_upload_import_markers",
+            "block_tag_release_action_markers",
+        ]:
+            self.assertIn(requirement, fixture["source_check_requirements"])
+
+        self.assertEqual(
+            fixture["recommended_next_order"][:2],
+            ["disabled_by_default_skeleton_approval_packet", "runtime_facing_source_check_consumption_guard"],
+        )
+
+        combined = "\n".join([doc, fixture_text])
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
         combined = doc + "\n" + fixture_text
         for forbidden in [
