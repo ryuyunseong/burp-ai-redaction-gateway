@@ -418,6 +418,12 @@ It fixes malformed input categories, echo-forbidden value classes, forbidden
 source marker categories, and blocked-response requirements without
 implementing a protocol parser, request dispatcher, tool registration, tool
 execution, local evidence reader, raw preview, or automatic handoff.
+The v0.8 tool registration design-only boundary is tracked in
+[`docs/V0.8_TOOL_REGISTRATION_DESIGN.md`](docs/V0.8_TOOL_REGISTRATION_DESIGN.md).
+It separates registration metadata from actual tool execution and keeps tool
+registry runtime, discovery runtime, dispatcher, local evidence reader, raw
+preview, replay, active scan, dashboard state-changing control, upload/import,
+and automatic handoff behavior out of scope.
 
 ## Burp Montoya Collector
 
