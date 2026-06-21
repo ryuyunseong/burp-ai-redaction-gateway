@@ -306,6 +306,8 @@ V08_RELEASE_APPROVAL_PACKET_DOC = ROOT / "docs" / "V0.8_RELEASE_APPROVAL_PACKET.
 V08_RELEASE_APPROVAL_PACKET_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v08_release_approval_packet.json"
 )
+V08_FINAL_GATE_EVIDENCE_DOC = ROOT / "docs" / "V0.8_FINAL_GATE_EVIDENCE.md"
+V08_FINAL_GATE_EVIDENCE_FIXTURE = ROOT / "tests" / "fixtures" / "v08_final_gate_evidence.json"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -3746,6 +3748,224 @@ class RedactionGatewayTests(unittest.TestCase):
         ]:
             self.assertIn(rollback_requirement, fixture["rollback_requirements"])
 
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "HMAC secret",
+            "CSRF token",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v08_final_gate_evidence_is_evidence_only_and_raw_free(self) -> None:
+        final_gate = V08_FINAL_GATE_EVIDENCE_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V08_FINAL_GATE_EVIDENCE_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        approval_packet = V08_RELEASE_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
+        normalized = " ".join(final_gate.split())
+        normalized_lower = normalized.lower()
+
+        self.assertTrue(V08_FINAL_GATE_EVIDENCE_DOC.exists())
+        self.assertTrue(V08_FINAL_GATE_EVIDENCE_FIXTURE.exists())
+        self.assertIn("V0.8_FINAL_GATE_EVIDENCE.md", readme)
+        self.assertIn("V0.8_FINAL_GATE_EVIDENCE.md", approval_packet)
+
+        for section in [
+            "## Purpose",
+            "## Final Gate Target Commit",
+            "## Approval Packet Target Drift Note",
+            "## Baseline PRs",
+            "## Release Type",
+            "## Included Scope",
+            "## Excluded Scope",
+            "## Final Gate Results",
+            "## Final Gate Commands",
+            "## Release Body Hygiene Requirements",
+            "## Rollback Requirements",
+            "## Human Approval Boundary",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, final_gate)
+
+        for required_text in [
+            "final gate evidence only",
+            "does not create a tag",
+            "does not create a GitHub Release",
+            "boundary_helper",
+            "not a read-only MCP runtime release",
+            "c5ff5c396d7e84a25d94d9ef12aeb85a03ac6b06",
+            "58c7190e5cde43ca2ae4bddf056360eda649622b",
+            "fcc0dd947ec9c62410cc5715cce7ae623bc32aa8",
+            "bb484ea21d90759125a7224fedaec6a9ee7b75fc",
+            "main HEAD before PR #133 was merged",
+            "Python compile check: passed",
+            "Python unit test discovery: passed",
+            "gitleaks directory scan: passed",
+            "gitleaks git scan: passed",
+            "git safety check: passed",
+            "diff whitespace check: passed",
+            "working tree check: clean",
+            "v0.8 tag check: absent",
+            "GitHub Release v0.8 check: absent",
+            "listener startup",
+            "socket, bind, listen, or accept behavior",
+            "stdio runtime",
+            "HTTP runtime",
+            "protocol parser",
+            "JSON-RPC parser",
+            "request dispatcher",
+            "executable tool registration",
+            "tool registry runtime",
+            "actual tool execution",
+            "local evidence reader",
+            "safe file body reader",
+            "raw preview or download",
+            "replay or active scan",
+            "dashboard state-changing control",
+            "upload or import action",
+            "automatic ChatGPT handoff",
+            "separate explicit human approval",
+        ]:
+            self.assertIn(required_text, normalized)
+
+        self.assertEqual(fixture["schema_version"], "v08_final_gate_evidence.v1")
+        self.assertIs(fixture["final_gate_evidence_only"], True)
+        self.assertEqual(fixture["release_type"], "boundary_helper")
+        self.assertEqual(
+            fixture["final_gate_target_commit"], "c5ff5c396d7e84a25d94d9ef12aeb85a03ac6b06"
+        )
+        self.assertEqual(
+            fixture["approval_packet_target_commit"],
+            "58c7190e5cde43ca2ae4bddf056360eda649622b",
+        )
+        self.assertEqual(
+            fixture["pr130_merge_commit"], "fcc0dd947ec9c62410cc5715cce7ae623bc32aa8"
+        )
+        self.assertEqual(
+            fixture["pr131_merge_commit"], "bb484ea21d90759125a7224fedaec6a9ee7b75fc"
+        )
+        self.assertEqual(
+            fixture["pr132_merge_commit"], "58c7190e5cde43ca2ae4bddf056360eda649622b"
+        )
+        self.assertEqual(
+            fixture["pr133_merge_commit"], "c5ff5c396d7e84a25d94d9ef12aeb85a03ac6b06"
+        )
+        self.assertIs(fixture["tag_created"], False)
+        self.assertIs(fixture["github_release_created"], False)
+        self.assertIs(fixture["explicit_release_approval_required"], True)
+        self.assertIs(fixture["read_only_mcp_runtime_release"], False)
+        self.assertIs(fixture["manual_review_required"], True)
+        self.assertIs(fixture["raw_data_included"], False)
+        self.assertIs(fixture["output_bundle_structure_changed"], False)
+        self.assertEqual(
+            fixture["output_bundle_files"],
+            ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"],
+        )
+
+        for included in [
+            "redaction_verify_review_report_pipeline",
+            "four_ai_input_candidate_files",
+            "dashboard_read_only_raw_free_baseline",
+            "disabled_by_default_mcp_helper_files",
+            "post_merge_boundary_note",
+            "scope_freeze_rc_readiness_evidence",
+            "release_approval_packet",
+        ]:
+            self.assertIn(included, fixture["included_scope"])
+
+        for excluded in [
+            "listener_startup",
+            "socket_bind_listen_accept",
+            "stdio_runtime",
+            "http_runtime",
+            "protocol_parser",
+            "json_rpc_parser",
+            "request_dispatcher",
+            "executable_tool_registration",
+            "tool_registry_runtime",
+            "tool_discovery_runtime",
+            "actual_tool_execution",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "raw_preview_download",
+            "replay_active_scan",
+            "dashboard_state_changing_control",
+            "upload_import_action",
+            "automatic_chatgpt_handoff",
+        ]:
+            self.assertIn(excluded, fixture["excluded_scope"])
+
+        for gate in [
+            "python_compileall",
+            "python_unittest_discover",
+            "gitleaks_dir",
+            "gitleaks_git",
+            "git_safety_check",
+            "git_diff_check",
+            "git_status_clean",
+            "v08_tag_absence_check",
+            "github_release_v08_absence_check",
+        ]:
+            self.assertIn(gate, fixture["final_gate_commands"])
+            self.assertIn(gate, fixture["final_gate_results"])
+
+        for hygiene in [
+            "state_boundary_helper_release",
+            "state_not_read_only_mcp_runtime_release",
+            "no_raw_request_response_content",
+            "no_actual_target_identifiers",
+            "no_credential_values",
+            "no_hmac_key_material",
+            "no_csrf_credential_value",
+            "no_full_local_paths",
+            "no_safety_guarantee_claim",
+            "no_verified_finding_claim",
+            "no_fixed_scoring_claim",
+            "candidate_findings_only",
+            "draft_risk_only",
+            "manual_review_required",
+            "no_automatic_chatgpt_handoff_claim",
+        ]:
+            self.assertIn(hygiene, fixture["release_body_hygiene_requirements"])
+
+        for rollback_requirement in [
+            "before_tag_revert_final_gate_evidence_pr_and_recheck_main_head",
+            "after_tag_or_release_requires_explicit_rollback_plan",
+            "no_tag_movement_in_this_evidence",
+            "no_github_release_mutation_in_this_evidence",
+        ]:
+            self.assertIn(rollback_requirement, fixture["rollback_requirements"])
+
+        combined = final_gate + "\n" + fixture_text
         for forbidden in [
             "\ufeff",
             "\ufffd",

@@ -464,6 +464,11 @@ The v0.8 release approval packet is tracked in
 It records target commit, baseline PRs, release body hygiene, rollback
 requirements, and explicit approval boundaries without creating a tag or
 GitHub Release.
+The v0.8 final gate evidence is tracked in
+[`docs/V0.8_FINAL_GATE_EVIDENCE.md`](docs/V0.8_FINAL_GATE_EVIDENCE.md).
+It records the post-approval-packet target commit, gate results, release body
+hygiene requirements, and tag/release absence without creating a tag or GitHub
+Release.
 
 ## Burp Montoya Collector
 
