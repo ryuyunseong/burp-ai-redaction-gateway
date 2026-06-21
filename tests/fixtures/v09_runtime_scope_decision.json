@@ -1,0 +1,112 @@
+{
+  "schema_version": "v09_runtime_scope_decision.v1",
+  "planning_only": true,
+  "implementation_pr": false,
+  "v08_release_completed": true,
+  "v08_release_type": "boundary_helper",
+  "v08_release_target_commit": "946db3dca6d2fa9988f847648041e4a45fcd2f9d",
+  "recommended_first_step": "protocol_parser_approval_packet_first",
+  "metadata_only_decision": true,
+  "runtime_implemented": false,
+  "listener_startup_implemented": false,
+  "socket_bind_implemented": false,
+  "socket_listen_implemented": false,
+  "socket_accept_implemented": false,
+  "transport_implemented": false,
+  "protocol_parser_implemented": false,
+  "json_rpc_parser_implemented": false,
+  "dispatcher_implemented": false,
+  "tool_registry_runtime_implemented": false,
+  "tool_discovery_runtime_implemented": false,
+  "executable_tool_registration_implemented": false,
+  "actual_tool_execution_implemented": false,
+  "local_evidence_reader_implemented": false,
+  "safe_file_body_reader_implemented": false,
+  "raw_preview_download_implemented": false,
+  "dashboard_state_changing_action_implemented": false,
+  "upload_import_action_implemented": false,
+  "replay_active_scan_implemented": false,
+  "automatic_chatgpt_handoff_implemented": false,
+  "tag_github_release_modified": false,
+  "output_bundle_structure_changed": false,
+  "raw_data_included": false,
+  "manual_review_required": true,
+  "source_check_required_before_runtime": true,
+  "negative_tests_required_before_runtime": true,
+  "candidate_options": [
+    {
+      "id": "option_a",
+      "name": "protocol_parser_approval_packet_first",
+      "implemented": false,
+      "recommended": true
+    },
+    {
+      "id": "option_b",
+      "name": "transport_listener_approval_packet_first",
+      "implemented": false,
+      "recommended": false
+    },
+    {
+      "id": "option_c",
+      "name": "read_only_tool_registry_contract_first",
+      "implemented": false,
+      "recommended": false
+    },
+    {
+      "id": "option_d",
+      "name": "local_evidence_reader_deferred",
+      "implemented": false,
+      "recommended": true
+    }
+  ],
+  "required_split_rules": [
+    "listener_transport_split_from_protocol_parser",
+    "protocol_parser_split_from_dispatcher",
+    "dispatcher_split_from_tool_execution",
+    "tool_registry_contract_split_from_actual_tool_execution",
+    "local_evidence_reader_deferred_until_threat_boundary",
+    "raw_preview_download_requires_separate_approval",
+    "automatic_chatgpt_handoff_requires_separate_approval"
+  ],
+  "required_negative_tests": [
+    "planning_only_flag_check",
+    "runtime_implementation_flag_false_check",
+    "listener_startup_marker_check",
+    "transport_marker_check",
+    "protocol_parser_marker_check",
+    "dispatcher_marker_check",
+    "tool_execution_marker_check",
+    "local_evidence_reader_marker_check",
+    "raw_preview_download_marker_check",
+    "automatic_handoff_marker_check",
+    "four_file_output_bundle_check",
+    "raw_free_hygiene_check"
+  ],
+  "source_check_requirements": [
+    "future_runtime_files_declared_before_implementation",
+    "forbidden_source_markers_checked_before_runtime",
+    "fixture_consumed_before_runtime",
+    "rollback_requirements_checked_before_runtime"
+  ],
+  "output_bundle_files": [
+    "analysis_packet.json",
+    "chatgpt_prompt.md",
+    "codex_task_prompt.md",
+    "report_draft.md"
+  ],
+  "forbidden_scope": [
+    "runtime_startup",
+    "listener_startup",
+    "transport_runtime",
+    "protocol_parser_implementation",
+    "dispatcher_implementation",
+    "executable_tool_registration",
+    "actual_tool_execution",
+    "local_evidence_reader",
+    "safe_file_body_reader",
+    "raw_preview_download",
+    "replay_active_scan",
+    "automatic_chatgpt_handoff",
+    "tag_github_release_mutation"
+  ]
+}
