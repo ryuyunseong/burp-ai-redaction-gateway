@@ -436,6 +436,11 @@ It fixes disabled-by-default, contract-consumption, source-check, and rollback
 requirements before any socket, stdio, HTTP, protocol parser, dispatcher, tool
 runtime, local evidence reader, raw preview, dashboard action, upload/import,
 replay, active scan, or automatic handoff behavior is implemented.
+The v0.8 skeleton approval packet is tracked in
+[`docs/V0.8_SKELETON_APPROVAL_PACKET.md`](docs/V0.8_SKELETON_APPROVAL_PACKET.md).
+It fixes explicit approval, blocker, raw-free response, rollback, and
+source-check requirements before any disabled-by-default skeleton runtime PR is
+reviewed.
 
 ## Burp Montoya Collector
 
