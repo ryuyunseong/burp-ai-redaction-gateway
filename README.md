@@ -406,6 +406,12 @@ The first v0.8 follow-up is the transport design-only boundary in
 transport acceptance and negative-test requirements without implementing socket,
 stdio, HTTP, protocol, tool, evidence-reader, raw preview, dashboard action,
 upload/import, replay, active scan, or automatic handoff behavior.
+The v0.8 protocol handler design-only boundary is tracked in
+[`docs/V0.8_PROTOCOL_HANDLER_DESIGN.md`](docs/V0.8_PROTOCOL_HANDLER_DESIGN.md).
+It documents malformed protocol input handling, raw-free blocked responses,
+negative-test expectations, and source-check requirements without implementing
+an MCP protocol handler, JSON-RPC parser, request dispatcher, tool execution,
+transport runtime, local evidence reader, raw preview, or automatic handoff.
 
 ## Burp Montoya Collector
 
