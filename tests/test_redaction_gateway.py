@@ -265,6 +265,10 @@ V08_PROTOCOL_NEGATIVE_HARNESS_DOC = ROOT / "docs" / "V0.8_PROTOCOL_NEGATIVE_TEST
 V08_PROTOCOL_NEGATIVE_HARNESS_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v08_protocol_negative_harness.json"
 )
+V08_TOOL_REGISTRATION_DESIGN_DOC = ROOT / "docs" / "V0.8_TOOL_REGISTRATION_DESIGN.md"
+V08_TOOL_REGISTRATION_DESIGN_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v08_tool_registration_design.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -7418,6 +7422,214 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertEqual(
             fixture["recommended_next_order"][:2],
             ["tool_registration_design_only", "transport_protocol_minimal_skeleton_planning"],
+        )
+
+        combined = doc + "\n" + fixture_text
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v08_tool_registration_design_is_design_only_and_raw_free(self) -> None:
+        doc = V08_TOOL_REGISTRATION_DESIGN_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V08_TOOL_REGISTRATION_DESIGN_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        backlog = V08_BACKLOG_SPLIT_DOC.read_text(encoding="utf-8")
+        negative_harness = V08_PROTOCOL_NEGATIVE_HARNESS_DOC.read_text(encoding="utf-8")
+        normalized_doc = " ".join(doc.split())
+        normalized_doc_lower = normalized_doc.lower()
+
+        self.assertTrue(V08_TOOL_REGISTRATION_DESIGN_DOC.exists())
+        self.assertTrue(V08_TOOL_REGISTRATION_DESIGN_FIXTURE.exists())
+        for linked_text in [readme, backlog, negative_harness]:
+            self.assertIn("V0.8_TOOL_REGISTRATION_DESIGN.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current v0.8 baseline",
+            "## Tool registration design scope",
+            "## Explicit non-goals",
+            "## Allowed future registration boundary",
+            "## Forbidden registration behaviors",
+            "## Tool execution separation",
+            "## Required approval conditions",
+            "## Required negative tests",
+            "## Source-check requirements",
+            "## Security review requirements",
+            "## Rollback expectations",
+            "## Deferred decisions",
+        ]:
+            self.assertIn(section, doc)
+
+        for required_text in [
+            "design-only and review-boundary document",
+            "v0.8 backlog split",
+            "v0.8 transport design",
+            "v0.8 protocol handler design",
+            "v0.8 protocol negative test harness",
+            "Executable tool registration",
+            "Tool registry runtime",
+            "Tool discovery runtime",
+            "Actual tool execution",
+            "Request dispatcher",
+            "Protocol parser",
+            "JSON-RPC parser",
+            "Transport runtime",
+            "Local evidence reader",
+            "Safe file body reader",
+            "Raw preview or raw download",
+            "Replay or active scan",
+            "Automatic ChatGPT handoff",
+            "Dashboard start or stop control",
+            "Upload or import action",
+            "Tool registration and actual tool execution must remain separate PRs",
+            "Registration metadata is future design data only",
+            "not runtime callable surface",
+            "Tool call dispatch",
+            "Local file read behavior",
+            "Safe file body read behavior",
+            "raw-free",
+            "Candidate findings remain candidates",
+            "risk remains draft",
+            "final severity or scoring remains manual",
+        ]:
+            self.assertIn(required_text.lower(), normalized_doc_lower)
+
+        self.assertEqual(fixture["schema_version"], "v08_tool_registration_design.v1")
+        for true_flag in [
+            "tool_registration_design_only",
+            "v08_backlog_split_consumed",
+            "v08_transport_design_consumed",
+            "v08_protocol_handler_design_consumed",
+            "v08_protocol_negative_harness_consumed",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        for false_flag in [
+            "implementation_included",
+            "tool_registration_implemented",
+            "tool_registry_runtime_implemented",
+            "tool_discovery_runtime_implemented",
+            "tool_execution_implemented",
+            "request_dispatcher_implemented",
+            "protocol_handler_implemented",
+            "json_rpc_parser_implemented",
+            "protocol_message_parser_implemented",
+            "schema_validation_runtime_implemented",
+            "transport_runtime_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "socket_accept_implemented",
+            "stdio_transport_runtime_implemented",
+            "http_transport_runtime_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+            "raw_data_included",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        for behavior in [
+            "executable_tool_registration",
+            "runtime_tool_registry",
+            "runtime_tool_discovery",
+            "request_dispatcher",
+            "actual_tool_execution",
+            "local_evidence_reader_tool",
+            "safe_file_body_reader_tool",
+            "raw_preview_download_tool",
+            "replay_active_scan_tool",
+            "external_handoff_tool",
+            "dashboard_state_changing_tool",
+            "upload_import_tool",
+        ]:
+            self.assertIn(behavior, fixture["forbidden_tool_registration_behaviors"])
+
+        for contract in [
+            "tool_registration_and_execution_are_separate_prs",
+            "registration_metadata_is_future_design_data_only",
+            "registration_metadata_is_not_runtime_callable_surface",
+            "tool_call_dispatch_is_out_of_scope",
+            "local_file_read_is_out_of_scope",
+            "safe_file_body_read_is_out_of_scope",
+            "raw_preview_is_out_of_scope",
+            "replay_active_scan_is_out_of_scope",
+            "external_handoff_tool_is_forbidden",
+            "candidate_findings_remain_candidates",
+            "risk_remains_draft",
+            "final_severity_or_scoring_remains_manual",
+        ]:
+            self.assertIn(contract, fixture["tool_execution_separation_contract"])
+
+        for negative in [
+            "tool_registration_marker_check",
+            "tool_registry_runtime_marker_check",
+            "tool_discovery_runtime_marker_check",
+            "tool_execution_marker_check",
+            "dispatcher_marker_check",
+            "local_evidence_reader_tool_marker_check",
+            "raw_preview_download_tool_marker_check",
+            "replay_active_scan_tool_marker_check",
+            "external_handoff_tool_marker_check",
+            "dashboard_state_changing_tool_marker_check",
+        ]:
+            self.assertIn(negative, fixture["required_negative_tests"])
+
+        for requirement in [
+            "declare_tool_registration_facing_files_before_runtime",
+            "block_executable_tool_registration_markers",
+            "block_runtime_tool_registry_markers",
+            "block_runtime_tool_discovery_markers",
+            "block_request_dispatcher_markers",
+            "block_tool_execution_markers",
+            "block_local_evidence_reader_tool_markers",
+            "block_safe_file_body_reader_tool_markers",
+            "block_raw_preview_download_tool_markers",
+            "block_replay_active_scan_tool_markers",
+            "block_external_handoff_tool_markers",
+            "block_dashboard_state_changing_tool_markers",
+            "block_upload_import_tool_markers",
+            "block_protocol_parser_markers",
+            "block_transport_runtime_markers",
+        ]:
+            self.assertIn(requirement, fixture["source_check_requirements"])
+
+        self.assertEqual(
+            fixture["recommended_next_order"][:2],
+            ["read_only_tool_contract_v08", "transport_protocol_minimal_skeleton_planning"],
         )
 
         combined = doc + "\n" + fixture_text
