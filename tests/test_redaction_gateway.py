@@ -257,6 +257,10 @@ V08_BACKLOG_SPLIT_DOC = ROOT / "docs" / "V0.8_BACKLOG_SPLIT.md"
 V08_BACKLOG_SPLIT_FIXTURE = ROOT / "tests" / "fixtures" / "v08_backlog_split.json"
 V08_TRANSPORT_DESIGN_DOC = ROOT / "docs" / "V0.8_TRANSPORT_DESIGN.md"
 V08_TRANSPORT_DESIGN_FIXTURE = ROOT / "tests" / "fixtures" / "v08_transport_design.json"
+V08_PROTOCOL_HANDLER_DESIGN_DOC = ROOT / "docs" / "V0.8_PROTOCOL_HANDLER_DESIGN.md"
+V08_PROTOCOL_HANDLER_DESIGN_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v08_protocol_handler_design.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -6970,6 +6974,217 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertEqual(
             fixture["recommended_next_order"][:2],
             ["protocol_handler_design_only", "protocol_negative_test_harness"],
+        )
+
+        combined = doc + "\n" + fixture_text
+        for forbidden in [
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v08_protocol_handler_design_is_design_only_and_raw_free(self) -> None:
+        doc = V08_PROTOCOL_HANDLER_DESIGN_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V08_PROTOCOL_HANDLER_DESIGN_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        backlog = V08_BACKLOG_SPLIT_DOC.read_text(encoding="utf-8")
+        transport = V08_TRANSPORT_DESIGN_DOC.read_text(encoding="utf-8")
+        normalized_doc = " ".join(doc.split())
+        normalized_doc_lower = normalized_doc.lower()
+
+        self.assertTrue(V08_PROTOCOL_HANDLER_DESIGN_DOC.exists())
+        self.assertTrue(V08_PROTOCOL_HANDLER_DESIGN_FIXTURE.exists())
+        for linked_text in [readme, backlog, transport]:
+            self.assertIn("V0.8_PROTOCOL_HANDLER_DESIGN.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current v0.8 baseline",
+            "## Protocol design scope",
+            "## Explicit non-goals",
+            "## Allowed future protocol boundary",
+            "## Forbidden protocol behaviors",
+            "## Failure and blocked-response contract",
+            "## Required negative tests",
+            "## Source-check requirements",
+            "## Security review requirements",
+            "## Rollback expectations",
+            "## Deferred decisions",
+        ]:
+            self.assertIn(section, doc)
+
+        for required_text in [
+            "design-only and review-boundary document",
+            "v0.8 backlog split",
+            "v0.8 transport design",
+            "MCP protocol handler",
+            "JSON-RPC parser",
+            "Protocol message parser",
+            "Schema validation runtime",
+            "Request dispatcher",
+            "Executable tool registration",
+            "Actual tool execution",
+            "Transport runtime",
+            "Socket, bind, listen, or accept behavior",
+            "Stdio transport runtime",
+            "HTTP transport runtime",
+            "Local evidence reader",
+            "Raw preview or raw download",
+            "Replay or active scan",
+            "Automatic ChatGPT handoff",
+            "Failure and blocked-response contract",
+            "Malformed protocol input",
+            "raw-free blocked or failure response",
+            "no request body echo",
+            "no credential, session, or token echo",
+            "no local path echo",
+            "no stack trace echo",
+            "no target identifier echo",
+            "Candidate findings remain candidates",
+            "risk remains draft",
+            "final severity or scoring remains manual",
+        ]:
+            self.assertIn(required_text.lower(), normalized_doc_lower)
+
+        self.assertEqual(fixture["schema_version"], "v08_protocol_handler_design.v1")
+        for true_flag in [
+            "protocol_handler_design_only",
+            "v08_backlog_split_consumed",
+            "v08_transport_design_consumed",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        for false_flag in [
+            "implementation_included",
+            "protocol_handler_implemented",
+            "json_rpc_parser_implemented",
+            "protocol_message_parser_implemented",
+            "schema_validation_runtime_implemented",
+            "request_dispatcher_implemented",
+            "tool_registration_implemented",
+            "tool_execution_implemented",
+            "transport_runtime_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "socket_accept_implemented",
+            "stdio_transport_runtime_implemented",
+            "http_transport_runtime_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+            "raw_data_included",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        for behavior in [
+            "mcp_protocol_handler",
+            "json_rpc_parser",
+            "protocol_message_parser",
+            "schema_validation_runtime",
+            "request_dispatcher",
+            "executable_tool_registration",
+            "actual_tool_execution",
+            "transport_runtime",
+            "socket_bind_listen_accept",
+            "stdio_http_runtime",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "raw_preview_download",
+            "dashboard_start_stop_control",
+            "upload_import_action",
+            "replay_active_scan",
+            "automatic_chatgpt_handoff",
+            "request_body_echo",
+            "credential_session_token_echo",
+            "stack_trace_echo",
+            "target_identifier_echo",
+            "external_handoff",
+        ]:
+            self.assertIn(behavior, fixture["forbidden_protocol_behaviors"])
+
+        for negative in [
+            "malformed_protocol_input_blocked_response_check",
+            "protocol_json_rpc_parser_marker_check",
+            "schema_validation_runtime_marker_check",
+            "request_dispatcher_marker_check",
+            "tool_registration_execution_marker_check",
+            "transport_runtime_marker_check",
+            "socket_bind_listen_accept_marker_check",
+            "stdio_http_runtime_marker_check",
+            "local_evidence_file_body_reader_marker_check",
+            "raw_preview_download_marker_check",
+            "dashboard_state_change_marker_check",
+            "upload_import_replay_active_scan_marker_check",
+            "automatic_handoff_marker_check",
+            "request_body_echo_marker_check",
+            "credential_session_token_echo_marker_check",
+            "local_path_stack_trace_target_echo_marker_check",
+        ]:
+            self.assertIn(negative, fixture["required_negative_tests"])
+
+        for contract in [
+            "raw_free_blocked_or_failure_response_only",
+            "no_request_body_echo",
+            "no_credential_session_token_echo",
+            "no_local_path_echo",
+            "no_stack_trace_echo",
+            "no_target_identifier_echo",
+            "no_final_vulnerability_severity_cvss_claim",
+            "no_tool_dispatch",
+            "no_external_handoff",
+        ]:
+            self.assertIn(contract, fixture["failure_response_contract"])
+
+        for requirement in [
+            "declare_protocol_facing_files_before_runtime",
+            "block_transport_runtime_markers",
+            "block_protocol_parser_runtime_markers",
+            "block_request_dispatcher_markers",
+            "block_tool_execution_markers",
+            "block_local_evidence_reader_markers",
+            "block_raw_preview_download_markers",
+            "block_dashboard_state_change_markers",
+            "block_upload_import_replay_active_scan_markers",
+            "block_automatic_handoff_markers",
+            "block_sensitive_input_echo_markers",
+        ]:
+            self.assertIn(requirement, fixture["source_check_requirements"])
+
+        self.assertEqual(
+            fixture["recommended_next_order"][:2],
+            ["protocol_negative_test_harness", "transport_protocol_minimal_skeleton_planning"],
         )
 
         combined = doc + "\n" + fixture_text
