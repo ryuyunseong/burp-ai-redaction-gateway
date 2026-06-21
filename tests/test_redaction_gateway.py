@@ -97,6 +97,10 @@ from burp_ai_redaction_gateway.mcp_listener_skeleton import (
     build_blocked_listener_response,
     build_listener_skeleton_metadata,
 )
+from burp_ai_redaction_gateway.mcp_minimal_skeleton import (
+    build_minimal_skeleton_disabled_response,
+    build_minimal_skeleton_metadata,
+)
 from burp_ai_redaction_gateway.mcp_listener_runtime import (
     MinimalListenerRuntimeConfig,
     build_default_listener_runtime_config,
@@ -107,6 +111,7 @@ from burp_ai_redaction_gateway.mcp_listener_runtime import (
     is_loopback_host,
     validate_minimal_listener_startup,
 )
+from burp_ai_redaction_gateway.mcp_runtime_contract import validate_loopback_host_candidate
 from burp_ai_redaction_gateway.mcp_read_only_registry import (
     ALLOWED_TOOL_NAMES,
     BLOCKED_RESPONSE_ALLOWED_FIELDS,
@@ -195,6 +200,8 @@ V07_MCP_LISTENER_SKELETON_PLAN_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v07_mcp_listener_skeleton_plan.json"
 )
 MCP_LISTENER_SKELETON_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_skeleton.py"
+MCP_MINIMAL_SKELETON_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_minimal_skeleton.py"
+MCP_RUNTIME_CONTRACT_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_runtime_contract.py"
 V07_LISTENER_RUNTIME_DECISION_PREFLIGHT_DOC = (
     ROOT / "docs" / "V0.7_LISTENER_RUNTIME_DECISION_PREFLIGHT.md"
 )
@@ -3082,7 +3089,6 @@ class RedactionGatewayTests(unittest.TestCase):
             "burp_ai_redaction_gateway/mcp_runtime_contract.py",
         ]:
             self.assertIn(runtime_file, fixture["runtime_facing_files"])
-            self.assertFalse((ROOT / Path(runtime_file)).exists())
 
         for requirement in [
             "consume_v08_skeleton_approval_packet",
@@ -3182,6 +3188,125 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v08_minimal_skeleton_runtime_is_disabled_and_raw_free(self) -> None:
+        guard_fixture = json.loads(
+            V08_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD_FIXTURE.read_text(encoding="utf-8")
+        )
+        source_check_fixture = json.loads(
+            MCP_LISTENER_RUNTIME_SOURCE_CHECK_V06_FIXTURE.read_text(encoding="utf-8")
+        )
+        runtime_files = [
+            "burp_ai_redaction_gateway/mcp_minimal_skeleton.py",
+            "burp_ai_redaction_gateway/mcp_runtime_contract.py",
+        ]
+
+        self.assertEqual(guard_fixture["runtime_facing_files"], runtime_files)
+        declared_scope = source_check_fixture["source_check_policy"][
+            "declared_runtime_facing_source_scope"
+        ]
+        for runtime_file in runtime_files:
+            source_file = ROOT / Path(runtime_file)
+            self.assertTrue(source_file.exists(), runtime_file)
+            self.assertIn(runtime_file, declared_scope)
+
+        metadata = build_minimal_skeleton_metadata()
+        self.assertEqual(metadata["schema_version"], "v08_disabled_minimal_skeleton.v1")
+        self.assertIs(metadata["minimal_skeleton_runtime_file_added"], True)
+        self.assertIs(metadata["source_check_guard_consumed"], True)
+        self.assertIs(metadata["approval_packet_consumed"], True)
+        self.assertIs(metadata["disabled_by_default"], True)
+        self.assertIs(metadata["runtime_enabled"], False)
+        self.assertIs(metadata["listener_started"], False)
+        self.assertIs(metadata["startup_permitted"], False)
+        self.assertIs(metadata["transport_enabled"], False)
+        self.assertIs(metadata["protocol_handler_enabled"], False)
+        self.assertIs(metadata["executable_tool_registration_enabled"], False)
+        self.assertIs(metadata["actual_tool_execution_enabled"], False)
+        self.assertIs(metadata["local_evidence_reader_enabled"], False)
+        self.assertIs(metadata["safe_file_body_reader_enabled"], False)
+        self.assertIs(metadata["raw_preview_download_enabled"], False)
+        self.assertIs(metadata["dashboard_state_changing_control_enabled"], False)
+        self.assertIs(metadata["upload_import_action_enabled"], False)
+        self.assertIs(metadata["automatic_chatgpt_handoff_enabled"], False)
+        self.assertIs(metadata["tag_github_release_mutation_enabled"], False)
+        self.assertIs(metadata["output_bundle_structure_changed"], False)
+        self.assertEqual(
+            metadata["output_bundle_files"],
+            ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"],
+        )
+        self.assertEqual(
+            metadata["consumed_guards"],
+            ["v08_skeleton_approval_packet", "v08_runtime_source_check_consumption_guard"],
+        )
+        self.assertEqual(
+            metadata["allowed_operations"],
+            ["describe_boundary", "build_disabled_response", "validate_loopback_candidate"],
+        )
+
+        default_response = build_minimal_skeleton_disabled_response()
+        self.assertEqual(default_response["status"], "disabled")
+        self.assertEqual(default_response["reason_code"], "runtime_disabled_by_default")
+        self.assertIs(default_response["runtime_enabled"], False)
+        self.assertIs(default_response["listener_started"], False)
+        self.assertIs(default_response["startup_permitted"], False)
+        self.assertIs(default_response["raw_data_included"], False)
+        self.assertIs(default_response["manual_review_required"], True)
+        self.assertIs(default_response["host_value_included"], False)
+        self.assertIs(default_response["credential_values_included"], False)
+        self.assertIs(default_response["file_body_included"], False)
+
+        unknown_response = build_minimal_skeleton_disabled_response("unreviewed input")
+        self.assertEqual(unknown_response["reason_code"], "unknown_disabled_surface")
+        self.assertNotIn("unreviewed input", json.dumps(unknown_response, sort_keys=True))
+
+        enabled_response = build_minimal_skeleton_disabled_response(
+            "runtime_start_blocked", enabled=True, host="localhost"
+        )
+        self.assertEqual(enabled_response["status"], "blocked")
+        self.assertEqual(enabled_response["reason_code"], "runtime_start_blocked")
+        self.assertEqual(enabled_response["host_validation_status"], "allowed")
+        self.assertIs(enabled_response["loopback_candidate_allowed"], True)
+        self.assertIs(enabled_response["runtime_enabled"], False)
+        self.assertIs(enabled_response["startup_permitted"], False)
+        self.assertIs(enabled_response["listener_started"], False)
+
+        all_interface_candidate = validate_loopback_host_candidate("*")
+        self.assertEqual(all_interface_candidate["status"], "blocked")
+        self.assertEqual(all_interface_candidate["reason_code"], "all_interface_host_blocked")
+        self.assertIs(all_interface_candidate["host_value_included"], False)
+        self.assertIs(all_interface_candidate["raw_data_included"], False)
+
+        source_text = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in [MCP_MINIMAL_SKELETON_MODULE, MCP_RUNTIME_CONTRACT_MODULE]
+        )
+        for forbidden_marker in source_check_fixture["forbidden_source_markers"]:
+            self.assertNotIn(forbidden_marker, source_text, forbidden_marker)
+        for forbidden_marker in [
+            "raw_request",
+            "raw_response",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "safe-to-share",
+            "confirmed vulnerability",
+            "final CVSS",
+        ]:
+            self.assertNotIn(forbidden_marker, source_text)
+        self.assertIsNone(re.search(r"https?://", source_text))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", source_text))
 
     def test_v05_troubleshooting_index_is_raw_free_and_category_based(self) -> None:
         troubleshooting = V05_TROUBLESHOOTING_DOC.read_text(encoding="utf-8")
@@ -5380,6 +5505,8 @@ class RedactionGatewayTests(unittest.TestCase):
             [
                 "burp_ai_redaction_gateway/mcp_listener_skeleton.py",
                 "burp_ai_redaction_gateway/mcp_listener_runtime.py",
+                "burp_ai_redaction_gateway/mcp_minimal_skeleton.py",
+                "burp_ai_redaction_gateway/mcp_runtime_contract.py",
             ],
         )
         self.assertEqual(fixture["planned_runtime_files"], ["burp_ai_redaction_gateway/mcp_listener_runtime.py"])
@@ -10469,6 +10596,8 @@ class RedactionGatewayTests(unittest.TestCase):
             [
                 "burp_ai_redaction_gateway/mcp_listener_skeleton.py",
                 "burp_ai_redaction_gateway/mcp_listener_runtime.py",
+                "burp_ai_redaction_gateway/mcp_minimal_skeleton.py",
+                "burp_ai_redaction_gateway/mcp_runtime_contract.py",
             ],
         )
         self.assertIs(policy["fail_on_undeclared_runtime_facing_file"], True)
