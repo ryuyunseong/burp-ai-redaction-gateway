@@ -12,7 +12,9 @@
   "future_runtime_files_must_be_declared": true,
   "declared_runtime_facing_source_scope": [
     "burp_ai_redaction_gateway/mcp_listener_skeleton.py",
-    "burp_ai_redaction_gateway/mcp_listener_runtime.py"
+    "burp_ai_redaction_gateway/mcp_listener_runtime.py",
+    "burp_ai_redaction_gateway/mcp_minimal_skeleton.py",
+    "burp_ai_redaction_gateway/mcp_runtime_contract.py"
   ],
   "planned_runtime_files": [
     "burp_ai_redaction_gateway/mcp_listener_runtime.py"
