@@ -277,6 +277,10 @@ V08_MINIMAL_SKELETON_PLANNING_DOC = ROOT / "docs" / "V0.8_MINIMAL_SKELETON_PLANN
 V08_MINIMAL_SKELETON_PLANNING_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v08_minimal_skeleton_planning.json"
 )
+V08_SKELETON_APPROVAL_PACKET_DOC = ROOT / "docs" / "V0.8_SKELETON_APPROVAL_PACKET.md"
+V08_SKELETON_APPROVAL_PACKET_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v08_skeleton_approval_packet.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -2703,6 +2707,241 @@ class RedactionGatewayTests(unittest.TestCase):
             "raw_response",
             "cookie_value",
             "authorization_value",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v08_skeleton_approval_packet_is_planning_only_and_raw_free(self) -> None:
+        doc = V08_SKELETON_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V08_SKELETON_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        backlog = V08_BACKLOG_SPLIT_DOC.read_text(encoding="utf-8")
+        planning = V08_MINIMAL_SKELETON_PLANNING_DOC.read_text(encoding="utf-8")
+        normalized_doc = " ".join(doc.split())
+        normalized_doc_lower = normalized_doc.lower()
+
+        self.assertTrue(V08_SKELETON_APPROVAL_PACKET_DOC.exists())
+        self.assertTrue(V08_SKELETON_APPROVAL_PACKET_FIXTURE.exists())
+        for linked_text in [readme, backlog, planning]:
+            self.assertIn("V0.8_SKELETON_APPROVAL_PACKET.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current v0.8 baseline",
+            "## Approval packet scope",
+            "## Explicit non-goals",
+            "## Required approval inputs",
+            "## Pre-implementation blockers",
+            "## Disabled-by-default approval conditions",
+            "## Runtime boundary constraints",
+            "## Raw-free response requirements",
+            "## Rollback requirements",
+            "## Required negative tests",
+            "## Source-check requirements",
+            "## Security review requirements",
+            "## Deferred decisions",
+        ]:
+            self.assertIn(section, doc)
+
+        for required_text in [
+            "approval-planning and review-boundary document",
+            "explicit human approval before any runtime pr",
+            "target branch and expected base commit named",
+            "implementation scope limited to disabled-by-default behavior",
+            "loopback-only condition stated if runtime is later approved",
+            "source-check consumption listed",
+            "rollback command or plan documented",
+            "release tag movement prohibited",
+            "github release mutation prohibited",
+            "raw-free blocked or disabled response contract listed",
+            "manual review and the four-file safe candidate boundary unchanged",
+            "missing explicit human approval",
+            "dirty git status",
+            "base branch is not main",
+            "unexpected base commit",
+            "missing source-check consumption guard",
+            "missing raw-free response contract",
+            "missing rollback plan",
+            "scope contains a protocol parser",
+            "scope contains a request dispatcher",
+            "scope contains tool execution",
+            "scope contains a local evidence reader",
+            "scope contains raw preview or raw download",
+            "scope contains external handoff",
+            "scope contains tag or release mutation",
+            "no raw request or response",
+            "no credential value",
+            "no session value",
+            "no token value",
+            "no full local path",
+            "no actual target identifier",
+            "no file body",
+            "candidate findings only",
+            "risk draft only",
+            "final severity is manual",
+            "final scoring is manual",
+        ]:
+            self.assertIn(required_text.lower(), normalized_doc_lower)
+
+        self.assertEqual(fixture["schema_version"], "v08_skeleton_approval_packet.v1")
+        for true_flag in [
+            "skeleton_approval_packet_only",
+            "v08_backlog_split_consumed",
+            "v08_transport_design_consumed",
+            "v08_protocol_handler_design_consumed",
+            "v08_protocol_negative_harness_consumed",
+            "v08_tool_registration_design_consumed",
+            "v08_read_only_tool_contract_consumed",
+            "v08_minimal_skeleton_planning_consumed",
+            "explicit_human_approval_required",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        for false_flag in [
+            "implementation_included",
+            "skeleton_runtime_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "socket_accept_implemented",
+            "stdio_transport_runtime_implemented",
+            "http_transport_runtime_implemented",
+            "protocol_parser_implemented",
+            "json_rpc_parser_implemented",
+            "request_dispatcher_implemented",
+            "tool_registration_runtime_implemented",
+            "tool_discovery_runtime_implemented",
+            "tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+            "tag_github_release_modified",
+            "output_bundle_structure_changed",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        for item in [
+            "explicit_human_approval_required_before_runtime_pr",
+            "target_branch_and_expected_base_commit_named",
+            "implementation_scope_disabled_by_default_only",
+            "loopback_only_condition_if_runtime_approved",
+            "source_check_consumption_listed",
+            "rollback_command_or_plan_documented",
+            "release_tag_movement_prohibited",
+            "github_release_mutation_prohibited",
+            "raw_free_blocked_disabled_response_contract_listed",
+            "manual_review_and_four_file_boundary_unchanged",
+        ]:
+            self.assertIn(item, fixture["required_approval_inputs"])
+
+        for blocker in [
+            "missing_explicit_human_approval",
+            "dirty_git_status",
+            "base_branch_not_main",
+            "unexpected_base_commit",
+            "missing_source_check_consumption_guard",
+            "missing_raw_free_response_contract",
+            "missing_rollback_plan",
+            "scope_contains_protocol_parser",
+            "scope_contains_request_dispatcher",
+            "scope_contains_tool_execution",
+            "scope_contains_local_evidence_reader",
+            "scope_contains_raw_preview_download",
+            "scope_contains_external_handoff",
+            "scope_contains_tag_or_release_mutation",
+        ]:
+            self.assertIn(blocker, fixture["pre_implementation_blockers"])
+
+        for requirement in [
+            "no_raw_request_response",
+            "no_credential_value",
+            "no_session_value",
+            "no_token_value",
+            "no_hmac_secret",
+            "no_csrf_token_value",
+            "no_full_local_path",
+            "no_actual_target_identifier",
+            "no_stack_trace",
+            "no_file_body",
+            "no_external_handoff",
+            "candidate_findings_only",
+            "risk_draft_only",
+            "final_severity_manual",
+            "final_cvss_manual",
+        ]:
+            self.assertIn(requirement, fixture["raw_free_response_requirements"])
+
+        for requirement in [
+            "revert_runtime_pr_without_release_tag_movement",
+            "revert_runtime_pr_without_github_release_mutation",
+            "output_bundle_structure_unchanged",
+            "manual_review_and_four_file_boundary_unchanged",
+            "raw_free_blocked_disabled_response_after_rollback",
+        ]:
+            self.assertIn(requirement, fixture["rollback_requirements"])
+
+        for negative in [
+            "skeleton_runtime_marker_check",
+            "socket_bind_listen_accept_marker_check",
+            "stdio_http_runtime_marker_check",
+            "protocol_parser_marker_check",
+            "json_rpc_parser_marker_check",
+            "request_dispatcher_marker_check",
+            "tool_registration_runtime_marker_check",
+            "tool_execution_marker_check",
+            "local_evidence_reader_marker_check",
+            "safe_file_body_reader_marker_check",
+            "raw_preview_download_marker_check",
+            "replay_active_scan_marker_check",
+            "automatic_handoff_marker_check",
+            "dashboard_state_changing_marker_check",
+            "upload_import_marker_check",
+            "tag_release_mutation_marker_check",
+        ]:
+            self.assertIn(negative, fixture["required_negative_tests"])
+
+        self.assertEqual(
+            fixture["recommended_next_order"][:2],
+            ["runtime_facing_source_check_consumption_guard", "minimal_skeleton_runtime_pr_after_explicit_approval"],
+        )
+
+        combined = "\n".join([doc, fixture_text])
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
         ]:
             self.assertNotIn(forbidden, combined)
         self.assertIsNone(re.search(r"https?://", combined))
