@@ -294,6 +294,10 @@ V08_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD_DOC = (
 V08_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v08_runtime_source_check_consumption_guard.json"
 )
+V08_POST_MERGE_BOUNDARY_NOTE_DOC = ROOT / "docs" / "V0.8_POST_MERGE_BOUNDARY_NOTE.md"
+V08_POST_MERGE_BOUNDARY_NOTE_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v08_post_merge_boundary_note.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -3182,6 +3186,163 @@ class RedactionGatewayTests(unittest.TestCase):
             "real_export_",
             "actual.local",
             "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v08_post_merge_boundary_note_is_helper_only_and_raw_free(self) -> None:
+        doc = V08_POST_MERGE_BOUNDARY_NOTE_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V08_POST_MERGE_BOUNDARY_NOTE_FIXTURE.read_text(encoding="utf-8"))
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        normalized_doc = " ".join(doc.split())
+        normalized_doc_lower = normalized_doc.lower()
+
+        self.assertTrue(V08_POST_MERGE_BOUNDARY_NOTE_DOC.exists())
+        self.assertTrue(V08_POST_MERGE_BOUNDARY_NOTE_FIXTURE.exists())
+        self.assertIn("V0.8_POST_MERGE_BOUNDARY_NOTE.md", readme)
+
+        for section in [
+            "## Purpose",
+            "## Current baseline",
+            "## Implemented helper boundary",
+            "## Not implemented",
+            "## Follow-up PR split rules",
+            "## Required checks before follow-up runtime work",
+            "## Release boundary",
+            "## Deferred decisions",
+        ]:
+            self.assertIn(section, doc)
+
+        for required_text in [
+            "pr #130",
+            "fcc0dd947ec9c62410cc5715cce7ae623bc32aa8",
+            "disabled-by-default minimal skeleton helper",
+            "raw-free disabled response helpers",
+            "loopback candidate validation helper",
+            "listener startup",
+            "socket, bind, listen, or accept behavior",
+            "stdio runtime",
+            "http runtime",
+            "protocol parser",
+            "json-rpc parser",
+            "request dispatcher",
+            "executable tool registration",
+            "actual tool execution",
+            "local evidence reader",
+            "safe file body reader",
+            "raw preview or raw download",
+            "dashboard start or stop control",
+            "upload or import action",
+            "replay or active scan",
+            "automatic chatgpt handoff",
+            "tag changes",
+            "github release changes",
+            "four-file ai input candidate boundary",
+        ]:
+            self.assertIn(required_text.lower(), normalized_doc_lower)
+
+        self.assertEqual(fixture["schema_version"], "v08_post_merge_boundary_note.v1")
+        self.assertIs(fixture["post_merge_boundary_note_only"], True)
+        self.assertEqual(fixture["pr_number"], 130)
+        self.assertEqual(
+            fixture["merge_commit"], "fcc0dd947ec9c62410cc5715cce7ae623bc32aa8"
+        )
+        self.assertEqual(fixture["implemented_helper_file_count"], 2)
+        for helper_file in [
+            "burp_ai_redaction_gateway/mcp_minimal_skeleton.py",
+            "burp_ai_redaction_gateway/mcp_runtime_contract.py",
+        ]:
+            self.assertIn(helper_file, fixture["implemented_scope"])
+
+        for false_flag in [
+            "listener_startup_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "socket_accept_implemented",
+            "stdio_transport_runtime_implemented",
+            "http_transport_runtime_implemented",
+            "protocol_parser_implemented",
+            "json_rpc_parser_implemented",
+            "request_dispatcher_implemented",
+            "tool_registration_runtime_implemented",
+            "tool_discovery_runtime_implemented",
+            "tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "tag_github_release_modified",
+            "output_bundle_structure_changed",
+            "raw_data_included",
+            "file_body_included",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        self.assertIs(fixture["manual_review_required"], True)
+        self.assertEqual(
+            fixture["output_bundle_files"],
+            ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"],
+        )
+
+        for split_requirement in [
+            "transport_protocol_separate",
+            "protocol_dispatcher_separate",
+            "tool_registration_discovery_execution_separate",
+            "local_evidence_reader_separate",
+            "dashboard_state_changing_action_separate",
+            "upload_import_action_separate",
+            "replay_active_scan_deferred",
+            "automatic_chatgpt_handoff_deferred",
+            "tag_release_action_separate",
+        ]:
+            self.assertIn(split_requirement, fixture["follow_up_pr_split_requirements"])
+
+        for required_check in [
+            "runtime_facing_files_declared",
+            "forbidden_marker_checks_cover_new_files",
+            "runtime_flags_remain_false_unless_approved",
+            "raw_free_disabled_blocked_response",
+            "output_bundle_structure_unchanged",
+            "rollback_without_tag_release_mutation",
+        ]:
+            self.assertIn(required_check, fixture["required_follow_up_checks"])
+
+        combined = "\n".join([doc, fixture_text])
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
             "approved for external sharing",
             "ready to submit",
         ]:

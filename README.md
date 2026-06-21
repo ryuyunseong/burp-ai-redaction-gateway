@@ -447,6 +447,12 @@ The v0.8 runtime source-check consumption guard is tracked in
 It declares future runtime-facing files as fixture metadata only and keeps
 runtime implementation blocked until approval packet consumption and forbidden
 marker checks are in place.
+The v0.8 post-merge boundary note is tracked in
+[`docs/V0.8_POST_MERGE_BOUNDARY_NOTE.md`](docs/V0.8_POST_MERGE_BOUNDARY_NOTE.md).
+It records the PR #130 helper-only merge baseline and keeps listener startup,
+transport, protocol parsing, request dispatch, tool execution, local evidence
+reading, raw preview, dashboard action, upload/import, replay, active scan,
+automatic handoff, tag changes, and GitHub Release changes out of scope.
 
 ## Burp Montoya Collector
 
