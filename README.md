@@ -412,6 +412,12 @@ It documents malformed protocol input handling, raw-free blocked responses,
 negative-test expectations, and source-check requirements without implementing
 an MCP protocol handler, JSON-RPC parser, request dispatcher, tool execution,
 transport runtime, local evidence reader, raw preview, or automatic handoff.
+The v0.8 protocol negative test harness is tracked in
+[`docs/V0.8_PROTOCOL_NEGATIVE_TEST_HARNESS.md`](docs/V0.8_PROTOCOL_NEGATIVE_TEST_HARNESS.md).
+It fixes malformed input categories, echo-forbidden value classes, forbidden
+source marker categories, and blocked-response requirements without
+implementing a protocol parser, request dispatcher, tool registration, tool
+execution, local evidence reader, raw preview, or automatic handoff.
 
 ## Burp Montoya Collector
 
