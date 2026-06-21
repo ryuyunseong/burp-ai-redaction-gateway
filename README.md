@@ -401,6 +401,11 @@ transport, protocol handling, tool registration, tool execution, local evidence
 reading, raw preview/download, dashboard state-changing control, upload/import,
 replay/active scan, and automatic ChatGPT handoff into separate design or
 approval PRs before implementation.
+The first v0.8 follow-up is the transport design-only boundary in
+[`docs/V0.8_TRANSPORT_DESIGN.md`](docs/V0.8_TRANSPORT_DESIGN.md). It documents
+transport acceptance and negative-test requirements without implementing socket,
+stdio, HTTP, protocol, tool, evidence-reader, raw preview, dashboard action,
+upload/import, replay, active scan, or automatic handoff behavior.
 
 ## Burp Montoya Collector
 
