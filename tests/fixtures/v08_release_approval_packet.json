@@ -1,0 +1,93 @@
+{
+  "schema_version": "v08_release_approval_packet.v1",
+  "release_approval_packet_only": true,
+  "release_type": "boundary_helper",
+  "target_commit": "58c7190e5cde43ca2ae4bddf056360eda649622b",
+  "pr130_merge_commit": "fcc0dd947ec9c62410cc5715cce7ae623bc32aa8",
+  "pr131_merge_commit": "bb484ea21d90759125a7224fedaec6a9ee7b75fc",
+  "pr132_merge_commit": "58c7190e5cde43ca2ae4bddf056360eda649622b",
+  "tag_created": false,
+  "github_release_created": false,
+  "explicit_release_approval_required": true,
+  "included_scope": [
+    "redaction_verify_review_report_pipeline",
+    "four_ai_input_candidate_files",
+    "dashboard_read_only_raw_free_baseline",
+    "disabled_by_default_mcp_helper_files",
+    "post_merge_boundary_note",
+    "scope_freeze_rc_readiness_evidence"
+  ],
+  "excluded_scope": [
+    "listener_startup",
+    "socket_bind_listen_accept",
+    "stdio_runtime",
+    "http_runtime",
+    "protocol_parser",
+    "json_rpc_parser",
+    "request_dispatcher",
+    "executable_tool_registration",
+    "tool_registry_runtime",
+    "tool_discovery_runtime",
+    "actual_tool_execution",
+    "local_evidence_reader",
+    "safe_file_body_reader",
+    "raw_preview_download",
+    "replay_active_scan",
+    "dashboard_state_changing_control",
+    "upload_import_action",
+    "automatic_chatgpt_handoff"
+  ],
+  "release_blockers": [
+    "unittest_failure",
+    "gitleaks_dir_finding",
+    "gitleaks_git_finding",
+    "git_safety_failure",
+    "dirty_working_tree",
+    "unexpected_v08_tag_exists",
+    "unexpected_github_release_v08_exists",
+    "raw_marker_or_credential_marker_in_docs_or_fixtures",
+    "output_bundle_structure_drift",
+    "unreviewed_runtime_surface_present",
+    "release_body_describes_read_only_mcp_runtime"
+  ],
+  "required_final_gate": [
+    "python_compileall",
+    "python_unittest_discover",
+    "gitleaks_dir",
+    "gitleaks_git",
+    "git_safety_check",
+    "git_diff_check",
+    "git_status_clean",
+    "v08_tag_absence_check",
+    "github_release_v08_absence_check",
+    "release_body_hygiene_check",
+    "tag_target_verification",
+    "release_target_verification"
+  ],
+  "proposed_release_note_sections": [
+    "summary",
+    "included_boundary_helper_scope",
+    "not_included",
+    "safety_and_privacy_boundaries",
+    "verification_evidence",
+    "manual_review_requirements",
+    "known_limitations",
+    "rollback_notes"
+  ],
+  "rollback_requirements": [
+    "before_tag_revert_approval_packet_pr_and_recheck_main_head",
+    "after_tag_or_release_requires_explicit_rollback_plan",
+    "no_tag_movement_in_this_packet",
+    "no_github_release_mutation_in_this_packet"
+  ],
+  "output_bundle_files": [
+    "analysis_packet.json",
+    "chatgpt_prompt.md",
+    "codex_task_prompt.md",
+    "report_draft.md"
+  ],
+  "manual_review_required": true,
+  "raw_data_included": false,
+  "output_bundle_structure_changed": false,
+  "read_only_mcp_runtime_release": false
+}
