@@ -281,6 +281,12 @@ V08_SKELETON_APPROVAL_PACKET_DOC = ROOT / "docs" / "V0.8_SKELETON_APPROVAL_PACKE
 V08_SKELETON_APPROVAL_PACKET_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v08_skeleton_approval_packet.json"
 )
+V08_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD_DOC = (
+    ROOT / "docs" / "V0.8_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD.md"
+)
+V08_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v08_runtime_source_check_consumption_guard.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -2908,6 +2914,236 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertEqual(
             fixture["recommended_next_order"][:2],
             ["runtime_facing_source_check_consumption_guard", "minimal_skeleton_runtime_pr_after_explicit_approval"],
+        )
+
+        combined = "\n".join([doc, fixture_text])
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue count",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "example.com",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v08_runtime_source_check_consumption_guard_is_guard_only(self) -> None:
+        doc = V08_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(
+            V08_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD_FIXTURE.read_text(encoding="utf-8")
+        )
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        approval = V08_SKELETON_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
+        planning = V08_MINIMAL_SKELETON_PLANNING_DOC.read_text(encoding="utf-8")
+        normalized_doc = " ".join(doc.split())
+        normalized_doc_lower = normalized_doc.lower()
+
+        self.assertTrue(V08_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD_DOC.exists())
+        self.assertTrue(V08_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD_FIXTURE.exists())
+        for linked_text in [readme, approval, planning]:
+            self.assertIn("V0.8_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD.md", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current v0.8 baseline",
+            "## Guard scope",
+            "## Explicit non-goals",
+            "## Runtime-facing file declaration requirements",
+            "## Approval packet consumption requirements",
+            "## Forbidden marker categories",
+            "## Source-check failure conditions",
+            "## Required negative tests",
+            "## Security review requirements",
+            "## Rollback expectations",
+            "## Deferred decisions",
+        ]:
+            self.assertIn(section, doc)
+
+        for consumed_baseline in [
+            "v08_backlog_split",
+            "v08_transport_design",
+            "v08_protocol_handler_design",
+            "v08_protocol_negative_harness",
+            "v08_tool_registration_design",
+            "v08_read_only_tool_contract",
+            "v08_minimal_skeleton_planning",
+            "v08_skeleton_approval_packet",
+        ]:
+            self.assertIn(consumed_baseline, doc)
+
+        for required_text in [
+            "fixture, test, and review-boundary document only",
+            "does not implement skeleton runtime",
+            "does not implement or approve",
+            "skeleton runtime",
+            "socket, bind, listen, or accept behavior",
+            "stdio transport runtime",
+            "http transport runtime",
+            "protocol parser",
+            "json-rpc parser",
+            "request dispatcher",
+            "executable tool registration",
+            "tool registry runtime",
+            "tool discovery runtime",
+            "actual tool execution",
+            "local evidence reader",
+            "safe file body reader",
+            "raw preview or raw download",
+            "dashboard start or stop control",
+            "upload or import action",
+            "replay or active scan",
+            "automatic chatgpt handoff",
+            "tag changes",
+            "github release changes",
+            "runtime_facing_file_missing_from_fixture",
+            "fixture_missing_approval_packet_consumption",
+            "fixture_flag_drift_to_true",
+            "forbidden_marker_present_without_approval",
+            "raw_free_contract_missing",
+            "rollback_requirement_missing",
+            "tag_release_mutation_marker_present",
+            "output_bundle_structure_change_marker_present",
+        ]:
+            self.assertIn(required_text.lower(), normalized_doc_lower)
+
+        self.assertEqual(
+            fixture["schema_version"], "v08_runtime_source_check_consumption_guard.v1"
+        )
+        for true_flag in [
+            "runtime_source_check_consumption_guard_only",
+            "v08_backlog_split_consumed",
+            "v08_transport_design_consumed",
+            "v08_protocol_handler_design_consumed",
+            "v08_protocol_negative_harness_consumed",
+            "v08_tool_registration_design_consumed",
+            "v08_read_only_tool_contract_consumed",
+            "v08_minimal_skeleton_planning_consumed",
+            "v08_skeleton_approval_packet_consumed",
+            "explicit_human_approval_required",
+            "runtime_facing_files_declared",
+        ]:
+            self.assertIs(fixture[true_flag], True)
+
+        for false_flag in [
+            "implementation_included",
+            "skeleton_runtime_implemented",
+            "socket_bind_implemented",
+            "socket_listen_implemented",
+            "socket_accept_implemented",
+            "stdio_transport_runtime_implemented",
+            "http_transport_runtime_implemented",
+            "protocol_parser_implemented",
+            "json_rpc_parser_implemented",
+            "request_dispatcher_implemented",
+            "tool_registration_runtime_implemented",
+            "tool_discovery_runtime_implemented",
+            "tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+            "tag_github_release_modified",
+            "output_bundle_structure_changed",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        for runtime_file in [
+            "burp_ai_redaction_gateway/mcp_minimal_skeleton.py",
+            "burp_ai_redaction_gateway/mcp_runtime_contract.py",
+        ]:
+            self.assertIn(runtime_file, fixture["runtime_facing_files"])
+            self.assertFalse((ROOT / Path(runtime_file)).exists())
+
+        for requirement in [
+            "consume_v08_skeleton_approval_packet",
+            "explicit_human_approval_required",
+            "expected_base_commit_required",
+            "disabled_by_default_required",
+            "loopback_only_if_runtime_approved",
+            "raw_free_blocked_disabled_response_required",
+            "rollback_without_tag_release_mutation_required",
+            "four_file_safe_candidate_boundary_required",
+        ]:
+            self.assertIn(requirement, fixture["approval_packet_consumption_requirements"])
+
+        for category in [
+            "socket_bind_listen_accept",
+            "stdio_http_runtime",
+            "protocol_parser",
+            "json_rpc_parser",
+            "request_dispatcher",
+            "executable_tool_registration",
+            "tool_registry_runtime",
+            "tool_discovery_runtime",
+            "actual_tool_execution",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "raw_preview_download",
+            "replay_active_scan",
+            "automatic_chatgpt_handoff",
+            "dashboard_state_changing_control",
+            "upload_import_action",
+            "tag_release_mutation",
+        ]:
+            self.assertIn(category, fixture["forbidden_marker_categories"])
+
+        for failure_condition in [
+            "runtime_facing_file_missing_from_fixture",
+            "fixture_missing_approval_packet_consumption",
+            "fixture_flag_drift_to_true",
+            "forbidden_marker_present_without_approval",
+            "raw_free_contract_missing",
+            "rollback_requirement_missing",
+            "tag_release_mutation_marker_present",
+            "output_bundle_structure_change_marker_present",
+        ]:
+            self.assertIn(failure_condition, fixture["source_check_failure_conditions"])
+
+        for rollback in [
+            "revert_runtime_facing_files_without_release_tag_movement",
+            "revert_runtime_facing_files_without_github_release_mutation",
+            "output_bundle_structure_unchanged",
+            "manual_review_and_four_file_boundary_unchanged",
+            "raw_free_blocked_disabled_response_after_rollback",
+        ]:
+            self.assertIn(rollback, fixture["rollback_requirements"])
+
+        self.assertEqual(
+            fixture["recommended_next_order"][:2],
+            [
+                "minimal_skeleton_runtime_approval_decision",
+                "minimal_skeleton_runtime_pr_after_explicit_approval",
+            ],
         )
 
         combined = "\n".join([doc, fixture_text])

@@ -442,6 +442,12 @@ It fixes explicit approval, blocker, raw-free response, rollback, and
 source-check requirements before any disabled-by-default skeleton runtime PR is
 reviewed.
 
+The v0.8 runtime source-check consumption guard is tracked in
+[`docs/V0.8_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD.md`](docs/V0.8_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD.md).
+It declares future runtime-facing files as fixture metadata only and keeps
+runtime implementation blocked until approval packet consumption and forbidden
+marker checks are in place.
+
 ## Burp Montoya Collector
 
 Burp-side collector skeleton은
