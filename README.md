@@ -511,6 +511,12 @@ It fixes metadata-only registry fields and forbidden execution-related fields
 without implementing dispatcher behavior, executable tool registration, actual
 tool execution, listener or transport runtime, local evidence reading, raw
 preview, or automatic handoff.
+The follow-up v0.9 registry implementation guard is tracked in
+[`tests/fixtures/v09_read_only_tool_registry_implementation_guard.json`](tests/fixtures/v09_read_only_tool_registry_implementation_guard.json).
+It requires future registry implementation work to consume the metadata-only
+contract fixture while keeping executable registration, dispatcher invocation,
+tool execution, local evidence access, raw preview, and automatic handoff out of
+scope.
 
 ## Burp Montoya Collector
 

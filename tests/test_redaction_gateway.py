@@ -355,6 +355,9 @@ V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_DOC = (
 V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v09_read_only_tool_registry_contract.json"
 )
+V09_READ_ONLY_TOOL_REGISTRY_IMPLEMENTATION_GUARD_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v09_read_only_tool_registry_implementation_guard.json"
+)
 MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
@@ -5254,6 +5257,174 @@ class RedactionGatewayTests(unittest.TestCase):
             "automatic_chatgpt_handoff_decision",
         ]:
             self.assertIn(deferred, fixture["deferred_work"])
+
+        positive_summary = validate_positive_case_fixture(
+            positive_cases,
+            positive_decision,
+        )
+        negative_summary = validate_negative_case_fixture(negative_cases)
+        self.assertEqual(positive_summary["parsed_count"], 4)
+        self.assertEqual(positive_summary["blocked_count"], 1)
+        self.assertIs(positive_summary["raw_data_included"], False)
+        self.assertIs(negative_summary["all_blocked"], True)
+        self.assertIs(negative_summary["raw_data_included"], False)
+
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v09_read_only_registry_implementation_guard_consumes_contract(self) -> None:
+        guard = json.loads(
+            V09_READ_ONLY_TOOL_REGISTRY_IMPLEMENTATION_GUARD_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        contract = json.loads(
+            V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_FIXTURE.read_text(encoding="utf-8")
+        )
+        doc = V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        positive_cases = json.loads(
+            V09_PARSER_POSITIVE_SHAPE_CASES_FIXTURE.read_text(encoding="utf-8")
+        )
+        positive_decision = json.loads(
+            V09_PARSER_POSITIVE_SHAPE_DECISION_FIXTURE.read_text(encoding="utf-8")
+        )
+        negative_cases = json.loads(
+            V09_PROTOCOL_PARSER_NEGATIVE_CASES_FIXTURE.read_text(encoding="utf-8")
+        )
+        guard_text = json.dumps(guard, sort_keys=True)
+        combined = "\n".join([guard_text, doc])
+
+        self.assertTrue(
+            V09_READ_ONLY_TOOL_REGISTRY_IMPLEMENTATION_GUARD_FIXTURE.exists()
+        )
+        self.assertIn(
+            "v09_read_only_tool_registry_implementation_guard.json",
+            readme,
+        )
+        self.assertIn(
+            "v09_read_only_tool_registry_implementation_guard.json",
+            doc,
+        )
+        self.assertEqual(
+            guard["schema_version"],
+            "v09_read_only_tool_registry_implementation_guard.v1",
+        )
+        self.assertIs(guard["registry_implementation_guard_only"], True)
+        self.assertIs(guard["registry_contract_consumed_required"], True)
+        self.assertEqual(
+            guard["contract_fixture_path"],
+            "tests/fixtures/v09_read_only_tool_registry_contract.json",
+        )
+        self.assertTrue((ROOT / guard["contract_fixture_path"]).exists())
+        self.assertEqual(
+            guard["required_contract_fields"],
+            contract["allowed_registry_metadata_fields"],
+        )
+
+        false_flags = [
+            "registry_implemented",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "dispatcher_implemented",
+            "listener_transport_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "tag_github_release_created",
+            "raw_data_included",
+        ]
+        for false_flag in false_flags:
+            self.assertIn(false_flag, guard)
+            self.assertIs(guard[false_flag], False)
+
+        self.assertIs(guard["parser_positive_behavior_unchanged_required"], True)
+        self.assertIs(guard["parser_negative_behavior_unchanged_required"], True)
+        self.assertIs(guard["manual_review_required"], True)
+
+        false_only_flags = [
+            "tool_execution_allowed",
+            "dispatcher_invocation_allowed",
+            "local_evidence_access_allowed",
+        ]
+        self.assertEqual(guard["false_only_flags"], false_only_flags)
+        self.assertEqual(
+            set(guard["false_only_flags"]),
+            set(guard["false_only_flag_values"]),
+        )
+        for false_only_flag in false_only_flags:
+            self.assertIn(false_only_flag, contract["allowed_registry_metadata_fields"])
+            self.assertIs(guard["false_only_flag_values"][false_only_flag], False)
+
+        for surface in [
+            "executable_registry",
+            "dispatcher",
+            "listener_transport",
+            "executable_tool_registration",
+            "actual_tool_execution",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "raw_preview_download",
+            "replay_active_scan",
+            "dashboard_state_changing_control",
+            "upload_import_action",
+            "automatic_chatgpt_handoff",
+        ]:
+            self.assertIn(surface, guard["forbidden_runtime_surfaces"])
+
+        for expectation in [
+            "implementation_guard_fixture_exists",
+            "contract_fixture_path_resolves",
+            "required_contract_fields_match_allowed_registry_metadata_fields",
+            "false_only_flags_are_allowed_contract_fields",
+            "runtime_surface_flags_remain_false",
+            "parser_positive_behavior_unchanged_required",
+            "parser_negative_behavior_unchanged_required",
+            "source_check_files_have_no_forbidden_markers",
+            "no_tag_or_release_creation",
+        ]:
+            self.assertIn(expectation, guard["required_test_expectations"])
+
+        for source_check_file in guard["source_check_files"]:
+            source_path = ROOT / source_check_file
+            self.assertTrue(source_path.exists())
+            source = source_path.read_text(encoding="utf-8")
+            for marker in guard["forbidden_source_markers"]:
+                self.assertNotIn(marker, source)
 
         positive_summary = validate_positive_case_fixture(
             positive_cases,

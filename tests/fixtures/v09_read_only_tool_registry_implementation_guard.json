@@ -1,0 +1,99 @@
+{
+  "schema_version": "v09_read_only_tool_registry_implementation_guard.v1",
+  "registry_implementation_guard_only": true,
+  "registry_contract_consumed_required": true,
+  "registry_implemented": false,
+  "executable_tool_registration_implemented": false,
+  "actual_tool_execution_implemented": false,
+  "dispatcher_implemented": false,
+  "listener_transport_implemented": false,
+  "local_evidence_reader_implemented": false,
+  "safe_file_body_reader_implemented": false,
+  "raw_preview_download_implemented": false,
+  "replay_active_scan_implemented": false,
+  "dashboard_state_changing_control_implemented": false,
+  "upload_import_action_implemented": false,
+  "automatic_chatgpt_handoff_implemented": false,
+  "parser_positive_behavior_unchanged_required": true,
+  "parser_negative_behavior_unchanged_required": true,
+  "raw_data_included": false,
+  "manual_review_required": true,
+  "tag_github_release_created": false,
+  "contract_fixture_path": "tests/fixtures/v09_read_only_tool_registry_contract.json",
+  "required_contract_fields": [
+    "registry_schema_version",
+    "registry_contract_only",
+    "read_only_capability_labels",
+    "tool_execution_allowed",
+    "dispatcher_invocation_allowed",
+    "local_evidence_access_allowed",
+    "raw_data_included",
+    "manual_review_required"
+  ],
+  "false_only_flags": [
+    "tool_execution_allowed",
+    "dispatcher_invocation_allowed",
+    "local_evidence_access_allowed"
+  ],
+  "false_only_flag_values": {
+    "tool_execution_allowed": false,
+    "dispatcher_invocation_allowed": false,
+    "local_evidence_access_allowed": false
+  },
+  "forbidden_runtime_surfaces": [
+    "executable_registry",
+    "dispatcher",
+    "listener_transport",
+    "executable_tool_registration",
+    "actual_tool_execution",
+    "local_evidence_reader",
+    "safe_file_body_reader",
+    "raw_preview_download",
+    "replay_active_scan",
+    "dashboard_state_changing_control",
+    "upload_import_action",
+    "automatic_chatgpt_handoff"
+  ],
+  "source_check_files": [
+    "burp_ai_redaction_gateway/mcp_read_only_registry.py"
+  ],
+  "forbidden_source_markers": [
+    "dispatch_tool(",
+    "execute_tool(",
+    "register_tool(",
+    "read_local_evidence(",
+    "read_file_body(",
+    "serve_forever",
+    "run_server",
+    "create_server",
+    "bind(",
+    "listen(",
+    "accept(",
+    "http.server",
+    "socketserver",
+    "http.client",
+    "subprocess",
+    "requests",
+    "urllib.request"
+  ],
+  "required_test_expectations": [
+    "implementation_guard_fixture_exists",
+    "contract_fixture_path_resolves",
+    "required_contract_fields_match_allowed_registry_metadata_fields",
+    "false_only_flags_are_allowed_contract_fields",
+    "runtime_surface_flags_remain_false",
+    "parser_positive_behavior_unchanged_required",
+    "parser_negative_behavior_unchanged_required",
+    "source_check_files_have_no_forbidden_markers",
+    "no_tag_or_release_creation"
+  ],
+  "rollback_requirements": [
+    "split_scope_if_registry_implementation_is_added",
+    "split_scope_if_dispatcher_is_added",
+    "split_scope_if_tool_execution_is_added",
+    "split_scope_if_local_evidence_reader_is_added",
+    "keep_parser_positive_behavior_unchanged",
+    "keep_parser_negative_behavior_unchanged",
+    "do_not_create_v09_tag_or_release"
+  ]
+}
