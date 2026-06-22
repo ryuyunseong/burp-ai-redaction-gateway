@@ -135,6 +135,7 @@ from burp_ai_redaction_gateway.mcp_read_only_registry import (
     ReadOnlyRegistryEntry,
     build_blocked_response,
     build_read_only_tool_registry,
+    build_read_only_registry_metadata,
     validate_registry_against_contract_fixtures,
 )
 from burp_ai_redaction_gateway.mcp_tool_schema_catalog import (
@@ -5469,6 +5470,120 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v09_read_only_registry_metadata_implementation_consumes_contract_and_guard(self) -> None:
+        contract = json.loads(
+            V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_FIXTURE.read_text(encoding="utf-8")
+        )
+        guard = json.loads(
+            V09_READ_ONLY_TOOL_REGISTRY_IMPLEMENTATION_GUARD_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        positive_cases = json.loads(
+            V09_PARSER_POSITIVE_SHAPE_CASES_FIXTURE.read_text(encoding="utf-8")
+        )
+        positive_decision = json.loads(
+            V09_PARSER_POSITIVE_SHAPE_DECISION_FIXTURE.read_text(encoding="utf-8")
+        )
+        negative_cases = json.loads(
+            V09_PROTOCOL_PARSER_NEGATIVE_CASES_FIXTURE.read_text(encoding="utf-8")
+        )
+
+        metadata = build_read_only_registry_metadata(contract, guard)
+
+        self.assertEqual(
+            tuple(metadata),
+            tuple(contract["allowed_registry_metadata_fields"]),
+        )
+        self.assertEqual(
+            tuple(metadata),
+            tuple(guard["required_contract_fields"]),
+        )
+        self.assertEqual(
+            metadata,
+            {
+                "registry_schema_version": "v09_read_only_tool_registry_contract.v1",
+                "registry_contract_only": True,
+                "read_only_capability_labels": contract["read_only_capability_labels"],
+                "tool_execution_allowed": False,
+                "dispatcher_invocation_allowed": False,
+                "local_evidence_access_allowed": False,
+                "raw_data_included": False,
+                "manual_review_required": True,
+            },
+        )
+        self.assertTrue(
+            set(metadata).isdisjoint(contract["forbidden_registry_fields"])
+        )
+        for false_only_flag in guard["false_only_flags"]:
+            self.assertIs(metadata[false_only_flag], False)
+
+        positive_summary = validate_positive_case_fixture(
+            positive_cases,
+            positive_decision,
+        )
+        negative_summary = validate_negative_case_fixture(negative_cases)
+        self.assertEqual(positive_summary["parsed_count"], 4)
+        self.assertEqual(positive_summary["blocked_count"], 1)
+        self.assertIs(positive_summary["raw_data_included"], False)
+        self.assertIs(negative_summary["all_blocked"], True)
+        self.assertIs(negative_summary["raw_data_included"], False)
+
+        serialized_metadata = json.dumps(metadata, sort_keys=True)
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, serialized_metadata)
+        self.assertIsNone(re.search(r"https?://", serialized_metadata))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", serialized_metadata))
+
+        changed_guard = deepcopy(guard)
+        changed_guard["false_only_flag_values"]["tool_execution_allowed"] = True
+        with self.assertRaisesRegex(McpReadOnlyRegistryError, "false_only_value"):
+            build_read_only_registry_metadata(contract, changed_guard)
+
+        changed_contract = deepcopy(contract)
+        changed_contract["allowed_registry_metadata_fields"].append("unexpected_field")
+        with self.assertRaisesRegex(
+            McpReadOnlyRegistryError,
+            "allowed_registry_metadata_fields",
+        ):
+            build_read_only_registry_metadata(changed_contract, guard)
+
+        changed_contract = deepcopy(contract)
+        changed_contract["forbidden_registry_fields"].append("manual_review_required")
+        with self.assertRaisesRegex(
+            McpReadOnlyRegistryError,
+            "allowed_forbidden_overlap",
+        ):
+            build_read_only_registry_metadata(changed_contract, guard)
 
     def test_v09_minimal_protocol_parser_blocks_negative_fixture_cases(self) -> None:
         approval = json.loads(
