@@ -481,6 +481,11 @@ It fixes malformed input classes, blocked response fields, echo-forbidden value
 classes, source-check requirements, and negative-test planning without
 implementing a protocol parser, dispatcher, tool execution, local evidence
 reader, raw preview, or automatic handoff.
+The v0.9 protocol parser negative fixture harness is tracked in
+[`tests/fixtures/v09_protocol_parser_negative_cases.json`](tests/fixtures/v09_protocol_parser_negative_cases.json).
+It fixes synthetic malformed input expectations before parser implementation;
+future parser implementation PRs must consume this fixture and still keep
+dispatcher, tool execution, and local evidence reader work separate.
 
 ## Burp Montoya Collector
 

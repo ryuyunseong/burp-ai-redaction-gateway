@@ -318,6 +318,9 @@ V09_PROTOCOL_PARSER_APPROVAL_PACKET_DOC = (
 V09_PROTOCOL_PARSER_APPROVAL_PACKET_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v09_protocol_parser_approval_packet.json"
 )
+V09_PROTOCOL_PARSER_NEGATIVE_CASES_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v09_protocol_parser_negative_cases.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -4309,6 +4312,107 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn(negative_test, fixture["required_negative_tests"])
 
         combined = packet + "\n" + fixture_text
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v09_protocol_parser_negative_fixture_harness_is_raw_free(self) -> None:
+        approval = json.loads(
+            V09_PROTOCOL_PARSER_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8")
+        )
+        negative = json.loads(
+            V09_PROTOCOL_PARSER_NEGATIVE_CASES_FIXTURE.read_text(encoding="utf-8")
+        )
+        negative_text = json.dumps(negative, sort_keys=True)
+        packet = V09_PROTOCOL_PARSER_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        scope_decision = V09_RUNTIME_SCOPE_DECISION_DOC.read_text(encoding="utf-8")
+        combined = "\n".join([negative_text, packet, scope_decision])
+
+        self.assertTrue(V09_PROTOCOL_PARSER_NEGATIVE_CASES_FIXTURE.exists())
+        self.assertEqual(negative["schema_version"], "v09_protocol_parser_negative_cases.v1")
+        self.assertIs(negative["parser_implemented"], False)
+        self.assertIs(negative["json_rpc_parser_implemented"], False)
+        self.assertIs(negative["dispatcher_implemented"], False)
+        self.assertIs(negative["tool_execution_implemented"], False)
+        self.assertIs(negative["local_evidence_reader_implemented"], False)
+        self.assertIs(negative["raw_data_included"], False)
+        self.assertIs(negative["manual_review_required"], True)
+        self.assertIs(negative["approval_packet_consumed"], True)
+        self.assertIs(negative["source_check_required"], True)
+        self.assertIn("v09_protocol_parser_negative_cases.json", readme)
+        self.assertIn("v09_protocol_parser_negative_cases.json", scope_decision)
+        self.assertIn("v09_protocol_parser_negative_cases.json", packet)
+        self.assertIn("does not implement a protocol parser", packet)
+        self.assertIn("future parser implementation PR must consume this fixture", packet)
+
+        required_categories = [
+            "empty_message",
+            "invalid_json_shape",
+            "unsupported_protocol_version",
+            "unknown_method",
+            "missing_required_field",
+            "oversized_message",
+            "nested_payload_too_deep",
+            "raw_value_probe",
+            "credential_echo_probe",
+            "local_path_echo_probe",
+            "target_identifier_echo_probe",
+        ]
+        case_categories = [case["category"] for case in negative["cases"]]
+        self.assertEqual(case_categories, required_categories)
+        self.assertEqual(
+            sorted(set(case_categories)),
+            sorted(set(approval["malformed_input_classes"])),
+        )
+        self.assertEqual(len(case_categories), len(set(case_categories)))
+
+        allowed_fields = approval["blocked_response_allowed_fields"]
+        allowed_echo_classes = set(approval["echo_forbidden_value_classes"])
+        for case in negative["cases"]:
+            self.assertRegex(case["id"], r"^v09-parser-neg-\d{3}$")
+            self.assertTrue(case["synthetic_input_label"].startswith("synthetic_"))
+            self.assertEqual(case["expected_status"], "blocked")
+            self.assertEqual(case["expected_reason_code"], case["category"])
+            self.assertIs(case["parser_approved"], False)
+            self.assertIs(case["raw_data_included"], False)
+            self.assertIs(case["manual_review_required"], True)
+            self.assertIs(case["echo_forbidden"], True)
+            self.assertEqual(case["allowed_response_fields"], allowed_fields)
+            self.assertGreater(len(case["forbidden_echo_classes"]), 0)
+            self.assertTrue(set(case["forbidden_echo_classes"]).issubset(allowed_echo_classes))
+
         for forbidden in [
             "\ufeff",
             "\ufffd",
