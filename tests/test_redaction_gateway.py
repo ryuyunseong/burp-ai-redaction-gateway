@@ -104,10 +104,15 @@ from burp_ai_redaction_gateway.mcp_minimal_skeleton import (
 from burp_ai_redaction_gateway.mcp_protocol_parser import (
     BLOCKED_RESPONSE_ALLOWED_FIELDS as PROTOCOL_PARSER_BLOCKED_RESPONSE_ALLOWED_FIELDS,
     NEGATIVE_REASON_CODES as PROTOCOL_PARSER_NEGATIVE_REASON_CODES,
+    POSITIVE_REASON_CODES as PROTOCOL_PARSER_POSITIVE_REASON_CODES,
+    POSITIVE_RESPONSE_ALLOWED_FIELDS as PROTOCOL_PARSER_POSITIVE_RESPONSE_ALLOWED_FIELDS,
     build_blocked_parser_response,
     build_minimal_protocol_parser_metadata,
+    build_positive_parser_response,
+    parse_minimal_positive_protocol_message,
     parse_minimal_protocol_message,
     validate_negative_case_fixture,
+    validate_positive_case_fixture,
 )
 from burp_ai_redaction_gateway.mcp_listener_runtime import (
     MinimalListenerRuntimeConfig,
@@ -4971,6 +4976,112 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v09_minimal_positive_parser_consumes_shape_fixture(self) -> None:
+        decision = json.loads(
+            V09_PARSER_POSITIVE_SHAPE_DECISION_FIXTURE.read_text(encoding="utf-8")
+        )
+        positive = json.loads(
+            V09_PARSER_POSITIVE_SHAPE_CASES_FIXTURE.read_text(encoding="utf-8")
+        )
+        negative = json.loads(
+            V09_PROTOCOL_PARSER_NEGATIVE_CASES_FIXTURE.read_text(encoding="utf-8")
+        )
+        metadata = build_minimal_protocol_parser_metadata()
+        allowed_fields = decision["allowed_positive_response_fields"]
+        forbidden_fields = set(decision["forbidden_positive_response_fields"])
+        case_categories = [case["category"] for case in positive["cases"]]
+
+        self.assertIs(metadata["parser_only_implementation"], True)
+        self.assertIs(metadata["positive_fixture_consumed"], True)
+        self.assertEqual(
+            list(PROTOCOL_PARSER_POSITIVE_RESPONSE_ALLOWED_FIELDS),
+            allowed_fields,
+        )
+        self.assertEqual(list(PROTOCOL_PARSER_POSITIVE_REASON_CODES), case_categories)
+        self.assertEqual(metadata["positive_response_allowed_fields"], allowed_fields)
+        self.assertEqual(metadata["supported_positive_categories"], case_categories)
+
+        for false_flag in [
+            "json_rpc_parser_implemented",
+            "dispatcher_implemented",
+            "listener_startup_implemented",
+            "transport_implemented",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "tag_github_release_created",
+        ]:
+            self.assertIn(false_flag, metadata)
+            self.assertIs(metadata[false_flag], False)
+
+        summary = validate_positive_case_fixture(positive, decision)
+        self.assertEqual(
+            summary,
+            {
+                "ok": True,
+                "case_count": 5,
+                "parsed_count": 4,
+                "blocked_count": 1,
+                "raw_data_included": False,
+                "manual_review_required": True,
+                "allowed_response_fields": allowed_fields,
+                "forbidden_response_fields_returned": False,
+                "dispatcher_invoked": False,
+                "tool_execution_invoked": False,
+                "local_evidence_reader_invoked": False,
+            },
+        )
+
+        for case in positive["cases"]:
+            response = parse_minimal_positive_protocol_message(
+                case["synthetic_input_label"],
+                positive_case=case,
+            )
+            self.assertEqual(list(response), allowed_fields)
+            self.assertEqual(response["status"], case["expected_status"])
+            self.assertEqual(response["reason_code"], case["expected_reason_code"])
+            self.assertIs(response["parser_approved"], case["parser_approved"])
+            self.assertIs(response["raw_data_included"], False)
+            self.assertIs(response["manual_review_required"], True)
+            self.assertIsInstance(response["safe_message"], str)
+            self.assertNotEqual(response["safe_message"], "")
+            self.assertNotIn(case["synthetic_input_label"], str(response))
+            self.assertTrue(forbidden_fields.isdisjoint(response))
+            self.assertNotIn("raw", response["safe_message"].lower())
+            self.assertNotIn("credential", response["safe_message"].lower())
+            self.assertNotIn("token", response["safe_message"].lower())
+            self.assertNotIn("session", response["safe_message"].lower())
+
+        parsed_response = build_positive_parser_response("known_read_only_method_label")
+        self.assertEqual(list(parsed_response), allowed_fields)
+        self.assertEqual(parsed_response["status"], "parsed")
+        self.assertEqual(
+            parsed_response["normalized_method_label"],
+            "known_read_only_method_label",
+        )
+        blocked_response = build_positive_parser_response("unsafe user supplied reason")
+        self.assertEqual(list(blocked_response), allowed_fields)
+        self.assertEqual(blocked_response["status"], "blocked")
+        self.assertEqual(blocked_response["reason_code"], "unknown_method")
+        self.assertNotIn("unsafe user supplied reason", str(blocked_response))
+
+        untrusted_response = parse_minimal_positive_protocol_message(
+            {"synthetic": "known_read_only_method_label"}
+        )
+        self.assertEqual(
+            list(untrusted_response),
+            list(PROTOCOL_PARSER_BLOCKED_RESPONSE_ALLOWED_FIELDS),
+        )
+        self.assertEqual(untrusted_response["status"], "blocked")
+        self.assertEqual(untrusted_response["reason_code"], "unknown_method")
+        self.assertNotIn("known_read_only_method_label", str(untrusted_response))
+
+        negative_summary = validate_negative_case_fixture(negative)
+        self.assertIs(negative_summary["all_blocked"], True)
+        self.assertIs(negative_summary["raw_data_included"], False)
 
     def test_v09_minimal_protocol_parser_blocks_negative_fixture_cases(self) -> None:
         approval = json.loads(
