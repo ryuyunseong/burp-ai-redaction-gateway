@@ -335,6 +335,12 @@ V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_DOC = (
 V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v09_protocol_parser_implementation_decision.json"
 )
+V09_PARSER_POSITIVE_SHAPE_DECISION_DOC = (
+    ROOT / "docs" / "V0.9_PARSER_POSITIVE_SHAPE_DECISION.md"
+)
+V09_PARSER_POSITIVE_SHAPE_DECISION_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v09_parser_positive_shape_decision.json"
+)
 MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
@@ -4625,6 +4631,185 @@ class RedactionGatewayTests(unittest.TestCase):
             "final CVSS",
             "\"raw_request\"",
             "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v09_parser_positive_shape_decision_is_planning_only(self) -> None:
+        decision = V09_PARSER_POSITIVE_SHAPE_DECISION_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(
+            V09_PARSER_POSITIVE_SHAPE_DECISION_FIXTURE.read_text(encoding="utf-8")
+        )
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        implementation_decision = (
+            V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_DOC.read_text(
+                encoding="utf-8"
+            )
+        )
+        normalized = " ".join(decision.split())
+
+        self.assertTrue(V09_PARSER_POSITIVE_SHAPE_DECISION_DOC.exists())
+        self.assertTrue(V09_PARSER_POSITIVE_SHAPE_DECISION_FIXTURE.exists())
+        self.assertIn("V0.9_PARSER_POSITIVE_SHAPE_DECISION.md", readme)
+        self.assertIn(
+            "V0.9_PARSER_POSITIVE_SHAPE_DECISION.md",
+            implementation_decision,
+        )
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Decision Status",
+            "## Allowed Future Positive Shape Candidate",
+            "## Allowed Positive Response Fields",
+            "## Forbidden Positive Response Fields",
+            "## Required Tests",
+            "## Forbidden Scope",
+            "## Source-check Requirements",
+            "## Rollback Requirements",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, decision)
+
+        for required_text in [
+            "planning only",
+            "separate explicit approval",
+            "bc4b950cf20aee24f968e9ff28f037cf1072b741",
+            "minimal blocked-only parser: merged",
+            "positive parser shape: not implemented",
+            "read-only structured parse metadata only",
+            "without invoking a dispatcher",
+            "avoid tool lookup and executable tool registration",
+            "avoid actual tool execution",
+            "avoid local evidence reader and safe file body reader behavior",
+            "avoid raw input echo",
+            "avoid credential, session, or token echo",
+            "normalized_method_label",
+            "must be an allowlisted synthetic label",
+            "This decision does not approve",
+            "positive parser implementation",
+            "dashboard state-changing control",
+            "v0.9 tag creation",
+            "GitHub Release v0.9 creation",
+        ]:
+            self.assertIn(required_text, normalized)
+
+        self.assertEqual(
+            fixture["schema_version"],
+            "v09_parser_positive_shape_decision.v1",
+        )
+        self.assertIs(fixture["positive_shape_decision_only"], True)
+        self.assertIs(
+            fixture["explicit_positive_shape_implementation_approval_required"],
+            True,
+        )
+        self.assertEqual(
+            fixture["blocked_parser_baseline_commit"],
+            "bc4b950cf20aee24f968e9ff28f037cf1072b741",
+        )
+
+        for false_flag in [
+            "positive_shape_implemented",
+            "dispatcher_implemented",
+            "tool_execution_implemented",
+            "listener_transport_implemented",
+            "local_evidence_reader_implemented",
+            "raw_preview_download_implemented",
+            "automatic_chatgpt_handoff_implemented",
+        ]:
+            self.assertIn(false_flag, fixture)
+            self.assertIs(fixture[false_flag], False)
+
+        allowed_fields = [
+            "status",
+            "reason_code",
+            "parser_approved",
+            "raw_data_included",
+            "manual_review_required",
+            "safe_message",
+            "message_kind",
+            "protocol_version_supported",
+            "normalized_method_label",
+        ]
+        self.assertEqual(fixture["allowed_positive_response_fields"], allowed_fields)
+        for allowed_field in allowed_fields:
+            self.assertIn(f"`{allowed_field}`", decision)
+
+        for forbidden_field in [
+            "raw_input",
+            "raw_request",
+            "raw_response",
+            "target",
+            "url",
+            "domain",
+            "ip",
+            "credential",
+            "token",
+            "session",
+            "local_path",
+            "file_body",
+            "stack_trace",
+        ]:
+            self.assertIn(forbidden_field, fixture["forbidden_positive_response_fields"])
+            self.assertIn(f"`{forbidden_field}`", decision)
+
+        for expectation in [
+            "positive_shape_allowed_fields_only",
+            "positive_shape_no_raw_input_echo",
+            "positive_shape_no_credential_session_token_echo",
+            "positive_shape_no_target_identifier_echo",
+            "positive_shape_no_url_domain_ip_echo",
+            "positive_shape_no_local_path_echo",
+            "no_dispatcher_side_effect",
+            "no_tool_lookup_registration_or_execution",
+            "no_local_evidence_reader_or_file_body_reader",
+            "blocked_negative_cases_remain_unchanged",
+            "raw_data_included_false",
+            "manual_review_required_true",
+        ]:
+            self.assertIn(expectation, fixture["required_test_expectations"])
+
+        for deferred in [
+            "positive_shape_fixture_harness",
+            "minimal_positive_parser_implementation",
+            "dispatcher_approval_packet",
+            "read_only_tool_registry_contract_review",
+            "actual_tool_execution_threat_boundary",
+            "local_evidence_reader_threat_boundary",
+        ]:
+            self.assertIn(deferred, fixture["deferred_work"])
+
+        combined = "\n".join([decision, fixture_text, implementation_decision])
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
             "raw_request:",
             "raw_response:",
             "Cookie:",

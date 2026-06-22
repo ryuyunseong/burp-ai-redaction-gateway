@@ -1,0 +1,68 @@
+{
+  "schema_version": "v09_parser_positive_shape_decision.v1",
+  "positive_shape_decision_only": true,
+  "explicit_positive_shape_implementation_approval_required": true,
+  "positive_shape_implemented": false,
+  "dispatcher_implemented": false,
+  "tool_execution_implemented": false,
+  "listener_transport_implemented": false,
+  "local_evidence_reader_implemented": false,
+  "raw_preview_download_implemented": false,
+  "automatic_chatgpt_handoff_implemented": false,
+  "blocked_parser_baseline_commit": "bc4b950cf20aee24f968e9ff28f037cf1072b741",
+  "allowed_positive_response_fields": [
+    "status",
+    "reason_code",
+    "parser_approved",
+    "raw_data_included",
+    "manual_review_required",
+    "safe_message",
+    "message_kind",
+    "protocol_version_supported",
+    "normalized_method_label"
+  ],
+  "forbidden_positive_response_fields": [
+    "raw_input",
+    "raw_request",
+    "raw_response",
+    "target",
+    "url",
+    "domain",
+    "ip",
+    "credential",
+    "token",
+    "session",
+    "local_path",
+    "file_body",
+    "stack_trace"
+  ],
+  "required_test_expectations": [
+    "positive_shape_allowed_fields_only",
+    "positive_shape_no_raw_input_echo",
+    "positive_shape_no_credential_session_token_echo",
+    "positive_shape_no_target_identifier_echo",
+    "positive_shape_no_url_domain_ip_echo",
+    "positive_shape_no_local_path_echo",
+    "no_dispatcher_side_effect",
+    "no_tool_lookup_registration_or_execution",
+    "no_local_evidence_reader_or_file_body_reader",
+    "blocked_negative_cases_remain_unchanged",
+    "raw_data_included_false",
+    "manual_review_required_true"
+  ],
+  "deferred_work": [
+    "positive_shape_fixture_harness",
+    "minimal_positive_parser_implementation",
+    "dispatcher_approval_packet",
+    "read_only_tool_registry_contract_review",
+    "executable_tool_registration_decision",
+    "actual_tool_execution_threat_boundary",
+    "local_evidence_reader_threat_boundary"
+  ],
+  "rollback_requirements": [
+    "split_scope_if_dispatcher_or_execution_is_added",
+    "revert_positive_shape_if_raw_echo_occurs",
+    "keep_decision_fixture_as_planning_baseline",
+    "do_not_create_v09_tag_or_release"
+  ]
+}
