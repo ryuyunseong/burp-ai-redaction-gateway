@@ -492,6 +492,12 @@ It keeps parser implementation pending explicit approval and limits the first
 candidate to a minimal blocked-response parser that consumes the negative
 fixture without adding dispatcher, tool execution, listener, transport, local
 evidence reader, raw preview, or automatic handoff behavior.
+The v0.9 parser positive shape decision is tracked in
+[`docs/V0.9_PARSER_POSITIVE_SHAPE_DECISION.md`](docs/V0.9_PARSER_POSITIVE_SHAPE_DECISION.md).
+It fixes the future read-only structured parse metadata shape before any
+positive parser implementation and keeps dispatcher, tool execution, listener,
+transport, local evidence reader, raw preview, and automatic handoff behavior
+out of scope.
 
 ## Burp Montoya Collector
 
