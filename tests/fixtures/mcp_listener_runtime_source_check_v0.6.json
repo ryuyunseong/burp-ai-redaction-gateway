@@ -39,6 +39,7 @@
       "burp_ai_redaction_gateway/mcp_listener_skeleton.py",
       "burp_ai_redaction_gateway/mcp_listener_runtime.py",
       "burp_ai_redaction_gateway/mcp_minimal_skeleton.py",
+      "burp_ai_redaction_gateway/mcp_protocol_parser.py",
       "burp_ai_redaction_gateway/mcp_runtime_contract.py"
     ],
     "fail_on_undeclared_runtime_facing_file": true
