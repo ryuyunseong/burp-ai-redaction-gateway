@@ -349,6 +349,12 @@ V09_PARSER_POSITIVE_SHAPE_DECISION_FIXTURE = (
 V09_PARSER_POSITIVE_SHAPE_CASES_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v09_parser_positive_shape_cases.json"
 )
+V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_DOC = (
+    ROOT / "docs" / "V0.9_READ_ONLY_TOOL_REGISTRY_CONTRACT.md"
+)
+V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v09_read_only_tool_registry_contract.json"
+)
 MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
@@ -5082,6 +5088,216 @@ class RedactionGatewayTests(unittest.TestCase):
         negative_summary = validate_negative_case_fixture(negative)
         self.assertIs(negative_summary["all_blocked"], True)
         self.assertIs(negative_summary["raw_data_included"], False)
+
+    def test_v09_read_only_tool_registry_contract_is_contract_only(self) -> None:
+        doc = V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(
+            V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_FIXTURE.read_text(encoding="utf-8")
+        )
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        positive_doc = V09_PARSER_POSITIVE_SHAPE_DECISION_DOC.read_text(
+            encoding="utf-8"
+        )
+        implementation_decision = (
+            V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_DOC.read_text(
+                encoding="utf-8"
+            )
+        )
+        positive_cases = json.loads(
+            V09_PARSER_POSITIVE_SHAPE_CASES_FIXTURE.read_text(encoding="utf-8")
+        )
+        positive_decision = json.loads(
+            V09_PARSER_POSITIVE_SHAPE_DECISION_FIXTURE.read_text(encoding="utf-8")
+        )
+        negative_cases = json.loads(
+            V09_PROTOCOL_PARSER_NEGATIVE_CASES_FIXTURE.read_text(encoding="utf-8")
+        )
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        combined = "\n".join([doc, fixture_text, positive_doc, implementation_decision])
+        normalized_doc = " ".join(doc.split())
+
+        self.assertTrue(V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_DOC.exists())
+        self.assertTrue(V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_FIXTURE.exists())
+        for linked_text in [readme, positive_doc, implementation_decision]:
+            self.assertIn("V0.9_READ_ONLY_TOOL_REGISTRY_CONTRACT.md", linked_text)
+            self.assertIn("v09_read_only_tool_registry_contract.json", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Contract Scope",
+            "## Explicit Non-goals",
+            "## Allowed Registry Metadata Fields",
+            "## Forbidden Registry Fields",
+            "## Parser Behavior Guard",
+            "## Required Test Expectations",
+            "## PR Split Requirements",
+            "## Rollback Requirements",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, doc)
+
+        for required_text in [
+            "contract-only planning record",
+            "does not implement a dispatcher",
+            "does not turn parser output into an executable tool call",
+            "separate explicit approval",
+            "parser positive and negative behavior remain unchanged",
+            "dispatcher implementation",
+            "executable tool registration",
+            "actual tool execution",
+            "local evidence reader",
+            "v0.9 tag creation",
+            "GitHub Release v0.9 creation",
+        ]:
+            self.assertIn(required_text, normalized_doc)
+
+        self.assertEqual(
+            fixture["schema_version"],
+            "v09_read_only_tool_registry_contract.v1",
+        )
+        self.assertIs(fixture["registry_contract_only"], True)
+        for false_flag in [
+            "registry_implemented",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "dispatcher_implemented",
+            "listener_transport_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "dashboard_state_changing_control_implemented",
+            "upload_import_action_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "tag_github_release_created",
+            "raw_data_included",
+        ]:
+            self.assertIn(false_flag, fixture)
+            self.assertIs(fixture[false_flag], False)
+
+        self.assertIs(fixture["parser_positive_behavior_unchanged_required"], True)
+        self.assertIs(fixture["parser_negative_behavior_unchanged_required"], True)
+        self.assertIs(fixture["manual_review_required"], True)
+
+        allowed_fields = [
+            "registry_schema_version",
+            "registry_contract_only",
+            "read_only_capability_labels",
+            "tool_execution_allowed",
+            "dispatcher_invocation_allowed",
+            "local_evidence_access_allowed",
+            "raw_data_included",
+            "manual_review_required",
+        ]
+        self.assertEqual(fixture["allowed_registry_metadata_fields"], allowed_fields)
+        for allowed_field in allowed_fields:
+            self.assertIn(f"`{allowed_field}`", doc)
+
+        for forbidden_field in [
+            "raw_input",
+            "raw_request",
+            "raw_response",
+            "target",
+            "url",
+            "domain",
+            "ip",
+            "credential",
+            "token",
+            "session",
+            "local_path",
+            "file_body",
+            "command",
+            "executable",
+            "handler",
+            "callback",
+            "stack_trace",
+        ]:
+            self.assertIn(forbidden_field, fixture["forbidden_registry_fields"])
+            self.assertIn(f"`{forbidden_field}`", doc)
+
+        self.assertTrue(
+            set(fixture["allowed_registry_metadata_fields"]).isdisjoint(
+                fixture["forbidden_registry_fields"]
+            )
+        )
+        for capability_label in fixture["read_only_capability_labels"]:
+            self.assertTrue(capability_label.endswith("_metadata"))
+
+        for expectation in [
+            "registry_contract_document_exists",
+            "registry_contract_fixture_exists",
+            "registry_contract_only_true",
+            "registry_implemented_false",
+            "executable_tool_registration_false",
+            "actual_tool_execution_false",
+            "dispatcher_implemented_false",
+            "listener_transport_implemented_false",
+            "local_evidence_reader_implemented_false",
+            "allowed_registry_metadata_fields_only",
+            "parser_positive_behavior_unchanged_required",
+            "parser_negative_behavior_unchanged_required",
+            "no_dashboard_state_change",
+            "no_upload_import_action",
+            "no_tag_or_release_creation",
+        ]:
+            self.assertIn(expectation, fixture["required_test_expectations"])
+
+        for deferred in [
+            "dispatcher_approval_packet",
+            "dispatcher_implementation",
+            "executable_tool_registration_decision",
+            "actual_tool_execution_threat_boundary",
+            "local_evidence_reader_threat_boundary",
+            "safe_file_body_reader_threat_boundary",
+            "raw_preview_download_approval_packet",
+            "automatic_chatgpt_handoff_decision",
+        ]:
+            self.assertIn(deferred, fixture["deferred_work"])
+
+        positive_summary = validate_positive_case_fixture(
+            positive_cases,
+            positive_decision,
+        )
+        negative_summary = validate_negative_case_fixture(negative_cases)
+        self.assertEqual(positive_summary["parsed_count"], 4)
+        self.assertEqual(positive_summary["blocked_count"], 1)
+        self.assertIs(positive_summary["raw_data_included"], False)
+        self.assertIs(negative_summary["all_blocked"], True)
+        self.assertIs(negative_summary["raw_data_included"], False)
+
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
     def test_v09_minimal_protocol_parser_blocks_negative_fixture_cases(self) -> None:
         approval = json.loads(
