@@ -312,6 +312,12 @@ V09_RUNTIME_SCOPE_DECISION_DOC = ROOT / "docs" / "V0.9_RUNTIME_SCOPE_DECISION.md
 V09_RUNTIME_SCOPE_DECISION_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v09_runtime_scope_decision.json"
 )
+V09_PROTOCOL_PARSER_APPROVAL_PACKET_DOC = (
+    ROOT / "docs" / "V0.9_PROTOCOL_PARSER_APPROVAL_PACKET.md"
+)
+V09_PROTOCOL_PARSER_APPROVAL_PACKET_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v09_protocol_parser_approval_packet.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -4138,6 +4144,171 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn(negative_test, fixture["required_negative_tests"])
 
         combined = decision + "\n" + fixture_text
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v09_protocol_parser_approval_packet_is_planning_only_and_raw_free(self) -> None:
+        packet = V09_PROTOCOL_PARSER_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(
+            V09_PROTOCOL_PARSER_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8")
+        )
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        scope_decision = V09_RUNTIME_SCOPE_DECISION_DOC.read_text(encoding="utf-8")
+        normalized = " ".join(packet.split())
+
+        self.assertTrue(V09_PROTOCOL_PARSER_APPROVAL_PACKET_DOC.exists())
+        self.assertTrue(V09_PROTOCOL_PARSER_APPROVAL_PACKET_FIXTURE.exists())
+        self.assertIn("V0.9_PROTOCOL_PARSER_APPROVAL_PACKET.md", readme)
+        self.assertIn("V0.9_PROTOCOL_PARSER_APPROVAL_PACKET.md", scope_decision)
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Approval Scope",
+            "## Explicit Non-goals",
+            "## Malformed Input Classes",
+            "## Blocked Response Requirements",
+            "## Echo-forbidden Value Classes",
+            "## Source-check Requirements",
+            "## Required Negative Tests",
+            "## PR Split Requirements",
+            "## Security Review Checklist",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, packet)
+
+        for required_text in [
+            "approval packet fixes the protocol parser boundary",
+            "does not implement a protocol parser",
+            "fc9a83b2e5e34d1d2ea098898b4af138a5c4b4dc",
+            "protocol parser approval packet first",
+            "This packet does not approve parser implementation",
+            "Blocked parser responses may include only",
+            "Every blocked response must set `parser_approved` to false",
+            "Tests may use synthetic labels for these classes",
+            "protocol parser implementation from dispatcher implementation",
+            "local evidence reader from parser, dispatcher, registry, and runtime work",
+        ]:
+            self.assertIn(required_text, normalized)
+
+        self.assertEqual(fixture["schema_version"], "v09_protocol_parser_approval_packet.v1")
+        self.assertIs(fixture["approval_packet_only"], True)
+        self.assertIs(fixture["raw_data_included"], False)
+        self.assertIs(fixture["manual_review_required"], True)
+        self.assertIs(fixture["output_bundle_structure_changed"], False)
+        self.assertEqual(
+            fixture["output_bundle_files"],
+            ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"],
+        )
+
+        for false_flag in [
+            "protocol_parser_implemented",
+            "json_rpc_parser_implemented",
+            "dispatcher_implemented",
+            "listener_startup_implemented",
+            "transport_implemented",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "tag_github_release_created",
+        ]:
+            self.assertIn(false_flag, fixture)
+            self.assertIs(fixture[false_flag], False)
+
+        for category in [
+            "empty_message",
+            "invalid_json_shape",
+            "unsupported_protocol_version",
+            "unknown_method",
+            "missing_required_field",
+            "oversized_message",
+            "nested_payload_too_deep",
+            "raw_value_probe",
+            "credential_echo_probe",
+            "local_path_echo_probe",
+            "target_identifier_echo_probe",
+        ]:
+            self.assertIn(category, fixture["malformed_input_classes"])
+            self.assertIn(f"`{category}`", packet)
+
+        self.assertEqual(
+            fixture["blocked_response_allowed_fields"],
+            [
+                "status",
+                "reason_code",
+                "parser_approved",
+                "raw_data_included",
+                "manual_review_required",
+                "safe_message",
+            ],
+        )
+
+        for value_class in [
+            "raw_request_response",
+            "credential_value",
+            "token_value",
+            "session_value",
+            "target_identifier",
+            "url_domain_ip",
+            "full_local_path",
+            "local_only_filename",
+            "stack_trace",
+            "local_evidence_body",
+        ]:
+            self.assertIn(value_class, fixture["echo_forbidden_value_classes"])
+
+        for negative_test in [
+            "malformed_input_blocked",
+            "raw_value_not_echoed",
+            "credential_value_not_echoed",
+            "target_identifier_not_echoed",
+            "local_path_not_echoed",
+            "unknown_method_blocked",
+            "oversized_message_blocked",
+            "dispatcher_absent",
+            "tool_execution_absent",
+            "local_evidence_reader_absent",
+        ]:
+            self.assertIn(negative_test, fixture["required_negative_tests"])
+
+        combined = packet + "\n" + fixture_text
         for forbidden in [
             "\ufeff",
             "\ufffd",

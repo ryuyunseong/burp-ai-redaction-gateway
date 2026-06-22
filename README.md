@@ -475,6 +475,12 @@ It starts the post-v0.8 planning path by comparing protocol parser,
 transport/listener, read-only tool registry, and local evidence reader options
 without implementing runtime startup, parser behavior, dispatch, tool
 execution, local evidence reading, raw preview, or automatic handoff.
+The v0.9 protocol parser approval packet is tracked in
+[`docs/V0.9_PROTOCOL_PARSER_APPROVAL_PACKET.md`](docs/V0.9_PROTOCOL_PARSER_APPROVAL_PACKET.md).
+It fixes malformed input classes, blocked response fields, echo-forbidden value
+classes, source-check requirements, and negative-test planning without
+implementing a protocol parser, dispatcher, tool execution, local evidence
+reader, raw preview, or automatic handoff.
 
 ## Burp Montoya Collector
 
