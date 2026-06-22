@@ -498,6 +498,12 @@ It fixes the future read-only structured parse metadata shape before any
 positive parser implementation and keeps dispatcher, tool execution, listener,
 transport, local evidence reader, raw preview, and automatic handoff behavior
 out of scope.
+The v0.9 parser positive shape fixture harness is tracked in
+[`tests/fixtures/v09_parser_positive_shape_cases.json`](tests/fixtures/v09_parser_positive_shape_cases.json).
+It fixes synthetic allowed/forbidden response shape expectations before any
+positive parser implementation; future positive parser implementation PRs must
+consume this fixture and still keep dispatcher, tool execution, listener,
+transport, and local evidence reader work separate.
 
 ## Burp Montoya Collector
 
