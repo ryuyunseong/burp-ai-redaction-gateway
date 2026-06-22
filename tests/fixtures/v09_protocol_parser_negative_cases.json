@@ -1,0 +1,268 @@
+{
+  "schema_version": "v09_protocol_parser_negative_cases.v1",
+  "parser_implemented": false,
+  "json_rpc_parser_implemented": false,
+  "dispatcher_implemented": false,
+  "tool_execution_implemented": false,
+  "local_evidence_reader_implemented": false,
+  "raw_data_included": false,
+  "manual_review_required": true,
+  "approval_packet_consumed": true,
+  "source_check_required": true,
+  "cases": [
+    {
+      "id": "v09-parser-neg-001",
+      "category": "empty_message",
+      "synthetic_input_label": "synthetic_empty_message_label",
+      "expected_status": "blocked",
+      "expected_reason_code": "empty_message",
+      "parser_approved": false,
+      "raw_data_included": false,
+      "manual_review_required": true,
+      "echo_forbidden": true,
+      "forbidden_echo_classes": [
+        "raw_request_response",
+        "local_evidence_body"
+      ],
+      "allowed_response_fields": [
+        "status",
+        "reason_code",
+        "parser_approved",
+        "raw_data_included",
+        "manual_review_required",
+        "safe_message"
+      ]
+    },
+    {
+      "id": "v09-parser-neg-002",
+      "category": "invalid_json_shape",
+      "synthetic_input_label": "synthetic_invalid_shape_label",
+      "expected_status": "blocked",
+      "expected_reason_code": "invalid_json_shape",
+      "parser_approved": false,
+      "raw_data_included": false,
+      "manual_review_required": true,
+      "echo_forbidden": true,
+      "forbidden_echo_classes": [
+        "raw_request_response",
+        "stack_trace"
+      ],
+      "allowed_response_fields": [
+        "status",
+        "reason_code",
+        "parser_approved",
+        "raw_data_included",
+        "manual_review_required",
+        "safe_message"
+      ]
+    },
+    {
+      "id": "v09-parser-neg-003",
+      "category": "unsupported_protocol_version",
+      "synthetic_input_label": "synthetic_unsupported_version_label",
+      "expected_status": "blocked",
+      "expected_reason_code": "unsupported_protocol_version",
+      "parser_approved": false,
+      "raw_data_included": false,
+      "manual_review_required": true,
+      "echo_forbidden": true,
+      "forbidden_echo_classes": [
+        "target_identifier",
+        "url_domain_ip"
+      ],
+      "allowed_response_fields": [
+        "status",
+        "reason_code",
+        "parser_approved",
+        "raw_data_included",
+        "manual_review_required",
+        "safe_message"
+      ]
+    },
+    {
+      "id": "v09-parser-neg-004",
+      "category": "unknown_method",
+      "synthetic_input_label": "synthetic_unknown_method_label",
+      "expected_status": "blocked",
+      "expected_reason_code": "unknown_method",
+      "parser_approved": false,
+      "raw_data_included": false,
+      "manual_review_required": true,
+      "echo_forbidden": true,
+      "forbidden_echo_classes": [
+        "target_identifier",
+        "local_evidence_body"
+      ],
+      "allowed_response_fields": [
+        "status",
+        "reason_code",
+        "parser_approved",
+        "raw_data_included",
+        "manual_review_required",
+        "safe_message"
+      ]
+    },
+    {
+      "id": "v09-parser-neg-005",
+      "category": "missing_required_field",
+      "synthetic_input_label": "synthetic_missing_field_label",
+      "expected_status": "blocked",
+      "expected_reason_code": "missing_required_field",
+      "parser_approved": false,
+      "raw_data_included": false,
+      "manual_review_required": true,
+      "echo_forbidden": true,
+      "forbidden_echo_classes": [
+        "credential_value",
+        "session_value"
+      ],
+      "allowed_response_fields": [
+        "status",
+        "reason_code",
+        "parser_approved",
+        "raw_data_included",
+        "manual_review_required",
+        "safe_message"
+      ]
+    },
+    {
+      "id": "v09-parser-neg-006",
+      "category": "oversized_message",
+      "synthetic_input_label": "synthetic_oversized_message_label",
+      "expected_status": "blocked",
+      "expected_reason_code": "oversized_message",
+      "parser_approved": false,
+      "raw_data_included": false,
+      "manual_review_required": true,
+      "echo_forbidden": true,
+      "forbidden_echo_classes": [
+        "raw_request_response",
+        "local_evidence_body"
+      ],
+      "allowed_response_fields": [
+        "status",
+        "reason_code",
+        "parser_approved",
+        "raw_data_included",
+        "manual_review_required",
+        "safe_message"
+      ]
+    },
+    {
+      "id": "v09-parser-neg-007",
+      "category": "nested_payload_too_deep",
+      "synthetic_input_label": "synthetic_deep_payload_label",
+      "expected_status": "blocked",
+      "expected_reason_code": "nested_payload_too_deep",
+      "parser_approved": false,
+      "raw_data_included": false,
+      "manual_review_required": true,
+      "echo_forbidden": true,
+      "forbidden_echo_classes": [
+        "stack_trace",
+        "local_evidence_body"
+      ],
+      "allowed_response_fields": [
+        "status",
+        "reason_code",
+        "parser_approved",
+        "raw_data_included",
+        "manual_review_required",
+        "safe_message"
+      ]
+    },
+    {
+      "id": "v09-parser-neg-008",
+      "category": "raw_value_probe",
+      "synthetic_input_label": "synthetic_raw_probe_label",
+      "expected_status": "blocked",
+      "expected_reason_code": "raw_value_probe",
+      "parser_approved": false,
+      "raw_data_included": false,
+      "manual_review_required": true,
+      "echo_forbidden": true,
+      "forbidden_echo_classes": [
+        "raw_request_response",
+        "local_evidence_body"
+      ],
+      "allowed_response_fields": [
+        "status",
+        "reason_code",
+        "parser_approved",
+        "raw_data_included",
+        "manual_review_required",
+        "safe_message"
+      ]
+    },
+    {
+      "id": "v09-parser-neg-009",
+      "category": "credential_echo_probe",
+      "synthetic_input_label": "synthetic_credential_probe_label",
+      "expected_status": "blocked",
+      "expected_reason_code": "credential_echo_probe",
+      "parser_approved": false,
+      "raw_data_included": false,
+      "manual_review_required": true,
+      "echo_forbidden": true,
+      "forbidden_echo_classes": [
+        "credential_value",
+        "token_value",
+        "session_value"
+      ],
+      "allowed_response_fields": [
+        "status",
+        "reason_code",
+        "parser_approved",
+        "raw_data_included",
+        "manual_review_required",
+        "safe_message"
+      ]
+    },
+    {
+      "id": "v09-parser-neg-010",
+      "category": "local_path_echo_probe",
+      "synthetic_input_label": "synthetic_local_path_probe_label",
+      "expected_status": "blocked",
+      "expected_reason_code": "local_path_echo_probe",
+      "parser_approved": false,
+      "raw_data_included": false,
+      "manual_review_required": true,
+      "echo_forbidden": true,
+      "forbidden_echo_classes": [
+        "full_local_path",
+        "local_only_filename"
+      ],
+      "allowed_response_fields": [
+        "status",
+        "reason_code",
+        "parser_approved",
+        "raw_data_included",
+        "manual_review_required",
+        "safe_message"
+      ]
+    },
+    {
+      "id": "v09-parser-neg-011",
+      "category": "target_identifier_echo_probe",
+      "synthetic_input_label": "synthetic_target_probe_label",
+      "expected_status": "blocked",
+      "expected_reason_code": "target_identifier_echo_probe",
+      "parser_approved": false,
+      "raw_data_included": false,
+      "manual_review_required": true,
+      "echo_forbidden": true,
+      "forbidden_echo_classes": [
+        "target_identifier",
+        "url_domain_ip"
+      ],
+      "allowed_response_fields": [
+        "status",
+        "reason_code",
+        "parser_approved",
+        "raw_data_included",
+        "manual_review_required",
+        "safe_message"
+      ]
+    }
+  ]
+}
