@@ -504,6 +504,13 @@ It fixes synthetic allowed/forbidden response shape expectations before any
 positive parser implementation; future positive parser implementation PRs must
 consume this fixture and still keep dispatcher, tool execution, listener,
 transport, and local evidence reader work separate.
+The v0.9 read-only tool registry contract is tracked in
+[`docs/V0.9_READ_ONLY_TOOL_REGISTRY_CONTRACT.md`](docs/V0.9_READ_ONLY_TOOL_REGISTRY_CONTRACT.md)
+and [`tests/fixtures/v09_read_only_tool_registry_contract.json`](tests/fixtures/v09_read_only_tool_registry_contract.json).
+It fixes metadata-only registry fields and forbidden execution-related fields
+without implementing dispatcher behavior, executable tool registration, actual
+tool execution, listener or transport runtime, local evidence reading, raw
+preview, or automatic handoff.
 
 ## Burp Montoya Collector
 
