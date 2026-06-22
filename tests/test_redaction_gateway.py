@@ -101,6 +101,14 @@ from burp_ai_redaction_gateway.mcp_minimal_skeleton import (
     build_minimal_skeleton_disabled_response,
     build_minimal_skeleton_metadata,
 )
+from burp_ai_redaction_gateway.mcp_protocol_parser import (
+    BLOCKED_RESPONSE_ALLOWED_FIELDS as PROTOCOL_PARSER_BLOCKED_RESPONSE_ALLOWED_FIELDS,
+    NEGATIVE_REASON_CODES as PROTOCOL_PARSER_NEGATIVE_REASON_CODES,
+    build_blocked_parser_response,
+    build_minimal_protocol_parser_metadata,
+    parse_minimal_protocol_message,
+    validate_negative_case_fixture,
+)
 from burp_ai_redaction_gateway.mcp_listener_runtime import (
     MinimalListenerRuntimeConfig,
     build_default_listener_runtime_config,
@@ -327,6 +335,7 @@ V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_DOC = (
 V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v09_protocol_parser_implementation_decision.json"
 )
+MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -4638,6 +4647,170 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
+    def test_v09_minimal_protocol_parser_blocks_negative_fixture_cases(self) -> None:
+        approval = json.loads(
+            V09_PROTOCOL_PARSER_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8")
+        )
+        negative = json.loads(
+            V09_PROTOCOL_PARSER_NEGATIVE_CASES_FIXTURE.read_text(encoding="utf-8")
+        )
+        decision = json.loads(
+            V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        module_text = MCP_PROTOCOL_PARSER_MODULE.read_text(encoding="utf-8")
+        metadata = build_minimal_protocol_parser_metadata()
+        allowed_fields = approval["blocked_response_allowed_fields"]
+        negative_categories = [case["category"] for case in negative["cases"]]
+
+        self.assertTrue(MCP_PROTOCOL_PARSER_MODULE.exists())
+        self.assertEqual(metadata["schema_version"], "v09_minimal_protocol_parser.v1")
+        self.assertIs(metadata["parser_only_implementation"], True)
+        self.assertIs(metadata["negative_fixture_consumed"], True)
+        self.assertIs(metadata["raw_data_included"], False)
+        self.assertIs(metadata["manual_review_required"], True)
+        self.assertEqual(
+            list(PROTOCOL_PARSER_BLOCKED_RESPONSE_ALLOWED_FIELDS),
+            allowed_fields,
+        )
+        self.assertEqual(list(PROTOCOL_PARSER_NEGATIVE_REASON_CODES), negative_categories)
+        self.assertEqual(metadata["blocked_response_allowed_fields"], allowed_fields)
+        self.assertEqual(metadata["supported_negative_categories"], negative_categories)
+        self.assertEqual(decision["required_negative_categories"], negative_categories)
+        self.assertEqual(decision["allowed_response_fields"], allowed_fields)
+        self.assertEqual(
+            decision["forbidden_echo_classes"],
+            approval["echo_forbidden_value_classes"],
+        )
+
+        for false_flag in [
+            "json_rpc_parser_implemented",
+            "dispatcher_implemented",
+            "listener_startup_implemented",
+            "transport_implemented",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "tag_github_release_created",
+        ]:
+            self.assertIn(false_flag, metadata)
+            self.assertIs(metadata[false_flag], False)
+
+        summary = validate_negative_case_fixture(negative)
+        self.assertEqual(
+            summary,
+            {
+                "ok": True,
+                "case_count": 11,
+                "all_blocked": True,
+                "parser_approved": False,
+                "raw_data_included": False,
+                "manual_review_required": True,
+                "allowed_response_fields": allowed_fields,
+            },
+        )
+
+        for case in negative["cases"]:
+            response = parse_minimal_protocol_message(
+                case["synthetic_input_label"],
+                negative_case=case,
+            )
+            self.assertEqual(list(response), allowed_fields)
+            self.assertEqual(response["status"], "blocked")
+            self.assertEqual(response["reason_code"], case["expected_reason_code"])
+            self.assertIs(response["parser_approved"], False)
+            self.assertIs(response["raw_data_included"], False)
+            self.assertIs(response["manual_review_required"], True)
+            response_text = str(response)
+            self.assertNotIn(case["synthetic_input_label"], response_text)
+            for forbidden_echo_class in case["forbidden_echo_classes"]:
+                self.assertNotIn(forbidden_echo_class, response["safe_message"])
+
+        unknown_response = build_blocked_parser_response("unsafe user supplied reason")
+        self.assertEqual(list(unknown_response), allowed_fields)
+        self.assertEqual(unknown_response["status"], "blocked")
+        self.assertEqual(unknown_response["reason_code"], "unknown_method")
+        self.assertNotIn("unsafe user supplied reason", str(unknown_response))
+        self.assertEqual(
+            parse_minimal_protocol_message(None)["reason_code"],
+            "empty_message",
+        )
+        self.assertEqual(
+            parse_minimal_protocol_message("")["reason_code"],
+            "empty_message",
+        )
+        self.assertEqual(
+            parse_minimal_protocol_message("x" * 9000)["reason_code"],
+            "oversized_message",
+        )
+        self.assertEqual(
+            parse_minimal_protocol_message({"synthetic": "value"})["reason_code"],
+            "unknown_method",
+        )
+
+        for forbidden_marker in [
+            "http.server",
+            "socketserver",
+            "http.client",
+            "subprocess",
+            "requests",
+            "urllib",
+            "bind(",
+            "listen(",
+            "accept(",
+            "serve_forever",
+            "run_server",
+            "create_server",
+            "register_tool",
+            "dispatch_tool",
+            "tool_execute",
+            "execute_tool",
+            "read_local_evidence",
+            "read_file_body",
+            "open(",
+            "Path(",
+        ]:
+            self.assertNotIn(forbidden_marker, module_text)
+
+        combined = module_text + "\n" + json.dumps(metadata, sort_keys=True)
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
     def test_v08_minimal_skeleton_runtime_is_disabled_and_raw_free(self) -> None:
         guard_fixture = json.loads(
             V08_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD_FIXTURE.read_text(encoding="utf-8")
@@ -6955,6 +7128,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 "burp_ai_redaction_gateway/mcp_listener_skeleton.py",
                 "burp_ai_redaction_gateway/mcp_listener_runtime.py",
                 "burp_ai_redaction_gateway/mcp_minimal_skeleton.py",
+                "burp_ai_redaction_gateway/mcp_protocol_parser.py",
                 "burp_ai_redaction_gateway/mcp_runtime_contract.py",
             ],
         )
@@ -12046,6 +12220,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 "burp_ai_redaction_gateway/mcp_listener_skeleton.py",
                 "burp_ai_redaction_gateway/mcp_listener_runtime.py",
                 "burp_ai_redaction_gateway/mcp_minimal_skeleton.py",
+                "burp_ai_redaction_gateway/mcp_protocol_parser.py",
                 "burp_ai_redaction_gateway/mcp_runtime_contract.py",
             ],
         )
