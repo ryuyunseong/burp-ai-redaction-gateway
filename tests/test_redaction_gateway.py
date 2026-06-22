@@ -321,6 +321,12 @@ V09_PROTOCOL_PARSER_APPROVAL_PACKET_FIXTURE = (
 V09_PROTOCOL_PARSER_NEGATIVE_CASES_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v09_protocol_parser_negative_cases.json"
 )
+V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_DOC = (
+    ROOT / "docs" / "V0.9_PROTOCOL_PARSER_IMPLEMENTATION_DECISION.md"
+)
+V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v09_protocol_parser_implementation_decision.json"
+)
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
 MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC = (
@@ -4413,6 +4419,190 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertGreater(len(case["forbidden_echo_classes"]), 0)
             self.assertTrue(set(case["forbidden_echo_classes"]).issubset(allowed_echo_classes))
 
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v09_protocol_parser_implementation_decision_is_planning_only(self) -> None:
+        decision = V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_DOC.read_text(
+            encoding="utf-8"
+        )
+        decision_fixture = json.loads(
+            V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        approval = json.loads(
+            V09_PROTOCOL_PARSER_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8")
+        )
+        negative = json.loads(
+            V09_PROTOCOL_PARSER_NEGATIVE_CASES_FIXTURE.read_text(encoding="utf-8")
+        )
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        packet = V09_PROTOCOL_PARSER_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
+        fixture_text = json.dumps(decision_fixture, sort_keys=True)
+        normalized = " ".join(decision.split())
+
+        self.assertTrue(V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_DOC.exists())
+        self.assertTrue(V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_FIXTURE.exists())
+        self.assertIn("V0.9_PROTOCOL_PARSER_IMPLEMENTATION_DECISION.md", readme)
+        self.assertIn("V0.9_PROTOCOL_PARSER_IMPLEMENTATION_DECISION.md", packet)
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Implementation Decision Status",
+            "## Allowed Implementation Candidate",
+            "## Forbidden Scope",
+            "## Negative Fixture Consumption",
+            "## Required Tests",
+            "## Source-check Requirements",
+            "## Rollback Expectation",
+            "## Explicit Approval Requirement",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, decision)
+
+        for required_text in [
+            "does not implement parser behavior",
+            "pending explicit approval",
+            "5a2dc00e78e88fcd855bcee7c781abf520108311",
+            "minimal parser function",
+            "consumes `tests/fixtures/v09_protocol_parser_negative_cases.json`",
+            "emits only the allowlisted blocked response fields",
+            "never echoes raw input",
+            "never echoes credential, session, or token values",
+            "never echoes target identifiers",
+            "never echoes local paths",
+            "dispatcher implementation",
+            "actual tool execution",
+            "local evidence reader",
+            "listener startup",
+            "transport runtime",
+            "This decision record does not authorize implementation by itself",
+        ]:
+            self.assertIn(required_text, normalized)
+
+        self.assertEqual(
+            decision_fixture["schema_version"],
+            "v09_protocol_parser_implementation_decision.v1",
+        )
+        self.assertIs(decision_fixture["implementation_decision_only"], True)
+        self.assertIs(
+            decision_fixture["explicit_implementation_approval_required"], True
+        )
+        self.assertEqual(
+            decision_fixture["implementation_status"], "pending_explicit_approval"
+        )
+        self.assertEqual(
+            decision_fixture["negative_fixture_path"],
+            "tests/fixtures/v09_protocol_parser_negative_cases.json",
+        )
+        self.assertIs(decision_fixture["negative_fixture_required"], True)
+
+        for false_flag in [
+            "parser_implementation_started",
+            "json_rpc_parser_implemented",
+            "dispatcher_implemented",
+            "tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "listener_transport_implemented",
+            "raw_preview_download_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "tag_github_release_created",
+        ]:
+            self.assertIn(false_flag, decision_fixture)
+            self.assertIs(decision_fixture[false_flag], False)
+
+        negative_categories = [case["category"] for case in negative["cases"]]
+        self.assertEqual(
+            decision_fixture["required_negative_categories"], negative_categories
+        )
+        self.assertEqual(
+            decision_fixture["required_negative_categories"],
+            approval["malformed_input_classes"],
+        )
+        self.assertEqual(
+            decision_fixture["allowed_response_fields"],
+            approval["blocked_response_allowed_fields"],
+        )
+        self.assertEqual(
+            decision_fixture["forbidden_echo_classes"],
+            approval["echo_forbidden_value_classes"],
+        )
+
+        for expectation in [
+            "all_negative_cases_blocked",
+            "parser_approved_false",
+            "raw_data_included_false",
+            "manual_review_required_true",
+            "allowed_response_fields_only",
+            "forbidden_echo_classes_not_echoed",
+            "dispatcher_absent",
+            "tool_execution_absent",
+            "local_evidence_reader_absent",
+        ]:
+            self.assertIn(expectation, decision_fixture["required_test_expectations"])
+
+        for allowed_candidate in [
+            "minimal_parser_function_only",
+            "consume_negative_fixture",
+            "return_blocked_response_for_malformed_input",
+            "allowlisted_response_fields_only",
+            "no_raw_input_echo",
+            "no_credential_session_token_echo",
+            "no_target_identifier_echo",
+            "no_local_path_echo",
+        ]:
+            self.assertIn(
+                allowed_candidate,
+                decision_fixture["allowed_implementation_candidate"],
+            )
+
+        for forbidden_scope in [
+            "dispatcher",
+            "tool_registration",
+            "tool_execution",
+            "local_evidence_reader",
+            "listener_startup",
+            "transport",
+            "raw_preview_download",
+            "automatic_chatgpt_handoff",
+        ]:
+            self.assertIn(forbidden_scope, decision_fixture["forbidden_scope"])
+
+        combined = decision + "\n" + fixture_text
         for forbidden in [
             "\ufeff",
             "\ufffd",
