@@ -1,0 +1,89 @@
+{
+  "schema_version": "v09_protocol_parser_implementation_decision.v1",
+  "implementation_decision_only": true,
+  "explicit_implementation_approval_required": true,
+  "implementation_status": "pending_explicit_approval",
+  "current_main_head": "5a2dc00e78e88fcd855bcee7c781abf520108311",
+  "pr_137_merge_commit": "5a2dc00e78e88fcd855bcee7c781abf520108311",
+  "parser_implementation_started": false,
+  "json_rpc_parser_implemented": false,
+  "dispatcher_implemented": false,
+  "tool_execution_implemented": false,
+  "local_evidence_reader_implemented": false,
+  "listener_transport_implemented": false,
+  "raw_preview_download_implemented": false,
+  "automatic_chatgpt_handoff_implemented": false,
+  "tag_github_release_created": false,
+  "negative_fixture_required": true,
+  "negative_fixture_path": "tests/fixtures/v09_protocol_parser_negative_cases.json",
+  "allowed_response_fields": [
+    "status",
+    "reason_code",
+    "parser_approved",
+    "raw_data_included",
+    "manual_review_required",
+    "safe_message"
+  ],
+  "required_negative_categories": [
+    "empty_message",
+    "invalid_json_shape",
+    "unsupported_protocol_version",
+    "unknown_method",
+    "missing_required_field",
+    "oversized_message",
+    "nested_payload_too_deep",
+    "raw_value_probe",
+    "credential_echo_probe",
+    "local_path_echo_probe",
+    "target_identifier_echo_probe"
+  ],
+  "forbidden_echo_classes": [
+    "raw_request_response",
+    "credential_value",
+    "token_value",
+    "session_value",
+    "target_identifier",
+    "url_domain_ip",
+    "full_local_path",
+    "local_only_filename",
+    "stack_trace",
+    "local_evidence_body"
+  ],
+  "required_test_expectations": [
+    "all_negative_cases_blocked",
+    "parser_approved_false",
+    "raw_data_included_false",
+    "manual_review_required_true",
+    "allowed_response_fields_only",
+    "forbidden_echo_classes_not_echoed",
+    "dispatcher_absent",
+    "tool_execution_absent",
+    "local_evidence_reader_absent"
+  ],
+  "allowed_implementation_candidate": [
+    "minimal_parser_function_only",
+    "consume_negative_fixture",
+    "return_blocked_response_for_malformed_input",
+    "allowlisted_response_fields_only",
+    "no_raw_input_echo",
+    "no_credential_session_token_echo",
+    "no_target_identifier_echo",
+    "no_local_path_echo"
+  ],
+  "forbidden_scope": [
+    "dispatcher",
+    "tool_registration",
+    "tool_execution",
+    "local_evidence_reader",
+    "listener_startup",
+    "transport",
+    "raw_preview_download",
+    "automatic_chatgpt_handoff"
+  ],
+  "rollback_requirements": [
+    "split_scope_if_dispatcher_or_execution_is_added",
+    "revert_parser_changes_if_forbidden_echo_occurs",
+    "keep_decision_fixture_as_planning_baseline",
+    "do_not_create_v09_tag_or_release"
+  ]
+}

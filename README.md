@@ -486,6 +486,12 @@ The v0.9 protocol parser negative fixture harness is tracked in
 It fixes synthetic malformed input expectations before parser implementation;
 future parser implementation PRs must consume this fixture and still keep
 dispatcher, tool execution, and local evidence reader work separate.
+The v0.9 protocol parser implementation decision is tracked in
+[`docs/V0.9_PROTOCOL_PARSER_IMPLEMENTATION_DECISION.md`](docs/V0.9_PROTOCOL_PARSER_IMPLEMENTATION_DECISION.md).
+It keeps parser implementation pending explicit approval and limits the first
+candidate to a minimal blocked-response parser that consumes the negative
+fixture without adding dispatcher, tool execution, listener, transport, local
+evidence reader, raw preview, or automatic handoff behavior.
 
 ## Burp Montoya Collector
 
