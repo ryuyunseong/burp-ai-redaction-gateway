@@ -55,6 +55,40 @@ SAFE_FILE_ALLOWLIST = (
     "report_draft.md",
 )
 
+V09_READ_ONLY_REGISTRY_METADATA_FIELDS = (
+    "registry_schema_version",
+    "registry_contract_only",
+    "read_only_capability_labels",
+    "tool_execution_allowed",
+    "dispatcher_invocation_allowed",
+    "local_evidence_access_allowed",
+    "raw_data_included",
+    "manual_review_required",
+)
+
+V09_FALSE_ONLY_REGISTRY_FLAGS = (
+    "tool_execution_allowed",
+    "dispatcher_invocation_allowed",
+    "local_evidence_access_allowed",
+)
+
+_V09_CONTRACT_FALSE_FLAGS = (
+    "registry_implemented",
+    "executable_tool_registration_implemented",
+    "actual_tool_execution_implemented",
+    "dispatcher_implemented",
+    "listener_transport_implemented",
+    "local_evidence_reader_implemented",
+    "safe_file_body_reader_implemented",
+    "raw_preview_download_implemented",
+    "replay_active_scan_implemented",
+    "dashboard_state_changing_control_implemented",
+    "upload_import_action_implemented",
+    "automatic_chatgpt_handoff_implemented",
+    "tag_github_release_created",
+    "raw_data_included",
+)
+
 _UNSAFE_METADATA_MARKERS = (
     "raw request",
     "raw response",
@@ -229,6 +263,38 @@ def validate_registry_against_contract_fixtures(
     }
 
 
+def build_read_only_registry_metadata(
+    contract_fixture: Mapping[str, Any],
+    implementation_guard_fixture: Mapping[str, Any],
+) -> dict[str, Any]:
+    _validate_v09_registry_contract_fixture(contract_fixture)
+    _validate_v09_registry_implementation_guard_fixture(
+        implementation_guard_fixture,
+        contract_fixture,
+    )
+    metadata = {
+        "registry_schema_version": _safe_metadata_text(
+            str(contract_fixture.get("schema_version", "")),
+            "v09_read_only_tool_registry_contract",
+        ),
+        "registry_contract_only": True,
+        "read_only_capability_labels": list(
+            _require_string_sequence(
+                "contract_read_only_capability_labels",
+                contract_fixture.get("read_only_capability_labels"),
+            )
+        ),
+        "tool_execution_allowed": False,
+        "dispatcher_invocation_allowed": False,
+        "local_evidence_access_allowed": False,
+        "raw_data_included": False,
+        "manual_review_required": True,
+    }
+    _assert_v09_registry_metadata_shape(metadata, contract_fixture)
+    _assert_raw_free_metadata(metadata)
+    return metadata
+
+
 def _assert_registry_shape(registry: Mapping[str, ReadOnlyRegistryEntry]) -> None:
     if tuple(registry) != ALLOWED_TOOL_NAMES:
         raise McpReadOnlyRegistryError("registry_allowed_tool_drift")
@@ -253,6 +319,125 @@ def _assert_blocked_response_shape(response: Mapping[str, Any]) -> None:
 def _require_sequence(name: str, actual: Any, expected: tuple[str, ...]) -> None:
     if tuple(actual or ()) != expected:
         raise McpReadOnlyRegistryError(f"{name}_drift")
+
+
+def _require_string_sequence(
+    name: str,
+    actual: Any,
+    *,
+    raw_free_values: bool = True,
+) -> tuple[str, ...]:
+    if not isinstance(actual, list | tuple):
+        raise McpReadOnlyRegistryError(f"{name}_not_sequence")
+    values = tuple(actual)
+    if not values or any(not isinstance(value, str) or not value.strip() for value in values):
+        raise McpReadOnlyRegistryError(f"{name}_invalid")
+    if raw_free_values:
+        for value in values:
+            _assert_raw_free_text(value)
+    return values
+
+
+def _validate_v09_registry_contract_fixture(contract_fixture: Mapping[str, Any]) -> None:
+    if contract_fixture.get("schema_version") != "v09_read_only_tool_registry_contract.v1":
+        raise McpReadOnlyRegistryError("v09_registry_contract_schema_drift")
+    if contract_fixture.get("registry_contract_only") is not True:
+        raise McpReadOnlyRegistryError("v09_registry_contract_only_drift")
+    for flag in _V09_CONTRACT_FALSE_FLAGS:
+        if contract_fixture.get(flag) is not False:
+            raise McpReadOnlyRegistryError(f"v09_contract_{flag}_drift")
+    if contract_fixture.get("manual_review_required") is not True:
+        raise McpReadOnlyRegistryError("v09_contract_manual_review_drift")
+    _require_sequence(
+        "v09_contract_allowed_registry_metadata_fields",
+        contract_fixture.get("allowed_registry_metadata_fields"),
+        V09_READ_ONLY_REGISTRY_METADATA_FIELDS,
+    )
+    labels = _require_string_sequence(
+        "v09_contract_read_only_capability_labels",
+        contract_fixture.get("read_only_capability_labels"),
+    )
+    if any(not label.endswith("_metadata") for label in labels):
+        raise McpReadOnlyRegistryError("v09_contract_capability_label_drift")
+    forbidden_fields = _require_string_sequence(
+        "v09_contract_forbidden_registry_fields",
+        contract_fixture.get("forbidden_registry_fields"),
+        raw_free_values=False,
+    )
+    if set(V09_READ_ONLY_REGISTRY_METADATA_FIELDS).intersection(forbidden_fields):
+        raise McpReadOnlyRegistryError("v09_contract_allowed_forbidden_overlap")
+
+
+def _validate_v09_registry_implementation_guard_fixture(
+    implementation_guard_fixture: Mapping[str, Any],
+    contract_fixture: Mapping[str, Any],
+) -> None:
+    if implementation_guard_fixture.get("schema_version") != "v09_read_only_tool_registry_implementation_guard.v1":
+        raise McpReadOnlyRegistryError("v09_registry_guard_schema_drift")
+    if implementation_guard_fixture.get("registry_implementation_guard_only") is not True:
+        raise McpReadOnlyRegistryError("v09_registry_guard_only_drift")
+    if implementation_guard_fixture.get("registry_contract_consumed_required") is not True:
+        raise McpReadOnlyRegistryError("v09_registry_contract_consumption_drift")
+    if implementation_guard_fixture.get("manual_review_required") is not True:
+        raise McpReadOnlyRegistryError("v09_registry_guard_manual_review_drift")
+    if implementation_guard_fixture.get("parser_positive_behavior_unchanged_required") is not True:
+        raise McpReadOnlyRegistryError("v09_registry_guard_positive_parser_drift")
+    if implementation_guard_fixture.get("parser_negative_behavior_unchanged_required") is not True:
+        raise McpReadOnlyRegistryError("v09_registry_guard_negative_parser_drift")
+    for flag in _V09_CONTRACT_FALSE_FLAGS:
+        if implementation_guard_fixture.get(flag) is not False:
+            raise McpReadOnlyRegistryError(f"v09_guard_{flag}_drift")
+    _require_sequence(
+        "v09_guard_required_contract_fields",
+        implementation_guard_fixture.get("required_contract_fields"),
+        tuple(contract_fixture.get("allowed_registry_metadata_fields") or ()),
+    )
+    _require_sequence(
+        "v09_guard_false_only_flags",
+        implementation_guard_fixture.get("false_only_flags"),
+        V09_FALSE_ONLY_REGISTRY_FLAGS,
+    )
+    false_values = implementation_guard_fixture.get("false_only_flag_values")
+    if not isinstance(false_values, Mapping):
+        raise McpReadOnlyRegistryError("v09_guard_false_only_values_invalid")
+    if tuple(false_values) != V09_FALSE_ONLY_REGISTRY_FLAGS:
+        raise McpReadOnlyRegistryError("v09_guard_false_only_value_keys_drift")
+    if any(false_values.get(flag) is not False for flag in V09_FALSE_ONLY_REGISTRY_FLAGS):
+        raise McpReadOnlyRegistryError("v09_guard_false_only_value_drift")
+
+
+def _assert_v09_registry_metadata_shape(
+    metadata: Mapping[str, Any],
+    contract_fixture: Mapping[str, Any],
+) -> None:
+    _require_sequence(
+        "v09_registry_metadata_fields",
+        tuple(metadata),
+        V09_READ_ONLY_REGISTRY_METADATA_FIELDS,
+    )
+    _require_sequence(
+        "v09_registry_metadata_fields_contract",
+        tuple(metadata),
+        tuple(contract_fixture.get("allowed_registry_metadata_fields") or ()),
+    )
+    for flag in V09_FALSE_ONLY_REGISTRY_FLAGS:
+        if metadata.get(flag) is not False:
+            raise McpReadOnlyRegistryError(f"v09_registry_{flag}_drift")
+    if metadata.get("registry_contract_only") is not True:
+        raise McpReadOnlyRegistryError("v09_registry_metadata_contract_only_drift")
+    if metadata.get("raw_data_included") is not False:
+        raise McpReadOnlyRegistryError("v09_registry_metadata_raw_data_drift")
+    if metadata.get("manual_review_required") is not True:
+        raise McpReadOnlyRegistryError("v09_registry_metadata_manual_review_drift")
+    forbidden_fields = tuple(contract_fixture.get("forbidden_registry_fields") or ())
+    if set(metadata).intersection(forbidden_fields):
+        raise McpReadOnlyRegistryError("v09_registry_forbidden_field_returned")
+    labels = _require_string_sequence(
+        "v09_registry_metadata_read_only_capability_labels",
+        metadata.get("read_only_capability_labels"),
+    )
+    if labels != tuple(contract_fixture.get("read_only_capability_labels") or ()):
+        raise McpReadOnlyRegistryError("v09_registry_capability_label_drift")
 
 
 def _safe_output_alias(value: str) -> str:
