@@ -359,6 +359,12 @@ V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_FIXTURE = (
 V09_READ_ONLY_TOOL_REGISTRY_IMPLEMENTATION_GUARD_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v09_read_only_tool_registry_implementation_guard.json"
 )
+V09_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY_DOC = (
+    ROOT / "docs" / "V0.9_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY.md"
+)
+V09_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v09_read_only_registry_dispatcher_boundary.json"
+)
 MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
@@ -5584,6 +5590,176 @@ class RedactionGatewayTests(unittest.TestCase):
             "allowed_forbidden_overlap",
         ):
             build_read_only_registry_metadata(changed_contract, guard)
+
+    def test_v09_read_only_registry_dispatcher_boundary_decision_hygiene(self) -> None:
+        doc = V09_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY_DOC.read_text(
+            encoding="utf-8"
+        )
+        fixture = json.loads(
+            V09_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        contract = json.loads(
+            V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_FIXTURE.read_text(encoding="utf-8")
+        )
+        guard = json.loads(
+            V09_READ_ONLY_TOOL_REGISTRY_IMPLEMENTATION_GUARD_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        contract_doc = V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_DOC.read_text(
+            encoding="utf-8"
+        )
+        metadata = build_read_only_registry_metadata(contract, guard)
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        combined = "\n".join([doc, fixture_text])
+        normalized_doc = " ".join(doc.split())
+
+        self.assertTrue(V09_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY_DOC.exists())
+        self.assertTrue(V09_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY_FIXTURE.exists())
+        for linked_text in [readme, contract_doc]:
+            self.assertIn("V0.9_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY.md", linked_text)
+            self.assertIn("v09_read_only_registry_dispatcher_boundary.json", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Boundary Decision",
+            "## Explicit Non-goals",
+            "## Registry Metadata Scope",
+            "## Dispatcher Invocation Boundary",
+            "## Executable Registration Boundary",
+            "## Actual Tool Execution Boundary",
+            "## Source-check Requirements",
+            "## Required Negative Tests",
+            "## PR Split Requirements",
+            "## Security Review Checklist",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, doc)
+
+        for required_text in [
+            "not dispatcher approval",
+            "not executable registration",
+            "not actual tool execution",
+            "metadata labels only",
+            "four-file candidate inventory metadata only",
+            "does not approve reading file bodies",
+            "Dispatcher invocation remains blocked",
+            "Executable tool registration is blocked",
+            "Actual tool execution is blocked",
+            "local evidence reader",
+            "v0.9 tag: not created",
+            "GitHub Release v0.9: not created",
+        ]:
+            self.assertIn(required_text, normalized_doc)
+
+        self.assertEqual(
+            fixture["schema_version"],
+            "v09_read_only_registry_dispatcher_boundary.v1",
+        )
+        self.assertIs(fixture["boundary_decision_only"], True)
+        self.assertIs(fixture["registry_metadata_helper_consumed"], True)
+        for false_flag in [
+            "dispatcher_approved",
+            "dispatcher_implemented",
+            "dispatcher_invocation_allowed",
+            "executable_tool_registration_approved",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_approved",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_approved",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "tag_github_release_created",
+            "raw_data_included",
+        ]:
+            self.assertIn(false_flag, fixture)
+            self.assertIs(fixture[false_flag], False)
+        self.assertIs(fixture["manual_review_required"], True)
+
+        self.assertEqual(
+            fixture["allowed_registry_metadata_fields"],
+            contract["allowed_registry_metadata_fields"],
+        )
+        self.assertEqual(
+            tuple(fixture["allowed_registry_metadata_fields"]),
+            tuple(metadata),
+        )
+        self.assertIs(metadata["dispatcher_invocation_allowed"], False)
+        self.assertIs(metadata["tool_execution_allowed"], False)
+        self.assertIs(metadata["local_evidence_access_allowed"], False)
+
+        for surface in [
+            "dispatcher_invocation",
+            "executable_tool_registration",
+            "actual_tool_execution",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "raw_preview_download",
+            "replay_active_scan",
+            "automatic_chatgpt_handoff",
+        ]:
+            self.assertIn(surface, fixture["blocked_future_surfaces"])
+
+        for expectation in [
+            "dispatcher_approval_false",
+            "dispatcher_implementation_false",
+            "dispatcher_invocation_false",
+            "executable_registration_false",
+            "actual_tool_execution_false",
+            "local_evidence_reader_false",
+            "allowed_registry_metadata_fields_match_helper",
+            "blocked_future_surfaces_declared",
+            "source_check_files_have_no_forbidden_markers",
+            "no_tag_or_release_creation",
+        ]:
+            self.assertIn(expectation, fixture["required_negative_tests"])
+
+        for source_check_file in fixture["source_check_files"]:
+            source_path = ROOT / source_check_file
+            self.assertTrue(source_path.exists())
+            source = source_path.read_text(encoding="utf-8")
+            for marker in fixture["forbidden_source_markers"]:
+                self.assertNotIn(marker, source)
+
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
     def test_v09_minimal_protocol_parser_blocks_negative_fixture_cases(self) -> None:
         approval = json.loads(

@@ -1,0 +1,83 @@
+{
+  "schema_version": "v09_read_only_registry_dispatcher_boundary.v1",
+  "boundary_decision_only": true,
+  "registry_metadata_helper_consumed": true,
+  "dispatcher_approved": false,
+  "dispatcher_implemented": false,
+  "dispatcher_invocation_allowed": false,
+  "executable_tool_registration_approved": false,
+  "executable_tool_registration_implemented": false,
+  "actual_tool_execution_approved": false,
+  "actual_tool_execution_implemented": false,
+  "local_evidence_reader_approved": false,
+  "local_evidence_reader_implemented": false,
+  "safe_file_body_reader_implemented": false,
+  "raw_preview_download_implemented": false,
+  "replay_active_scan_implemented": false,
+  "automatic_chatgpt_handoff_implemented": false,
+  "tag_github_release_created": false,
+  "raw_data_included": false,
+  "manual_review_required": true,
+  "allowed_registry_metadata_fields": [
+    "registry_schema_version",
+    "registry_contract_only",
+    "read_only_capability_labels",
+    "tool_execution_allowed",
+    "dispatcher_invocation_allowed",
+    "local_evidence_access_allowed",
+    "raw_data_included",
+    "manual_review_required"
+  ],
+  "blocked_future_surfaces": [
+    "dispatcher_invocation",
+    "executable_tool_registration",
+    "actual_tool_execution",
+    "local_evidence_reader",
+    "safe_file_body_reader",
+    "raw_preview_download",
+    "replay_active_scan",
+    "automatic_chatgpt_handoff"
+  ],
+  "source_check_files": [
+    "burp_ai_redaction_gateway/mcp_read_only_registry.py"
+  ],
+  "forbidden_source_markers": [
+    "dispatch_tool(",
+    "execute_tool(",
+    "register_tool(",
+    "read_local_evidence(",
+    "read_file_body(",
+    "serve_forever",
+    "run_server",
+    "create_server",
+    "bind(",
+    "listen(",
+    "accept(",
+    "http.server",
+    "socketserver",
+    "http.client",
+    "subprocess",
+    "requests",
+    "urllib.request"
+  ],
+  "required_negative_tests": [
+    "dispatcher_approval_false",
+    "dispatcher_implementation_false",
+    "dispatcher_invocation_false",
+    "executable_registration_false",
+    "actual_tool_execution_false",
+    "local_evidence_reader_false",
+    "allowed_registry_metadata_fields_match_helper",
+    "blocked_future_surfaces_declared",
+    "source_check_files_have_no_forbidden_markers",
+    "no_tag_or_release_creation"
+  ],
+  "rollback_requirements": [
+    "split_scope_if_dispatcher_invocation_is_added",
+    "split_scope_if_executable_registration_is_added",
+    "split_scope_if_tool_execution_is_added",
+    "split_scope_if_local_evidence_reader_is_added",
+    "keep_registry_metadata_helper_metadata_only",
+    "do_not_create_v09_tag_or_release"
+  ]
+}
