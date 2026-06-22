@@ -341,6 +341,9 @@ V09_PARSER_POSITIVE_SHAPE_DECISION_DOC = (
 V09_PARSER_POSITIVE_SHAPE_DECISION_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v09_parser_positive_shape_decision.json"
 )
+V09_PARSER_POSITIVE_SHAPE_CASES_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v09_parser_positive_shape_cases.json"
+)
 MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
@@ -4799,6 +4802,143 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn(deferred, fixture["deferred_work"])
 
         combined = "\n".join([decision, fixture_text, implementation_decision])
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v09_parser_positive_shape_fixture_harness_is_raw_free(self) -> None:
+        decision_doc = V09_PARSER_POSITIVE_SHAPE_DECISION_DOC.read_text(
+            encoding="utf-8"
+        )
+        implementation_decision = (
+            V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_DOC.read_text(
+                encoding="utf-8"
+            )
+        )
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        decision = json.loads(
+            V09_PARSER_POSITIVE_SHAPE_DECISION_FIXTURE.read_text(encoding="utf-8")
+        )
+        positive = json.loads(
+            V09_PARSER_POSITIVE_SHAPE_CASES_FIXTURE.read_text(encoding="utf-8")
+        )
+        positive_text = json.dumps(positive, sort_keys=True)
+        combined = "\n".join([decision_doc, implementation_decision, positive_text])
+        normalized_decision_doc = " ".join(decision_doc.split())
+        normalized_implementation_decision = " ".join(
+            implementation_decision.split()
+        )
+
+        self.assertTrue(V09_PARSER_POSITIVE_SHAPE_CASES_FIXTURE.exists())
+        self.assertEqual(
+            positive["schema_version"],
+            "v09_parser_positive_shape_cases.v1",
+        )
+        self.assertIs(positive["positive_shape_fixture_harness_only"], True)
+        self.assertIs(positive["positive_shape_decision_consumed"], True)
+        self.assertIn("v09_parser_positive_shape_cases.json", readme)
+        self.assertIn("v09_parser_positive_shape_cases.json", decision_doc)
+        self.assertIn(
+            "v09_parser_positive_shape_cases.json",
+            implementation_decision,
+        )
+        self.assertIn(
+            "not a positive parser implementation",
+            normalized_decision_doc,
+        )
+        self.assertIn(
+            "future positive parser implementation PR must consume this fixture",
+            normalized_decision_doc,
+        )
+        self.assertIn(
+            "not a parser implementation",
+            normalized_implementation_decision,
+        )
+
+        for false_flag in [
+            "positive_parser_implemented",
+            "dispatcher_implemented",
+            "tool_execution_implemented",
+            "listener_transport_implemented",
+            "local_evidence_reader_implemented",
+            "raw_preview_download_implemented",
+            "automatic_chatgpt_handoff_implemented",
+        ]:
+            self.assertIn(false_flag, positive)
+            self.assertIs(positive[false_flag], False)
+
+        allowed_fields = decision["allowed_positive_response_fields"]
+        forbidden_fields = decision["forbidden_positive_response_fields"]
+        self.assertEqual(positive["allowed_response_fields"], allowed_fields)
+        self.assertEqual(positive["forbidden_response_fields"], forbidden_fields)
+
+        required_categories = [
+            "supported_protocol_version_metadata",
+            "known_read_only_method_label",
+            "unknown_but_blocked_method_label",
+            "metadata_only_notification_label",
+            "safe_empty_params_label",
+        ]
+        case_categories = [case["category"] for case in positive["cases"]]
+        self.assertEqual(case_categories, required_categories)
+        self.assertEqual(len(case_categories), len(set(case_categories)))
+
+        for case in positive["cases"]:
+            self.assertRegex(case["id"], r"^v09-parser-pos-\d{3}$")
+            self.assertTrue(case["synthetic_input_label"].startswith("synthetic_"))
+            self.assertIn(case["category"], case["synthetic_input_label"])
+            self.assertIn(case["expected_status"], ["parsed", "blocked"])
+            self.assertIs(case["raw_data_included"], False)
+            self.assertIs(case["manual_review_required"], True)
+            self.assertIs(case["dispatcher_invoked"], False)
+            self.assertIs(case["tool_execution_invoked"], False)
+            self.assertIs(case["local_evidence_reader_invoked"], False)
+            self.assertIs(case["echo_forbidden"], True)
+            self.assertEqual(case["allowed_response_fields"], allowed_fields)
+            self.assertEqual(case["forbidden_response_fields"], forbidden_fields)
+
+        blocked_case = positive["cases"][2]
+        self.assertEqual(blocked_case["category"], "unknown_but_blocked_method_label")
+        self.assertEqual(blocked_case["expected_status"], "blocked")
+        self.assertIs(blocked_case["parser_approved"], False)
+        for parsed_case in [
+            positive["cases"][0],
+            positive["cases"][1],
+            positive["cases"][3],
+            positive["cases"][4],
+        ]:
+            self.assertEqual(parsed_case["expected_status"], "parsed")
+            self.assertIs(parsed_case["parser_approved"], True)
+
         for forbidden in [
             "\ufeff",
             "\ufffd",
