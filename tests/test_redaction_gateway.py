@@ -365,6 +365,12 @@ V09_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY_DOC = (
 V09_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v09_read_only_registry_dispatcher_boundary.json"
 )
+V09_DISPATCHER_APPROVAL_PACKET_DOC = (
+    ROOT / "docs" / "V0.9_DISPATCHER_APPROVAL_PACKET.md"
+)
+V09_DISPATCHER_APPROVAL_PACKET_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v09_dispatcher_approval_packet.json"
+)
 MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
@@ -5741,6 +5747,198 @@ class RedactionGatewayTests(unittest.TestCase):
             "final CVSS",
             "raw_request:",
             "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v09_dispatcher_approval_packet_is_planning_only_and_raw_free(self) -> None:
+        doc = V09_DISPATCHER_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(
+            V09_DISPATCHER_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8")
+        )
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        boundary_doc = V09_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY_DOC.read_text(
+            encoding="utf-8"
+        )
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        combined = "\n".join([doc, fixture_text])
+        normalized_doc = " ".join(doc.split())
+
+        self.assertTrue(V09_DISPATCHER_APPROVAL_PACKET_DOC.exists())
+        self.assertTrue(V09_DISPATCHER_APPROVAL_PACKET_FIXTURE.exists())
+        for linked_text in [readme, boundary_doc]:
+            self.assertIn("V0.9_DISPATCHER_APPROVAL_PACKET.md", linked_text)
+            self.assertIn("v09_dispatcher_approval_packet.json", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Approval Scope",
+            "## Explicit Non-goals",
+            "## Dispatcher Input Boundary",
+            "## Dispatcher Output Boundary",
+            "## Blocked Response Requirements",
+            "## Audit Boundary",
+            "## Required Negative Tests",
+            "## Source-check Requirements",
+            "## PR Split Requirements",
+            "## Security Review Checklist",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, doc)
+
+        for required_text in [
+            "documentation, fixture, and negative-test planning only",
+            "This packet does not approve dispatcher implementation",
+            "Future dispatcher input may accept only parser metadata",
+            "raw request or response content",
+            "credential, token, or session values",
+            "actual target identifiers",
+            "full local paths",
+            "local evidence bodies",
+            "safe file bodies",
+            "Every dispatcher-denied response must set",
+            "Future dispatcher audit records must remain raw-free",
+            "No dispatcher implementation file is added",
+            "parser behavior remains unchanged",
+            "v0.9 tag: not created",
+            "GitHub Release v0.9: not created",
+        ]:
+            self.assertIn(required_text, normalized_doc)
+
+        self.assertEqual(
+            fixture["schema_version"],
+            "v09_dispatcher_approval_packet.v1",
+        )
+        self.assertIs(fixture["approval_packet_only"], True)
+        self.assertIs(fixture["registry_dispatcher_boundary_consumed"], True)
+        self.assertIs(fixture["parser_boundary_consumed"], True)
+        for false_flag in [
+            "dispatcher_approved",
+            "dispatcher_implemented",
+            "dispatcher_invocation_allowed",
+            "executable_tool_registration_approved",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_approved",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_approved",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "listener_startup_implemented",
+            "transport_runtime_implemented",
+            "tag_github_release_created",
+            "output_bundle_structure_changed",
+            "raw_data_included",
+        ]:
+            self.assertIn(false_flag, fixture)
+            self.assertIs(fixture[false_flag], False)
+        self.assertIs(fixture["manual_review_required"], True)
+
+        allowed_fields = [
+            "status",
+            "reason_code",
+            "dispatcher_approved",
+            "dispatcher_invocation_allowed",
+            "tool_execution_allowed",
+            "raw_data_included",
+            "manual_review_required",
+            "safe_message",
+        ]
+        forbidden_fields = [
+            "tool_result",
+            "evidence_body",
+            "raw_body",
+            "local_file_path",
+            "target_identifier",
+            "credential_value",
+            "stack_trace",
+            "callback_handle",
+            "command",
+            "handler_name",
+        ]
+        self.assertEqual(fixture["allowed_dispatcher_output_fields"], allowed_fields)
+        self.assertEqual(
+            fixture["forbidden_dispatcher_output_fields"],
+            forbidden_fields,
+        )
+        self.assertTrue(
+            set(fixture["allowed_dispatcher_output_fields"]).isdisjoint(
+                fixture["forbidden_dispatcher_output_fields"]
+            )
+        )
+
+        for expectation in [
+            "dispatcher_approval_false",
+            "dispatcher_invocation_false",
+            "tool_execution_absent",
+            "executable_registration_absent",
+            "local_evidence_reader_absent",
+            "raw_input_rejected",
+            "credential_input_rejected",
+            "target_identifier_input_rejected",
+            "local_path_input_rejected",
+            "audit_raw_free",
+            "output_allowed_fields_only",
+        ]:
+            self.assertIn(expectation, fixture["required_negative_tests"])
+
+        self.assertEqual(
+            fixture["source_check_scope"],
+            ["approval_document", "approval_fixture", "hygiene_test"],
+        )
+        for marker in [
+            "dispatch_tool(",
+            "execute_tool(",
+            "register_tool(",
+            "callback_handle",
+            "command",
+            "handler_name",
+            "read_local_evidence(",
+            "read_file_body(",
+            "raw_preview",
+            "replay",
+            "active_scan",
+            "automatic_chatgpt_handoff",
+        ]:
+            self.assertIn(marker, fixture["forbidden_source_markers"])
+
+        self.assertFalse((ROOT / "burp_ai_redaction_gateway" / "mcp_dispatcher.py").exists())
+        self.assertFalse(
+            (ROOT / "burp_ai_redaction_gateway" / "mcp_tool_dispatcher.py").exists()
+        )
+
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "raw_request",
+            "raw_response",
             "Cookie:",
             "Authorization:",
             "Bearer ",
