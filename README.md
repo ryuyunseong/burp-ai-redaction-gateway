@@ -517,6 +517,12 @@ It requires future registry implementation work to consume the metadata-only
 contract fixture while keeping executable registration, dispatcher invocation,
 tool execution, local evidence access, raw preview, and automatic handoff out of
 scope.
+The v0.9 read-only registry dispatcher boundary decision is tracked in
+[`docs/V0.9_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY.md`](docs/V0.9_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY.md)
+and [`tests/fixtures/v09_read_only_registry_dispatcher_boundary.json`](tests/fixtures/v09_read_only_registry_dispatcher_boundary.json).
+It keeps the registry metadata helper separate from dispatcher invocation,
+executable registration, actual tool execution, local evidence reading, raw
+preview, replay, and automatic handoff.
 
 ## Burp Montoya Collector
 
