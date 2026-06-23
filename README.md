@@ -523,6 +523,13 @@ and [`tests/fixtures/v09_read_only_registry_dispatcher_boundary.json`](tests/fix
 It keeps the registry metadata helper separate from dispatcher invocation,
 executable registration, actual tool execution, local evidence reading, raw
 preview, replay, and automatic handoff.
+The v0.9 dispatcher approval packet is tracked in
+[`docs/V0.9_DISPATCHER_APPROVAL_PACKET.md`](docs/V0.9_DISPATCHER_APPROVAL_PACKET.md)
+and [`tests/fixtures/v09_dispatcher_approval_packet.json`](tests/fixtures/v09_dispatcher_approval_packet.json).
+It fixes dispatcher input, output, blocked response, audit, source-check, and
+negative-test boundaries without implementing dispatcher behavior, executable
+registration, actual tool execution, local evidence reading, listener startup,
+transport runtime, raw preview, replay, or automatic handoff.
 
 ## Burp Montoya Collector
 
