@@ -530,6 +530,12 @@ It fixes dispatcher input, output, blocked response, audit, source-check, and
 negative-test boundaries without implementing dispatcher behavior, executable
 registration, actual tool execution, local evidence reading, listener startup,
 transport runtime, raw preview, replay, or automatic handoff.
+The v0.9 dispatcher negative fixture harness is tracked in
+[`tests/fixtures/v09_dispatcher_negative_cases.json`](tests/fixtures/v09_dispatcher_negative_cases.json).
+It fixes synthetic blocked and denied dispatcher expectations before
+implementation; future dispatcher implementation PRs must consume this fixture
+and still keep executable registration, tool execution, local evidence reading,
+listener startup, and transport runtime separate.
 
 ## Burp Montoya Collector
 
