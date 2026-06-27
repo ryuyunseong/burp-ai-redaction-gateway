@@ -1,0 +1,60 @@
+{
+  "schema_version": "v09_release_readiness.v1",
+  "readiness_only": true,
+  "release_tag_created": false,
+  "github_release_created": false,
+  "release_candidate_commit": "6343b761d6076c825035dc4a1e83f367ab0f1168",
+  "safe_core_scope": [
+    "redaction_verify_review_report",
+    "ai_candidate_four_file_boundary",
+    "dashboard_read_only_boundary",
+    "mcp_parser_boundary",
+    "read_only_registry_metadata_helper",
+    "minimal_dispatcher_decision_helper"
+  ],
+  "included_prs": [
+    135,
+    136,
+    145,
+    146,
+    147,
+    148,
+    149,
+    150
+  ],
+  "deferred_surfaces": [
+    "executable_tool_registration",
+    "actual_tool_execution",
+    "local_evidence_reader",
+    "safe_file_body_reader",
+    "raw_preview_download",
+    "replay_active_scan",
+    "automatic_chatgpt_handoff",
+    "listener_startup",
+    "transport_runtime",
+    "dashboard_state_changing_action",
+    "upload_import_action"
+  ],
+  "required_gates": [
+    "python -m compileall burp_ai_redaction_gateway tests",
+    "python -m unittest discover -s tests",
+    "python -m unittest discover -s tests -k v09_minimal_dispatcher",
+    "gitleaks dir -v --redact=100 --config .gitleaks.toml .",
+    "gitleaks git -v --redact=100 --config .gitleaks.toml .",
+    "scripts\\git_safety_check.bat",
+    "git diff --check",
+    "git status --short --untracked-files=all"
+  ],
+  "required_release_checks": [
+    "no_v09_tag_before_release_approval",
+    "no_github_release_v09_before_release_approval",
+    "no_raw_preview",
+    "no_tool_execution",
+    "no_local_evidence_reader",
+    "no_listener_transport_runtime",
+    "release_notes_include_deferred_scope",
+    "release_notes_do_not_claim_safe_to_share"
+  ],
+  "manual_review_required": true,
+  "raw_data_included": false
+}
