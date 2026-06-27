@@ -536,6 +536,13 @@ It fixes synthetic blocked and denied dispatcher expectations before
 implementation; future dispatcher implementation PRs must consume this fixture
 and still keep executable registration, tool execution, local evidence reading,
 listener startup, and transport runtime separate.
+The v0.9 dispatcher implementation decision is tracked in
+[`docs/V0.9_DISPATCHER_IMPLEMENTATION_DECISION.md`](docs/V0.9_DISPATCHER_IMPLEMENTATION_DECISION.md)
+and [`tests/fixtures/v09_dispatcher_implementation_decision.json`](tests/fixtures/v09_dispatcher_implementation_decision.json).
+It defines the candidate scope and fixture consumption requirements for a
+future dispatcher implementation PR without adding dispatcher code, executable
+registration, tool execution, local evidence reading, listener startup, or
+transport runtime.
 
 ## Burp Montoya Collector
 
