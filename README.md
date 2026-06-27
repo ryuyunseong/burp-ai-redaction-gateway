@@ -543,6 +543,12 @@ It defines the candidate scope and fixture consumption requirements for a
 future dispatcher implementation PR without adding dispatcher code, executable
 registration, tool execution, local evidence reading, listener startup, or
 transport runtime.
+The v0.9 minimal dispatcher decision helper is implemented in
+[`burp_ai_redaction_gateway/mcp_dispatcher.py`](burp_ai_redaction_gateway/mcp_dispatcher.py).
+It produces blocked raw-free dispatcher responses using the approval packet
+allowed fields and keeps executable registration, actual tool execution, local
+evidence reading, listener startup, and transport runtime out of scope. The next
+v0.9 safe-core candidate is release readiness.
 
 ## Burp Montoya Collector
 

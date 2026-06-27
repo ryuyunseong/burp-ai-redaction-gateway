@@ -114,6 +114,13 @@ from burp_ai_redaction_gateway.mcp_protocol_parser import (
     validate_negative_case_fixture,
     validate_positive_case_fixture,
 )
+from burp_ai_redaction_gateway.mcp_dispatcher import (
+    DISPATCHER_RESPONSE_ALLOWED_FIELDS,
+    SAFE_DISPATCHER_MESSAGE,
+    build_blocked_dispatcher_response,
+    build_minimal_dispatcher_metadata,
+    classify_dispatcher_metadata,
+)
 from burp_ai_redaction_gateway.mcp_listener_runtime import (
     MinimalListenerRuntimeConfig,
     build_default_listener_runtime_config,
@@ -380,6 +387,7 @@ V09_DISPATCHER_IMPLEMENTATION_DECISION_DOC = (
 V09_DISPATCHER_IMPLEMENTATION_DECISION_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v09_dispatcher_implementation_decision.json"
 )
+MCP_DISPATCHER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_dispatcher.py"
 MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
@@ -5930,10 +5938,7 @@ class RedactionGatewayTests(unittest.TestCase):
         ]:
             self.assertIn(marker, fixture["forbidden_source_markers"])
 
-        self.assertFalse((ROOT / "burp_ai_redaction_gateway" / "mcp_dispatcher.py").exists())
-        self.assertFalse(
-            (ROOT / "burp_ai_redaction_gateway" / "mcp_tool_dispatcher.py").exists()
-        )
+        self.assertFalse((ROOT / "burp_ai_redaction_gateway" / "mcp_tool_dispatcher.py").exists())
 
         for forbidden in [
             "\ufeff",
@@ -6079,11 +6084,9 @@ class RedactionGatewayTests(unittest.TestCase):
         }
         self.assertTrue(expected_echo_classes.issubset(actual_echo_classes))
 
-        for dispatcher_file in [
-            "burp_ai_redaction_gateway/mcp_dispatcher.py",
-            "burp_ai_redaction_gateway/mcp_tool_dispatcher.py",
-        ]:
-            self.assertFalse((ROOT / dispatcher_file).exists())
+        self.assertFalse(
+            (ROOT / "burp_ai_redaction_gateway/mcp_tool_dispatcher.py").exists()
+        )
 
         for forbidden in [
             "\ufeff",
@@ -6176,7 +6179,8 @@ class RedactionGatewayTests(unittest.TestCase):
             "Future dispatcher output must preserve the allowed dispatcher output fields",
             "Blocked dispatcher responses must be raw-free metadata only",
             "Future dispatcher audit metadata may include only synthetic case labels",
-            "This PR must not add dispatcher implementation files",
+            "The original decision PR did not add dispatcher implementation files",
+            "The minimal helper follow-up adds only",
             "Parser behavior must not change",
             "output bundle files remain unchanged",
             "v0.9 tag: not created",
@@ -6274,11 +6278,10 @@ class RedactionGatewayTests(unittest.TestCase):
         ]
         self.assertEqual(decision["blocked_surfaces"], blocked_surfaces)
 
-        for dispatcher_file in [
-            "burp_ai_redaction_gateway/mcp_dispatcher.py",
-            "burp_ai_redaction_gateway/mcp_tool_dispatcher.py",
-        ]:
-            self.assertFalse((ROOT / dispatcher_file).exists())
+        self.assertTrue(MCP_DISPATCHER_MODULE.exists())
+        self.assertFalse(
+            (ROOT / "burp_ai_redaction_gateway/mcp_tool_dispatcher.py").exists()
+        )
 
         for forbidden in [
             "\ufeff",
@@ -6314,6 +6317,164 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(forbidden, combined)
         self.assertIsNone(re.search(r"https?://", combined))
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v09_minimal_dispatcher_decision_helper_consumes_decision_and_negative_cases(self) -> None:
+        approval = json.loads(
+            V09_DISPATCHER_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8")
+        )
+        negative = json.loads(
+            V09_DISPATCHER_NEGATIVE_CASES_FIXTURE.read_text(encoding="utf-8")
+        )
+        decision = json.loads(
+            V09_DISPATCHER_IMPLEMENTATION_DECISION_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        registry_boundary = json.loads(
+            V09_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        module_text = MCP_DISPATCHER_MODULE.read_text(encoding="utf-8")
+        metadata = build_minimal_dispatcher_metadata()
+        allowed_fields = approval["allowed_dispatcher_output_fields"]
+        negative_categories = [case["category"] for case in negative["cases"]]
+
+        self.assertTrue(MCP_DISPATCHER_MODULE.exists())
+        self.assertEqual(
+            metadata["schema_version"],
+            "v09_minimal_dispatcher_decision_helper.v1",
+        )
+        self.assertIs(metadata["minimal_dispatcher_decision_helper"], True)
+        self.assertIs(metadata["dispatcher_approval_packet_consumed"], True)
+        self.assertIs(metadata["dispatcher_negative_fixture_consumed"], True)
+        self.assertIs(metadata["dispatcher_implementation_decision_consumed"], True)
+        self.assertIs(metadata["registry_dispatcher_boundary_consumed"], True)
+        self.assertEqual(metadata["allowed_dispatcher_output_fields"], allowed_fields)
+        self.assertEqual(list(DISPATCHER_RESPONSE_ALLOWED_FIELDS), allowed_fields)
+        self.assertEqual(decision["allowed_dispatcher_output_fields"], allowed_fields)
+        self.assertEqual(decision["required_negative_categories"], negative_categories)
+        self.assertEqual(len(negative["cases"]), 13)
+        for fixture_path in decision["required_fixture_paths"]:
+            self.assertTrue((ROOT / fixture_path).exists())
+
+        for false_flag in [
+            "dispatcher_invocation_allowed",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "listener_startup_implemented",
+            "transport_runtime_implemented",
+            "raw_data_included",
+        ]:
+            self.assertIn(false_flag, metadata)
+            self.assertIs(metadata[false_flag], False)
+        self.assertIs(metadata["manual_review_required"], True)
+        self.assertIs(registry_boundary["dispatcher_invocation_allowed"], False)
+        self.assertIs(registry_boundary["actual_tool_execution_implemented"], False)
+        self.assertIs(registry_boundary["local_evidence_reader_implemented"], False)
+
+        required_future_tests = set(decision["required_future_implementation_tests"])
+        for expected_test in [
+            "consumes_dispatcher_negative_cases",
+            "preserves_allowed_dispatcher_output_fields",
+            "rejects_forbidden_echo_classes",
+            "blocks_raw_input",
+            "blocks_credential_input",
+            "blocks_target_identifier_input",
+            "blocks_local_path_input",
+            "blocks_local_evidence_body",
+            "blocks_safe_file_body",
+            "blocks_callback_handle",
+            "blocks_handler_name",
+            "blocks_command_string",
+            "blocks_tool_result",
+            "keeps_audit_raw_free",
+            "no_tool_execution",
+            "no_local_evidence_reader",
+            "no_listener_transport_runtime",
+        ]:
+            self.assertIn(expected_test, required_future_tests)
+
+        response_texts = []
+        for case in negative["cases"]:
+            response = classify_dispatcher_metadata(case)
+            self.assertEqual(list(response), allowed_fields)
+            self.assertEqual(response["status"], case["expected_status"])
+            self.assertEqual(response["reason_code"], case["category"])
+            self.assertEqual(response["reason_code"], case["expected_reason_code"])
+            self.assertIs(response["dispatcher_approved"], False)
+            self.assertIs(response["dispatcher_invocation_allowed"], False)
+            self.assertIs(response["tool_execution_allowed"], False)
+            self.assertIs(response["raw_data_included"], False)
+            self.assertIs(response["manual_review_required"], True)
+            self.assertEqual(response["safe_message"], SAFE_DISPATCHER_MESSAGE)
+            self.assertNotIn(case["synthetic_input_label"], str(response))
+            response_without_reason = dict(response)
+            response_without_reason.pop("reason_code")
+            response_value_text = json.dumps(
+                list(response_without_reason.values()),
+                sort_keys=True,
+            )
+            for echo_class in case["forbidden_echo_classes"]:
+                self.assertNotIn(echo_class, response["safe_message"])
+                self.assertNotIn(echo_class, response_value_text)
+            response_texts.append(json.dumps(response, sort_keys=True))
+
+        unsafe_response = build_blocked_dispatcher_response(
+            "token=synthetic",
+            safe_message="Cookie: synthetic",
+        )
+        self.assertEqual(unsafe_response["reason_code"], "dispatcher_invocation_blocked")
+        self.assertEqual(unsafe_response["safe_message"], SAFE_DISPATCHER_MESSAGE)
+        response_texts.append(json.dumps(unsafe_response, sort_keys=True))
+
+        combined_responses = "\n".join(response_texts)
+        for forbidden in [
+            "raw_request",
+            "raw_response",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "actual.local",
+        ]:
+            self.assertNotIn(forbidden, combined_responses)
+        self.assertIsNone(re.search(r"https?://", combined_responses))
+        self.assertIsNone(
+            re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined_responses)
+        )
+
+        for forbidden_source_marker in [
+            "execute_tool(",
+            "register_tool(",
+            "read_local_evidence(",
+            "read_file_body(",
+            "callback_handle",
+            "handler_name",
+            "command",
+            "raw_preview",
+            "replay",
+            "active_scan",
+            "automatic_chatgpt_handoff",
+            "serve_forever",
+            "bind(",
+            "listen(",
+            "accept(",
+            "subprocess",
+            "requests",
+            "urllib.request",
+            "http.server",
+            "socketserver",
+        ]:
+            self.assertNotIn(forbidden_source_marker, module_text)
 
     def test_v09_minimal_protocol_parser_blocks_negative_fixture_cases(self) -> None:
         approval = json.loads(
