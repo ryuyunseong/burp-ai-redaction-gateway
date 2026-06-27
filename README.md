@@ -573,6 +573,13 @@ boundaries without implementing listener runtime, transport runtime, socket
 startup, protocol handling, tool execution, local evidence reading, raw
 preview/download, replay, state-changing actions, upload/import, or automatic
 handoff.
+The v0.10 listener startup negative fixture harness is tracked in
+[`tests/fixtures/v10_listener_startup_negative_cases.json`](tests/fixtures/v10_listener_startup_negative_cases.json).
+It is fixture, test, and documentation boundary work only. It does not implement
+listener runtime, transport runtime, socket startup, protocol handling, tool
+execution, local evidence reading, raw preview/download, replay, state-changing
+actions, upload/import, or automatic handoff. Future listener implementation
+PRs must consume this fixture before opening any startup surface.
 
 ## Burp Montoya Collector
 
