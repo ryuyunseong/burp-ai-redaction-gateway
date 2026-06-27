@@ -557,6 +557,13 @@ It includes the minimal dispatcher decision helper in the safe-core scope and
 keeps transport/listener runtime, tool execution, local evidence reading, raw
 preview/download, replay/active scan, dashboard state-changing controls,
 upload/import action, and automatic handoff deferred to later versions.
+After the v0.9 safe-core release, the v0.10 scope decision is tracked in
+[`docs/V0.10_SCOPE_DECISION.md`](docs/V0.10_SCOPE_DECISION.md) and
+[`tests/fixtures/v10_scope_decision.json`](tests/fixtures/v10_scope_decision.json).
+It recommends a transport/listener approval packet as the first v0.10 path and
+keeps tool execution, local evidence reading, raw preview/download, replay,
+active scan, state-changing dashboard controls, upload/import action, and
+automatic handoff split into later threat-boundary work.
 
 ## Burp Montoya Collector
 
