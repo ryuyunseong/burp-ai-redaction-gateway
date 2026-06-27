@@ -548,7 +548,8 @@ The v0.9 minimal dispatcher decision helper is implemented in
 It produces blocked raw-free dispatcher responses using the approval packet
 allowed fields and keeps executable registration, actual tool execution, local
 evidence reading, listener startup, and transport runtime out of scope. The next
-v0.9 safe-core candidate is release readiness.
+v0.9 safe-core candidate is release readiness. Its `reason_code` is restricted
+to known dispatcher negative categories and the fallback blocked reason.
 
 ## Burp Montoya Collector
 

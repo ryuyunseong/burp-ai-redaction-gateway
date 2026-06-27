@@ -116,6 +116,8 @@ from burp_ai_redaction_gateway.mcp_protocol_parser import (
 )
 from burp_ai_redaction_gateway.mcp_dispatcher import (
     DISPATCHER_RESPONSE_ALLOWED_FIELDS,
+    FALLBACK_REASON_CODE,
+    NEGATIVE_REASON_CODES,
     SAFE_DISPATCHER_MESSAGE,
     build_blocked_dispatcher_response,
     build_minimal_dispatcher_metadata,
@@ -6355,6 +6357,7 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertEqual(decision["allowed_dispatcher_output_fields"], allowed_fields)
         self.assertEqual(decision["required_negative_categories"], negative_categories)
         self.assertEqual(len(negative["cases"]), 13)
+        self.assertEqual(list(NEGATIVE_REASON_CODES), negative_categories)
         for fixture_path in decision["required_fixture_paths"]:
             self.assertTrue((ROOT / fixture_path).exists())
 
@@ -6364,6 +6367,9 @@ class RedactionGatewayTests(unittest.TestCase):
             "actual_tool_execution_implemented",
             "local_evidence_reader_implemented",
             "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
             "listener_startup_implemented",
             "transport_runtime_implemented",
             "raw_data_included",
@@ -6422,11 +6428,36 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn(echo_class, response_value_text)
             response_texts.append(json.dumps(response, sort_keys=True))
 
+        fallback_reason_codes = {
+            "unknown_reason_code": "unknown_reason_code",
+            "arbitrary_safe_looking_label": "synthetic_safe_label",
+            "token_like_reason": "token_like_reason",
+            "session_like_reason": "session_like_reason",
+            "url_like_reason": "synthetic://redacted",
+            "local_path_like_reason": "synthetic\\redacted",
+            "ip_like_reason": "999.999.999.999",
+            "raw_request": "raw_request",
+            "raw_response": "raw_response",
+            "authorization": "authorization",
+            "cookie": "cookie",
+            "bearer": "bearer",
+            "jwt": "jwt",
+            "hmac": "hmac",
+            "csrf": "csrf",
+            "handler_name": "handler_name",
+            "command_string": "command_string",
+        }
+        for label, reason_code in fallback_reason_codes.items():
+            response = build_blocked_dispatcher_response(reason_code)
+            self.assertEqual(response["reason_code"], FALLBACK_REASON_CODE, label)
+            self.assertNotIn(reason_code, json.dumps(response, sort_keys=True))
+            response_texts.append(json.dumps(response, sort_keys=True))
+
         unsafe_response = build_blocked_dispatcher_response(
             "token=synthetic",
             safe_message="Cookie: synthetic",
         )
-        self.assertEqual(unsafe_response["reason_code"], "dispatcher_invocation_blocked")
+        self.assertEqual(unsafe_response["reason_code"], FALLBACK_REASON_CODE)
         self.assertEqual(unsafe_response["safe_message"], SAFE_DISPATCHER_MESSAGE)
         response_texts.append(json.dumps(unsafe_response, sort_keys=True))
 
@@ -6438,10 +6469,18 @@ class RedactionGatewayTests(unittest.TestCase):
             "Authorization:",
             "Bearer ",
             "JWT ",
+            "authorization",
+            "bearer",
+            "cookie",
+            "jwt",
             "session=",
             "token=",
+            "session_like_reason",
+            "token_like_reason",
             "HMAC secret:",
             "CSRF token:",
+            "hmac",
+            "csrf",
             "C:\\coding\\",
             "C:\\Users\\",
             "actual.local",
@@ -6451,6 +6490,15 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIsNone(
             re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined_responses)
         )
+
+        source_check_text = module_text
+        for allowed_literal in [
+            *NEGATIVE_REASON_CODES,
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+        ]:
+            source_check_text = source_check_text.replace(f'"{allowed_literal}"', '""')
 
         for forbidden_source_marker in [
             "execute_tool(",
@@ -6474,7 +6522,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "http.server",
             "socketserver",
         ]:
-            self.assertNotIn(forbidden_source_marker, module_text)
+            self.assertNotIn(forbidden_source_marker, source_check_text)
 
     def test_v09_minimal_protocol_parser_blocks_negative_fixture_cases(self) -> None:
         approval = json.loads(

@@ -20,27 +20,25 @@ DISPATCHER_RESPONSE_ALLOWED_FIELDS = (
 )
 
 FALLBACK_REASON_CODE = "dispatcher_invocation_blocked"
+NEGATIVE_REASON_CODES = (
+    "raw_input_rejected",
+    "credential_input_rejected",
+    "target_identifier_input_rejected",
+    "local_path_input_rejected",
+    "local_evidence_body_rejected",
+    "safe_file_body_rejected",
+    "callback_handle_rejected",
+    "handler_name_rejected",
+    "command_string_rejected",
+    "tool_result_rejected",
+    "dispatcher_invocation_blocked",
+    "audit_raw_free",
+    "output_allowed_fields_only",
+)
+ALLOWED_REASON_CODES = frozenset((*NEGATIVE_REASON_CODES, FALLBACK_REASON_CODE))
 SAFE_DISPATCHER_MESSAGE = "Dispatcher request blocked. Manual review required."
 _SAFE_MESSAGE_ALLOWLIST = frozenset({SAFE_DISPATCHER_MESSAGE})
-_REASON_CODE_RE = re.compile(r"^[a-z][a-z0-9_]{0,79}$")
 _IP_LITERAL_RE = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
-
-_UNSAFE_REASON_VALUES = frozenset(
-    {
-        "authorization",
-        "bearer",
-        "cookie",
-        "csrf",
-        "csrf_token",
-        "hmac",
-        "hmac_secret",
-        "jwt",
-        "raw_request",
-        "raw_response",
-        "session",
-        "token",
-    }
-)
 
 _UNSAFE_TEXT_MARKERS = (
     "authorization:",
@@ -64,6 +62,9 @@ RUNTIME_FLAGS = MappingProxyType(
         "actual_tool_execution_implemented": False,
         "local_evidence_reader_implemented": False,
         "safe_file_body_reader_implemented": False,
+        "raw_preview_download_implemented": False,
+        "replay_active_scan_implemented": False,
+        "automatic_chatgpt_handoff_implemented": False,
         "listener_startup_implemented": False,
         "transport_runtime_implemented": False,
     }
@@ -126,13 +127,9 @@ def _metadata_reason_code(metadata: Mapping[str, Any]) -> str:
 
 def _safe_reason_code(reason_code: str) -> str:
     text = str(reason_code).strip().lower()
-    if not _REASON_CODE_RE.fullmatch(text):
-        return FALLBACK_REASON_CODE
-    if text in _UNSAFE_REASON_VALUES:
-        return FALLBACK_REASON_CODE
-    if "://" in text or "/" in text or "\\" in text or _IP_LITERAL_RE.search(text):
-        return FALLBACK_REASON_CODE
-    return text
+    if text in ALLOWED_REASON_CODES:
+        return text
+    return FALLBACK_REASON_CODE
 
 
 def _safe_message(safe_message: str | None) -> str:
