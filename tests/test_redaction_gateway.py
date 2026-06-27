@@ -395,6 +395,12 @@ V09_RELEASE_READINESS_FIXTURE = (
 )
 V10_SCOPE_DECISION_DOC = ROOT / "docs" / "V0.10_SCOPE_DECISION.md"
 V10_SCOPE_DECISION_FIXTURE = ROOT / "tests" / "fixtures" / "v10_scope_decision.json"
+V10_TRANSPORT_LISTENER_APPROVAL_PACKET_DOC = (
+    ROOT / "docs" / "V0.10_TRANSPORT_LISTENER_APPROVAL_PACKET.md"
+)
+V10_TRANSPORT_LISTENER_APPROVAL_PACKET_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v10_transport_listener_approval_packet.json"
+)
 MCP_DISPATCHER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_dispatcher.py"
 MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
@@ -6594,6 +6600,208 @@ class RedactionGatewayTests(unittest.TestCase):
             "urllib.request",
             "http.server",
             "socketserver",
+        ]:
+            self.assertIn(
+                forbidden_source_marker,
+                fixture["forbidden_source_markers"],
+            )
+
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v10_transport_listener_approval_packet_hygiene(self) -> None:
+        self.assertTrue(V10_TRANSPORT_LISTENER_APPROVAL_PACKET_DOC.exists())
+        self.assertTrue(V10_TRANSPORT_LISTENER_APPROVAL_PACKET_FIXTURE.exists())
+
+        doc_text = V10_TRANSPORT_LISTENER_APPROVAL_PACKET_DOC.read_text(
+            encoding="utf-8"
+        )
+        fixture = json.loads(
+            V10_TRANSPORT_LISTENER_APPROVAL_PACKET_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        combined = "\n".join([doc_text, json.dumps(fixture, sort_keys=True)])
+
+        for section in [
+            "## Purpose",
+            "## Current baseline",
+            "## Approval scope",
+            "## Explicit non-goals",
+            "## Transport choices",
+            "## Listener startup boundary",
+            "## Localhost binding boundary",
+            "## Origin validation boundary",
+            "## Authentication and authorization boundary",
+            "## Session handling boundary",
+            "## Blocked response boundary",
+            "## Audit and logging boundary",
+            "## Source-check requirements",
+            "## Required negative tests",
+            "## PR split requirements",
+            "## Security review checklist",
+            "## Deferred work",
+        ]:
+            self.assertIn(section, doc_text)
+
+        self.assertIn(
+            "docs/V0.10_TRANSPORT_LISTENER_APPROVAL_PACKET.md",
+            readme_text,
+        )
+        self.assertIn(
+            "tests/fixtures/v10_transport_listener_approval_packet.json",
+            readme_text,
+        )
+        self.assertIn("planning and approval only", readme_text)
+        self.assertIn("listener runtime", readme_text)
+        self.assertIn("transport runtime", readme_text)
+
+        self.assertEqual(
+            fixture["schema_version"],
+            "v10_transport_listener_approval_packet.v1",
+        )
+        self.assertIs(fixture["approval_packet_only"], True)
+        self.assertIs(fixture["scope_decision_consumed"], True)
+        self.assertEqual(
+            fixture["v10_scope_recommended_first_path"],
+            "transport_listener_approval_packet",
+        )
+        self.assertIs(fixture["manual_review_required"], True)
+        self.assertIs(fixture["raw_data_included"], False)
+
+        for false_flag in [
+            "listener_implementation_allowed_in_this_pr",
+            "transport_runtime_allowed_in_this_pr",
+            "socket_bind_allowed_in_this_pr",
+            "socket_listen_allowed_in_this_pr",
+            "socket_accept_allowed_in_this_pr",
+            "server_startup_allowed_in_this_pr",
+            "protocol_handler_allowed_in_this_pr",
+            "executable_tool_registration_allowed_in_this_pr",
+            "actual_tool_execution_allowed_in_this_pr",
+            "local_evidence_reader_allowed_in_this_pr",
+            "safe_file_body_reader_allowed_in_this_pr",
+            "raw_preview_download_allowed_in_this_pr",
+            "replay_active_scan_allowed_in_this_pr",
+            "automatic_chatgpt_handoff_allowed_in_this_pr",
+            "dashboard_state_changing_action_allowed_in_this_pr",
+            "upload_import_action_allowed_in_this_pr",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        for boundary in [
+            "localhost_binding_required_before_runtime",
+            "origin_validation_required_before_streamable_http",
+            "authentication_boundary_required_before_remote_transport",
+            "session_id_policy_required_before_stateful_transport",
+            "token_passthrough_forbidden",
+            "no_tool_execution",
+            "no_local_evidence_reader",
+            "no_raw_preview",
+        ]:
+            self.assertIn(boundary, fixture["required_security_boundaries"])
+
+        self.assertEqual(
+            fixture["allowed_transport_planning_values"],
+            [
+                "stdio_planning",
+                "streamable_http_planning",
+                "custom_transport_deferred",
+            ],
+        )
+
+        for negative_test in [
+            "rejects_non_local_bind_plan",
+            "rejects_missing_origin_validation_plan",
+            "rejects_missing_auth_boundary_plan",
+            "rejects_token_passthrough_plan",
+            "rejects_listener_plus_tool_execution",
+            "rejects_listener_plus_local_evidence_reader",
+            "rejects_transport_plus_raw_preview",
+            "keeps_socket_startup_absent",
+            "keeps_runtime_code_unchanged",
+            "keeps_audit_raw_free",
+        ]:
+            self.assertIn(negative_test, fixture["required_negative_tests"])
+
+        for blocked_combination in [
+            "listener_plus_tool_execution",
+            "listener_plus_local_evidence_reader",
+            "transport_plus_raw_preview",
+            "listener_plus_server_startup",
+            "transport_plus_protocol_handler",
+            "tool_execution_plus_local_evidence_reader",
+        ]:
+            self.assertIn(blocked_combination, fixture["blocked_combined_prs"])
+
+        self.assertEqual(
+            fixture["blocked_response_allowed_fields"],
+            [
+                "status",
+                "reason_code",
+                "approval_packet_only",
+                "raw_data_included",
+                "manual_review_required",
+                "safe_message",
+            ],
+        )
+
+        for forbidden_source_marker in [
+            "execute_tool(",
+            "register_tool(",
+            "read_local_evidence(",
+            "read_file_body(",
+            "callback_handle",
+            "handler_name",
+            "command",
+            "raw_preview",
+            "replay",
+            "active_scan",
+            "automatic_chatgpt_handoff",
+            "serve_forever",
+            "bind(",
+            "listen(",
+            "accept(",
+            "subprocess",
+            "requests",
+            "urllib.request",
+            "http.server",
+            "socketserver",
+            "HTTPServer",
+            "ThreadingHTTPServer",
         ]:
             self.assertIn(
                 forbidden_source_marker,

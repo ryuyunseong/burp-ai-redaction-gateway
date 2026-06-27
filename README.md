@@ -564,6 +564,15 @@ It recommends a transport/listener approval packet as the first v0.10 path and
 keeps tool execution, local evidence reading, raw preview/download, replay,
 active scan, state-changing dashboard controls, upload/import action, and
 automatic handoff split into later threat-boundary work.
+The v0.10 transport/listener approval packet is tracked in
+[`docs/V0.10_TRANSPORT_LISTENER_APPROVAL_PACKET.md`](docs/V0.10_TRANSPORT_LISTENER_APPROVAL_PACKET.md)
+and
+[`tests/fixtures/v10_transport_listener_approval_packet.json`](tests/fixtures/v10_transport_listener_approval_packet.json).
+It is planning and approval only; it records transport/listener security
+boundaries without implementing listener runtime, transport runtime, socket
+startup, protocol handling, tool execution, local evidence reading, raw
+preview/download, replay, state-changing actions, upload/import, or automatic
+handoff.
 
 ## Burp Montoya Collector
 
