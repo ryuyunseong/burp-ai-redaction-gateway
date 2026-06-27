@@ -393,6 +393,8 @@ V09_RELEASE_READINESS_DOC = ROOT / "docs" / "V0.9_RELEASE_READINESS.md"
 V09_RELEASE_READINESS_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v09_release_readiness.json"
 )
+V10_SCOPE_DECISION_DOC = ROOT / "docs" / "V0.10_SCOPE_DECISION.md"
+V10_SCOPE_DECISION_FIXTURE = ROOT / "tests" / "fixtures" / "v10_scope_decision.json"
 MCP_DISPATCHER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_dispatcher.py"
 MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
@@ -6454,6 +6456,149 @@ class RedactionGatewayTests(unittest.TestCase):
             "socketserver",
         ]:
             self.assertNotIn(forbidden_source_marker, source_check_text)
+
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v10_scope_decision_hygiene(self) -> None:
+        self.assertTrue(V10_SCOPE_DECISION_DOC.exists())
+        self.assertTrue(V10_SCOPE_DECISION_FIXTURE.exists())
+
+        doc_text = V10_SCOPE_DECISION_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(V10_SCOPE_DECISION_FIXTURE.read_text(encoding="utf-8"))
+        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        combined = "\n".join([doc_text, json.dumps(fixture, sort_keys=True)])
+
+        for section in [
+            "## Purpose",
+            "## Current baseline",
+            "## v0.9 release baseline",
+            "## v0.10 candidate directions",
+            "## Recommended first v0.10 path",
+            "## Explicit non-goals",
+            "## Security boundary",
+            "## Required approval packets",
+            "## PR split requirements",
+            "## Source-check requirements",
+            "## Required tests",
+            "## Deferred work",
+            "## Final decision",
+        ]:
+            self.assertIn(section, doc_text)
+
+        self.assertIn("docs/V0.10_SCOPE_DECISION.md", readme_text)
+        self.assertIn("tests/fixtures/v10_scope_decision.json", readme_text)
+        self.assertIn("transport/listener approval packet", readme_text)
+        self.assertIn("tool execution", readme_text)
+        self.assertIn("local evidence", readme_text)
+
+        self.assertEqual(fixture["schema_version"], "v10_scope_decision.v1")
+        self.assertIs(fixture["scope_decision_only"], True)
+        self.assertEqual(fixture["v09_release_tag"], "v0.9")
+        self.assertEqual(
+            fixture["v09_release_target_commit"],
+            "a50c66e08f9618cbc021cfbe0de0ee0a6ec8b08f",
+        )
+        self.assertEqual(
+            fixture["recommended_first_path"],
+            "transport_listener_approval_packet",
+        )
+        self.assertIs(fixture["transport_listener_approval_packet_required"], True)
+        self.assertIs(fixture["manual_review_required"], True)
+        self.assertIs(fixture["raw_data_included"], False)
+
+        for false_flag in [
+            "listener_implementation_allowed_in_this_pr",
+            "transport_runtime_allowed_in_this_pr",
+            "executable_tool_registration_allowed_in_this_pr",
+            "actual_tool_execution_allowed_in_this_pr",
+            "local_evidence_reader_allowed_in_this_pr",
+            "safe_file_body_reader_allowed_in_this_pr",
+            "raw_preview_download_allowed_in_this_pr",
+            "replay_active_scan_allowed_in_this_pr",
+            "automatic_chatgpt_handoff_allowed_in_this_pr",
+            "dashboard_state_changing_action_allowed_in_this_pr",
+            "upload_import_action_allowed_in_this_pr",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        for required_packet in [
+            "transport_listener_approval_packet",
+            "listener_startup_negative_fixture_harness",
+            "transport_runtime_implementation_decision",
+            "executable_tool_registration_decision",
+            "actual_tool_execution_threat_boundary",
+            "local_evidence_reader_threat_boundary",
+        ]:
+            self.assertIn(required_packet, fixture["required_future_packets"])
+
+        for blocked_combination in [
+            "listener_plus_tool_execution",
+            "listener_plus_local_evidence_reader",
+            "transport_plus_raw_preview",
+            "tool_execution_plus_local_evidence_reader",
+            "upload_import_plus_state_changing_action",
+        ]:
+            self.assertIn(blocked_combination, fixture["blocked_combined_prs"])
+
+        for forbidden_source_marker in [
+            "execute_tool(",
+            "register_tool(",
+            "read_local_evidence(",
+            "read_file_body(",
+            "callback_handle",
+            "handler_name",
+            "command",
+            "raw_preview",
+            "replay",
+            "active_scan",
+            "automatic_chatgpt_handoff",
+            "serve_forever",
+            "bind(",
+            "listen(",
+            "accept(",
+            "subprocess",
+            "requests",
+            "urllib.request",
+            "http.server",
+            "socketserver",
+        ]:
+            self.assertIn(
+                forbidden_source_marker,
+                fixture["forbidden_source_markers"],
+            )
 
         for forbidden in [
             "\ufeff",
