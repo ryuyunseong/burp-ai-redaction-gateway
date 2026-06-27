@@ -550,6 +550,13 @@ allowed fields and keeps executable registration, actual tool execution, local
 evidence reading, listener startup, and transport runtime out of scope. The next
 v0.9 safe-core candidate is release readiness. Its `reason_code` is restricted
 to known dispatcher negative categories and the fallback blocked reason.
+The v0.9 release readiness record is tracked in
+[`docs/V0.9_RELEASE_READINESS.md`](docs/V0.9_RELEASE_READINESS.md) and
+[`tests/fixtures/v09_release_readiness.json`](tests/fixtures/v09_release_readiness.json).
+It includes the minimal dispatcher decision helper in the safe-core scope and
+keeps transport/listener runtime, tool execution, local evidence reading, raw
+preview/download, replay/active scan, dashboard state-changing controls,
+upload/import action, and automatic handoff deferred to later versions.
 
 ## Burp Montoya Collector
 
