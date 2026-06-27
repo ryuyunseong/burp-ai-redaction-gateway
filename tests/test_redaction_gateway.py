@@ -401,6 +401,9 @@ V10_TRANSPORT_LISTENER_APPROVAL_PACKET_DOC = (
 V10_TRANSPORT_LISTENER_APPROVAL_PACKET_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v10_transport_listener_approval_packet.json"
 )
+V10_LISTENER_STARTUP_NEGATIVE_CASES_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v10_listener_startup_negative_cases.json"
+)
 MCP_DISPATCHER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_dispatcher.py"
 MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
@@ -6807,6 +6810,172 @@ class RedactionGatewayTests(unittest.TestCase):
                 forbidden_source_marker,
                 fixture["forbidden_source_markers"],
             )
+
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v10_listener_startup_negative_fixture_harness(self) -> None:
+        self.assertTrue(V10_LISTENER_STARTUP_NEGATIVE_CASES_FIXTURE.exists())
+
+        fixture = json.loads(
+            V10_LISTENER_STARTUP_NEGATIVE_CASES_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        approval = json.loads(
+            V10_TRANSPORT_LISTENER_APPROVAL_PACKET_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        scope_text = V10_SCOPE_DECISION_DOC.read_text(encoding="utf-8")
+        packet_text = V10_TRANSPORT_LISTENER_APPROVAL_PACKET_DOC.read_text(
+            encoding="utf-8"
+        )
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        combined = "\n".join([fixture_text, scope_text, packet_text])
+
+        for linked_text in [readme_text, scope_text, packet_text]:
+            self.assertIn(
+                "tests/fixtures/v10_listener_startup_negative_cases.json",
+                linked_text,
+            )
+
+        self.assertIn("This harness is not", packet_text)
+        self.assertIn("a runtime implementation", packet_text)
+        self.assertIn("does not add socket bind, listen, or accept", packet_text)
+        self.assertIn("does not add a protocol handler", packet_text)
+        self.assertIn("tool execution", packet_text)
+        self.assertIn("local evidence reading", packet_text)
+        self.assertIn("future listener implementation PR", packet_text)
+        self.assertIn("must consume this", packet_text)
+
+        self.assertEqual(
+            fixture["schema_version"],
+            "v10_listener_startup_negative_cases.v1",
+        )
+        self.assertIs(fixture["negative_fixture_only"], True)
+        self.assertIs(fixture["transport_listener_approval_packet_consumed"], True)
+        self.assertIs(fixture["v10_scope_decision_consumed"], True)
+        self.assertIs(fixture["manual_review_required"], True)
+        self.assertIs(fixture["raw_data_included"], False)
+        self.assertIs(fixture["source_check_required"], True)
+
+        false_flags = [
+            "listener_implementation_allowed_in_this_pr",
+            "transport_runtime_allowed_in_this_pr",
+            "socket_bind_allowed_in_this_pr",
+            "socket_listen_allowed_in_this_pr",
+            "socket_accept_allowed_in_this_pr",
+            "server_startup_allowed_in_this_pr",
+            "protocol_handler_allowed_in_this_pr",
+            "executable_tool_registration_allowed_in_this_pr",
+            "actual_tool_execution_allowed_in_this_pr",
+            "local_evidence_reader_allowed_in_this_pr",
+            "safe_file_body_reader_allowed_in_this_pr",
+            "raw_preview_download_allowed_in_this_pr",
+            "replay_active_scan_allowed_in_this_pr",
+            "automatic_chatgpt_handoff_allowed_in_this_pr",
+            "dashboard_state_changing_action_allowed_in_this_pr",
+            "upload_import_action_allowed_in_this_pr",
+        ]
+        for false_flag in false_flags:
+            self.assertIs(fixture[false_flag], False)
+
+        self.assertEqual(
+            fixture["forbidden_source_markers"],
+            approval["forbidden_source_markers"],
+        )
+
+        required_categories = [
+            "non_local_bind_plan_rejected",
+            "missing_origin_validation_plan_rejected",
+            "missing_auth_boundary_plan_rejected",
+            "token_passthrough_plan_rejected",
+            "missing_session_policy_plan_rejected",
+            "listener_plus_tool_execution_rejected",
+            "listener_plus_local_evidence_reader_rejected",
+            "transport_plus_raw_preview_rejected",
+            "socket_startup_absent_required",
+            "protocol_handler_absent_required",
+            "audit_raw_free_required",
+            "runtime_code_unchanged_required",
+        ]
+        case_categories = [case["category"] for case in fixture["cases"]]
+        self.assertEqual(case_categories, required_categories)
+        self.assertEqual(len(case_categories), len(set(case_categories)))
+
+        allowed_response_fields = [
+            "status",
+            "reason_code",
+            "listener_startup_allowed",
+            "transport_runtime_allowed",
+            "socket_bind_allowed",
+            "socket_listen_allowed",
+            "socket_accept_allowed",
+            "protocol_handler_allowed",
+            "tool_execution_allowed",
+            "local_evidence_reader_allowed",
+            "raw_preview_allowed",
+            "raw_data_included",
+            "manual_review_required",
+            "safe_message",
+        ]
+        case_false_flags = [
+            "listener_startup_allowed",
+            "transport_runtime_allowed",
+            "socket_bind_allowed",
+            "socket_listen_allowed",
+            "socket_accept_allowed",
+            "protocol_handler_allowed",
+            "tool_execution_allowed",
+            "local_evidence_reader_allowed",
+            "raw_preview_allowed",
+            "raw_data_included",
+        ]
+        for case in fixture["cases"]:
+            self.assertRegex(case["id"], r"^v10-listener-neg-\d{3}$")
+            self.assertTrue(case["synthetic_plan_label"].startswith("synthetic_"))
+            self.assertEqual(case["expected_status"], "blocked")
+            self.assertEqual(case["expected_reason_code"], case["category"])
+            for false_flag in case_false_flags:
+                self.assertIs(case[false_flag], False)
+            self.assertIs(case["manual_review_required"], True)
+            self.assertIs(case["echo_forbidden"], True)
+            self.assertGreater(len(case["forbidden_echo_classes"]), 0)
+            self.assertEqual(case["allowed_response_fields"], allowed_response_fields)
 
         for forbidden in [
             "\ufeff",
