@@ -374,6 +374,12 @@ V09_DISPATCHER_APPROVAL_PACKET_FIXTURE = (
 V09_DISPATCHER_NEGATIVE_CASES_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v09_dispatcher_negative_cases.json"
 )
+V09_DISPATCHER_IMPLEMENTATION_DECISION_DOC = (
+    ROOT / "docs" / "V0.9_DISPATCHER_IMPLEMENTATION_DECISION.md"
+)
+V09_DISPATCHER_IMPLEMENTATION_DECISION_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v09_dispatcher_implementation_decision.json"
+)
 MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
 V05_HOTFIX_POLICY_DOC = ROOT / "docs" / "V0.5_HOTFIX_POLICY.md"
@@ -6072,6 +6078,201 @@ class RedactionGatewayTests(unittest.TestCase):
             for echo_class in case["forbidden_echo_classes"]
         }
         self.assertTrue(expected_echo_classes.issubset(actual_echo_classes))
+
+        for dispatcher_file in [
+            "burp_ai_redaction_gateway/mcp_dispatcher.py",
+            "burp_ai_redaction_gateway/mcp_tool_dispatcher.py",
+        ]:
+            self.assertFalse((ROOT / dispatcher_file).exists())
+
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v09_dispatcher_implementation_decision_is_planning_only_and_raw_free(self) -> None:
+        approval = json.loads(
+            V09_DISPATCHER_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8")
+        )
+        negative = json.loads(
+            V09_DISPATCHER_NEGATIVE_CASES_FIXTURE.read_text(encoding="utf-8")
+        )
+        decision = json.loads(
+            V09_DISPATCHER_IMPLEMENTATION_DECISION_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        doc = V09_DISPATCHER_IMPLEMENTATION_DECISION_DOC.read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        approval_doc = V09_DISPATCHER_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
+        boundary_doc = V09_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY_DOC.read_text(
+            encoding="utf-8"
+        )
+        fixture_text = json.dumps(decision, sort_keys=True)
+        combined = "\n".join([doc, fixture_text])
+        normalized_doc = " ".join(doc.split())
+
+        self.assertTrue(V09_DISPATCHER_IMPLEMENTATION_DECISION_DOC.exists())
+        self.assertTrue(V09_DISPATCHER_IMPLEMENTATION_DECISION_FIXTURE.exists())
+        for linked_text in [readme, approval_doc, boundary_doc]:
+            self.assertIn("V0.9_DISPATCHER_IMPLEMENTATION_DECISION.md", linked_text)
+            self.assertIn("v09_dispatcher_implementation_decision.json", linked_text)
+
+        for section in [
+            "## Purpose",
+            "## Current Baseline",
+            "## Decision Scope",
+            "## Explicit Non-goals",
+            "## Required Fixture Consumption",
+            "## Dispatcher Implementation Candidate Scope",
+            "## Dispatcher Input Boundary",
+            "## Dispatcher Output Boundary",
+            "## Blocked Response Boundary",
+            "## Audit Boundary",
+            "## Source-check Requirements",
+            "## Required Implementation Tests",
+            "## PR Split Requirements",
+            "## Security Review Checklist",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, doc)
+
+        for required_text in [
+            "documentation, fixture, and source-check planning only",
+            "This decision does not approve adding dispatcher source code",
+            "A future dispatcher implementation PR must consume",
+            "allowed response field drift and forbidden echo class drift must fail",
+            "Future dispatcher input may accept only parser metadata",
+            "Future dispatcher output must preserve the allowed dispatcher output fields",
+            "Blocked dispatcher responses must be raw-free metadata only",
+            "Future dispatcher audit metadata may include only synthetic case labels",
+            "This PR must not add dispatcher implementation files",
+            "Parser behavior must not change",
+            "output bundle files remain unchanged",
+            "v0.9 tag: not created",
+            "GitHub Release v0.9: not created",
+        ]:
+            self.assertIn(required_text.lower(), normalized_doc.lower())
+
+        self.assertEqual(
+            decision["schema_version"],
+            "v09_dispatcher_implementation_decision.v1",
+        )
+        for true_flag in [
+            "decision_only",
+            "dispatcher_implementation_candidate_defined",
+            "dispatcher_approval_packet_consumed",
+            "dispatcher_negative_fixture_consumed",
+            "registry_dispatcher_boundary_consumed",
+            "parser_boundary_consumed",
+            "allowed_response_fields_drift_must_fail",
+            "forbidden_echo_classes_drift_must_fail",
+        ]:
+            self.assertIn(true_flag, decision)
+            self.assertIs(decision[true_flag], True)
+
+        for false_flag in [
+            "dispatcher_implementation_allowed_in_this_pr",
+            "dispatcher_implemented",
+            "dispatcher_invocation_allowed",
+            "executable_tool_registration_implemented",
+            "actual_tool_execution_implemented",
+            "local_evidence_reader_implemented",
+            "safe_file_body_reader_implemented",
+            "raw_preview_download_implemented",
+            "replay_active_scan_implemented",
+            "automatic_chatgpt_handoff_implemented",
+            "listener_startup_implemented",
+            "transport_runtime_implemented",
+            "parser_behavior_changed",
+            "output_bundle_structure_changed",
+            "tag_github_release_created",
+            "raw_data_included",
+        ]:
+            self.assertIn(false_flag, decision)
+            self.assertIs(decision[false_flag], False)
+        self.assertIs(decision["manual_review_required"], True)
+
+        required_fixture_paths = [
+            "tests/fixtures/v09_dispatcher_approval_packet.json",
+            "tests/fixtures/v09_dispatcher_negative_cases.json",
+            "tests/fixtures/v09_read_only_registry_dispatcher_boundary.json",
+        ]
+        self.assertEqual(decision["required_fixture_paths"], required_fixture_paths)
+        for fixture_path in required_fixture_paths:
+            self.assertTrue((ROOT / fixture_path).exists())
+
+        allowed_fields = approval["allowed_dispatcher_output_fields"]
+        negative_categories = [case["category"] for case in negative["cases"]]
+        self.assertEqual(decision["allowed_dispatcher_output_fields"], allowed_fields)
+        self.assertEqual(decision["required_negative_categories"], negative_categories)
+
+        required_future_tests = [
+            "consumes_dispatcher_negative_cases",
+            "preserves_allowed_dispatcher_output_fields",
+            "rejects_forbidden_echo_classes",
+            "blocks_raw_input",
+            "blocks_credential_input",
+            "blocks_target_identifier_input",
+            "blocks_local_path_input",
+            "blocks_local_evidence_body",
+            "blocks_safe_file_body",
+            "blocks_callback_handle",
+            "blocks_handler_name",
+            "blocks_command_string",
+            "blocks_tool_result",
+            "keeps_audit_raw_free",
+            "no_tool_execution",
+            "no_local_evidence_reader",
+            "no_listener_transport_runtime",
+        ]
+        self.assertEqual(
+            decision["required_future_implementation_tests"],
+            required_future_tests,
+        )
+
+        blocked_surfaces = [
+            "executable_tool_registration",
+            "actual_tool_execution",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "raw_preview_download",
+            "replay_active_scan",
+            "automatic_chatgpt_handoff",
+            "listener_startup",
+            "transport_runtime",
+        ]
+        self.assertEqual(decision["blocked_surfaces"], blocked_surfaces)
 
         for dispatcher_file in [
             "burp_ai_redaction_gateway/mcp_dispatcher.py",
