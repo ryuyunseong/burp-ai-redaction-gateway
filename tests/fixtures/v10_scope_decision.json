@@ -21,6 +21,7 @@
   "required_future_packets": [
     "transport_listener_approval_packet",
     "listener_startup_negative_fixture_harness",
+    "listener_startup_implementation_decision",
     "transport_runtime_implementation_decision",
     "executable_tool_registration_decision",
     "actual_tool_execution_threat_boundary",

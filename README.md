@@ -580,6 +580,14 @@ listener runtime, transport runtime, socket startup, protocol handling, tool
 execution, local evidence reading, raw preview/download, replay, state-changing
 actions, upload/import, or automatic handoff. Future listener implementation
 PRs must consume this fixture before opening any startup surface.
+The v0.10 listener startup implementation decision is tracked in
+[`docs/V0.10_LISTENER_STARTUP_IMPLEMENTATION_DECISION.md`](docs/V0.10_LISTENER_STARTUP_IMPLEMENTATION_DECISION.md)
+and
+[`tests/fixtures/v10_listener_startup_implementation_decision.json`](tests/fixtures/v10_listener_startup_implementation_decision.json).
+It allows only a future listener startup skeleton step and keeps listener
+runtime, transport runtime, socket startup, protocol handling, tool execution,
+local evidence reading, raw preview/download, replay, state-changing actions,
+upload/import, and automatic handoff outside this decision.
 
 ## Burp Montoya Collector
 
