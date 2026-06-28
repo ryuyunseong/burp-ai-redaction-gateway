@@ -597,6 +597,14 @@ decision and negative fixture harness, but it does not implement listener
 runtime, transport runtime, socket startup, protocol handling, tool execution,
 local evidence reading, raw preview/download, replay, state-changing actions,
 upload/import, or automatic handoff.
+The v0.10 listener startup implementation review is tracked in
+[`docs/V0.10_LISTENER_STARTUP_IMPLEMENTATION_REVIEW.md`](docs/V0.10_LISTENER_STARTUP_IMPLEMENTATION_REVIEW.md)
+and
+[`tests/fixtures/v10_listener_startup_implementation_review.json`](tests/fixtures/v10_listener_startup_implementation_review.json).
+It is review-only boundary work after the metadata skeleton and still does not
+implement listener runtime, transport runtime, socket startup, protocol
+handling, tool execution, local evidence reading, raw preview/download, replay,
+state-changing actions, upload/import, or automatic handoff.
 
 ## Burp Montoya Collector
 
