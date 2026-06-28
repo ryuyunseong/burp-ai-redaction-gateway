@@ -428,6 +428,12 @@ V10_LISTENER_STARTUP_IMPLEMENTATION_REVIEW_FIXTURE = (
     / "fixtures"
     / "v10_listener_startup_implementation_review.json"
 )
+V10_TRANSPORT_RUNTIME_DECISION_DOC = (
+    ROOT / "docs" / "V0.10_TRANSPORT_RUNTIME_DECISION.md"
+)
+V10_TRANSPORT_RUNTIME_DECISION_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v10_transport_runtime_decision.json"
+)
 MCP_DISPATCHER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_dispatcher.py"
 MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
@@ -7852,6 +7858,219 @@ class RedactionGatewayTests(unittest.TestCase):
                 module_text_for_scan,
                 f"{marker} found in module",
             )
+
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v10_transport_runtime_decision_hygiene(self) -> None:
+        self.assertTrue(V10_TRANSPORT_RUNTIME_DECISION_DOC.exists())
+        self.assertTrue(V10_TRANSPORT_RUNTIME_DECISION_FIXTURE.exists())
+
+        doc_text = V10_TRANSPORT_RUNTIME_DECISION_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(
+            V10_TRANSPORT_RUNTIME_DECISION_FIXTURE.read_text(encoding="utf-8")
+        )
+        skeleton = json.loads(
+            V10_LISTENER_STARTUP_SKELETON_FIXTURE.read_text(encoding="utf-8")
+        )
+        review = json.loads(
+            V10_LISTENER_STARTUP_IMPLEMENTATION_REVIEW_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        packet = json.loads(
+            V10_TRANSPORT_LISTENER_APPROVAL_PACKET_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        combined = "\n".join([doc_text, fixture_text])
+
+        for section in [
+            "## Purpose",
+            "## Current baseline",
+            "## Consumed baselines",
+            "## Decision scope",
+            "## Explicit non-goals",
+            "## Transport Runtime Decision",
+            "## Streamable HTTP Boundary",
+            "## Stdio Boundary",
+            "## Socket Boundary",
+            "## Protocol Handler Separation",
+            "## Origin Validation Requirement",
+            "## Authentication Boundary",
+            "## Session Policy",
+            "## Token Passthrough Prohibition",
+            "## Source-check Requirements",
+            "## Release Closure Decision",
+            "## Deferred Work",
+        ]:
+            self.assertIn(section, doc_text)
+
+        for required_link in [
+            "docs/V0.10_TRANSPORT_RUNTIME_DECISION.md",
+            "tests/fixtures/v10_transport_runtime_decision.json",
+        ]:
+            self.assertIn(required_link, readme_text)
+
+        self.assertIn("decision-only", readme_text)
+        self.assertIn("release readiness", readme_text)
+        self.assertIn("v0.11 or later", readme_text)
+
+        self.assertEqual(
+            fixture["schema_version"],
+            "v10_transport_runtime_decision.v1",
+        )
+        self.assertIs(fixture["decision_only"], True)
+        self.assertIs(fixture["listener_startup_skeleton_consumed"], True)
+        self.assertIs(
+            fixture["listener_startup_implementation_review_consumed"],
+            True,
+        )
+        self.assertIs(fixture["transport_listener_approval_packet_consumed"], True)
+        self.assertIs(fixture["actual_transport_runtime_allowed_in_v010"], False)
+        self.assertIs(fixture["actual_listener_startup_allowed_in_v010"], False)
+        self.assertIs(fixture["protocol_handler_allowed_in_v010"], False)
+        self.assertIs(fixture["tool_execution_allowed_in_v010"], False)
+        self.assertIs(fixture["local_evidence_reader_allowed_in_v010"], False)
+        self.assertIs(fixture["raw_preview_download_allowed_in_v010"], False)
+        self.assertIs(
+            fixture["v010_should_move_to_release_readiness_after_this_pr"],
+            True,
+        )
+        self.assertIs(fixture["manual_review_required"], True)
+        self.assertIs(fixture["raw_data_included"], False)
+        self.assertEqual(fixture["approved_next_step"], "v010_release_readiness")
+
+        for false_flag in [
+            "listener_runtime_implemented_in_this_pr",
+            "transport_runtime_implemented_in_this_pr",
+            "socket_bind_implemented_in_this_pr",
+            "socket_listen_implemented_in_this_pr",
+            "socket_accept_implemented_in_this_pr",
+            "http_transport_runtime_implemented_in_this_pr",
+            "streamable_http_runtime_implemented_in_this_pr",
+            "stdio_runtime_implemented_in_this_pr",
+            "protocol_handler_implemented_in_this_pr",
+            "protocol_message_parsing_implemented_in_this_pr",
+            "executable_tool_registration_implemented_in_this_pr",
+            "actual_tool_execution_implemented_in_this_pr",
+            "local_evidence_reader_implemented_in_this_pr",
+            "raw_preview_download_implemented_in_this_pr",
+            "replay_active_scan_implemented_in_this_pr",
+            "automatic_chatgpt_handoff_implemented_in_this_pr",
+        ]:
+            self.assertIs(fixture[false_flag], False)
+
+        self.assertEqual(
+            fixture["required_preconditions_for_future_runtime"],
+            [
+                "origin_validation_required_before_streamable_http",
+                "loopback_only_bind_required_for_local_http",
+                "authentication_boundary_required_before_remote_transport",
+                "session_policy_required",
+                "token_passthrough_forbidden",
+                "session_ids_must_not_be_authentication",
+                "session_ids_must_be_secure_non_deterministic",
+                "session_ids_should_bind_to_user_context",
+                "protocol_handler_must_be_separate_pr",
+                "tool_execution_must_be_separate_threat_boundary",
+                "local_evidence_reader_must_be_separate_threat_boundary",
+                "raw_preview_must_remain_deferred",
+            ],
+        )
+        self.assertEqual(
+            fixture["blocked_v010_scope"],
+            [
+                "actual_transport_runtime",
+                "actual_listener_startup",
+                "socket_bind",
+                "socket_listen",
+                "socket_accept",
+                "http_server",
+                "streamable_http_runtime",
+                "stdio_subprocess_runtime",
+                "protocol_handler",
+                "protocol_message_parsing",
+                "tool_execution",
+                "local_evidence_reader",
+                "raw_preview_download",
+                "replay_active_scan",
+                "automatic_handoff",
+                "dashboard_state_change",
+                "upload_import_action",
+            ],
+        )
+        self.assertEqual(
+            fixture["allowed_followup_paths"],
+            [
+                "v010_release_readiness",
+                "v010_release_approval",
+                "v010_tag_github_release",
+            ],
+        )
+        self.assertEqual(
+            fixture["consumed_baselines"],
+            [
+                "docs/V0.10_SCOPE_DECISION.md",
+                "docs/V0.10_TRANSPORT_LISTENER_APPROVAL_PACKET.md",
+                "docs/V0.10_LISTENER_STARTUP_IMPLEMENTATION_DECISION.md",
+                "docs/V0.10_LISTENER_STARTUP_IMPLEMENTATION_REVIEW.md",
+                "tests/fixtures/v10_listener_startup_negative_cases.json",
+                "tests/fixtures/v10_listener_startup_implementation_decision.json",
+                "tests/fixtures/v10_listener_startup_skeleton.json",
+                "tests/fixtures/v10_listener_startup_implementation_review.json",
+            ],
+        )
+
+        self.assertIs(skeleton["skeleton_only"], True)
+        self.assertIs(
+            review["actual_listener_startup_allowed_after_this_review"],
+            False,
+        )
+        self.assertIs(packet["approval_packet_only"], True)
+
+        for required_precondition in fixture[
+            "required_preconditions_for_future_runtime"
+        ]:
+            self.assertIn(required_precondition, combined)
+        for blocked_surface in fixture["blocked_v010_scope"]:
+            self.assertIn(blocked_surface, combined)
+        for allowed_followup_path in fixture["allowed_followup_paths"]:
+            self.assertIn(allowed_followup_path, combined)
 
         for forbidden in [
             "\ufeff",
