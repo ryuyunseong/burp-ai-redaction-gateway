@@ -615,6 +615,12 @@ runtime, listener startup, protocol handling, tool execution, local evidence
 reading, raw preview/download, replay, state-changing actions, upload/import,
 or automatic handoff. Future runtime work is deferred to a separately reviewed
 v0.11 or later PR.
+The v0.10 release readiness record is tracked in
+[`docs/V0.10_RELEASE_READINESS.md`](docs/V0.10_RELEASE_READINESS.md) and
+[`tests/fixtures/v10_release_readiness.json`](tests/fixtures/v10_release_readiness.json).
+It closes v0.10 as a metadata and safety-boundary release candidate without
+actual transport or listener runtime. Future runtime work remains deferred to a
+separately reviewed v0.11 or later PR.
 
 ## Burp Montoya Collector
 
