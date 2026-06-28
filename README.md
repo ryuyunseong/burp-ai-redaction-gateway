@@ -588,6 +588,15 @@ It allows only a future listener startup skeleton step and keeps listener
 runtime, transport runtime, socket startup, protocol handling, tool execution,
 local evidence reading, raw preview/download, replay, state-changing actions,
 upload/import, and automatic handoff outside this decision.
+The v0.10 listener startup skeleton is tracked in
+[`burp_ai_redaction_gateway/mcp_listener_startup_skeleton.py`](burp_ai_redaction_gateway/mcp_listener_startup_skeleton.py)
+and
+[`tests/fixtures/v10_listener_startup_skeleton.json`](tests/fixtures/v10_listener_startup_skeleton.json).
+It is disabled-by-default metadata only. It consumes the startup implementation
+decision and negative fixture harness, but it does not implement listener
+runtime, transport runtime, socket startup, protocol handling, tool execution,
+local evidence reading, raw preview/download, replay, state-changing actions,
+upload/import, or automatic handoff.
 
 ## Burp Montoya Collector
 

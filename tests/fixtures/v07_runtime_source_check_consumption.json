@@ -13,6 +13,7 @@
   "declared_runtime_facing_source_scope": [
     "burp_ai_redaction_gateway/mcp_listener_skeleton.py",
     "burp_ai_redaction_gateway/mcp_listener_runtime.py",
+    "burp_ai_redaction_gateway/mcp_listener_startup_skeleton.py",
     "burp_ai_redaction_gateway/mcp_minimal_skeleton.py",
     "burp_ai_redaction_gateway/mcp_protocol_parser.py",
     "burp_ai_redaction_gateway/mcp_runtime_contract.py"
