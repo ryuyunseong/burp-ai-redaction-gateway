@@ -605,6 +605,16 @@ It is review-only boundary work after the metadata skeleton and still does not
 implement listener runtime, transport runtime, socket startup, protocol
 handling, tool execution, local evidence reading, raw preview/download, replay,
 state-changing actions, upload/import, or automatic handoff.
+The v0.10 transport runtime decision is tracked in
+[`docs/V0.10_TRANSPORT_RUNTIME_DECISION.md`](docs/V0.10_TRANSPORT_RUNTIME_DECISION.md)
+and
+[`tests/fixtures/v10_transport_runtime_decision.json`](tests/fixtures/v10_transport_runtime_decision.json).
+It closes the v0.10 transport/listener planning path as decision-only work and
+moves the next v0.10 step to release readiness without adding actual transport
+runtime, listener startup, protocol handling, tool execution, local evidence
+reading, raw preview/download, replay, state-changing actions, upload/import,
+or automatic handoff. Future runtime work is deferred to a separately reviewed
+v0.11 or later PR.
 
 ## Burp Montoya Collector
 
