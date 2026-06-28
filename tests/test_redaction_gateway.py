@@ -434,6 +434,10 @@ V10_TRANSPORT_RUNTIME_DECISION_DOC = (
 V10_TRANSPORT_RUNTIME_DECISION_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v10_transport_runtime_decision.json"
 )
+V10_RELEASE_READINESS_DOC = ROOT / "docs" / "V0.10_RELEASE_READINESS.md"
+V10_RELEASE_READINESS_FIXTURE = (
+    ROOT / "tests" / "fixtures" / "v10_release_readiness.json"
+)
 MCP_DISPATCHER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_dispatcher.py"
 MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
@@ -8071,6 +8075,172 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn(blocked_surface, combined)
         for allowed_followup_path in fixture["allowed_followup_paths"]:
             self.assertIn(allowed_followup_path, combined)
+
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
+
+    def test_v10_release_readiness_hygiene(self) -> None:
+        self.assertTrue(V10_RELEASE_READINESS_DOC.exists())
+        self.assertTrue(V10_RELEASE_READINESS_FIXTURE.exists())
+
+        doc_text = V10_RELEASE_READINESS_DOC.read_text(encoding="utf-8")
+        fixture = json.loads(
+            V10_RELEASE_READINESS_FIXTURE.read_text(encoding="utf-8")
+        )
+        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        transport_decision = json.loads(
+            V10_TRANSPORT_RUNTIME_DECISION_FIXTURE.read_text(encoding="utf-8")
+        )
+        combined = "\n".join([doc_text, json.dumps(fixture, sort_keys=True)])
+
+        for section in [
+            "## Purpose",
+            "## Release target",
+            "## v0.10 included scope",
+            "## v0.10 explicit deferred scope",
+            "## Included PRs",
+            "## Required gate evidence",
+            "## Security and privacy checklist",
+            "## Runtime absence checklist",
+            "## Raw-free assurance limits",
+            "## Tag and GitHub Release preconditions",
+            "## Release notes draft",
+            "## Rollback plan",
+            "## Final decision",
+            "## Deferred work for v0.11 or later",
+        ]:
+            self.assertIn(section, doc_text)
+
+        for required_link in [
+            "docs/V0.10_RELEASE_READINESS.md",
+            "tests/fixtures/v10_release_readiness.json",
+        ]:
+            self.assertIn(required_link, readme_text)
+
+        self.assertIn("metadata and safety-boundary", readme_text)
+        self.assertIn("actual transport or listener runtime", readme_text)
+        self.assertIn("v0.11 or later", readme_text)
+
+        self.assertEqual(fixture["schema_version"], "v10_release_readiness.v1")
+        self.assertIs(fixture["release_readiness_only"], True)
+        self.assertIs(fixture["release_tag_created"], False)
+        self.assertIs(fixture["github_release_created"], False)
+        self.assertEqual(
+            fixture["release_candidate_commit"],
+            "24ecb841fa59104d7bad72f5e8dea11388ee281c",
+        )
+        self.assertIs(fixture["v010_actual_runtime_included"], False)
+        self.assertIs(fixture["manual_review_required"], True)
+        self.assertIs(fixture["raw_data_included"], False)
+        self.assertIs(fixture["v010_should_not_add_more_planning_prs"], True)
+        self.assertEqual(fixture["approved_next_step"], "v010_release_approval")
+        self.assertEqual(
+            transport_decision["approved_next_step"],
+            "v010_release_readiness",
+        )
+
+        self.assertEqual(
+            fixture["included_prs"],
+            [152, 153, 154, 155, 156, 157, 158],
+        )
+
+        for included_scope in [
+            "v010_scope_decision",
+            "transport_listener_approval_packet",
+            "listener_startup_negative_fixture_harness",
+            "listener_startup_implementation_decision",
+            "listener_startup_metadata_skeleton",
+            "listener_startup_implementation_review",
+            "transport_runtime_decision",
+            "source_check_hardening",
+            "metadata_only_runtime_absence_boundary",
+        ]:
+            self.assertIn(included_scope, fixture["included_scope"])
+            self.assertIn(included_scope, combined)
+
+        for deferred_surface in [
+            "actual_transport_runtime",
+            "actual_listener_startup",
+            "socket_bind",
+            "socket_listen",
+            "socket_accept",
+            "http_server",
+            "streamable_http_runtime",
+            "stdio_subprocess_runtime",
+            "protocol_handler",
+            "protocol_message_parsing",
+            "executable_tool_registration",
+            "actual_tool_execution",
+            "local_evidence_reader",
+            "safe_file_body_reader",
+            "raw_preview_download",
+            "replay_active_scan",
+            "automatic_chatgpt_handoff",
+            "dashboard_state_changing_action",
+            "upload_import_action",
+        ]:
+            self.assertIn(deferred_surface, fixture["explicit_deferred_scope"])
+            self.assertIn(deferred_surface, combined)
+
+        for required_gate in [
+            "python -m compileall burp_ai_redaction_gateway tests",
+            "python -m unittest discover -s tests",
+            "python -m unittest discover -s tests -k v10_release_readiness",
+            "gitleaks dir -v --redact=100 --config .gitleaks.toml .",
+            "gitleaks git -v --redact=100 --config .gitleaks.toml .",
+            "scripts\\git_safety_check.bat",
+            "git diff --check",
+            "git status --short --untracked-files=all",
+        ]:
+            self.assertIn(required_gate, fixture["required_gates"])
+            self.assertIn(required_gate, combined)
+
+        for release_check in [
+            "no_v010_tag_before_release_approval",
+            "no_github_release_v010_before_release_approval",
+            "release_notes_include_actual_runtime_absence",
+            "release_notes_include_deferred_scope",
+            "release_notes_do_not_claim_safe_to_share",
+            "release_notes_do_not_claim_transport_runtime",
+            "release_notes_do_not_claim_listener_runtime",
+            "release_notes_do_not_claim_protocol_handler",
+            "release_notes_do_not_claim_tool_execution",
+            "release_notes_do_not_claim_local_evidence_reader",
+        ]:
+            self.assertIn(release_check, fixture["required_release_checks"])
+            self.assertIn(release_check, combined)
 
         for forbidden in [
             "\ufeff",
