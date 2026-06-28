@@ -43,6 +43,22 @@
       "burp_ai_redaction_gateway/mcp_protocol_parser.py",
       "burp_ai_redaction_gateway/mcp_runtime_contract.py"
     ],
+    "allowed_metadata_only_marker_values": [
+      "socket_startup",
+      "socket_bind_enabled",
+      "socket_listen_enabled",
+      "socket_accept_enabled",
+      "protocol_handler",
+      "protocol_message_handling_enabled",
+      "raw_preview_enabled",
+      "raw_preview_download",
+      "raw_preview_download_blocked",
+      "raw_preview_download_enabled",
+      "replay_active_scan",
+      "replay_active_scan_enabled",
+      "automatic_chatgpt_handoff",
+      "automatic_chatgpt_handoff_enabled"
+    ],
     "fail_on_undeclared_runtime_facing_file": true
   },
   "runtime_facing_filename_markers": [

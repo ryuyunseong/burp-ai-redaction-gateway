@@ -13,11 +13,6 @@ OUTPUT_BUNDLE_FILES = (
     "report_draft.md",
 )
 
-
-def _name(*parts: str) -> str:
-    return "_".join(parts)
-
-
 APPROVED_SCOPE = (
     "disabled_by_default_metadata_skeleton",
     "static_config_metadata_only",
@@ -30,18 +25,18 @@ APPROVED_SCOPE = (
 BLOCKED_SCOPE = (
     "listener_runtime",
     "transport_runtime",
-    _name("sock" + "et", "startup"),
-    _name("protocol", "handler"),
+    "socket_startup",
+    "protocol_handler",
     "protocol_message_parsing",
     "executable_tool_registration",
     "actual_tool_execution",
     "local_evidence_reader",
     "safe_file_body_reader",
-    _name("raw", "preview", "download"),
-    _name("re" + "play", "active", "scan"),
+    "raw_preview_download",
+    "replay_active_scan",
     "dashboard_state_changing_action",
     "upload_import_action",
-    _name("automatic", "chatgpt", "handoff"),
+    "automatic_chatgpt_handoff",
 )
 
 CONSUMED_BASELINES = (
@@ -55,9 +50,9 @@ RUNTIME_FLAGS = MappingProxyType(
     {
         "listener_runtime_enabled": False,
         "transport_runtime_enabled": False,
-        _name("sock" + "et", "bind_enabled"): False,
-        _name("sock" + "et", "listen_enabled"): False,
-        _name("sock" + "et", "accept_enabled"): False,
+        "socket_bind_enabled": False,
+        "socket_listen_enabled": False,
+        "socket_accept_enabled": False,
         "server_startup_enabled": False,
         "protocol_message_handling_enabled": False,
         "executable_tool_registration_enabled": False,
@@ -65,12 +60,12 @@ RUNTIME_FLAGS = MappingProxyType(
         "tool_execution_enabled": False,
         "local_evidence_access_enabled": False,
         "safe_file_body_reader_enabled": False,
-        _name("raw", "preview", "enabled"): False,
-        _name("raw", "preview", "download_enabled"): False,
-        _name("re" + "play", "active", "scan_enabled"): False,
+        "raw_preview_enabled": False,
+        "raw_preview_download_enabled": False,
+        "replay_active_scan_enabled": False,
         "dashboard_state_changing_action_enabled": False,
         "upload_import_action_enabled": False,
-        _name("automatic", "chatgpt", "handoff_enabled"): False,
+        "automatic_chatgpt_handoff_enabled": False,
     }
 )
 

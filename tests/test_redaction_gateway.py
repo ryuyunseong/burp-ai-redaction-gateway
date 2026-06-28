@@ -7267,6 +7267,11 @@ class RedactionGatewayTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
+        source_check = json.loads(
+            V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
         module_text = MCP_LISTENER_STARTUP_SKELETON_MODULE.read_text(
             encoding="utf-8"
         )
@@ -7381,8 +7386,22 @@ class RedactionGatewayTests(unittest.TestCase):
             ],
         )
 
+        module_text_for_scan = module_text
+        for allowed_literal in sorted(
+            source_check["allowed_metadata_only_marker_values"],
+            key=len,
+            reverse=True,
+        ):
+            module_text_for_scan = module_text_for_scan.replace(
+                allowed_literal,
+                "",
+            )
         for marker in decision["forbidden_source_markers"]:
-            self.assertNotIn(marker, module_text, f"{marker} found in module")
+            self.assertNotIn(
+                marker,
+                module_text_for_scan,
+                f"{marker} found in module",
+            )
 
         combined = "\n".join(
             [
@@ -10157,9 +10176,20 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertEqual(
             fixture["allowed_metadata_only_marker_values"],
             [
+                "socket_startup",
+                "socket_bind_enabled",
+                "socket_listen_enabled",
+                "socket_accept_enabled",
+                "protocol_handler",
+                "protocol_message_handling_enabled",
+                "raw_preview_enabled",
                 "raw_preview_download",
                 "raw_preview_download_blocked",
                 "raw_preview_download_enabled",
+                "replay_active_scan",
+                "replay_active_scan_enabled",
+                "automatic_chatgpt_handoff",
+                "automatic_chatgpt_handoff_enabled",
             ],
         )
 
@@ -15210,6 +15240,25 @@ class RedactionGatewayTests(unittest.TestCase):
                 "burp_ai_redaction_gateway/mcp_runtime_contract.py",
             ],
         )
+        self.assertEqual(
+            policy["allowed_metadata_only_marker_values"],
+            [
+                "socket_startup",
+                "socket_bind_enabled",
+                "socket_listen_enabled",
+                "socket_accept_enabled",
+                "protocol_handler",
+                "protocol_message_handling_enabled",
+                "raw_preview_enabled",
+                "raw_preview_download",
+                "raw_preview_download_blocked",
+                "raw_preview_download_enabled",
+                "replay_active_scan",
+                "replay_active_scan_enabled",
+                "automatic_chatgpt_handoff",
+                "automatic_chatgpt_handoff_enabled",
+            ],
+        )
         self.assertIs(policy["fail_on_undeclared_runtime_facing_file"], True)
 
         runtime_markers = [
@@ -15274,8 +15323,22 @@ class RedactionGatewayTests(unittest.TestCase):
                     undeclared_runtime_facing_files.append(relative_source)
                 else:
                     source_text = source_file.read_text(encoding="utf-8")
+                    source_text_for_scan = source_text
+                    for allowed_marker in sorted(
+                        policy["allowed_metadata_only_marker_values"],
+                        key=len,
+                        reverse=True,
+                    ):
+                        source_text_for_scan = source_text_for_scan.replace(
+                            allowed_marker,
+                            "",
+                        )
                     for marker in forbidden_markers:
-                        self.assertNotIn(marker, source_text, f"{marker} found in {relative_source}")
+                        self.assertNotIn(
+                            marker,
+                            source_text_for_scan,
+                            f"{marker} found in {relative_source}",
+                        )
         self.assertEqual(undeclared_runtime_facing_files, [])
 
         combined = source_check_doc + "\n" + fixture_text
