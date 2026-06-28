@@ -419,6 +419,15 @@ V10_LISTENER_STARTUP_IMPLEMENTATION_DECISION_FIXTURE = (
 V10_LISTENER_STARTUP_SKELETON_FIXTURE = (
     ROOT / "tests" / "fixtures" / "v10_listener_startup_skeleton.json"
 )
+V10_LISTENER_STARTUP_IMPLEMENTATION_REVIEW_DOC = (
+    ROOT / "docs" / "V0.10_LISTENER_STARTUP_IMPLEMENTATION_REVIEW.md"
+)
+V10_LISTENER_STARTUP_IMPLEMENTATION_REVIEW_FIXTURE = (
+    ROOT
+    / "tests"
+    / "fixtures"
+    / "v10_listener_startup_implementation_review.json"
+)
 MCP_DISPATCHER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_dispatcher.py"
 MCP_PROTOCOL_PARSER_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_protocol_parser.py"
 MCP_LISTENER_RUNTIME_MODULE = ROOT / "burp_ai_redaction_gateway" / "mcp_listener_runtime.py"
@@ -7649,6 +7658,235 @@ class RedactionGatewayTests(unittest.TestCase):
             "socketserver",
         ]:
             self.assertNotIn(forbidden_source_marker, source_check_text)
+
+    def test_v10_listener_startup_implementation_review_hygiene(self) -> None:
+        self.assertTrue(V10_LISTENER_STARTUP_IMPLEMENTATION_REVIEW_DOC.exists())
+        self.assertTrue(V10_LISTENER_STARTUP_IMPLEMENTATION_REVIEW_FIXTURE.exists())
+
+        doc_text = V10_LISTENER_STARTUP_IMPLEMENTATION_REVIEW_DOC.read_text(
+            encoding="utf-8"
+        )
+        fixture = json.loads(
+            V10_LISTENER_STARTUP_IMPLEMENTATION_REVIEW_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        skeleton = json.loads(
+            V10_LISTENER_STARTUP_SKELETON_FIXTURE.read_text(encoding="utf-8")
+        )
+        decision = json.loads(
+            V10_LISTENER_STARTUP_IMPLEMENTATION_DECISION_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        negative = json.loads(
+            V10_LISTENER_STARTUP_NEGATIVE_CASES_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        source_check = json.loads(
+            V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_FIXTURE.read_text(
+                encoding="utf-8"
+            )
+        )
+        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        module_text = MCP_LISTENER_STARTUP_SKELETON_MODULE.read_text(
+            encoding="utf-8"
+        )
+        fixture_text = json.dumps(fixture, sort_keys=True)
+        combined = "\n".join([doc_text, fixture_text])
+
+        for section in [
+            "## Purpose",
+            "## Current baseline",
+            "## Consumed baselines",
+            "## Review scope",
+            "## Explicit non-goals",
+            "## Startup implementation decision",
+            "## Socket boundary",
+            "## Loopback-only requirement",
+            "## Origin validation requirement",
+            "## Authentication boundary",
+            "## Session policy",
+            "## Token passthrough prohibition",
+            "## Runtime separation",
+            "## Source-check requirements",
+            "## Required tests",
+            "## Approval result",
+            "## Deferred work",
+        ]:
+            self.assertIn(section, doc_text)
+
+        for required_link in [
+            "docs/V0.10_LISTENER_STARTUP_IMPLEMENTATION_REVIEW.md",
+            "tests/fixtures/v10_listener_startup_implementation_review.json",
+        ]:
+            self.assertIn(required_link, readme_text)
+
+        self.assertIn("review-only", readme_text)
+        self.assertIn("does not implement listener runtime", readme_text)
+
+        self.assertEqual(
+            fixture["schema_version"],
+            "v10_listener_startup_implementation_review.v1",
+        )
+        self.assertIs(fixture["implementation_review_only"], True)
+        self.assertIs(fixture["listener_startup_skeleton_consumed"], True)
+        self.assertIs(
+            fixture["listener_startup_implementation_decision_consumed"],
+            True,
+        )
+        self.assertIs(fixture["listener_startup_negative_fixture_consumed"], True)
+        self.assertIs(
+            fixture["transport_listener_approval_packet_consumed"],
+            True,
+        )
+        self.assertIs(
+            fixture["actual_listener_startup_allowed_after_this_review"],
+            False,
+        )
+        self.assertIs(fixture["manual_review_required"], True)
+        self.assertIs(fixture["raw_data_included"], False)
+        self.assertEqual(
+            fixture["approved_next_step"],
+            "transport_runtime_decision_or_startup_skeleton_review_only",
+        )
+
+        false_flags = [
+            "listener_runtime_implemented_in_this_pr",
+            "transport_runtime_implemented_in_this_pr",
+            "socket_bind_implemented_in_this_pr",
+            "socket_listen_implemented_in_this_pr",
+            "socket_accept_implemented_in_this_pr",
+            "server_startup_implemented_in_this_pr",
+            "http_transport_runtime_implemented_in_this_pr",
+            "protocol_handler_implemented_in_this_pr",
+            "protocol_message_parsing_implemented_in_this_pr",
+            "executable_tool_registration_implemented_in_this_pr",
+            "actual_tool_execution_implemented_in_this_pr",
+            "local_evidence_reader_implemented_in_this_pr",
+            "raw_preview_download_implemented_in_this_pr",
+            "replay_active_scan_implemented_in_this_pr",
+            "automatic_chatgpt_handoff_implemented_in_this_pr",
+        ]
+        for false_flag in false_flags:
+            self.assertIs(fixture[false_flag], False)
+
+        self.assertEqual(
+            fixture["required_preconditions_before_runtime"],
+            [
+                "origin_validation_required",
+                "loopback_only_bind_required",
+                "authentication_boundary_required",
+                "session_policy_required",
+                "token_passthrough_forbidden",
+                "session_ids_must_not_be_authentication",
+                "session_ids_must_be_secure_non_deterministic",
+                "session_ids_should_bind_to_user_context",
+                "no_protocol_handler_in_startup_pr",
+                "no_tool_execution",
+                "no_local_evidence_reader",
+                "no_raw_preview",
+            ],
+        )
+        self.assertEqual(
+            fixture["blocked_combined_prs"],
+            [
+                "socket_startup_plus_protocol_handler",
+                "socket_startup_plus_tool_execution",
+                "socket_startup_plus_local_evidence_reader",
+                "transport_runtime_plus_protocol_handler",
+                "transport_runtime_plus_raw_preview",
+                "protocol_handler_plus_tool_execution",
+                "tool_execution_plus_local_evidence_reader",
+            ],
+        )
+        self.assertEqual(
+            fixture["allowed_followup_paths"],
+            [
+                "transport_runtime_decision",
+                "listener_startup_review_only",
+                "protocol_handler_approval_packet",
+            ],
+        )
+        self.assertEqual(
+            fixture["consumed_baselines"],
+            [
+                "docs/V0.10_TRANSPORT_LISTENER_APPROVAL_PACKET.md",
+                "docs/V0.10_LISTENER_STARTUP_IMPLEMENTATION_DECISION.md",
+                "tests/fixtures/v10_listener_startup_negative_cases.json",
+                "tests/fixtures/v10_listener_startup_implementation_decision.json",
+                "burp_ai_redaction_gateway/mcp_listener_startup_skeleton.py",
+                "tests/fixtures/v10_listener_startup_skeleton.json",
+            ],
+        )
+        self.assertIs(skeleton["skeleton_only"], True)
+        self.assertEqual(
+            decision["approved_next_step"],
+            "listener_startup_skeleton_only",
+        )
+        self.assertEqual(len(negative["cases"]), 12)
+
+        for required_precondition in fixture[
+            "required_preconditions_before_runtime"
+        ]:
+            self.assertIn(required_precondition, combined)
+        for blocked_combination in fixture["blocked_combined_prs"]:
+            self.assertIn(blocked_combination, combined)
+        for allowed_followup_path in fixture["allowed_followup_paths"]:
+            self.assertIn(allowed_followup_path, combined)
+
+        module_text_for_scan = module_text
+        for allowed_literal in sorted(
+            source_check["allowed_metadata_only_marker_values"],
+            key=len,
+            reverse=True,
+        ):
+            module_text_for_scan = module_text_for_scan.replace(
+                allowed_literal,
+                "",
+            )
+        for marker in fixture["source_check_forbidden_markers"]:
+            self.assertNotIn(
+                marker,
+                module_text_for_scan,
+                f"{marker} found in module",
+            )
+
+        for forbidden in [
+            "\ufeff",
+            "\ufffd",
+            "??",
+            "safe-to-share",
+            "safe to share",
+            "guaranteed safe",
+            "confirmed vulnerability",
+            "confirmed finding",
+            "confirmed issue",
+            "final CVSS",
+            "\"raw_request\"",
+            "\"raw_response\"",
+            "raw_request:",
+            "raw_response:",
+            "Cookie:",
+            "Authorization:",
+            "Bearer ",
+            "JWT ",
+            "session=",
+            "token=",
+            "HMAC secret:",
+            "CSRF token:",
+            "C:\\coding\\",
+            "C:\\Users\\",
+            "local_only/",
+            "real_export_",
+            "actual.local",
+            "approved for external sharing",
+            "ready to submit",
+        ]:
+            self.assertNotIn(forbidden, combined)
+        self.assertIsNone(re.search(r"https?://", combined))
+        self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", combined))
 
     def test_v09_minimal_protocol_parser_blocks_negative_fixture_cases(self) -> None:
         approval = json.loads(
