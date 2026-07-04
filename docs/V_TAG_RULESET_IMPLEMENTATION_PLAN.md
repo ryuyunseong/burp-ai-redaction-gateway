@@ -26,6 +26,42 @@ code, runtime behavior, tests, README, or issues.
 - Repository settings changed by this plan: no
 - v0.10 tag or Release changed by this plan: no
 
+## Plan And Visibility Blocker
+
+Follow-up verification on 2026-07-03 confirmed that repository ruleset access is
+blocked for the current repository plan or visibility state. The ruleset API
+returned `HTTP 403` with this message:
+
+```text
+Upgrade to GitHub Pro or make this repository public to enable this feature.
+```
+
+This is a normal stop condition for the current repository state. No repository
+settings, rulesets, tags, GitHub Releases, issues, source files, runtime files,
+tests, or README files were changed by this check.
+
+Current verified state after the stop:
+
+- v0.10 tag target remains
+  `f078134dfecda1c9d153e46ef1d25d46ff811fa0`;
+- GitHub Release v0.10 remains published;
+- visible repository rulesets remain unavailable or empty from the current
+  checks;
+- GitHub Issue created for this blocker: no;
+- release tag protection remains a manual verification process.
+
+Available choices:
+
+- keep the current state and continue manual tag-target verification;
+- upgrade to a GitHub plan that supports private repository rulesets, then
+  retry the settings-only ruleset task;
+- make the repository public only after a separate visibility risk review.
+
+Recommendation: keep the repository private and retry ruleset application only
+after GitHub plan support is available. Do not make the repository public only
+to enable rulesets without a separate approval, because public visibility can
+expose repository code and related project metadata.
+
 ## Proposed Tag Pattern
 
 Primary candidate:
@@ -198,8 +234,10 @@ Recommended future review questions:
 
 ## Decision
 
-Recommended next step: keep v0.10 unchanged and create a separate approved
-settings task if the project decides to apply a `v*` tag ruleset.
+Recommended next step: keep v0.10 unchanged and keep release tag protection on
+manual verification unless GitHub plan support for private repository rulesets
+is added. If plan support becomes available, create a separate approved
+settings task to apply a `v*` tag ruleset.
 
 Until then, release tag protection remains a manual verification process:
 
@@ -212,15 +250,16 @@ Until then, release tag protection remains a manual verification process:
 
 - Final goal: preserve completed v0.10 release state and evaluate future
   release tag protection separately.
-- Current progress: v0.10 release 100%, PR #163 100%, ruleset implementation
-  plan draft created locally.
+- Current progress: v0.10 release 100%, PR #163 100%, PR #164 100%, ruleset
+  application decision 100%, actual ruleset application 0%.
 - Completed work: v0.10 publication, governance evidence, post-release hygiene,
-  protection review, and this `v*` tag ruleset plan draft.
-- Next work: decide whether to commit/PR this plan, then separately approve or
-  defer an actual repository ruleset settings task.
-- Main risk: no visible ruleset is active from this check, so future release
-  tag protection remains process-based until settings are changed.
-- Decision: v0.10 remains frozen; actual ruleset application is a separate
-  approval.
-- Pending decision: apply `v*` tag ruleset, evaluate immutable releases for
-  future releases, or defer both into v0.11 scope planning.
+  protection review, `v*` tag ruleset plan, and ruleset API blocker
+  confirmation.
+- Next work: decide whether to upgrade GitHub plan support, keep manual
+  verification, or run a separate repository visibility risk review.
+- Main risk: private repository rulesets are blocked in the current plan or
+  visibility state, so future release tag protection remains process-based.
+- Decision: v0.10 remains frozen; actual ruleset application is blocked until
+  plan or visibility prerequisites change.
+- Pending decision: GitHub Pro or equivalent upgrade, repository public
+  visibility review, immutable releases future policy, or v0.11 scope planning.
