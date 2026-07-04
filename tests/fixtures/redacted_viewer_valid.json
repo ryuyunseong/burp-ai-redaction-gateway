@@ -1,0 +1,62 @@
+{
+  "artifact_id": "redacted-viewer-valid-001",
+  "schema_version": "redacted-viewer-fixture-contract-v1",
+  "generated_at": "2026-07-04T00:00:00Z",
+  "source_kind": "verified_redacted_bundle",
+  "fixture_kind": "valid",
+  "expected_decision": "accept",
+  "viewer_implementation_included": false,
+  "raw_data_included": false,
+  "manual_review_required": true,
+  "safe_file_allowlist": [
+    "analysis_packet.json",
+    "chatgpt_prompt.md",
+    "codex_task_prompt.md",
+    "report_draft.md"
+  ],
+  "redaction_status": {
+    "verification_status": "passed",
+    "raw_free": true,
+    "credential_values_removed": true,
+    "target_identifiers_removed": true
+  },
+  "findings": [
+    {
+      "id": "synthetic-candidate-001",
+      "title": "Synthetic candidate row",
+      "status": "candidate",
+      "risk": "draft",
+      "severity_finalized": false,
+      "evidence_aliases": [
+        "analysis_packet.json",
+        "report_draft.md"
+      ],
+      "safe_summary": "Synthetic redacted metadata for viewer contract validation."
+    }
+  ],
+  "display_sections": [
+    {
+      "id": "safe_summary",
+      "title": "Safe summary",
+      "source_alias": "analysis_packet.json"
+    },
+    {
+      "id": "candidate_table",
+      "title": "Candidate table",
+      "source_alias": "report_draft.md"
+    },
+    {
+      "id": "prompt_readiness",
+      "title": "Prompt readiness",
+      "source_alias": "chatgpt_prompt.md"
+    }
+  ],
+  "audit": {
+    "event_name": "redacted_viewer_fixture_contract_validated",
+    "artifact_role": "viewer_contract_fixture",
+    "viewer_mode": "static_local_planned",
+    "verify_status": "passed",
+    "blocked_reason_code": null,
+    "manual_review_required": true
+  }
+}
