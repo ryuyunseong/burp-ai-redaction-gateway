@@ -53,7 +53,7 @@ Not allowed in this contract:
 The fixture contract is represented by these files:
 
 - `tests/fixtures/redacted_viewer_valid.json`
-- `tests/fixtures/redacted_viewer_reject_raw_like.json`
+- `tests/fixtures/redacted_viewer_reject_unredacted_like.json`
 - `tests/fixtures/redacted_viewer_reject_credential_like.json`
 - `tests/fixtures/redacted_viewer_reject_unsafe_path.json`
 
