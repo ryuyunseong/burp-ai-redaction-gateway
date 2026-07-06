@@ -13,7 +13,7 @@ CONTRACT_DOC = ROOT / "docs" / "REDACTED_VIEWER_FIXTURE_CONTRACT.md"
 DESIGN_DOC = ROOT / "docs" / "REDACTED_VIEWER_DESIGN.md"
 
 VALID_FIXTURE = FIXTURE_DIR / "redacted_viewer_valid.json"
-RAW_LIKE_FIXTURE = FIXTURE_DIR / "redacted_viewer_reject_raw_like.json"
+RAW_LIKE_FIXTURE = FIXTURE_DIR / "redacted_viewer_reject_unredacted_like.json"
 CREDENTIAL_LIKE_FIXTURE = FIXTURE_DIR / "redacted_viewer_reject_credential_like.json"
 UNSAFE_PATH_FIXTURE = FIXTURE_DIR / "redacted_viewer_reject_unsafe_path.json"
 
