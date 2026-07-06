@@ -47,6 +47,7 @@ from .report import DEFAULT_REPORT_PROFILE, REPORT_PROFILE_NAMES, write_report_d
 from .review import build_review, render_review_summary
 from .risk import DEFAULT_RISK_RATING_PROFILE, RISK_RATING_PROFILE_NAMES
 from .verifier import verify_path
+from .viewer import RedactedStaticViewerError, render_static_viewer_summary, write_static_viewer_html
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -172,6 +173,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     report.add_argument("--policy", type=Path, help="Optional policy.json path.")
 
+    viewer = subparsers.add_parser("viewer", help="Generate a static local HTML viewer for a redacted artifact.")
+    viewer.add_argument("--input", required=True, type=Path, help="Redacted viewer JSON artifact.")
+    viewer.add_argument("--output", required=True, type=Path, help="Static HTML output path.")
+
     mcp = subparsers.add_parser("mcp", help="Run the read-only MCP server over stdio.")
     mcp.add_argument("--root", required=True, type=Path, help="Allowed verified output root.")
     mcp.add_argument("--policy", type=Path, help="Optional policy.json path.")
@@ -215,6 +220,8 @@ def main(argv: list[str] | None = None) -> int:
         return _review(args.input, args.export_dir, args.policy)
     if args.command == "report":
         return _report(args.input, args.output, args.profile, args.policy)
+    if args.command == "viewer":
+        return _viewer(args.input, args.output)
     if args.command == "mcp":
         return _mcp(args.root, args.policy)
     if args.command == "dashboard":
@@ -364,6 +371,16 @@ def _report(input_dir: Path, output_path: Path | None, profile: str, policy_path
     print(f"Profile: {result.profile}")
     print(f"Candidate count: {result.candidate_count}")
     print("Raw data included: false")
+    return 0
+
+
+def _viewer(input_path: Path, output_path: Path) -> int:
+    try:
+        result = write_static_viewer_html(input_path, output_path)
+    except RedactedStaticViewerError as error:
+        print(f"Static viewer failed: {error.error_type}")
+        return 1
+    print(render_static_viewer_summary(result), end="")
     return 0
 
 

@@ -66,6 +66,17 @@ python -m burp_ai_redaction_gateway review --input out/demo --export-dir exports
 python -m burp_ai_redaction_gateway report --input out/demo --output out/demo/report_draft.md --profile conservative
 ```
 
+redacted viewer fixture를 정적 HTML로 렌더링:
+
+```powershell
+python -m burp_ai_redaction_gateway viewer --input tests\fixtures\redacted_viewer_valid.json --output out\viewer\redacted_viewer.html
+```
+
+`viewer`는 static/local output만 생성합니다. Web server, upload/import,
+raw preview/download, MCP/Burp integration, listener/transport runtime은
+구현하지 않습니다. 입력 fixture가 negative, malformed, unsupported,
+oversized, unsafe-path 상태이면 렌더링 전에 fail-closed합니다.
+
 보고서 초안은 모든 항목을 candidate 또는 suspected finding 상태로 유지합니다.
 rationale, impact draft, 추가 검증 단계, remediation draft, 증명 전 주장하지
 않을 항목을 포함합니다. `confidence`는 evidence confidence이며 severity가

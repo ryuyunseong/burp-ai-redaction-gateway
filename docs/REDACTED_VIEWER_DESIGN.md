@@ -2,8 +2,8 @@
 
 ## Purpose
 
-This document defines the v0.11 redacted static/local viewer design. It is a
-design document only.
+This document defines the v0.11 redacted static/local viewer design and the
+prototype boundary consumed by the first implementation PR.
 
 The viewer goal is to provide a fast GUI-like review experience for already
 verified redacted artifacts without introducing a web server, listener runtime,
@@ -36,7 +36,25 @@ Allowed design goals:
 - show blocked reason codes without raw values
 - fail closed when verification is absent or failed
 
-This document does not implement the viewer.
+The first prototype implementation is a static HTML generator only. It does not
+add a web server, upload or import workflow, raw preview, raw download, MCP
+integration, listener runtime, transport runtime, replay, active scan, raw
+forwarding, tool execution, or automatic AI handoff.
+
+## Prototype Command
+
+The static/local prototype consumes the redacted viewer fixture contract and
+writes a self-contained HTML file:
+
+```powershell
+python -m burp_ai_redaction_gateway viewer `
+  --input tests\fixtures\redacted_viewer_valid.json `
+  --output out\viewer\redacted_viewer.html
+```
+
+The command prints raw-free summary metadata only. It does not echo raw artifact
+values or full local paths. Negative, malformed, unsupported, oversized, or
+unsafe-path artifacts fail closed before rendering.
 
 ## Input Contract
 
