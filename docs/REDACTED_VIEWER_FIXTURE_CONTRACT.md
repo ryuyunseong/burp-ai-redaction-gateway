@@ -2,8 +2,8 @@
 
 ## Purpose
 
-This document fixes the v0.11 redacted viewer fixture contract before any
-static/local viewer implementation starts.
+This document fixes the v0.11 redacted viewer fixture contract consumed by the
+first static/local viewer prototype.
 
 The fixture contract defines which already-redacted artifacts the viewer may
 consume and which synthetic failure classes must fail closed. It does not add a
@@ -20,8 +20,8 @@ scan, tool execution, or automatic AI handoff.
   `docs/V0.11_SCOPE_PLANNING.md`.
 - Redacted viewer design is recorded in
   `docs/REDACTED_VIEWER_DESIGN.md`.
-- The viewer fixture contract must be consumed before a later static/local
-  viewer implementation PR.
+- The viewer fixture contract is consumed before any static/local viewer output
+  is rendered.
 
 ## Contract Scope
 
@@ -218,7 +218,7 @@ The targeted fixture test must confirm:
 - the unsafe path detector rejects POSIX absolute path labels
 - the unsafe path detector rejects file scheme labels
 - the unsafe path detector rejects URL-like external path labels
-- no viewer implementation module is imported
+- viewer implementation consumes this contract before rendering
 
 The full unittest suite must continue to pass after adding this fixture
 contract.
@@ -242,7 +242,7 @@ Keep these as separate future PRs:
 
 ## Final Decision
 
-The next v0.11 implementation work must consume this fixture contract before it
-renders any viewer output. The contract keeps the fast GUI-like path raw-free,
-fail-closed, and separate from server, MCP, Burp, listener, transport, and tool
-execution surfaces.
+The v0.11 static/local viewer implementation consumes this fixture contract
+before it renders any viewer output. The contract keeps the fast GUI-like path
+raw-free, fail-closed, and separate from server, MCP, Burp, listener,
+transport, and tool execution surfaces.
