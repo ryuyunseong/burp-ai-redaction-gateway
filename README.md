@@ -6,6 +6,11 @@
 모든 처리는 사용자의 컴퓨터에서 진행합니다. 원본 기록이나 결과를 ChatGPT로
 자동 전송하지 않으며, 사용자가 결과를 직접 확인한 뒤 AI 사용 여부를 결정합니다.
 
+> **버전 안내:** 최신 안정 Release [v0.10](https://github.com/ryuyunseong/burp-ai-redaction-gateway/releases/tag/v0.10)은
+> MCP transport/listener 경로의 metadata·안전 경계를 고정한 Release이며 실제
+> transport/listener runtime을 포함하지 않습니다. 현재 `main`에는 Release 이후
+> 추가된 정적 viewer와 포트폴리오 문서 개선이 포함되어 있습니다.
+
 ## 이 프로젝트가 하는 일
 
 1. Burp Suite에서 저장한 파일을 불러옵니다.
@@ -23,8 +28,46 @@
 - 로컬에서 결과를 확인하는 정적 viewer와 Dashboard
 - synthetic fixture 기반 테스트와 자동 검증
 
+지원서 문구는 [6줄 프로젝트 요약](docs/PORTFOLIO_SUMMARY_KO.md)에서 바로 확인할
+수 있습니다.
+
 Web UI 전체 기능, 원본 미리보기, replay, active scan, Burp MCP 직접 실행,
 listener/transport runtime, 자동 AI 전송은 현재 제공 범위가 아닙니다.
+
+## 처리 흐름
+
+```mermaid
+flowchart LR
+    A["Burp export"] --> B["로컬 파싱 및 민감정보 제거"]
+    B --> C{"fail-closed 검증"}
+    C -->|실패| D["결과 생성 및 AI 사용 중단"]
+    C -->|통과| E["AI 전달 후보 파일 4개"]
+    E --> F["사용자 수동 검토"]
+    F --> G["선택적으로 AI 분석 또는 보고서 작성"]
+```
+
+검증에 실패하면 파일 생성과 후속 사용을 중단합니다. 통과한 경우에도 사용자가
+파일 4개를 직접 확인한 뒤 AI 사용 여부를 결정합니다.
+
+## 실행 결과 미리보기
+
+![Synthetic fixture로 생성한 민감정보 제거 결과 viewer](docs/images/portfolio-redacted-viewer.png)
+
+이 화면은 공개 synthetic fixture만으로 생성했습니다. 실제 Burp traffic, 대상
+식별자, 쿠키, 토큰, 개인정보와 사용자 로컬 경로는 포함하지 않습니다.
+
+## 공개 검증 결과
+
+runtime 검증 기준은 `main@4001258da4fba881b3e7e9ef3936e993f05c4f81`이며,
+이 문서 변경은 Python 동작이나 Release를 바꾸지 않습니다.
+
+- `python -m compileall burp_ai_redaction_gateway tests`: 통과
+- `python -m unittest discover -s tests`: 208개 통과
+- synthetic `generate`: 산출물 8개 생성
+- synthetic `verify`: 7개 파일 검사 통과
+- static `viewer`: finding 1개, 화면 section 3개 생성, `raw_data_included=false`
+- `scripts\pre_commit_check.bat`, `scripts\git_safety_check.bat`: 통과
+- Gitleaks: 노출 항목 없음
 
 ## 처음 보는 분을 위한 안내
 
