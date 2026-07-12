@@ -401,6 +401,7 @@ control, upload/import, 자동 ChatGPT handoff, tag 또는 GitHub Release 생성
 - [Dispatcher approval packet](docs/V0.9_DISPATCHER_APPROVAL_PACKET.md)
 - [Dispatcher approval fixture](tests/fixtures/v09_dispatcher_approval_packet.json)
 - [Dispatcher negative cases](tests/fixtures/v09_dispatcher_negative_cases.json)
+- 후속 dispatcher 구현 PR은 이 fixture를 반드시 사용해야 합니다.
 - [Dispatcher implementation decision](docs/V0.9_DISPATCHER_IMPLEMENTATION_DECISION.md)
 - [Dispatcher decision fixture](tests/fixtures/v09_dispatcher_implementation_decision.json)
 - [`mcp_dispatcher.py`](burp_ai_redaction_gateway/mcp_dispatcher.py)
@@ -411,8 +412,10 @@ control, upload/import, 자동 ChatGPT handoff, tag 또는 GitHub Release 생성
 
 - [Scope decision](docs/V0.10_SCOPE_DECISION.md)
 - [Scope decision fixture](tests/fixtures/v10_scope_decision.json)
+- 첫 단계는 transport/listener 승인 문서이며, tool execution과 local evidence reader는 별도 검토 대상으로 유지합니다.
 - [Transport/listener approval packet](docs/V0.10_TRANSPORT_LISTENER_APPROVAL_PACKET.md)
 - [Transport/listener approval fixture](tests/fixtures/v10_transport_listener_approval_packet.json)
+- 이 문서는 계획 및 승인 기준만 정의하며 listener runtime과 transport runtime을 구현하지 않습니다.
 - [Listener startup negative cases](tests/fixtures/v10_listener_startup_negative_cases.json)
 - [Listener startup implementation decision](docs/V0.10_LISTENER_STARTUP_IMPLEMENTATION_DECISION.md)
 - [Listener startup decision fixture](tests/fixtures/v10_listener_startup_implementation_decision.json)
@@ -420,9 +423,12 @@ control, upload/import, 자동 ChatGPT handoff, tag 또는 GitHub Release 생성
 - [Listener startup skeleton fixture](tests/fixtures/v10_listener_startup_skeleton.json)
 - [Listener startup implementation review](docs/V0.10_LISTENER_STARTUP_IMPLEMENTATION_REVIEW.md)
 - [Listener startup review fixture](tests/fixtures/v10_listener_startup_implementation_review.json)
+- 이 문서는 검토 전용이며 listener runtime을 구현하지 않습니다.
 - [Transport runtime decision](docs/V0.10_TRANSPORT_RUNTIME_DECISION.md)
 - [Transport runtime decision fixture](tests/fixtures/v10_transport_runtime_decision.json)
+- 이 문서는 결정 전용이며 다음 단계는 release readiness입니다. 실제 runtime은 v0.11 이상에서 별도로 검토합니다.
 - [Release readiness](docs/V0.10_RELEASE_READINESS.md)
 - [Release readiness fixture](tests/fixtures/v10_release_readiness.json)
+- v0.10은 메타데이터와 안전 경계 릴리스이며 실제 transport/listener runtime을 포함하지 않습니다. 후속 runtime은 v0.11 이상에서 별도로 검토합니다.
 
 </details>

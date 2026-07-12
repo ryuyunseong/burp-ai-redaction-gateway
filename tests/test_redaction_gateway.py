@@ -6046,7 +6046,7 @@ class RedactionGatewayTests(unittest.TestCase):
         for linked_text in [readme, approval_doc, boundary_doc]:
             self.assertIn("v09_dispatcher_negative_cases.json", linked_text)
         self.assertIn(
-            "future dispatcher implementation PRs must consume this fixture",
+            "후속 dispatcher 구현 PR은 이 fixture를 반드시 사용해야 합니다.",
             readme,
         )
         self.assertIn(
@@ -6566,7 +6566,7 @@ class RedactionGatewayTests(unittest.TestCase):
 
         self.assertIn("docs/V0.10_SCOPE_DECISION.md", readme_text)
         self.assertIn("tests/fixtures/v10_scope_decision.json", readme_text)
-        self.assertIn("transport/listener approval packet", readme_text)
+        self.assertIn("transport/listener 승인 문서", readme_text)
         self.assertIn("tool execution", readme_text)
         self.assertIn("local evidence", readme_text)
 
@@ -6726,7 +6726,7 @@ class RedactionGatewayTests(unittest.TestCase):
             "tests/fixtures/v10_transport_listener_approval_packet.json",
             readme_text,
         )
-        self.assertIn("planning and approval only", readme_text)
+        self.assertIn("계획 및 승인 기준만 정의", readme_text)
         self.assertIn("listener runtime", readme_text)
         self.assertIn("transport runtime", readme_text)
 
@@ -7733,8 +7733,8 @@ class RedactionGatewayTests(unittest.TestCase):
         ]:
             self.assertIn(required_link, readme_text)
 
-        self.assertIn("review-only", readme_text)
-        self.assertIn("does not implement listener runtime", readme_text)
+        self.assertIn("검토 전용", readme_text)
+        self.assertIn("listener runtime을 구현하지 않습니다", readme_text)
 
         self.assertEqual(
             fixture["schema_version"],
@@ -7950,9 +7950,9 @@ class RedactionGatewayTests(unittest.TestCase):
         ]:
             self.assertIn(required_link, readme_text)
 
-        self.assertIn("decision-only", readme_text)
+        self.assertIn("결정 전용", readme_text)
         self.assertIn("release readiness", readme_text)
-        self.assertIn("v0.11 or later", readme_text)
+        self.assertIn("v0.11 이상", readme_text)
 
         self.assertEqual(
             fixture["schema_version"],
@@ -8149,9 +8149,9 @@ class RedactionGatewayTests(unittest.TestCase):
         ]:
             self.assertIn(required_link, readme_text)
 
-        self.assertIn("metadata and safety-boundary", readme_text)
-        self.assertIn("actual transport or listener runtime", readme_text)
-        self.assertIn("v0.11 or later", readme_text)
+        self.assertIn("메타데이터와 안전 경계", readme_text)
+        self.assertIn("실제 transport/listener runtime을 포함하지 않습니다", readme_text)
+        self.assertIn("v0.11 이상", readme_text)
 
         self.assertEqual(fixture["schema_version"], "v10_release_readiness.v1")
         self.assertIs(fixture["release_readiness_only"], True)
