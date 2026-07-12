@@ -7,7 +7,7 @@
 자동 전송하지 않으며, 사용자가 결과를 직접 확인한 뒤 AI 사용 여부를 결정합니다.
 
 > **버전 안내:** 최신 안정 Release [v0.10](https://github.com/ryuyunseong/burp-ai-redaction-gateway/releases/tag/v0.10)은
-> MCP transport/listener 경계와 metadata helper 계약을 고정한 버전이며 실제
+> MCP transport/listener 경로의 metadata·안전 경계를 고정한 Release이며 실제
 > transport/listener runtime을 포함하지 않습니다. 현재 `main`에는 Release 이후
 > 추가된 정적 viewer와 포트폴리오 문서 개선이 포함되어 있습니다.
 
@@ -41,7 +41,7 @@ flowchart LR
     A["Burp export"] --> B["로컬 파싱 및 민감정보 제거"]
     B --> C{"fail-closed 검증"}
     C -->|실패| D["결과 생성 및 AI 사용 중단"]
-    C -->|통과| E["AI 검토 후보 파일 4개"]
+    C -->|통과| E["AI 전달 후보 파일 4개"]
     E --> F["사용자 수동 검토"]
     F --> G["선택적으로 AI 분석 또는 보고서 작성"]
 ```
