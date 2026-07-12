@@ -1,12 +1,37 @@
 # Burp AI Redaction Gateway
 
-Burp HTTP history export를 sanitization 완료 evidence packet과 prompt file로
-바꾸는 로컬 CLI/GUI 도구입니다. raw HTTP 값은 로컬에서 파싱하고 민감값은
-redaction하며, 마지막 safety scan에서 token, 개인정보, raw HTTP marker가
-남아 있으면 output 생성을 차단합니다.
+Burp Suite에서 저장한 웹 요청·응답에는 쿠키, 토큰, 개인정보가 섞일 수
+있습니다. 이 도구는 해당 파일을 외부로 보내기 전에 **내 PC에서 민감한
+값을 가리고 검사**합니다. 검사에 통과한 요약 파일 4개만 AI 검토 후보로
+분리하며, 원본 요청·응답은 후보 파일에 넣지 않습니다.
 
-현재 MVP는 Python 표준 라이브러리만 사용합니다. synthetic JSON fixture,
-HAR-style JSON, 기본 Burp XML export 형태를 지원합니다.
+## 한눈에 보는 사용 흐름
+
+1. Burp Suite에서 내보낸 파일을 선택합니다.
+2. 도구가 민감정보를 가리고, 원본 값이 남아 있는지 다시 검사합니다.
+3. 검사를 통과하면 사람이 확인할 수 있는 요약 파일 4개를 만듭니다.
+4. 필요하면 정적 HTML 화면에서 결과를 확인한 뒤 AI 사용 여부를 직접
+   결정합니다.
+
+여기서 **redaction**은 민감한 값을 알아볼 수 없게 바꾸는 작업이고,
+**raw-free**는 원본 요청·응답 값이 결과에 포함되지 않았다는 뜻입니다.
+모든 처리는 로컬에서 이루어지며 결과를 ChatGPT로 자동 전송하지 않습니다.
+
+현재 버전은 Python 표준 라이브러리만 사용하며 synthetic JSON, HAR 형식,
+기본 Burp XML export를 지원합니다. 저장소의 예시는 모두 가상 데이터입니다.
+
+## 포트폴리오 요약
+
+이 프로젝트는 현대오토에버 신입 채용 포트폴리오에서 다음 역량을 보여
+주기 위한 공개 프로젝트입니다.
+
+- 보안 점검 파일에서 민감정보를 찾아 제거하는 자동화
+- 제거 결과를 다시 검사하고, 문제가 있으면 결과 생성을 막는 안전장치
+- AI 검토 후보를 원본이 아닌 요약 파일 4개로 제한하는 정보 보호 설계
+- 별도 웹 서버 없이 결과를 확인하는 정적/로컬 HTML 화면
+- Web server, raw preview/download, replay/active scan, 자동 ChatGPT 전송,
+  실행형 MCP 도구 호출은 구현된 기능으로 설명하지 않습니다.
+- 저장소의 테스트 자료와 예시는 모두 가상 데이터만 사용합니다.
 
 ## Usage
 

@@ -133,7 +133,8 @@ class RedactedViewerFixtureContractTests(unittest.TestCase):
             self.assertEqual(finding["risk"], "draft")
             self.assertFalse(finding["severity_finalized"])
             self.assertTrue(set(finding["evidence_aliases"]).issubset(SAFE_FILE_ALLOWLIST))
-            self.assertIn("Synthetic", finding["safe_summary"])
+            self.assertIn("가상", finding["safe_summary"])
+            self.assertIn("원본 웹 요청·응답", finding["safe_summary"])
 
         for section in fixture["display_sections"]:
             self.assertIn(section["source_alias"], SAFE_FILE_ALLOWLIST)
