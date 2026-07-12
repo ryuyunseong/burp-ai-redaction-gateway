@@ -163,13 +163,18 @@ def render_static_viewer_html(artifact: dict[str, Any]) -> str:
     findings = "\n".join(_render_finding(finding) for finding in artifact["findings"])
     safe_files = "\n".join(f"<li>{_html(name)}</li>" for name in SAFE_FILE_ALLOWLIST)
     return f"""<!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="utf-8">
-  <title>Redacted Static Viewer</title>
+  <title>민감정보 제거 결과 뷰어</title>
   <style>
-    body {{ font-family: system-ui, sans-serif; margin: 2rem; color: #1f2937; background: #f9fafb; }}
+    body {{ font-family: system-ui, sans-serif; margin: 2rem; color: #1f2937; background: #f9fafb; line-height: 1.55; }}
     main {{ max-width: 960px; margin: 0 auto; }}
+    .subtitle {{ color: #4b5563; margin-top: -0.25rem; }}
+    .badge {{ display: inline-block; background: #ecfdf5; border: 1px solid #86efac; border-radius: 999px; color: #166534; font-size: 0.875rem; padding: 0.15rem 0.55rem; margin-right: 0.35rem; }}
+    dl {{ display: grid; grid-template-columns: minmax(10rem, 14rem) 1fr; gap: 0.35rem 1rem; }}
+    dt {{ font-weight: 700; }}
+    dd {{ margin: 0; }}
     section {{ background: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; padding: 1rem; margin: 1rem 0; }}
     table {{ border-collapse: collapse; width: 100%; }}
     th, td {{ border: 1px solid #d1d5db; padding: 0.5rem; text-align: left; vertical-align: top; }}
@@ -179,37 +184,39 @@ def render_static_viewer_html(artifact: dict[str, Any]) -> str:
 </head>
 <body>
   <main>
-    <h1>Redacted Static Viewer</h1>
+    <h1>민감정보 제거 결과 뷰어</h1>
+    <p class="subtitle">검사를 통과한 요약 결과만 보여줍니다. 원본 웹 요청·응답, 인증값, 실제 대상 정보는 표시하지 않습니다.</p>
+    <p><span class="badge">원본 미포함</span><span class="badge">로컬 파일</span><span class="badge">수동 검토 필요</span></p>
     <section>
-      <h2>Artifact Status</h2>
+      <h2>산출물 상태</h2>
       <dl>
-        <dt>Artifact</dt><dd><code>{artifact_id}</code></dd>
-        <dt>Generated</dt><dd>{generated_at}</dd>
-        <dt>Source kind</dt><dd>{source_kind}</dd>
-        <dt>Verification</dt><dd>passed</dd>
-        <dt>Raw data included</dt><dd>false</dd>
-        <dt>Manual review required</dt><dd>true</dd>
+        <dt>산출물 ID</dt><dd><code>{artifact_id}</code></dd>
+        <dt>생성 시각</dt><dd>{generated_at}</dd>
+        <dt>입력 유형</dt><dd>{source_kind}</dd>
+        <dt>검증 상태</dt><dd>통과</dd>
+        <dt>원본 데이터 포함</dt><dd>아니요</dd>
+        <dt>수동 검토 필요</dt><dd>예</dd>
       </dl>
     </section>
     <section>
-      <h2>Safe File Allowlist</h2>
+      <h2>AI 검토 후보 파일 4개</h2>
       <ul>
         {safe_files}
       </ul>
     </section>
     <section>
-      <h2>Display Sections</h2>
+      <h2>화면 구성</h2>
       <table>
-        <thead><tr><th>ID</th><th>Title</th><th>Source alias</th></tr></thead>
+        <thead><tr><th>ID</th><th>제목</th><th>출처 파일</th></tr></thead>
         <tbody>
           {sections}
         </tbody>
       </table>
     </section>
     <section>
-      <h2>Candidate Findings</h2>
+      <h2>검토 후보</h2>
       <table>
-        <thead><tr><th>ID</th><th>Title</th><th>Status</th><th>Risk</th><th>Evidence</th><th>Safe summary</th></tr></thead>
+        <thead><tr><th>ID</th><th>제목</th><th>상태</th><th>위험도 초안</th><th>근거 파일</th><th>안전 요약</th></tr></thead>
         <tbody>
           {findings}
         </tbody>

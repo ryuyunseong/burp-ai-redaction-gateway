@@ -23,7 +23,7 @@
   "findings": [
     {
       "id": "synthetic-candidate-001",
-      "title": "Synthetic candidate row",
+      "title": "합성 검토 후보",
       "status": "candidate",
       "risk": "draft",
       "severity_finalized": false,
@@ -31,23 +31,23 @@
         "analysis_packet.json",
         "report_draft.md"
       ],
-      "safe_summary": "Synthetic redacted metadata for viewer contract validation."
+      "safe_summary": "포트폴리오 확인용 가상 요약 정보입니다. 원본 웹 요청·응답과 인증값은 포함하지 않습니다."
     }
   ],
   "display_sections": [
     {
       "id": "safe_summary",
-      "title": "Safe summary",
+      "title": "안전 요약",
       "source_alias": "analysis_packet.json"
     },
     {
       "id": "candidate_table",
-      "title": "Candidate table",
+      "title": "후보 테이블",
       "source_alias": "report_draft.md"
     },
     {
       "id": "prompt_readiness",
-      "title": "Prompt readiness",
+      "title": "프롬프트 준비 상태",
       "source_alias": "chatgpt_prompt.md"
     }
   ],

@@ -66,9 +66,12 @@ class RedactedStaticViewerTests(unittest.TestCase):
         self.assertFalse(result.raw_data_included)
         self.assertTrue(result.manual_review_required)
         self.assertIn("redacted-viewer-valid-001", html)
-        self.assertIn("Safe summary", html)
-        self.assertIn("Candidate table", html)
-        self.assertIn("Synthetic candidate row", html)
+        self.assertIn("민감정보 제거 결과 뷰어", html)
+        self.assertIn("산출물 상태", html)
+        self.assertIn("AI 검토 후보 파일 4개", html)
+        self.assertIn("안전 요약", html)
+        self.assertIn("후보 테이블", html)
+        self.assertIn("합성 검토 후보", html)
         self.assertIn("analysis_packet.json", html)
         self.assert_static_html_is_safe(html)
 
@@ -138,7 +141,8 @@ class RedactedStaticViewerTests(unittest.TestCase):
             html = output.read_text(encoding="utf-8")
         self.assertEqual(exit_code, 0)
         self.assertIn("Static viewer HTML written: <viewer_html_path>", stdout.getvalue())
-        self.assertIn("Redacted Static Viewer", html)
+        self.assertIn("민감정보 제거 결과 뷰어", html)
+        self.assertIn("검토 후보", html)
         self.assert_static_html_is_safe(html)
 
     def test_cli_viewer_command_blocks_negative_fixture(self) -> None:
