@@ -1,39 +1,45 @@
 # Burp AI Redaction Gateway
 
-Burp Suite에서 저장한 웹 요청·응답에는 쿠키, 토큰, 개인정보가 섞일 수
-있습니다. 이 도구는 해당 파일을 외부로 보내기 전에 **내 PC에서 민감한
-값을 가리고 검사**합니다. 검사에 통과한 요약 파일 4개만 AI 검토 후보로
-분리하며, 원본 요청·응답은 후보 파일에 넣지 않습니다.
+Burp Suite의 보안 점검 기록에서 **로그인 정보와 개인정보를 지우는
+프로그램**입니다. 모든 처리는 내 컴퓨터에서 진행하며, 안전성 검사를
+통과한 요약 파일 4개만 따로 만들어 줍니다.
 
-## 한눈에 보는 사용 흐름
+## 이 프로젝트가 하는 일
 
-1. Burp Suite에서 내보낸 파일을 선택합니다.
-2. 도구가 민감정보를 가리고, 원본 값이 남아 있는지 다시 검사합니다.
-3. 검사를 통과하면 사람이 확인할 수 있는 요약 파일 4개를 만듭니다.
-4. 필요하면 정적 HTML 화면에서 결과를 확인한 뒤 AI 사용 여부를 직접
-   결정합니다.
+1. Burp Suite에서 저장한 파일을 불러옵니다.
+2. 쿠키, 토큰, 개인정보처럼 노출되면 안 되는 값을 가립니다.
+3. 민감한 값이 남아 있으면 작업을 중단합니다.
+4. 문제가 없으면 요약 파일 4개와 확인용 HTML 화면을 만듭니다.
 
-여기서 **redaction**은 민감한 값을 알아볼 수 없게 바꾸는 작업이고,
-**raw-free**는 원본 요청·응답 값이 결과에 포함되지 않았다는 뜻입니다.
-모든 처리는 로컬에서 이루어지며 결과를 ChatGPT로 자동 전송하지 않습니다.
-
-현재 버전은 Python 표준 라이브러리만 사용하며 synthetic JSON, HAR 형식,
-기본 Burp XML export를 지원합니다. 저장소의 예시는 모두 가상 데이터입니다.
+> 원본 기록이나 결과를 ChatGPT로 자동 전송하지 않습니다. 사용자가 결과를
+> 직접 확인한 뒤 AI 사용 여부를 결정합니다.
 
 ## 포트폴리오 요약
 
-이 프로젝트는 현대오토에버 신입 채용 포트폴리오에서 다음 역량을 보여
-주기 위한 공개 프로젝트입니다.
+현대오토에버 신입 채용 포트폴리오에서 다음 역량을 보여 주기 위한 공개
+프로젝트입니다.
 
-- 보안 점검 파일에서 민감정보를 찾아 제거하는 자동화
-- 제거 결과를 다시 검사하고, 문제가 있으면 결과 생성을 막는 안전장치
-- AI 검토 후보를 원본이 아닌 요약 파일 4개로 제한하는 정보 보호 설계
-- 별도 웹 서버 없이 결과를 확인하는 정적/로컬 HTML 화면
-- Web server, raw preview/download, replay/active scan, 자동 ChatGPT 전송,
-  실행형 MCP 도구 호출은 구현된 기능으로 설명하지 않습니다.
-- 저장소의 테스트 자료와 예시는 모두 가상 데이터만 사용합니다.
+- 민감정보 자동 제거
+- 문제가 남으면 결과 생성을 막는 안전장치
+- AI에 전달할 파일을 안전한 요약 4개로 제한하는 설계
+- 웹 서버 없이 결과를 확인하는 HTML 화면
+- 가상 데이터 기반 테스트와 자동 검증
 
-## Usage
+Web UI, Burp MCP 직접 연동, 원본 미리보기, 자동 AI 전송은 현재 제공하는
+기능이 아닙니다.
+
+## 처음 보는 분을 위한 안내
+
+- [5분 한글 빠른 시작](docs/USER_QUICKSTART_KO_v0.6.md)
+- [결과 파일 4개 설명](docs/OUTPUT_BUNDLE_GUIDE_KO_v0.6.md)
+- [웹에서 가능한 작업과 제한 사항](docs/WEB_OPERATOR_GUIDE_KO_v0.7.md)
+
+아래 내용은 실행 명령과 설계 근거가 필요한 개발자를 위한 상세 자료입니다.
+
+<details>
+<summary><strong>개발자용 상세 내용 펼치기</strong></summary>
+
+## 상세 사용법
 
 짧은 CLI와 dashboard walkthrough는
 [docs/USER_QUICKSTART.md](docs/USER_QUICKSTART.md)를
@@ -140,7 +146,7 @@ impact, severity 값에 사용한 risk profile을 기록합니다. 지원 profil
 `analysis_packet.json`, `chatgpt_prompt.md`, `codex_task_prompt.md`는 이 후보
 metadata에서 만들어지며 `verify` 통과 후에만 사용합니다.
 
-## Policy
+## 정책 설정
 
 기본 policy는 [policy.json](policy.json)입니다.
 fail-closed 방식이며 raw request/response output과 response snippet은 기본적으로
@@ -152,7 +158,7 @@ marker를 스캔합니다.
 내장 allowlist는 `10.0.0.0/8` 같은 network bucket만 허용하며 raw internal
 host IP address는 허용하지 않습니다.
 
-## Fixtures
+## 테스트용 예제
 
 Repository fixture는 synthetic data만 포함합니다.
 
@@ -164,7 +170,7 @@ fixture는 JSON API, URL-encoded form, multipart upload shape, GraphQL,
 hidden input이 있는 HTML form, 여러 위치의 JWT, 한국어 PII, internal IP/host
 aliasing, high entropy string, Burp XML base64 request/response를 다룹니다.
 
-## Real-Like Smoke Test
+## 실제와 유사한 동작 점검
 
 실제 Burp export가 없을 때는 안전한 real-like smoke test sample을 생성합니다.
 
@@ -198,7 +204,7 @@ v0.4 release 후보 검증에서 실제 export를 다룰 때는
 `forbidden_value_hits=0` 같은 raw-free metadata로 제한합니다. 제안된 RC1
 tag 후보는 `v0.4.31-rc1`이지만, tag 생성은 별도 승인 후에만 진행합니다.
 
-## v0.4 RC3 readiness metadata
+## v0.4 RC3 준비 상태 기록
 
 Authorized local real export smoke results are recorded as release readiness
 evidence only, using raw-free metadata. The current RC3 readiness baseline is
@@ -216,7 +222,7 @@ These records do not make any finding final, do not make risk drafts final, and
 do not clear any output for external sharing. The final v0.4 baseline tag is
 `v0.4.34`.
 
-## Verification
+## 검증
 
 테스트는 `unittest` 기반이며 pytest가 설치된 환경에서도 실행할 수 있습니다.
 
@@ -237,7 +243,7 @@ scripts\git_safety_check.bat
 `git_safety_check`는 `git init` 전에도 실행 가능합니다. 이 경우 tracked/staged
 file check는 건너뛰지만 pre-commit verification은 실행합니다.
 
-## Operating Guide
+## 운영 가이드
 
 Burp 수집, receiver 사용, verification, AI 안전 파일, audit retention,
 HMAC verification, 실패 처리까지 포함한 전체 안전 운영 흐름은
@@ -658,7 +664,7 @@ It closes v0.10 as a metadata and safety-boundary release candidate without
 actual transport or listener runtime. Future runtime work remains deferred to a
 separately reviewed v0.11 or later PR.
 
-## Burp Montoya Collector
+## Burp Montoya 수집기
 
 Burp-side collector skeleton은
 [extensions/montoya-collector](extensions/montoya-collector)
@@ -670,7 +676,7 @@ Python `verify` gate를 계속 통과해야 합니다.
 [docs/MONTOYA_COLLECTOR.md](docs/MONTOYA_COLLECTOR.md)를
 참조하세요.
 
-## Windows Local Launcher
+## Windows 로컬 실행기
 
 Windows에서는 receiver와 dashboard를 함께 시작합니다.
 
@@ -695,7 +701,7 @@ target domain, 개인정보, HMAC secret, CSRF 값을 출력하지 않습니다.
 [docs/WINDOWS_LAUNCHER_GUIDE.md](docs/WINDOWS_LAUNCHER_GUIDE.md)를
 참조하세요.
 
-## Localhost Receiver
+## 로컬 수신기
 
 Montoya collector handoff payload용 loopback receiver 실행:
 
@@ -708,7 +714,7 @@ receiver는 `POST /ingest/burp-history`를 받고 즉시 redaction을 적용한 
 [docs/LOCALHOST_RECEIVER.md](docs/LOCALHOST_RECEIVER.md)를
 참조하세요.
 
-## Read-Only MCP Server
+## 읽기 전용 MCP 서버
 
 검증된 sanitization output용 read-only MCP server를 stdio로 실행:
 
@@ -722,7 +728,7 @@ raw exchange lookup, replay, file write, external transmission은 구현하지
 [docs/READ_ONLY_MCP.md](docs/READ_ONLY_MCP.md)를
 참조하세요.
 
-## Local Dashboard
+## 로컬 대시보드
 
 검증된 output용 local read-only dashboard 실행:
 
@@ -804,7 +810,7 @@ active scan, delete, edit, retention control, risk profile action을 추가하�
 [docs/LOCAL_DASHBOARD.md](docs/LOCAL_DASHBOARD.md)를
 참조하세요.
 
-## MCP Audit Records
+## MCP 감사 기록
 
 Tool-call과 dashboard action audit record는 `<root>/.audit/mcp_audit.jsonl`
 아래에 raw-free metadata only로 기록됩니다. Audit schema `1.1`은 새 MCP
@@ -889,7 +895,7 @@ archive alias, compressed size, SHA-256, HMAC-SHA256, creation time,
 detection이며 encryption이 아니고 `review-audit` 또는 retained JSONL HMAC을
 대체하지 않습니다.
 
-## Security Notes
+## 보안 참고 사항
 
 - 실제 Burp export, raw HTTP history, token, cookie, customer domain,
   internal IP, local audit database를 커밋하지 않습니다.
@@ -925,3 +931,5 @@ detection이며 encryption이 아니고 `review-audit` 또는 retained JSONL HMA
   text에 남아 있으면 CLI는 output file 쓰기 전에 error를 발생시킵니다.
 - 실제 Burp export는 `local_only/` 아래에서만 테스트하고, `samples/`로
   이동하거나 커밋하거나 prompt에 붙여넣거나 issue로 복사하지 않습니다.
+
+</details>

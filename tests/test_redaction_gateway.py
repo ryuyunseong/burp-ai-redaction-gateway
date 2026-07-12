@@ -18202,7 +18202,8 @@ class RedactionGatewayTests(unittest.TestCase):
     def test_real_like_smoke_test_is_documented_as_synthetic_only(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         real_testing = (ROOT / "docs" / "REAL_BURP_EXPORT_TESTING.md").read_text(encoding="utf-8")
-        self.assertIn("Real-Like Smoke Test", readme)
+        self.assertIn("실제와 유사한 동작 점검", readme)
+        self.assertIn("synthetic data만 포함", readme)
         self.assertIn("compatibility testing을 대체하지 않습니다", readme)
         self.assertIn("Safe Real-Like Smoke Test", real_testing)
         self.assertIn("not a real Burp export compatibility test", real_testing)
