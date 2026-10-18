@@ -4,9 +4,11 @@ Python 3.12 이상에서 실행합니다. 추가 패키지 설치는 필요 없�
 
 ## 웹에서 처리하기
 
-저장소 폴더에서 실행하세요.
+Windows PowerShell에서 README.md가 있는 폴더를 열고 실행하세요.
+`out` 폴더가 없으면 먼저 만듭니다. 이미 있어도 기존 결과는 지우지 않습니다.
 
 ```powershell
+New-Item -ItemType Directory -Force out
 python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out
 ```
 
