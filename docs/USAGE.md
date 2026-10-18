@@ -1,103 +1,89 @@
 # 사용 방법
 
-Python 3.12 이상에서 실행합니다. 추가 패키지 설치는 필요 없습니다.
+**파일 업로드 → 민감정보 제거 → 결과 확인** 순서입니다. AI에 자동으로 보내지 않습니다.
+Python 3.12 이상이 필요하며 추가 Python 패키지는 설치하지 않아도 됩니다.
 
-## 웹에서 처리하기
+## 1. 대시보드 열기
 
-Windows PowerShell에서 README.md가 있는 폴더를 열고 실행하세요.
-`out` 폴더가 없으면 먼저 만듭니다. 이미 있어도 기존 결과는 지우지 않습니다.
+Windows에서 README.md가 있는 폴더를 열고, 탐색기 주소창에 `powershell`을 입력하세요.
+아래 두 줄을 실행한 뒤 터미널을 열어 둡니다. `out` 폴더가 이미 있어도 기존 결과는 지우지 않습니다.
 
 ```powershell
 New-Item -ItemType Directory -Force out
 python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out
 ```
 
-1. [대시보드](http://127.0.0.1:8766/)에서 **파일 업로드**를 엽니다.
-2. XML 또는 JSON 파일과 `check01` 같은 새 작업 이름을 입력합니다.
-3. **민감정보 제거 시작**을 누릅니다.
-4. **결과 파일 확인**에서 내용을 읽고 필요한 파일을 내려받습니다.
+[대시보드](http://127.0.0.1:8766/)를 엽니다. 종료할 때는 터미널에서 `Ctrl+C`를 누르세요.
 
-처음에는 `samples/synthetic_burp_history.json`으로 시험해 보세요.
-파일은 최대 10 MiB이며 원본은 `local_only/`에 보관됩니다.
-작업 이름은 영문·숫자·밑줄·하이픈으로 입력하고 영문이나 숫자로 시작하세요. 최대 64자이며 실제 고객명이나 주소는 넣지 않습니다.
-이미 쓴 작업 이름은 다시 사용할 수 없습니다.
+## 2. 파일 처리하기
 
-네 파일을 로컬 폴더에 따로 모으려면 **파일 4개 내보내기**를 누릅니다. `exports/dashboard/` 아래에 복사됩니다.
-공유 전에 [파일 내용](OUTPUT_BUNDLE_GUIDE_KO_v0.6.md)을 확인하세요. 검증에 실패한 결과나 원본·결과 폴더 전체를 AI에 올리지 마세요.
+1. **파일 업로드**를 누릅니다.
+2. 처음에는 `samples/synthetic_burp_history.json`을 선택합니다. 실제 고객 기록이 아닌 가상 샘플입니다.
+3. 작업 이름에 `demo`를 입력하고 **민감정보 제거 시작**을 누릅니다.
+4. **결과 파일 확인**에서 보고서와 프롬프트를 읽고, 필요한 파일만 내려받습니다.
 
-포트가 사용 중이면 `--port 8767`처럼 번호를 바꾸고 브라우저 주소도 맞춥니다.
-종료할 때는 터미널에서 `Ctrl+C`를 누릅니다.
+네 파일을 한 폴더에 모으려면 **파일 4개 내보내기**를 누르세요. `exports/dashboard/` 아래에 복사됩니다.
+파일 용도는 [결과 파일 안내](OUTPUT_BUNDLE_GUIDE_KO_v0.6.md)를 참고하세요.
 
-## 내 Burp 기록 준비하기
+다시 처리할 때는 `demo2`처럼 새 작업 이름을 씁니다. 영문·숫자·밑줄·하이픈을 사용할 수 있으며,
+영문이나 숫자로 시작하는 최대 64자 이름이어야 합니다. 실제 고객명이나 주소는 넣지 마세요.
 
-Burp의 HTTP history에서 필요한 요청을 골라 XML로 저장하세요.
-원본은 `local_only/`에 두고 Git에 추가하지 않습니다. 저장한 XML을 웹에서 업로드하면 됩니다.
+## 3. 내 Burp 기록 사용하기
 
-| 실행 방법 | 입력 형식 | 최대 크기 |
+Burp의 **Proxy → HTTP history**에서 필요한 요청을 선택하고, 우클릭한 뒤 **Save items**로 XML 파일을 저장하세요.
+원본은 `local_only/`에 보관하고 Git에 추가하지 않습니다. 저장한 파일을 2단계에서 선택하면 됩니다.
+
+| 실행 방법 | 입력 파일 | 최대 크기 |
 | --- | --- | --- |
 | 웹 업로드 | Burp XML, JSON | 10 MiB |
-| `process` 명령 | Burp XML, JSON, HAR | 16 MiB |
+| 명령어 실행 | Burp XML, JSON, HAR | 16 MiB |
 
-JSON은 `samples/`의 예제 형식이나 HAR 구조를 사용합니다.
+JSON은 `samples/` 예제나 HAR 구조를 사용합니다. 웹에 올린 원본도 `local_only/`에 보관됩니다.
 
 ## 명령어로 처리하기
 
-웹 대신 명령어 한 번으로 처리할 수도 있습니다.
+웹 화면 없이 처리하려면 같은 폴더에서 실행하세요.
 
 ```powershell
 python -m burp_ai_redaction_gateway process --input samples/synthetic_burp_history.json --output out/demo --project demo
 ```
 
-Burp에서 저장한 XML을 사용하려면 입력 위치를 바꿉니다.
+내 XML은 `--input local_only/history.xml`처럼 입력 위치만 바꾸면 됩니다.
+`--project`는 작업 이름, `--output`은 **새 결과 폴더**입니다. 기존 폴더를 덮어쓰지 않으므로 다시 실행할 때는 `--output out/demo2 --project demo2`처럼 바꾸세요.
 
-```powershell
-python -m burp_ai_redaction_gateway process --input local_only/history.xml --output out/check01 --project check01
-```
-
-`--project`는 작업 이름, `--output`은 새 결과 폴더입니다.
-이미 있는 폴더는 덮어쓰지 않으므로 다시 실행할 때는 `out/demo2`처럼 다른 이름을 지정하세요.
-
-`process`는 민감정보 제거, 검증, 보고서 작성을 마친 뒤 `ai_candidates/`에 네 파일을 복사합니다.
-입력 원본은 수정하지 않습니다. 실패한 중간 결과는 로컬에 남을 수 있지만 전달 후보 폴더는 최종 검사를 통과해야 생성됩니다.
+민감정보 제거·검증·보고서 작성을 마치면 결과 폴더의 `ai_candidates/`에 파일 4개가 모입니다.
+입력 원본은 수정하지 않습니다. 실패한 중간 결과가 남아도 전달 후보 폴더는 최종 검사를 통과해야 생성됩니다.
 
 ## 문제가 생겼을 때
 
-| 표시 | 해결 방법 |
+| 상황 또는 표시 | 해결 방법 |
 | --- | --- |
-| `output_already_exists` | 새 결과 폴더나 작업 이름을 사용하세요. |
+| `python`을 찾을 수 없음 | Python 설치 후 터미널을 다시 여세요. `py --version`이 3.12 이상이면 명령의 `python`을 `py`로 바꿔도 됩니다. |
+| `No module named burp_ai_redaction_gateway` | README.md가 있는 폴더에서 실행했는지 확인하세요. |
+| 주소가 사용 중임 | `--port 8767`로 바꾸고 브라우저도 `http://127.0.0.1:8767/`로 여세요. |
+| `output_already_exists` | 새 작업 이름과 새 결과 폴더를 사용하세요. |
 | `invalid_project_alias` | 작업 이름의 문자와 길이를 확인하세요. |
-| `unsupported_input_format` | XML, JSON, HAR 확장자인지 확인하세요. |
-| `input_not_readable_or_invalid` | 파일 위치와 내용 형식을 확인하세요. |
-| `input_too_large` | CLI 입력이 16 MiB를 넘었습니다. Burp에서 요청을 나눠 저장하세요. |
-| `no_http_events` | 읽을 수 있는 HTTP 항목이 없습니다. 요청을 선택해 저장했는지 확인하세요. |
-| `verification_failed`, `export_verification_failed`, `processing_failed` | 처리가 중단됐습니다. 실패한 결과를 AI에 보내지 말고 입력 형식과 정책을 확인하세요. |
+| `unsupported_input_format`, `input_not_readable_or_invalid`, `no_http_events` | 입력 형식과 파일 위치를 확인하고, Burp에서 요청을 선택해 다시 저장하세요. |
+| `input_too_large` | 입력 크기 제한을 넘었습니다. Burp에서 요청을 나눠 저장하세요. |
+| `verification_failed`, `export_verification_failed`, `processing_failed` | 처리가 중단됐습니다. 실패한 결과는 공유하지 말고 입력 형식과 정책을 확인하세요. |
 
-## 선택 기능
+## 공유 전 확인
 
-기본 사용에는 아래 설정이 필요하지 않습니다.
+- 검증에 실패한 결과는 사용하지 마세요. 검사를 끄거나 정책을 느슨하게 바꿔 통과시키지 않습니다.
+- 자동 검사가 모든 민감정보를 찾는 것은 아닙니다. 원본 요청·응답, 인증정보, 개인정보가 남지 않았는지 직접 읽어보세요.
+- 검토 후보는 확정 취약점이 아니며 위험도도 초안입니다. 재현과 영향 확인 후 판단하세요.
+- 원본이나 결과 폴더 전체를 AI에 올리지 말고, 확인한 파일만 사용하세요.
 
-- [Burp 수집기](MONTOYA_COLLECTOR.md): 탐색 중 선택한 기록을 로컬 수신기로 전달합니다. **Burp 수집 상태** 화면만 열어서는 수집이 시작되지 않습니다.
-- [읽기 전용 MCP](READ_ONLY_MCP.md): AI 도구에서 검증된 결과를 읽습니다. Burp를 직접 조작하거나 원본을 전달하지 않습니다.
-- **공유 전 추가 점검**: 결과 화면 아래에서 펼칩니다. 파일 생성 여부와 검사 결과를 보여주며 파일을 수정하거나 처리를 실행하지 않습니다.
+## 필요한 경우에만 설정
+
+- [Burp 수집기](MONTOYA_COLLECTOR.md): 허가된 점검 범위의 기록을 로컬 수신기로 보냅니다. **Burp 수집 상태** 화면만 열어서는 수집이 시작되지 않습니다.
+- [읽기 전용 MCP](READ_ONLY_MCP.md): AI 프로그램에서 검증된 결과를 읽습니다. Burp를 직접 조작하지 않습니다.
 
 <details>
-<summary>단계를 나눠 실행하거나 테스트하기</summary>
+<summary>개발·고급 사용 참고</summary>
 
-```powershell
-python -m burp_ai_redaction_gateway generate --input samples/synthetic_burp_history.json --output out/manual --project manual
-python -m burp_ai_redaction_gateway verify --input out/manual
-python -m burp_ai_redaction_gateway report --input out/manual
-python -m burp_ai_redaction_gateway review --input out/manual
-```
-
-기존 `review --export-dir`은 분석 파일과 프롬프트 3개만 복사합니다.
-보고서를 포함한 4개 파일이 필요하면 `process` 또는 대시보드 내보내기를 사용하세요.
-
-```powershell
-python -m unittest discover -s tests
-python -m compileall burp_ai_redaction_gateway tests
-```
-
-테스트에는 가상 데이터를 사용합니다. 세부 명령과 버전별 설계는 [기술 참고](REFERENCE.md)에 있습니다.
+결과 화면의 **공유 전 추가 점검**은 파일과 검사 상태를 조회하며 파일을 수정하거나 처리를 실행하지 않습니다.
+단계별 명령은 [구성과 추가 설정](REFERENCE.md)을 참고하세요.
+기존 `review --export-dir`은 분석 파일과 프롬프트 3개만 복사합니다. 보고서를 포함한 4개 파일에는 `process` 또는 대시보드 내보내기를 사용하세요.
 
 </details>
