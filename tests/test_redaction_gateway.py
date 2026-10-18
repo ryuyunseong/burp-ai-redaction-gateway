@@ -15586,7 +15586,7 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertFalse(empty_evidence.safe_navigation_available)
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir) / "out"
+            root = Path(temp_dir).resolve() / "out"
             output = root / "generated"
             main(["generate", "--input", str(SAMPLE), "--output", str(output), "--project", "client_alias_demo"])
             dashboard_output = _verified_output(root, load_policy(None), "generated")
@@ -16608,7 +16608,7 @@ class RedactionGatewayTests(unittest.TestCase):
                     "jsonrpc": "2.0",
                     "id": 1,
                     "method": "tools/call",
-                    "params": {"name": "list_findings", "arguments": {"project": "..\\generated"}},
+                    "params": {"name": "list_findings", "arguments": {"project": str(Path("..") / "generated")}},
                 }
             )
             self.assertTrue(traversal_response["result"]["isError"])
