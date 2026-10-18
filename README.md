@@ -52,7 +52,7 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 
 ## 실행 화면
 
-[한글 보고서 예제](docs/examples/report_draft.md)와 아래 사진은 공개 가상 샘플을 로컬 대시보드에서 직접 처리한 결과입니다. 실제 고객 기록은 사용하지 않았습니다.
+공개 가상 샘플을 로컬에서 직접 처리한 [한글 보고서](docs/examples/report_draft.md) · [ChatGPT용 프롬프트](docs/examples/chatgpt_prompt.md) · [Codex용 프롬프트](docs/examples/codex_task_prompt.md) 예제입니다. 아래 사진도 실제 실행 화면이며, 실제 고객 기록은 사용하지 않았습니다.
 
 ![파일을 선택하고 작업 이름을 입력한 화면](docs/images/dashboard-upload.png)
 
