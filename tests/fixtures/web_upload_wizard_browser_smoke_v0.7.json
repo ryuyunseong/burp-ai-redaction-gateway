@@ -10,12 +10,11 @@
     "file_input_count": 1
   },
   "required_page_markers": [
-    "local-only workflow",
-    "Web Operator Guide: docs/WEB_OPERATOR_GUIDE_KO_v0.7.md",
-    "raw preview/download",
-    "replay/active scan",
-    "automatic ChatGPT handoff",
-    "MCP listener runtime",
+    "파일 업로드",
+    "이 컴퓨터에서 처리",
+    "민감정보 제거 시작",
+    "검증에 실패하면 이후 처리를 중단합니다",
+    "AI로 자동 전송하지 않습니다",
     "analysis_packet.json",
     "chatgpt_prompt.md",
     "codex_task_prompt.md",
@@ -61,6 +60,7 @@
     "local_only/dashboard_uploads"
   ],
   "failure_safe_links_forbidden": [
+    "/output?project=",
     "/safe-files?project=",
     "/triage?project=",
     "/report-readiness?project=",

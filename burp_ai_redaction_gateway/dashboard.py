@@ -1163,103 +1163,52 @@ def run_live_capture_stop_placeholder(server: DashboardHttpServer) -> LiveCaptur
 
 def render_home(root: Path, policy: RedactionPolicy) -> str:
     outputs, blocked_count = _discover_outputs(root, policy)
-    audit_status = _audit_status(root)
-    rows = "\n".join(_output_row(output) for output in outputs) or (
-        '<tr><td colspan="6" class="empty">검증을 통과한 산출물 디렉터리가 없습니다.</td></tr>'
+    rows = "\n".join(_output_row(output) for output in outputs)
+    records = (
+        f'<table class="records-table"><thead><tr><th>작업 이름</th><th>검토할 항목</th>'
+        f'<th>전달 후보 파일</th><th>보고서</th><th>검증</th><th>결과</th></tr></thead>'
+        f'<tbody>{rows}</tbody></table>'
+        if outputs else '<p class="empty-state">아직 처리한 기록이 없습니다.</p>'
     )
-    first_output_id = outputs[0].output_id if outputs else ""
-    safe_files_href = _safe_files_href(first_output_id) if first_output_id else "/help"
-    safe_file_cards = "\n".join(
-        f"""
-        <div class="guide-card">
-          <strong>{_h(name)}</strong>
-          <span>{_h(purpose)}</span>
-          <small>AI 입력 후보 파일이며 사람이 수동 검토해야 합니다.</small>
-        </div>
-        """
-        for name, purpose in SAFE_FILE_PURPOSES
+    file_rows = "\n".join(
+        f"<tr><td>{_h(name)}</td><td>{_h(_safe_file_description(name))}</td></tr>"
+        for name in SAFE_PREVIEW_FILES
     )
     return _page(
-        "로컬 리뷰 대시보드",
+        "처리한 기록",
         f"""
-        <section class="topbar">
+        <header class="topbar">
           <div>
-            <h1>Burp AI Redaction Gateway</h1>
-            <p class="subtitle">검증을 통과한 정제 산출물만 표시합니다. 원문 HTTP 보기와 재전송 기능은 제공하지 않습니다.</p>
+            <p class="app-name">Burp AI Redaction Gateway</p>
+            <h1>Burp 기록 정리</h1>
+            <p class="subtitle">검증을 통과한 기록과 보고서 초안</p>
           </div>
-          <div class="status-stack">
-            <span class="badge good">로컬 전용</span>
-            <span class="badge neutral">안전 미리보기</span>
-            <a class="button secondary" href="/live-capture">Live Capture 준비</a>
-            <a class="button" href="/upload">업로드 마법사</a>
-            <a class="button secondary" href="/help">운영 가이드</a>
-            <a class="button secondary" href="/settings">설정/상태</a>
-          </div>
+          <nav class="actions" aria-label="주요 메뉴">
+            <a class="button" href="/upload">파일 업로드</a>
+            <a class="button secondary" href="/help">도움말</a>
+            <a class="button secondary" href="/settings">설정</a>
+          </nav>
+        </header>
+        <div class="summary-line">
+          <span>처리한 기록 <strong>{len(outputs)}개</strong></span>
+          <span>검증 실패로 숨긴 기록 <strong>{blocked_count}개</strong></span>
+          <span class="badge neutral">자동 전송 없음</span>
+        </div>
+        <section class="workspace-section" aria-labelledby="records-title">
+          <h2 id="records-title">처리한 기록</h2>
+          {records}
         </section>
-        {_safety_strip()}
-        {_render_output_alias_selector(root, policy, first_output_id, outputs)}
-        {_read_only_troubleshooting_panel()}
-        {_release_readiness_status_panel()}
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>처음 시작하기</h2><span class="muted">PowerShell을 덜 쓰고 화면 순서대로 확인합니다.</span></div>
-            <div class="file-grid">
-              <a class="guide-card" href="/upload">
-                <strong>파일 업로드</strong>
-                <span>Burp export를 선택하고 redaction, verify, review, report를 순서대로 실행합니다.</span>
-              </a>
-              <a class="guide-card" href="/live-capture">
-                <strong>Live Capture 상태 확인</strong>
-                <span>Burp 탐색 후 receiver output 준비 상태를 조회합니다. 이 화면은 실행 화면이 아닙니다.</span>
-              </a>
-              <a class="guide-card" href="{_h(safe_files_href)}">
-                <strong>AI에 넣을 수 있는 후보 파일 확인</strong>
-                <span>검증 통과 산출물이 있으면 목록의 첫 번째 safe files로 이동합니다. 최종 결과가 아닙니다.</span>
-              </a>
-              <a class="guide-card" href="/help">
-                <strong>운영 도움말</strong>
-                <span>문제가 생기면 도움말과 troubleshooting 문서 흐름을 먼저 확인합니다.</span>
-              </a>
-            </div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>safe files 4개</h2><span class="muted">AI 입력 후보 allowlist입니다.</span></div>
-            <div class="file-grid">{safe_file_cards}</div>
-            <p class="muted">finding은 후보, risk는 초안이며 final severity와 CVSS는 사람이 수동 결정합니다.</p>
-          </div>
-        </section>
-        <section class="metrics">
-          <div class="metric"><span class="metric-value">{len(outputs)}</span><span>검증 통과 산출물</span></div>
-          <div class="metric"><span class="metric-value">{blocked_count}</span><span>차단 또는 숨김</span></div>
-          <div class="metric"><span class="metric-value">{_h(_status_label(audit_status["review_status"]))}</span><span>감사 로그 검토</span></div>
-          <div class="metric"><span class="metric-value">false</span><span>원문 표시 여부</span></div>
-        </section>
-        <section class="panel">
-          <div class="panel-head">
-            <h2>산출물</h2>
-            <span class="muted">검증을 통과한 산출물만 선택할 수 있습니다.</span>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>산출물</th>
-                <th>후보</th>
-                <th>프롬프트 파일</th>
-                <th>보고서</th>
-                <th>상태</th>
-                <th>작업</th>
-              </tr>
-            </thead>
-            <tbody>{rows}</tbody>
-          </table>
-        </section>
-        <section class="panel">
-          <div class="panel-head">
-            <h2>감사 로그</h2>
-            <span class="muted">메타데이터만 표시하며 감사 로그 원문 row는 표시하지 않습니다.</span>
-          </div>
-          {_audit_panel(audit_status)}
-        </section>
+        <p class="review-note">표시된 항목은 취약점 확정 결과가 아닙니다. 외부에 전달하기 전에 내용을 직접 확인하세요.</p>
+        <details class="secondary-details">
+          <summary>AI 전달 후보 파일 4개</summary>
+          <table class="result-table"><thead><tr><th>파일</th><th>내용</th></tr></thead>
+          <tbody>{file_rows}</tbody></table>
+        </details>
+        <details class="secondary-details">
+          <summary>감사 기록과 Burp 수집 상태</summary>
+          {_audit_panel(_audit_status(root))}
+          <a href="/live-capture">Burp 수집 상태</a>
+        </details>
         """,
     )
 
@@ -1354,22 +1303,40 @@ def render_operations_help() -> str:
     safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
     forbidden_items = "".join(f"<li>{_h(name)}</li>" for name in FORBIDDEN_AI_ITEMS)
     return _page(
-        "운영 인덱스",
+        "도움말",
         f"""
         <section class="topbar">
           <div>
-            <a class="back" href="/">산출물 목록으로</a>
-            <h1>운영 인덱스</h1>
-            <p class="subtitle">GUI에서 자주 필요한 사용 흐름, 문서 위치, 안전 경계를 한 화면에 모아 둔 조회 전용 안내입니다.</p>
+            <a class="back" href="/">처리한 기록으로</a>
+            <h1>도움말</h1>
+            <p class="subtitle">파일 처리부터 결과 확인까지</p>
           </div>
           <div class="status-stack">
-            <span class="badge good">조회 전용</span>
-            <span class="badge neutral">실행 버튼 없음</span>
-            <a class="button secondary" href="/live-capture">Live Capture 준비</a>
-            <a class="button" href="/upload">업로드 마법사</a>
-            <a class="button secondary" href="/settings">설정/상태</a>
+            <a class="button" href="/upload">파일 업로드</a>
+            <a class="button secondary" href="/settings">설정</a>
           </div>
         </section>
+        <section class="workspace-section">
+          <h2>사용 순서</h2>
+          <ol class="safe-list">
+            <li>Burp의 HTTP history에서 필요한 항목을 XML로 저장합니다. 예제 JSON도 사용할 수 있습니다.</li>
+            <li><a href="/upload">파일 업로드</a>에서 파일과 새 작업 이름을 입력하고 민감정보 제거를 시작합니다.</li>
+            <li>처리가 끝나면 결과 파일 확인을 엽니다. 검증에 실패한 기록은 사용할 수 없습니다.</li>
+            <li>파일 내용을 직접 읽고 필요한 파일만 내려받습니다. AI로 자동 전송하지 않습니다.</li>
+          </ol>
+        </section>
+        <section class="workspace-section">
+          <h2>처리가 안 될 때</h2>
+          <ul class="safe-list">
+            <li>파일은 XML 또는 JSON이어야 하며 10 MiB 이하여야 합니다.</li>
+            <li>이미 사용한 작업 이름은 다른 이름으로 바꿉니다.</li>
+            <li>파일을 읽지 못하면 Burp에서 요청 항목을 선택해 다시 저장합니다.</li>
+          </ul>
+        </section>
+        <p class="review-note">점검 항목은 취약점 후보이며 보고서는 초안입니다. 최종 심각도와 공유 여부는 직접 판단하세요.</p>
+        <details class="secondary-details">
+          <summary>Burp 수집기와 기술 참고</summary>
+          <p>Burp 탐색 중 수집은 별도 수신기와 Montoya 확장 설정이 필요합니다. <a href="/live-capture">Burp 수집 상태</a> 화면만 열어서는 수집이 시작되지 않습니다.</p>
         <section class="safety-strip">
           <div class="rail"><span>접속</span><strong>127.0.0.1 전용</strong></div>
           <div class="rail"><span>표시</span><strong>HTML escape 적용</strong></div>
@@ -1382,7 +1349,6 @@ def render_operations_help() -> str:
           <div class="panel">
             <div class="panel-head"><h2>빠른 흐름</h2><span class="muted">CLI와 GUI 병행 사용 순서입니다.</span></div>
             <ol class="safe-list">
-              <li>PowerShell 명령 없이 시작하려면 <a href="/upload">업로드 마법사</a>에서 파일을 선택합니다.</li>
               <li>receiver를 127.0.0.1에서 실행합니다.</li>
               <li>Burp scoped HTTP history를 로컬 receiver로 전송합니다.</li>
               <li>정제 산출물이 생성되고 verify를 통과했는지 확인합니다.</li>
@@ -1423,6 +1389,7 @@ def render_operations_help() -> str:
             </ul>
           </div>
         </section>
+        </details>
         """,
     )
 
@@ -1591,174 +1558,115 @@ def render_live_capture_readiness(
         """,
     )
 def render_upload_wizard(csrf_token: str) -> str:
-    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
-    token = _h(csrf_token)
+    file_rows = "\n".join(
+        f"<tr><td>{_h(name)}</td><td>{_h(_safe_file_description(name))}</td></tr>"
+        for name in SAFE_PREVIEW_FILES
+    )
     return _page(
-        "업로드 마법사",
+        "파일 업로드",
         f"""
-        <section class="topbar">
+        <header class="topbar">
           <div>
-            <a class="back" href="/">산출물 목록으로</a>
-            <h1>업로드 마법사</h1>
-            <p class="subtitle">Burp export 파일을 로컬에서 받아 redaction, verify, review, report까지 실행한 뒤 사람이 확인할 AI 입력 후보 파일 4개만 안내합니다.</p>
+            <a class="back" href="/">처리한 기록으로</a>
+            <h1>파일 업로드</h1>
+            <p class="subtitle">Burp XML 또는 JSON · 최대 10 MiB</p>
           </div>
-          <div class="status-stack">
-            <span class="badge warning">state-changing POST</span>
-            <span class="badge neutral">raw-free result</span>
-            <a class="button secondary" href="/live-capture">Live Capture 준비</a>
-            <a class="button secondary" href="/help">운영 허브</a>
-          </div>
-        </section>
-        <section class="safety-strip">
-          <div class="rail"><span>workflow</span><strong>local-only</strong></div>
-          <div class="rail"><span>업로드 형식</span><strong>.xml 또는 .json</strong></div>
-          <div class="rail"><span>safe files</span><strong>4개로 제한</strong></div>
-          <div class="rail"><span>자동 전송</span><strong>false</strong></div>
-        </section>
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>파일 업로드</h2><span class="muted">원본 본문이나 실제 파일명은 결과 화면에 표시하지 않습니다.</span></div>
+          <span class="badge neutral">이 컴퓨터에서 처리</span>
+        </header>
+        <div class="workflow-grid">
+          <section class="workspace-section">
             <form class="stacked-form" method="post" action="/upload" enctype="multipart/form-data">
-              <input type="hidden" name="csrf_token" value="{token}">
-              <label>Burp export 파일
+              <input type="hidden" name="csrf_token" value="{_h(csrf_token)}">
+              <label>Burp 기록 파일
                 <input type="file" name="burp_export" accept=".xml,.json" required>
               </label>
-              <label>프로젝트 별칭
-                <input type="text" name="project" required pattern="[A-Za-z0-9][A-Za-z0-9_-]{{0,63}}" placeholder="client_alias_demo">
+              <label>작업 이름
+                <input type="text" name="project" required pattern="[A-Za-z0-9][A-Za-z0-9_-]{{0,63}}"
+                       placeholder="check01" maxlength="64" aria-describedby="project-hint">
               </label>
-              <button type="submit">로컬 마스킹 및 검증 시작</button>
-              <small>POST에는 CSRF 보호가 적용됩니다. ChatGPT API 자동 전송은 수행하지 않습니다.</small>
-              <small>verify 통과 전에는 AI 후보 파일을 사용하지 마세요.</small>
+              <small id="project-hint">영문과 숫자로 시작하세요. 밑줄·하이픈을 쓸 수 있으며 실제 고객명은 넣지 마세요.</small>
+              <button type="submit">민감정보 제거 시작</button>
             </form>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>자동 처리 순서</h2><span class="muted">verify fail-closed를 통과한 경우에만 safe files 링크를 제공합니다.</span></div>
-            <ol class="safe-list">
-              <li>업로드 파일 형식과 프로젝트 별칭을 검증합니다.</li>
-              <li>원본 파일을 ignored local-only 저장소에 내부 이름으로 보관합니다.</li>
-              <li>redaction과 sanitized output 생성을 실행합니다.</li>
-              <li>verify를 실행하고 실패하면 review/report를 건너뜁니다.</li>
-              <li>verify 통과 후 review와 report draft를 생성합니다.</li>
-              <li>결과 화면에서 AI 입력 후보 파일 4개 상태만 표시합니다.</li>
-            </ol>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>AI 입력 후보 파일</h2><span class="muted">성공 후 직접 확인할 수 있는 후보 파일입니다.</span></div>
-            <ul class="safe-list">{safe_files}</ul>
-            <p class="muted">safe files 4개도 외부 공유 보장이 아니며, 사람이 필요한 범위만 확인 후 사용합니다.</p>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>표시하지 않는 값</h2><span class="muted">실패 결과에도 원본 값과 내부 경로는 표시하지 않습니다.</span></div>
-            <ul class="safe-list">
-              <li>원본 요청/응답 본문</li>
-              <li>Cookie, Authorization, token, JWT, session 값</li>
-              <li>실제 URL, domain, IP, 개인정보</li>
-              <li>무결성 비밀값과 요청 위조 방지 보호값</li>
-              <li>전체 로컬 경로와 실제 local-only 파일명</li>
-              <li>prompt/report 본문 미리보기</li>
-            </ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>운영자 안내</h2><span class="muted">웹에서 가능한 작업과 금지된 작업을 분리합니다.</span></div>
-            <ul class="safe-list">
-              <li>Web Operator Guide: docs/WEB_OPERATOR_GUIDE_KO_v0.7.md</li>
-              <li>Upload Wizard는 local-only workflow입니다.</li>
-              <li>raw preview/download 없음, replay/active scan 없음.</li>
-              <li>automatic ChatGPT handoff 없음.</li>
-              <li>MCP listener runtime, socket/bind/listen, transport/protocol, tool execution은 별도 PR 전까지 사용할 수 없습니다.</li>
-            </ul>
-          </div>
-        </section>
+            <p class="review-note">선택한 원본은 이 컴퓨터의 local_only/ 폴더에 보관합니다. 화면에는 원문을 표시하지 않습니다.</p>
+          </section>
+          <section class="workspace-section">
+            <h2>처리 후 확인할 파일</h2>
+            <table class="result-table"><thead><tr><th>파일</th><th>내용</th></tr></thead>
+              <tbody>{file_rows}</tbody>
+            </table>
+            <p class="review-note">검증에 실패하면 이후 처리를 중단합니다. 결과가 만들어져도 AI로 자동 전송하지 않습니다.</p>
+          </section>
+        </div>
         """,
     )
 
 
 def render_upload_result(result: UploadWizardResult, csrf_token: str) -> str:
-    status_badge = _status_badge(result.status)
-    summaries = "".join(f"<li>{_h(line)}</li>" for line in result.summary_lines)
+    passed = result.status == "passed"
+    stage_names = {
+        "upload validation": "입력 파일 확인",
+        "raw local storage": "원본 로컬 보관",
+        "redaction/generate": "민감정보 제거",
+        "verify": "잔존 정보 검사",
+        "review": "검토 자료 정리",
+        "report": "보고서 초안 생성",
+    }
     stages = "".join(
-        f"<tr><td>{_h(name)}</td><td>{_status_badge(status)}</td></tr>" for name, status in result.stage_statuses
+        f"<tr><td>{_h(stage_names.get(name, name))}</td><td>{_status_badge(status)}</td></tr>"
+        for name, status in result.stage_statuses
     )
     safe_rows = "".join(
-        f"<tr><td>{_h(name)}</td><td>{_status_badge('present' if name in result.safe_files_present else 'missing')}</td></tr>"
+        f"<tr><td>{_h(name)}</td><td>{_h(_safe_file_description(name))}</td>"
+        f"<td>{_status_badge('present' if name in result.safe_files_present else 'missing')}</td></tr>"
         for name in SAFE_PREVIEW_FILES
     )
-    links = ""
-    retry = f'<a class="button secondary" href="/upload">다시 업로드</a>'
-    if result.status == "passed":
+    messages = {
+        "generate_failed": "파일 형식을 확인해 주세요. 처리하지 못한 결과는 사용할 수 없습니다.",
+        "verify_failed": "검사에서 문제가 발견돼 중단했습니다. 이 결과를 AI에 전달하지 마세요.",
+        "review_failed": "검토 자료를 만들지 못했습니다. 이 결과를 AI에 전달하지 마세요.",
+        "report_failed": "보고서 초안을 만들지 못했습니다. 이 결과를 AI에 전달하지 마세요.",
+    }
+    if passed:
         links = f"""
-        <div class="actions">
-          <a class="button" href="{_simple_dashboard_href(result.output_id)}">Simple Dashboard</a>
-          <a class="button secondary" href="{_safe_files_href(result.output_id)}">Safe Files</a>
-          <a class="button secondary" href="{_triage_href(result.output_id)}">Triage</a>
-          <a class="button secondary" href="{_report_readiness_href(result.output_id)}">Report Readiness</a>
-          {retry}
-        </div>
+          <a class="button" href="{_output_href(result.output_id)}">결과 파일 확인</a>
+          <a class="button secondary" href="{_simple_dashboard_href(result.output_id)}">결과 요약</a>
+        """
+        contents = f"""
+        <section class="workspace-section">
+          <h2>AI 전달 후보 파일 4개</h2>
+          <table class="result-table"><thead><tr><th>파일</th><th>내용</th><th>상태</th></tr></thead>
+          <tbody>{safe_rows}</tbody></table>
+        </section>
+        <p class="review-note">검사가 끝났습니다. 공유 전에 파일 내용을 직접 확인하세요. 점검 항목과 위험도는 수동 검토 전 초안입니다.</p>
         """
     else:
-        links = f"""
-        <div class="actions">
-          {retry}
-          <a class="button secondary" href="/">산출물 목록</a>
-        </div>
-        <p class="muted">검증 또는 처리 실패 상태에서는 review/report/safe file link를 제공하지 않습니다.</p>
-        <p class="muted">verify 통과 전 output은 AI 입력 후보가 아닙니다.</p>
-        """
+        links = '<a class="button" href="/upload">다시 업로드</a>'
+        contents = f'<p class="failure-note" role="alert">{_h(messages.get(result.blocked_reason, "처리를 완료하지 못했습니다. 입력 파일을 확인해 주세요."))}</p>'
+    title = "처리 완료" if passed else result.title
     return _page(
-        result.title,
+        title,
         f"""
-        <section class="topbar">
+        <header class="topbar">
           <div>
-            <a class="back" href="/upload">업로드 마법사로 돌아가기</a>
-            <h1>{_h(result.title)}</h1>
-            <p class="subtitle">결과는 raw-free metadata만 표시합니다. ChatGPT 자동 전송은 수행하지 않습니다.</p>
+            <a class="back" href="/">처리한 기록으로</a>
+            <h1>{_h(title)}</h1>
           </div>
-          <div class="status-stack">
-            {status_badge}
-            <span class="badge neutral">raw_data_included=false</span>
-          </div>
-        </section>
-        <section class="safety-strip">
-          <div class="rail"><span>project alias</span><strong>{_h(result.project_alias)}</strong></div>
-          <div class="rail"><span>verify files</span><strong>{result.files_checked}</strong></div>
-          <div class="rail"><span>후보 finding</span><strong>{result.candidate_count}</strong></div>
-          <div class="rail"><span>safe files</span><strong>{len(result.safe_files_present)}</strong></div>
-        </section>
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>처리 요약</h2><span class="muted">원본 값, 실제 파일명, 전체 경로는 제외합니다.</span></div>
-            <ul class="safe-list">{summaries}</ul>
+          <div class="actions">
             {links}
+            <a class="button secondary" href="/upload">다른 파일 처리</a>
           </div>
-          <div class="panel">
-            <div class="panel-head"><h2>단계 상태</h2><span class="muted">실패 단계 이후 작업은 건너뜁니다.</span></div>
-            <table><tbody>{stages}</tbody></table>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>AI 입력 후보 파일 4개</h2><span class="muted">성공 상태에서만 확인 대상으로 안내합니다.</span></div>
-            <table><tbody>{safe_rows}</tbody></table>
-            <p class="muted">safe files 4개는 AI 입력 후보일 뿐이며 사람이 직접 확인해야 합니다.</p>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>해석 경계</h2><span class="muted">자동 처리 결과는 수동 검토 전 초안입니다.</span></div>
-            <ul class="safe-list">
-              <li>finding은 candidate입니다.</li>
-              <li>risk는 draft입니다.</li>
-              <li>final severity와 CVSS는 수동 결정입니다.</li>
-              <li>upload 성공은 외부 공유 가능 보장이 아닙니다.</li>
-            </ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>다음 확인 순서</h2><span class="muted">성공 후에도 본문 preview나 자동 전송은 제공하지 않습니다.</span></div>
-            <ol class="safe-list">
-              <li>Simple Dashboard에서 전체 상태를 확인합니다.</li>
-              <li>Safe Files에서 4개 후보 파일의 존재 여부를 확인합니다.</li>
-              <li>Triage에서 candidate finding을 수동 검토합니다.</li>
-              <li>Report Readiness에서 draft report 경계를 확인합니다.</li>
-              <li>필요한 범위만 사람이 복사합니다.</li>
-            </ol>
-          </div>
-        </section>
+        </header>
+        <div class="summary-line">
+          <span>작업 <strong>{_h(result.project_alias)}</strong></span>
+          <span>검토할 항목 <strong>{result.candidate_count}개</strong></span>
+          <span>전달 후보 <strong>{len(result.safe_files_present)}/4개</strong></span>
+          {_status_badge(result.status)}
+        </div>
+        {contents}
+        <details class="secondary-details">
+          <summary>처리 단계 확인</summary>
+          <table class="result-table"><thead><tr><th>단계</th><th>결과</th></tr></thead><tbody>{stages}</tbody></table>
+        </details>
         """,
     )
 
@@ -1766,55 +1674,51 @@ def render_upload_result(result: UploadWizardResult, csrf_token: str) -> str:
 def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
     candidates = _load_candidates(output.path)
     candidate_cards = "\n".join(_candidate_card(candidate) for candidate in candidates[:40]) or (
-        '<div class="empty">표시할 finding 후보가 없습니다.</div>'
+        '<p class="empty">검토할 항목이 없습니다.</p>'
     )
     file_cards = "\n".join(_safe_file_card(output, name) for name in SAFE_PREVIEW_FILES)
-    preflight = _build_ai_safe_preflight(output)
     return _page(
-        f"산출물 {output.label}",
+        f"결과 파일 {output.label}",
         f"""
-        <section class="topbar">
+        <header class="topbar">
           <div>
-            <a class="back" href="/">산출물 목록으로</a>
-            <h1>{_h(output.label)}</h1>
-            <p class="subtitle">탐지 후보는 수동 검증이 필요합니다. 신뢰도는 증거 신뢰도이며 심각도가 아닙니다.</p>
+            <a class="back" href="/">처리한 기록으로</a>
+            <h1>결과 파일</h1>
+            <p class="subtitle">{_h(output.label)}</p>
           </div>
-          <span class="badge good">검증 통과</span>
+          <div class="actions">
+            <a class="button secondary" href="{_simple_dashboard_href(output.output_id)}">결과 요약</a>
+            <a class="button secondary" href="/upload">다른 파일 처리</a>
+          </div>
+        </header>
+        <section class="workspace-section">
+          <h2>AI 전달 후보 파일</h2>
+          <div class="file-grid">{file_cards}</div>
         </section>
-        <section class="safety-strip">
-          <div class="rail"><span>검증</span><strong>통과</strong></div>
-          <div class="rail"><span>표시 모드</span><strong>원문 없음</strong></div>
-          <div class="rail"><span>탐지 상태</span><strong>후보만 표시</strong></div>
-          <div class="rail"><span>심각도</span><strong>별도 산정 필요</strong></div>
+        <p class="review-note">자동 검사는 공유 승인을 대신하지 않습니다. 내용을 읽어보고 필요한 파일만 사용하세요.</p>
+        <section class="workspace-section">
+          <h2>다시 검사하거나 내보내기</h2>
+          {_action_panel(output, csrf_token)}
         </section>
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>안전 파일</h2><span class="muted">AI에 넣어도 되는 안전 파일만 표시합니다.</span></div>
-            <div class="file-grid">{file_cards}</div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>대시보드 실행</h2><span class="muted">POST 실행은 CSRF 보호를 사용합니다.</span></div>
-            {_action_panel(output, csrf_token)}
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>AI 안전 사전 점검</h2><span class="muted">AI 핸드오프 전 조회 전용 점검입니다.</span></div>
-            {_preflight_summary(preflight)}
-            <a class="button small secondary" href="{_simple_dashboard_href(output.output_id)}">간단 대시보드</a>
-            <a class="button small secondary" href="{_preflight_href(output.output_id)}">사전 점검 상세</a>
-            <a class="button small secondary" href="{_handoff_href(output.output_id)}">핸드오프 인덱스</a>
-            <a class="button small secondary" href="{_triage_href(output.output_id)}">후보 분류 인덱스</a>
-            <a class="button small secondary" href="{_report_readiness_href(output.output_id)}">보고서 준비</a>
-            <a class="button small secondary" href="{_prompt_readiness_href(output.output_id)}">Prompt readiness</a>
-            <a class="button small secondary" href="{_evidence_boundary_href(output.output_id)}">증거 경계</a>
-            <a class="button small secondary" href="{_workflow_href(output.output_id)}">작업 흐름 상태</a>
-            <a class="button small secondary" href="{_operator_runbook_href(output.output_id)}">Operator runbook</a>
-            <a class="button small secondary" href="{_safe_files_href(output.output_id)}">Safe file inventory</a>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>탐지 후보</h2><span class="muted">총 {len(candidates)}개</span></div>
-            <div class="candidate-list">{candidate_cards}</div>
-          </div>
-        </section>
+        <details class="secondary-details">
+          <summary>검토할 항목 {len(candidates)}개</summary>
+          <p class="review-note">확정된 취약점이 아닙니다. 증거 신뢰도와 심각도는 구분해 판단하세요.</p>
+          <div class="candidate-list">{candidate_cards}</div>
+        </details>
+        <details class="secondary-details">
+          <summary>공유 전 추가 점검</summary>
+          <nav class="secondary-links">
+            <a href="{_preflight_href(output.output_id)}">공유 전 점검</a>
+            <a href="{_handoff_href(output.output_id)}">전달 자료 목록</a>
+            <a href="{_triage_href(output.output_id)}">검토할 항목</a>
+            <a href="{_report_readiness_href(output.output_id)}">보고서 준비 상태</a>
+            <a href="{_prompt_readiness_href(output.output_id)}">프롬프트 준비 상태</a>
+            <a href="{_evidence_boundary_href(output.output_id)}">근거 자료 범위</a>
+            <a href="{_workflow_href(output.output_id)}">처리 이력</a>
+            <a href="{_operator_runbook_href(output.output_id)}">운영 순서</a>
+            <a href="{_safe_files_href(output.output_id)}">파일 상태</a>
+          </nav>
+        </details>
         """,
     )
 
@@ -1822,85 +1726,45 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
 def render_simple_dashboard(output: DashboardOutput) -> str:
     safe_rows = "\n".join(_simple_safe_file_row(output, name) for name in SAFE_PREVIEW_FILES)
     safe_file_count = sum(1 for name in SAFE_PREVIEW_FILES if (output.path / name).is_file())
-    all_safe_files_present = safe_file_count == len(SAFE_PREVIEW_FILES)
-    report_status = "present" if output.report_available else "missing"
-    safe_file_status = "present" if all_safe_files_present else "missing"
     return _page(
-        f"간단 대시보드 {output.label}",
+        f"결과 요약 {output.label}",
         f"""
-        <section class="topbar">
+        <header class="topbar">
           <div>
-            <a class="back" href="{_output_href(output.output_id)}">상세 화면으로 돌아가기</a>
-            <h1>간단 대시보드</h1>
-            <p class="subtitle">처음 보는 사용자를 위한 read-only 간단 체크 화면입니다. 본문 preview, download, POST action은 제공하지 않습니다.</p>
+            <a class="back" href="/">처리한 기록으로</a>
+            <h1>결과 요약</h1>
+            <p class="subtitle">{_h(output.label)}</p>
           </div>
-          <div class="status-stack">
-            <span class="badge good">read-only</span>
-            <span class="badge neutral">간단 모드</span>
-            <a class="button secondary" href="/live-capture">Live Capture 준비</a>
-            <a class="button secondary" href="/upload">새 업로드</a>
+          <div class="actions">
+            <a class="button" href="{_output_href(output.output_id)}">결과 파일 확인</a>
+            <a class="button secondary" href="/upload">다른 파일 처리</a>
           </div>
+        </header>
+        <div class="summary-line">
+          <span>검토할 항목 <strong>{output.candidate_count}개</strong></span>
+          <span>전달 후보 <strong>{safe_file_count}/4개</strong></span>
+          <span>보고서 초안 <strong>{'있음' if output.report_available else '없음'}</strong></span>
+          <span class="badge good">검증 통과</span>
+        </div>
+        <section class="workspace-section">
+          <h2>AI 전달 후보 파일</h2>
+          <table class="result-table"><thead><tr><th>파일</th><th>내용</th><th>상태</th></tr></thead>
+          <tbody>{safe_rows}</tbody></table>
         </section>
-        <section class="safety-strip">
-          <div class="rail"><span>현재 상태</span><strong>검증 통과</strong></div>
-          <div class="rail"><span>후보 finding</span><strong>{output.candidate_count}</strong></div>
-          <div class="rail"><span>AI 후보 파일</span><strong>{safe_file_count}/4</strong></div>
-          <div class="rail"><span>화면 성격</span><strong>조회 전용</strong></div>
-        </section>
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>현재 상태</h2><span class="muted">검증된 output의 안전 메타데이터만 표시합니다.</span></div>
-            <dl class="facts">
-              <div><dt>project alias</dt><dd>{_h(output.label)}</dd></div>
-              <div><dt>verify 결과</dt><dd>{_status_badge("passed")}</dd></div>
-              <div><dt>후보 finding</dt><dd>{output.candidate_count}</dd></div>
-              <div><dt>report_draft.md</dt><dd>{_status_badge(report_status)}</dd></div>
-              <div><dt>AI 삽입 후보 파일</dt><dd>{_status_badge(safe_file_status)}</dd></div>
-              <div><dt>주의</dt><dd>후보 finding은 확정 취약점이 아니며, 초안 risk와 최종 심각도는 수동 검토가 필요합니다.</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>기본 보기와 고급 산출물</h2><span class="muted">기본 2개를 먼저 보고, 고급 2개는 필요할 때만 확인합니다. 자동 전송 없음. 파일 본문과 전체 경로는 표시하지 않습니다.</span></div>
-            <table>
-              <thead>
-                <tr><th>파일</th><th>상태</th></tr>
-              </thead>
-              <tbody>{safe_rows}</tbody>
-            </table>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>다음 행동</h2><span class="muted">고급 화면으로 이동하는 조회 링크입니다.</span></div>
-            <ol class="steps">
-              <li>새 Burp export는 <a href="/upload">업로드 마법사</a>에서 redaction/verify/review/report를 한 번에 실행합니다.</li>
-              <li><a href="{_safe_files_href(output.output_id)}">/safe-files</a>와 <a href="{_preflight_href(output.output_id)}">/preflight</a>에서 AI 삽입 전 후보 파일을 확인합니다.</li>
-              <li><a href="{_triage_href(output.output_id)}">/triage</a>에서 후보 finding을 수동 검토합니다.</li>
-              <li><a href="{_report_readiness_href(output.output_id)}">/report-readiness</a>에서 보고서 초안을 수동 검토합니다.</li>
-              <li><a href="{_workflow_href(output.output_id)}">/workflow</a>에서 전체 고급 흐름을 확인합니다.</li>
-              <li><a href="/live-capture">/live-capture</a>에서 v0.5 live capture 준비 조건을 read-only로 확인합니다.</li>
-            </ol>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>고급 화면</h2><span class="muted">필요할 때만 상세 체크리스트를 엽니다.</span></div>
-            <dl class="facts">
-              <div><dt>작업 흐름</dt><dd><a href="{_workflow_href(output.output_id)}">/workflow</a></dd></div>
-              <div><dt>safe files</dt><dd><a href="{_safe_files_href(output.output_id)}">/safe-files</a></dd></div>
-              <div><dt>finding triage</dt><dd><a href="{_triage_href(output.output_id)}">/triage</a></dd></div>
-              <div><dt>evidence boundary</dt><dd><a href="{_evidence_boundary_href(output.output_id)}">/evidence-boundary</a></dd></div>
-              <div><dt>operator runbook</dt><dd><a href="{_operator_runbook_href(output.output_id)}">/operator-runbook</a></dd></div>
-              <div><dt>live capture 준비</dt><dd><a href="/live-capture">/live-capture</a></dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>보안 경계</h2><span class="muted">간단 화면은 상태 표시만 합니다.</span></div>
-            <ul class="safe-list">
-              <li>raw request/response, Cookie, Authorization, token/JWT/session은 표시하지 않습니다.</li>
-              <li>실제 domain/IP, 개인정보, 무결성 검증 비밀값, 요청 위조 방지 값은 표시하지 않습니다.</li>
-              <li>request body, response body, prompt body, report body preview는 표시하지 않습니다.</li>
-              <li>전체 로컬 경로, local_only, raw, raw_vault, out 원본은 AI 입력 대상으로 표시하지 않습니다.</li>
-              <li>replay, active scan, 파일 삭제, retention 정책 변경, 무결성 검증 비밀값 처리는 제공하지 않습니다.</li>
-            </ul>
-          </div>
-        </section>
+        <p class="review-note">점검 결과는 취약점 확정이 아닌 후보입니다. 위험도와 최종 심각도는 수동 검토가 필요합니다. 파일을 확인한 뒤 필요한 범위만 사용하세요.</p>
+        <details class="secondary-details">
+          <summary>추가 점검</summary>
+          <nav class="secondary-links" aria-label="추가 점검">
+            <a href="{_safe_files_href(output.output_id)}">파일 상태</a>
+            <a href="{_preflight_href(output.output_id)}">공유 전 점검</a>
+            <a href="{_triage_href(output.output_id)}">검토할 항목</a>
+            <a href="{_report_readiness_href(output.output_id)}">보고서 준비 상태</a>
+            <a href="{_workflow_href(output.output_id)}">처리 이력</a>
+            <a href="{_evidence_boundary_href(output.output_id)}">근거 자료 범위</a>
+            <a href="{_operator_runbook_href(output.output_id)}">운영 순서</a>
+            <a href="/live-capture">Burp 수집 상태</a>
+          </nav>
+        </details>
         """,
     )
 
@@ -2783,23 +2647,33 @@ def render_preview(output: DashboardOutput, file_name: str, text: str) -> str:
 
 
 def render_error(error_type: str, status: HTTPStatus) -> str:
+    messages = {
+        "upload_output_exists": "이미 사용한 작업 이름입니다. 다른 이름으로 다시 올려주세요.",
+        "upload_validation_failed": "입력 파일과 작업 이름을 확인해 주세요.",
+        "upload_too_large": "파일이 10 MiB를 넘습니다. Burp에서 요청을 나눠 저장해 주세요.",
+        "unsupported_file_type": "XML 또는 JSON 파일을 선택해 주세요.",
+        "invalid_project_alias": "작업 이름은 영문·숫자·밑줄·하이픈으로 입력하고, 영문이나 숫자로 시작하세요.",
+        "csrf_token_missing": "요청을 확인할 수 없습니다. 업로드 화면을 다시 열어주세요.",
+        "csrf_token_invalid": "화면이 만료됐을 수 있습니다. 업로드 화면을 다시 열어주세요.",
+        "verification_failed": "검사에서 문제가 발견됐습니다. 이 결과를 AI에 전달하지 마세요.",
+    }
+    message = messages.get(error_type, "요청을 처리하지 못했습니다. 입력 내용을 확인하거나 도움말을 참고해 주세요.")
     return _page(
-        "요청 차단",
+        "요청 확인",
         f"""
-        <section class="topbar">
-          <div>
-            <a class="back" href="/">산출물 목록으로</a>
-            <h1>요청이 차단되었습니다</h1>
-            <p class="subtitle">안전한 오류 요약만 표시합니다. 원문 요청/응답, 쿠키, 토큰, 도메인, 개인정보는 출력하지 않습니다.</p>
-          </div>
-          <span class="badge danger">{status.value}</span>
-        </section>
-        <section class="panel">
-          <dl class="facts">
-            <div><dt>오류 유형</dt><dd>{_h(error_type)}</dd></div>
-            <div><dt>원문 데이터 포함</dt><dd>false</dd></div>
-          </dl>
-        </section>
+        <header class="topbar"><div>
+          <a class="back" href="/">처리한 기록으로</a>
+          <h1>요청을 처리하지 못했습니다</h1>
+        </div></header>
+        <p class="failure-note" role="alert">{_h(message)}</p>
+        <div class="actions">
+          <a class="button" href="/upload">파일 다시 선택</a>
+          <a class="button secondary" href="/help">도움말</a>
+        </div>
+        <details class="secondary-details">
+          <summary>오류 정보</summary>
+          <p>오류 코드: {_h(error_type)} · HTTP {status.value}</p>
+        </details>
         """,
     )
 
@@ -3954,17 +3828,16 @@ def _safe_root_alias(root: Path) -> str:
 
 
 def _output_row(output: DashboardOutput) -> str:
-    file_count = len(output.prompt_files)
     return f"""
     <tr>
       <td><span class="output-label">{_h(output.label)}</span></td>
-      <td>{output.candidate_count}</td>
-      <td>{file_count}</td>
+      <td>{output.candidate_count}개</td>
+      <td>{len(output.prompt_files)}/4개</td>
       <td>{'있음' if output.report_available else '없음'}</td>
       <td><span class="badge good">검증 통과</span></td>
-      <td>
-        <a class="button small" href="{_simple_dashboard_href(output.output_id)}">간단 보기</a>
-        <a class="button small secondary" href="{_output_href(output.output_id)}">상세</a>
+      <td class="record-actions">
+        <a class="button small" href="{_simple_dashboard_href(output.output_id)}">결과 보기</a>
+        <a class="button small secondary" href="{_output_href(output.output_id)}">파일 확인</a>
       </td>
     </tr>
     """
@@ -4004,11 +3877,12 @@ def _safe_file_card(output: DashboardOutput, file_name: str) -> str:
 
 
 def _simple_safe_file_row(output: DashboardOutput, file_name: str) -> str:
-    status = "exists" if (output.path / file_name).is_file() else "missing"
+    status = "present" if (output.path / file_name).is_file() else "missing"
     return f"""
     <tr>
       <td>{_h(file_name)}</td>
-      <td>{_h(status)}</td>
+      <td>{_h(_safe_file_description(file_name))}</td>
+      <td>{_status_badge(status)}</td>
     </tr>
     """
 
@@ -4016,26 +3890,27 @@ def _simple_safe_file_row(output: DashboardOutput, file_name: str) -> str:
 def _action_panel(output: DashboardOutput, csrf_token: str) -> str:
     project = _h(output.output_id)
     token = _h(csrf_token)
+    profile_labels = {"conservative": "기본 검토용", "consultant": "상세 검토용"}
     profile_options = "\n".join(
-        f'<option value="{_h(name)}"{" selected" if name == DEFAULT_REPORT_PROFILE else ""}>{_h(name)}</option>'
+        f'<option value="{_h(name)}"{" selected" if name == DEFAULT_REPORT_PROFILE else ""}>{_h(profile_labels.get(name, name))}</option>'
         for name in REPORT_PROFILE_NAMES
     )
     return f"""
     <div class="action-grid">
-      {_action_form(project, token, "verify", "검증", "fail-closed 산출물 검증을 다시 실행합니다.")}
-      {_action_form(project, token, "review", "리뷰", "안전한 리뷰 요약을 생성합니다.")}
+      {_action_form(project, token, "verify", "다시 검증", "결과에 민감정보가 남아 있는지 다시 검사합니다.")}
+      {_action_form(project, token, "review", "검토 요약", "검토할 항목의 요약을 확인합니다.")}
       <form class="action-card" method="post" action="/action">
         <input type="hidden" name="csrf_token" value="{token}">
         <input type="hidden" name="project" value="{project}">
         <input type="hidden" name="action" value="report">
-        <label>보고서 프로필<select name="profile">{profile_options}</select></label>
-        <button type="submit">보고서</button>
-        <small>검증 통과 후 report_draft.md를 생성하거나 갱신합니다.</small>
+        <label>보고서 작성 방식<select name="profile">{profile_options}</select></label>
+        <button type="submit">보고서 다시 만들기</button>
+        <small>검사를 통과하면 보고서 초안을 갱신합니다.</small>
       </form>
-      {_action_form(project, token, "export", "내보내기", "안전 미리보기 파일만 복사합니다.")}
+      {_action_form(project, token, "export", "파일 4개 내보내기", "전달 후보 파일을 별도 폴더에 복사합니다.")}
       <a class="action-card refresh-card" href="{_output_href(output.output_id)}">
         <strong>새로고침</strong>
-        <small>읽기 전용 GET 요청으로 이 산출물 화면을 다시 불러옵니다.</small>
+        <small>현재 결과를 다시 불러옵니다.</small>
       </a>
     </div>
     """
@@ -4248,10 +4123,10 @@ def _safety_strip() -> str:
 
 def _safe_file_description(file_name: str) -> str:
     descriptions = {
-        "analysis_packet.json": "구조화된 후보 증거 패킷입니다.",
-        "chatgpt_prompt.md": "ChatGPT 검토용 안전 프롬프트입니다.",
-        "codex_task_prompt.md": "Codex 작업용 안전 프롬프트입니다.",
-        "report_draft.md": "탐지 후보 보고서 초안입니다.",
+        "analysis_packet.json": "요청 요약과 점검 후보",
+        "chatgpt_prompt.md": "ChatGPT 검토용 질문",
+        "codex_task_prompt.md": "Codex 검토용 질문",
+        "report_draft.md": "검토할 보고서 초안",
     }
     return descriptions.get(file_name, "안전하게 생성된 파일입니다.")
 
@@ -4297,6 +4172,9 @@ def _status_label(value: str) -> str:
         "candidate available": "후보 있음",
         "draft available": "초안 있음",
         "manual review required": "수동 검토 필요",
+        "skipped": "건너뜀",
+        "failed safely": "차단됨",
+        "stored under local_only alias": "로컬에 보관",
     }
     return labels.get(value, value)
 
@@ -4647,6 +4525,32 @@ def _page(title: str, body: str) -> str:
       margin-bottom: 18px;
     }}
     .subtitle {{ color: var(--muted); margin-bottom: 0; max-width: 760px; }}
+    .app-name {{ color: var(--muted); font-size: 13px; margin-bottom: 6px; }}
+    .summary-line {{ display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; min-height: 64px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-bottom: 20px; padding: 12px 0; }}
+    .summary-line span {{ line-height: 1.6; }}
+    .workspace-section {{ margin: 0 0 24px; min-width: 0; }}
+    .workspace-section h2 {{ margin: 0 0 16px; }}
+    .workflow-grid {{ display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; }}
+    .review-note {{ color: var(--muted); font-size: 14px; line-height: 1.65; margin: 16px 0 22px; }}
+    .failure-note {{ border-left: 3px solid var(--danger); padding: 14px 18px; line-height: 1.65; background: #fff0ed; }}
+    .empty-state {{ padding: 40px 0; color: var(--muted); border-bottom: 1px solid var(--border); }}
+    .secondary-details {{ border-top: 1px solid var(--border); padding: 16px 0; }}
+    .secondary-details summary {{ cursor: pointer; font-weight: 600; }}
+    .secondary-details[open] summary {{ margin-bottom: 18px; }}
+    .secondary-links {{ display: flex; flex-wrap: wrap; gap: 14px 24px; }}
+    .record-actions {{ display: flex; flex-wrap: wrap; gap: 6px; }}
+    .records-table th:first-child {{ width: 22%; }}
+    .records-table th:last-child {{ width: 28%; }}
+    .result-table th:first-child {{ width: 35%; }}
+    .result-table th:last-child:not(:nth-child(2)) {{ width: 18%; }}
+    .result-table td {{ overflow-wrap: anywhere; line-height: 1.6; }}
+    .stacked-form {{ display: grid; gap: 16px; }}
+    .stacked-form label {{ display: grid; gap: 8px; font-weight: 600; min-width: 0; }}
+    .stacked-form input {{ width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font: inherit; background: var(--surface); color: var(--text); }}
+    .stacked-form input[type="file"] {{ padding: 10px; font-size: 14px; }}
+    .stacked-form small {{ color: var(--muted); line-height: 1.6; }}
+    .stacked-form button {{ min-height: 44px; padding: 10px 16px; font: inherit; font-weight: 600; color: #ffffff; background: var(--accent); border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; }}
+    a:focus-visible, summary:focus-visible, button:focus-visible, input:focus-visible {{ outline: 3px solid #e0ae35; outline-offset: 3px; }}
     .status-stack, .actions {{ display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }}
     .badge {{
       display: inline-flex;
@@ -4823,6 +4727,14 @@ def _page(title: str, body: str) -> str:
       table {{ table-layout: auto; }}
       th:nth-child(3), td:nth-child(3), th:nth-child(4), td:nth-child(4) {{ display: none; }}
       .status-stack, .actions {{ justify-content: flex-start; }}
+      .workflow-grid {{ grid-template-columns: minmax(0, 1fr); gap: 16px; }}
+      .summary-line {{ gap: 8px 18px; }}
+      .records-table th:nth-child(2), .records-table td:nth-child(2), .records-table th:nth-child(5), .records-table td:nth-child(5) {{ display: none; }}
+      .records-table th:first-child, .records-table th:last-child {{ width: 50%; }}
+      .result-table th, .result-table td {{ display: table-cell; }}
+      .result-table {{ table-layout: fixed; }}
+      .result-table th:first-child {{ width: 40%; }}
+      .result-table th:last-child:not(:nth-child(2)) {{ width: 20%; }}
     }}
   </style>
 </head>
