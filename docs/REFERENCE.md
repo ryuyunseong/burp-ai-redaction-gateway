@@ -1,11 +1,46 @@
-# 기술 참고
+# 구성과 추가 설정
 
-처음 사용할 때는 [README](../README.md)와 [사용 방법](USAGE.md)을 먼저 확인하세요.
-세부 CLI, 감사 기능, 버전별 설계를 찾아보기 위한 참고 자료입니다.
-버전별 설계 문서는 작성 당시의 범위를 설명하며 현재 사용법과 차이가 있을 수 있습니다.
+**처음 사용할 때는 [README](../README.md)만 따라 하면 됩니다.**
+이 문서는 명령어로 실행하거나 Burp·AI 도구를 연결할 때 참고하세요.
 
-기존 `mcp` 명령은 stdio로 검증된 결과를 읽습니다. 아래에서 설명하는 새 MCP listener의
-구현 경계와는 별도 코드 경로이며, Burp 요청 재전송이나 능동 스캔 기능은 제공하지 않습니다.
+## 어떤 기능이 있나요?
+
+| 기능 | 하는 일 | 안내 |
+| --- | --- | --- |
+| 대시보드 | 파일 업로드, 민감정보 제거, 결과 확인과 내려받기 | [사용 방법](USAGE.md) |
+| 명령어 실행 | 대시보드 없이 파일 처리 | [명령어와 오류 해결](USAGE.md) |
+| Burp 수집기 | Burp 기록을 로컬 수신기로 전달 | [수집기 설정](MONTOYA_COLLECTOR.md) |
+| 읽기 전용 MCP | AI 도구에서 검증된 결과 조회 | [MCP 설정](READ_ONLY_MCP.md) |
+| 감사 기록 | 결과 검증과 처리 이력을 별도로 점검 | [감사 기록 안내](AUDIT_OPERATIONS_GUIDE.md) |
+
+기본 파일 처리에는 대시보드만 있으면 됩니다. Burp 수집기와 MCP 연결은 선택 사항입니다.
+결과 파일의 용도는 [파일 4개 안내](OUTPUT_BUNDLE_GUIDE_KO_v0.6.md)를 참고하세요.
+
+## 개발할 때 확인할 내용
+
+- 프로그램 코드: `burp_ai_redaction_gateway/`
+- 자동 테스트: `tests/`
+- 공개 가상 샘플: `samples/` (실제 고객 기록이 아닙니다.)
+- 민감정보 처리와 검사 기준: [policy.json](../policy.json)
+
+```powershell
+python -m compileall burp_ai_redaction_gateway tests
+python -m unittest discover -s tests
+```
+
+## 알아둘 점
+
+- 검증에 실패한 결과는 보고서나 AI 검토에 사용하지 않습니다.
+- 검토 후보는 확정 취약점이 아닙니다. 최종 심각도는 직접 재현한 뒤 판단합니다.
+- 원본 요청·응답, 인증정보와 개인정보는 공유하지 않습니다. 자동 검사 후에도 파일을 직접 확인하세요.
+- 요청 재전송, 능동 스캔, 자동 AI 전송은 제공하지 않습니다.
+
+<details>
+<summary>이전 버전 기록 (일반 사용에는 필요하지 않습니다)</summary>
+
+아래 내용은 당시의 명령, 검증 결과와 설계 기록입니다. 현재 사용법과 다를 수 있으므로 실행은 위 안내를 기준으로 하세요.
+개발 근거를 남기기 위해 보관하며, 현재 구현이나 추가 기능의 승인을 뜻하지 않습니다.
+기존 `mcp` 명령의 결과 조회 기능과 별도로, 새 MCP listener의 설계·구현 경계를 설명하는 문서도 포함되어 있습니다.
 
 ## 공개 검증 결과
 
@@ -423,5 +458,7 @@ control, upload/import, 자동 ChatGPT handoff, tag 또는 GitHub Release 생성
 - [Release readiness](../docs/V0.10_RELEASE_READINESS.md)
 - [Release readiness fixture](../tests/fixtures/v10_release_readiness.json)
 - v0.10은 메타데이터와 안전 경계 릴리스이며 실제 transport/listener runtime을 포함하지 않습니다. 후속 runtime은 v0.11 이상에서 별도로 검토합니다.
+
+</details>
 
 </details>
