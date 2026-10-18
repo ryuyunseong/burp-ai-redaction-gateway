@@ -48,7 +48,7 @@ class ProcessWorkflowTests(unittest.TestCase):
 
     def test_candidate_copy_is_not_listed_as_a_second_project(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
+            root = Path(temporary).resolve()
             process_export(SAMPLE, root / "demo_check", "demo_check", load_policy())
             outputs, blocked_count = _discover_outputs(root, load_policy())
             self.assertEqual([output.output_id for output in outputs], ["demo_check"])

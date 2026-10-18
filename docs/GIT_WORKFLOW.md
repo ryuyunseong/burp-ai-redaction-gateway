@@ -4,6 +4,15 @@ This repository handles security-test artifacts. Git must never contain real
 Burp exports, raw HTTP history, customer data, tokens, cookies, or generated
 outputs that have not passed verification.
 
+## PR 자동 검사
+
+`main`으로 보내는 모든 PR에서 Windows·Linux의 Python 3.12 테스트와
+가상 샘플 처리를 실행하고, Java 21로 Burp 수집기를 빌드·검사합니다.
+최종 검사 `PR checks`는 모든 검사가 성공해야 통과합니다.
+실패·취소·건너뛰기·결과 누락은 통과로 처리하지 않습니다.
+`main` 보호 규칙의 필수 상태 검사로 연결하며, 최신 `main`과 맞지 않으면 갱신 후 다시 검사해야 합니다.
+이 워크플로는 태그나 GitHub Release를 만들거나 수정하지 않습니다.
+
 ## Before `git init`
 
 Run the local checks first:
