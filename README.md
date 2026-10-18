@@ -52,7 +52,7 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 
 ## 실행 화면
 
-공개 가상 샘플을 로컬 대시보드에서 직접 업로드하고 처리한 화면입니다. 실제 고객 기록은 사용하지 않았습니다.
+[한글 보고서 예제](docs/examples/report_draft.md)와 아래 사진은 공개 가상 샘플을 로컬 대시보드에서 직접 처리한 결과입니다. 실제 고객 기록은 사용하지 않았습니다.
 
 ![파일을 선택하고 작업 이름을 입력한 화면](docs/images/dashboard-upload.png)
 
@@ -62,6 +62,10 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 ![전달 후보 파일 4개가 만들어진 화면](docs/images/dashboard-result.png)
 
 가상 요청 10개에서 검토 후보 22개가 나왔습니다. 후보 수는 확정 취약점 수가 아닙니다.
+
+보고서 미리보기에서 발견 내용과 확인 방법을 읽고 파일을 내려받을 수 있습니다.
+
+![한글 보고서 초안을 미리보기로 연 화면](docs/images/dashboard-report.png)
 
 </details>
 
