@@ -48,11 +48,18 @@ from .review import build_review, render_review_summary
 from .risk import DEFAULT_RISK_RATING_PROFILE, RISK_RATING_PROFILE_NAMES
 from .verifier import verify_path
 from .viewer import RedactedStaticViewerError, render_static_viewer_summary, write_static_viewer_html
+from .workflow import WorkflowError, process_export
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="burp-ai-redaction-gateway")
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    process = subparsers.add_parser("process", help="민감정보 제거, 검증, 보고서와 AI 전달 후보 4개를 한 번에 생성합니다.")
+    process.add_argument("--input", required=True, type=Path, help="Burp XML, HAR 또는 JSON 파일.")
+    process.add_argument("--output", required=True, type=Path, help="새 결과 폴더. 기존 폴더는 덮어쓰지 않습니다.")
+    process.add_argument("--project", required=True, help="실제 고객명 대신 사용할 영문 별칭.")
+    process.add_argument("--policy", type=Path, help="선택할 policy.json 경로.")
 
     generate = subparsers.add_parser("generate", help="Generate sanitized prompt packet output.")
     generate.add_argument("--input", required=True, type=Path, help="Burp export, HAR, or fixture JSON path.")
@@ -196,6 +203,8 @@ def main(argv: list[str] | None = None) -> int:
     serve.add_argument("--max-bytes", default=DEFAULT_MAX_BYTES, type=int, help="Maximum accepted JSON payload bytes.")
 
     args = parser.parse_args(argv)
+    if args.command == "process":
+        return _process(args.input, args.output, args.project, args.policy)
     if args.command == "generate":
         return _generate(args.input, args.output, args.project, args.policy, args.risk_profile)
     if args.command == "verify":
@@ -230,6 +239,24 @@ def main(argv: list[str] | None = None) -> int:
         return _serve(args.host, args.port, args.output, args.project, args.policy, args.max_bytes)
     parser.error("Unknown command")
     return 2
+
+
+def _process(input_path: Path, output_dir: Path, project: str, policy_path: Path | None) -> int:
+    try:
+        policy = load_policy(policy_path)
+        result = process_export(input_path, output_dir, project, policy)
+    except (OSError, ValueError, TypeError, AttributeError) as error:
+        reason = error.error_type if isinstance(error, WorkflowError) else "invalid_policy"
+        print(f"처리를 완료하지 못했습니다: {reason}")
+        print("새 결과 폴더와 입력 형식을 확인하세요. 실패한 결과는 AI에 전달하지 마세요.")
+        return 1
+    print("민감정보 제거, 검증, 검토 및 보고서 초안 생성 완료")
+    print(f"처리한 요청: {result.event_count}개 / 수동 검토할 후보: {result.candidate_count}개")
+    print("AI 전달 후보: 결과 폴더의 ai_candidates 아래 파일 4개")
+    for name in result.exported_files:
+        print(f"- {name}")
+    print("자동 전송하지 않습니다. 파일 내용을 직접 확인한 뒤 사용하세요.")
+    return 0
 
 
 def _generate(

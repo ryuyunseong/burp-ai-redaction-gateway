@@ -168,6 +168,15 @@ from burp_ai_redaction_gateway.verifier import VerificationResult, verify_path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def read_public_documentation() -> str:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    if "docs/REFERENCE.md" not in readme:
+        raise AssertionError("README must link to the technical reference")
+    return readme + "\n" + (ROOT / "docs" / "REFERENCE.md").read_text(encoding="utf-8")
+
+
 SAMPLE = ROOT / "samples" / "synthetic_burp_history.json"
 VARIANTS = ROOT / "samples" / "synthetic_burp_variants.json"
 BURP_XML = ROOT / "samples" / "burp_xml_base64_history.xml"
@@ -2179,7 +2188,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 thread.join(timeout=5)
 
     def test_dashboard_read_only_ux_bundle_docs_are_raw_free(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
         roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
 
@@ -2878,7 +2887,7 @@ class RedactionGatewayTests(unittest.TestCase):
         doc = V08_SKELETON_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V08_SKELETON_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         backlog = V08_BACKLOG_SPLIT_DOC.read_text(encoding="utf-8")
         planning = V08_MINIMAL_SKELETON_PLANNING_DOC.read_text(encoding="utf-8")
         normalized_doc = " ".join(doc.split())
@@ -3115,7 +3124,7 @@ class RedactionGatewayTests(unittest.TestCase):
             V08_RUNTIME_SOURCE_CHECK_CONSUMPTION_GUARD_FIXTURE.read_text(encoding="utf-8")
         )
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         approval = V08_SKELETON_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
         planning = V08_MINIMAL_SKELETON_PLANNING_DOC.read_text(encoding="utf-8")
         normalized_doc = " ".join(doc.split())
@@ -3342,7 +3351,7 @@ class RedactionGatewayTests(unittest.TestCase):
         doc = V08_POST_MERGE_BOUNDARY_NOTE_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V08_POST_MERGE_BOUNDARY_NOTE_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         normalized_doc = " ".join(doc.split())
         normalized_doc_lower = normalized_doc.lower()
 
@@ -3499,7 +3508,7 @@ class RedactionGatewayTests(unittest.TestCase):
         doc = V08_SCOPE_FREEZE_RC_READINESS_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V08_SCOPE_FREEZE_RC_READINESS_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         normalized_doc = " ".join(doc.split())
         normalized_doc_lower = normalized_doc.lower()
 
@@ -3697,7 +3706,7 @@ class RedactionGatewayTests(unittest.TestCase):
         approval_packet = V08_RELEASE_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V08_RELEASE_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         scope_freeze = V08_SCOPE_FREEZE_RC_READINESS_DOC.read_text(encoding="utf-8")
         combined = "\n".join([approval_packet, fixture_text])
         normalized = " ".join(approval_packet.split())
@@ -3924,7 +3933,7 @@ class RedactionGatewayTests(unittest.TestCase):
         final_gate = V08_FINAL_GATE_EVIDENCE_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V08_FINAL_GATE_EVIDENCE_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         approval_packet = V08_RELEASE_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
         normalized = " ".join(final_gate.split())
         normalized_lower = normalized.lower()
@@ -4142,7 +4151,7 @@ class RedactionGatewayTests(unittest.TestCase):
         decision = V09_RUNTIME_SCOPE_DECISION_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V09_RUNTIME_SCOPE_DECISION_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         normalized = " ".join(decision.split())
 
         self.assertTrue(V09_RUNTIME_SCOPE_DECISION_DOC.exists())
@@ -4310,7 +4319,7 @@ class RedactionGatewayTests(unittest.TestCase):
             V09_PROTOCOL_PARSER_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8")
         )
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         scope_decision = V09_RUNTIME_SCOPE_DECISION_DOC.read_text(encoding="utf-8")
         normalized = " ".join(packet.split())
 
@@ -4478,7 +4487,7 @@ class RedactionGatewayTests(unittest.TestCase):
         )
         negative_text = json.dumps(negative, sort_keys=True)
         packet = V09_PROTOCOL_PARSER_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         scope_decision = V09_RUNTIME_SCOPE_DECISION_DOC.read_text(encoding="utf-8")
         combined = "\n".join([negative_text, packet, scope_decision])
 
@@ -4585,7 +4594,7 @@ class RedactionGatewayTests(unittest.TestCase):
         negative = json.loads(
             V09_PROTOCOL_PARSER_NEGATIVE_CASES_FIXTURE.read_text(encoding="utf-8")
         )
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         packet = V09_PROTOCOL_PARSER_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
         fixture_text = json.dumps(decision_fixture, sort_keys=True)
         normalized = " ".join(decision.split())
@@ -4760,7 +4769,7 @@ class RedactionGatewayTests(unittest.TestCase):
             V09_PARSER_POSITIVE_SHAPE_DECISION_FIXTURE.read_text(encoding="utf-8")
         )
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         implementation_decision = (
             V09_PROTOCOL_PARSER_IMPLEMENTATION_DECISION_DOC.read_text(
                 encoding="utf-8"
@@ -4942,7 +4951,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         decision = json.loads(
             V09_PARSER_POSITIVE_SHAPE_DECISION_FIXTURE.read_text(encoding="utf-8")
         )
@@ -5181,7 +5190,7 @@ class RedactionGatewayTests(unittest.TestCase):
         fixture = json.loads(
             V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_FIXTURE.read_text(encoding="utf-8")
         )
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         positive_doc = V09_PARSER_POSITIVE_SHAPE_DECISION_DOC.read_text(
             encoding="utf-8"
         )
@@ -5396,7 +5405,7 @@ class RedactionGatewayTests(unittest.TestCase):
             V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_FIXTURE.read_text(encoding="utf-8")
         )
         doc = V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         positive_cases = json.loads(
             V09_PARSER_POSITIVE_SHAPE_CASES_FIXTURE.read_text(encoding="utf-8")
         )
@@ -5685,7 +5694,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         contract_doc = V09_READ_ONLY_TOOL_REGISTRY_CONTRACT_DOC.read_text(
             encoding="utf-8"
         )
@@ -5843,7 +5852,7 @@ class RedactionGatewayTests(unittest.TestCase):
         fixture = json.loads(
             V09_DISPATCHER_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8")
         )
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         boundary_doc = V09_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY_DOC.read_text(
             encoding="utf-8"
         )
@@ -6034,7 +6043,7 @@ class RedactionGatewayTests(unittest.TestCase):
         fixture = json.loads(
             V09_DISPATCHER_NEGATIVE_CASES_FIXTURE.read_text(encoding="utf-8")
         )
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         approval_doc = V09_DISPATCHER_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
         boundary_doc = V09_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY_DOC.read_text(
             encoding="utf-8"
@@ -6190,7 +6199,7 @@ class RedactionGatewayTests(unittest.TestCase):
             )
         )
         doc = V09_DISPATCHER_IMPLEMENTATION_DECISION_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         approval_doc = V09_DISPATCHER_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
         boundary_doc = V09_READ_ONLY_REGISTRY_DISPATCHER_BOUNDARY_DOC.read_text(
             encoding="utf-8"
@@ -6378,7 +6387,7 @@ class RedactionGatewayTests(unittest.TestCase):
 
         doc_text = V09_RELEASE_READINESS_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V09_RELEASE_READINESS_FIXTURE.read_text(encoding="utf-8"))
-        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme_text = read_public_documentation()
         combined = "\n".join(
             [
                 doc_text,
@@ -6544,7 +6553,7 @@ class RedactionGatewayTests(unittest.TestCase):
 
         doc_text = V10_SCOPE_DECISION_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V10_SCOPE_DECISION_FIXTURE.read_text(encoding="utf-8"))
-        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme_text = read_public_documentation()
         combined = "\n".join([doc_text, json.dumps(fixture, sort_keys=True)])
 
         for section in [
@@ -6694,7 +6703,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme_text = read_public_documentation()
         combined = "\n".join([doc_text, json.dumps(fixture, sort_keys=True)])
 
         for section in [
@@ -6897,7 +6906,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme_text = read_public_documentation()
         scope_text = V10_SCOPE_DECISION_DOC.read_text(encoding="utf-8")
         packet_text = V10_TRANSPORT_LISTENER_APPROVAL_PACKET_DOC.read_text(
             encoding="utf-8"
@@ -7069,7 +7078,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme_text = read_public_documentation()
         scope_text = V10_SCOPE_DECISION_DOC.read_text(encoding="utf-8")
         packet_text = V10_TRANSPORT_LISTENER_APPROVAL_PACKET_DOC.read_text(
             encoding="utf-8"
@@ -7294,7 +7303,7 @@ class RedactionGatewayTests(unittest.TestCase):
         module_text = MCP_LISTENER_STARTUP_SKELETON_MODULE.read_text(
             encoding="utf-8"
         )
-        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme_text = read_public_documentation()
         decision_text = V10_LISTENER_STARTUP_IMPLEMENTATION_DECISION_DOC.read_text(
             encoding="utf-8"
         )
@@ -7699,7 +7708,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme_text = read_public_documentation()
         module_text = MCP_LISTENER_STARTUP_SKELETON_MODULE.read_text(
             encoding="utf-8"
         )
@@ -7919,7 +7928,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme_text = read_public_documentation()
         fixture_text = json.dumps(fixture, sort_keys=True)
         combined = "\n".join([doc_text, fixture_text])
 
@@ -8119,7 +8128,7 @@ class RedactionGatewayTests(unittest.TestCase):
         fixture = json.loads(
             V10_RELEASE_READINESS_FIXTURE.read_text(encoding="utf-8")
         )
-        readme_text = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme_text = read_public_documentation()
         transport_decision = json.loads(
             V10_TRANSPORT_RUNTIME_DECISION_FIXTURE.read_text(encoding="utf-8")
         )
@@ -8865,7 +8874,7 @@ class RedactionGatewayTests(unittest.TestCase):
     def test_v05_release_readiness_doc_is_scope_based_and_raw_free(self) -> None:
         readiness = V05_RELEASE_READINESS_DOC.read_text(encoding="utf-8")
         roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         troubleshooting = V05_TROUBLESHOOTING_DOC.read_text(encoding="utf-8")
 
         for linked_text in [roadmap, readme, troubleshooting]:
@@ -8957,7 +8966,7 @@ class RedactionGatewayTests(unittest.TestCase):
         rc_readiness = V05_RC_READINESS_DOC.read_text(encoding="utf-8")
         readiness = V05_RELEASE_READINESS_DOC.read_text(encoding="utf-8")
         roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
 
         for linked_text in [readiness, roadmap, readme]:
             self.assertIn("RC_READINESS_v0.5.md", linked_text)
@@ -9062,7 +9071,7 @@ class RedactionGatewayTests(unittest.TestCase):
         rc_readiness = V05_RC_READINESS_DOC.read_text(encoding="utf-8")
         readiness = V05_RELEASE_READINESS_DOC.read_text(encoding="utf-8")
         roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
 
         for linked_text in [rc_readiness, readiness, roadmap, readme]:
             self.assertIn("V05_MONTOYA_RUNTIME_SMOKE_RELEASE_EVIDENCE.md", linked_text)
@@ -9135,7 +9144,7 @@ class RedactionGatewayTests(unittest.TestCase):
         hotfix_policy = V05_HOTFIX_POLICY_DOC.read_text(encoding="utf-8")
         roadmap_v05 = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
         readiness = V05_RELEASE_READINESS_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
 
         for linked_text in [roadmap_v05, readiness, readme]:
             self.assertIn("ROADMAP_v0.6.md", linked_text)
@@ -9293,7 +9302,7 @@ class RedactionGatewayTests(unittest.TestCase):
 
     def test_v06_rc_readiness_checklist_is_gate_based_and_raw_free(self) -> None:
         checklist = V06_RC_READINESS_CHECKLIST_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
         fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
         quickstart_ko = USER_QUICKSTART_KO_V06_DOC.read_text(encoding="utf-8")
@@ -9446,7 +9455,7 @@ class RedactionGatewayTests(unittest.TestCase):
     def test_v06_quickstart_smoke_and_release_notes_draft_are_raw_free(self) -> None:
         quickstart_smoke = V06_QUICKSTART_SMOKE_DOC.read_text(encoding="utf-8")
         release_notes = V06_RELEASE_NOTES_DRAFT_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         checklist = V06_RC_READINESS_CHECKLIST_DOC.read_text(encoding="utf-8")
         roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
         quickstart_ko = USER_QUICKSTART_KO_V06_DOC.read_text(encoding="utf-8")
@@ -9560,7 +9569,7 @@ class RedactionGatewayTests(unittest.TestCase):
     def test_v06_final_gate_and_release_approval_packet_are_raw_free(self) -> None:
         final_gate = V06_RC_FINAL_GATE_RUN_DOC.read_text(encoding="utf-8")
         approval_packet = V06_RELEASE_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         checklist = V06_RC_READINESS_CHECKLIST_DOC.read_text(encoding="utf-8")
         roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
         release_notes = V06_RELEASE_NOTES_DRAFT_DOC.read_text(encoding="utf-8")
@@ -9674,7 +9683,7 @@ class RedactionGatewayTests(unittest.TestCase):
 
     def test_v061_hotfix_triage_is_patch_scoped_and_raw_free(self) -> None:
         hotfix_triage = V061_HOTFIX_TRIAGE_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
 
         self.assertTrue(V061_HOTFIX_TRIAGE_DOC.exists())
@@ -9778,7 +9787,7 @@ class RedactionGatewayTests(unittest.TestCase):
 
     def test_v07_scope_plan_is_planning_only_and_raw_free(self) -> None:
         scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
         hotfix_triage = V061_HOTFIX_TRIAGE_DOC.read_text(encoding="utf-8")
 
@@ -9891,7 +9900,7 @@ class RedactionGatewayTests(unittest.TestCase):
         plan = V07_MCP_LISTENER_SKELETON_PLAN_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V07_MCP_LISTENER_SKELETON_PLAN_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
         scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
 
@@ -10158,7 +10167,7 @@ class RedactionGatewayTests(unittest.TestCase):
         preflight = V07_LISTENER_RUNTIME_DECISION_PREFLIGHT_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V07_LISTENER_RUNTIME_DECISION_PREFLIGHT_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
         skeleton_plan = V07_MCP_LISTENER_SKELETON_PLAN_DOC.read_text(encoding="utf-8")
 
@@ -10313,7 +10322,7 @@ class RedactionGatewayTests(unittest.TestCase):
         packet = V07_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V07_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
         preflight = V07_LISTENER_RUNTIME_DECISION_PREFLIGHT_DOC.read_text(encoding="utf-8")
         skeleton_plan = V07_MCP_LISTENER_SKELETON_PLAN_DOC.read_text(encoding="utf-8")
@@ -10476,7 +10485,7 @@ class RedactionGatewayTests(unittest.TestCase):
         design = V07_MINIMAL_LISTENER_RUNTIME_DESIGN_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V07_MINIMAL_LISTENER_RUNTIME_DESIGN_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
         preflight = V07_LISTENER_RUNTIME_DECISION_PREFLIGHT_DOC.read_text(encoding="utf-8")
         approval = V07_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
@@ -10654,7 +10663,7 @@ class RedactionGatewayTests(unittest.TestCase):
         fixture = json.loads(V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
         design_fixture = json.loads(V07_MINIMAL_LISTENER_RUNTIME_DESIGN_FIXTURE.read_text(encoding="utf-8"))
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
         design_doc = V07_MINIMAL_LISTENER_RUNTIME_DESIGN_DOC.read_text(encoding="utf-8")
         approval = V07_MINIMAL_LISTENER_RUNTIME_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
@@ -10910,7 +10919,7 @@ class RedactionGatewayTests(unittest.TestCase):
         harness_doc = V07_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V07_LISTENER_NEGATIVE_TEST_HARNESS_DESIGN_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
         design_doc = V07_MINIMAL_LISTENER_RUNTIME_DESIGN_DOC.read_text(encoding="utf-8")
         consumption_doc = V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_DOC.read_text(encoding="utf-8")
@@ -11114,7 +11123,7 @@ class RedactionGatewayTests(unittest.TestCase):
         decision_doc = V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
         design_doc = V07_MINIMAL_LISTENER_RUNTIME_DESIGN_DOC.read_text(encoding="utf-8")
         consumption_doc = V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_DOC.read_text(encoding="utf-8")
@@ -11302,7 +11311,7 @@ class RedactionGatewayTests(unittest.TestCase):
         implementation_doc = V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
         decision_doc = V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION_DOC.read_text(encoding="utf-8")
         source_check_doc = V07_RUNTIME_SOURCE_CHECK_CONSUMPTION_DOC.read_text(encoding="utf-8")
@@ -11587,7 +11596,7 @@ class RedactionGatewayTests(unittest.TestCase):
         evidence_doc = V07_LISTENER_LOCAL_SMOKE_EVIDENCE_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V07_LISTENER_LOCAL_SMOKE_EVIDENCE_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
         implementation_doc = V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DOC.read_text(encoding="utf-8")
         decision_doc = V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DECISION_DOC.read_text(encoding="utf-8")
@@ -11846,7 +11855,7 @@ class RedactionGatewayTests(unittest.TestCase):
         checklist = V07_RC_READINESS_CHECKLIST_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V07_RC_READINESS_CHECKLIST_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
         smoke_evidence = V07_LISTENER_LOCAL_SMOKE_EVIDENCE_DOC.read_text(encoding="utf-8")
         implementation_doc = V07_MINIMAL_LISTENER_RUNTIME_IMPLEMENTATION_DOC.read_text(encoding="utf-8")
@@ -12036,7 +12045,7 @@ class RedactionGatewayTests(unittest.TestCase):
         approval_packet = V07_RELEASE_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V07_RELEASE_APPROVAL_PACKET_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         rc_checklist = V07_RC_READINESS_CHECKLIST_DOC.read_text(encoding="utf-8")
         scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
         smoke_evidence = V07_LISTENER_LOCAL_SMOKE_EVIDENCE_DOC.read_text(encoding="utf-8")
@@ -12216,7 +12225,7 @@ class RedactionGatewayTests(unittest.TestCase):
         final_gate = V07_FINAL_GATE_EXECUTION_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V07_FINAL_GATE_EXECUTION_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         approval_packet = V07_RELEASE_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
         rc_checklist = V07_RC_READINESS_CHECKLIST_DOC.read_text(encoding="utf-8")
         scope_plan = V07_SCOPE_PLAN_DOC.read_text(encoding="utf-8")
@@ -12411,7 +12420,7 @@ class RedactionGatewayTests(unittest.TestCase):
         notes = V07_RELEASE_NOTES_DRAFT_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V07_RELEASE_NOTES_DRAFT_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         final_gate = V07_FINAL_GATE_EXECUTION_DOC.read_text(encoding="utf-8")
         approval_packet = V07_RELEASE_APPROVAL_PACKET_DOC.read_text(encoding="utf-8")
         rc_checklist = V07_RC_READINESS_CHECKLIST_DOC.read_text(encoding="utf-8")
@@ -12563,7 +12572,7 @@ class RedactionGatewayTests(unittest.TestCase):
         doc = V08_BACKLOG_SPLIT_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V08_BACKLOG_SPLIT_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         release_notes = V07_RELEASE_NOTES_DRAFT_DOC.read_text(encoding="utf-8")
         final_gate = V07_FINAL_GATE_EXECUTION_DOC.read_text(encoding="utf-8")
         normalized_doc = " ".join(doc.split())
@@ -12733,7 +12742,7 @@ class RedactionGatewayTests(unittest.TestCase):
         doc = V08_TRANSPORT_DESIGN_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V08_TRANSPORT_DESIGN_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         backlog = V08_BACKLOG_SPLIT_DOC.read_text(encoding="utf-8")
         normalized_doc = " ".join(doc.split())
         normalized_doc_lower = normalized_doc.lower()
@@ -12897,7 +12906,7 @@ class RedactionGatewayTests(unittest.TestCase):
         doc = V08_PROTOCOL_HANDLER_DESIGN_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V08_PROTOCOL_HANDLER_DESIGN_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         backlog = V08_BACKLOG_SPLIT_DOC.read_text(encoding="utf-8")
         transport = V08_TRANSPORT_DESIGN_DOC.read_text(encoding="utf-8")
         normalized_doc = " ".join(doc.split())
@@ -13108,7 +13117,7 @@ class RedactionGatewayTests(unittest.TestCase):
         doc = V08_PROTOCOL_NEGATIVE_HARNESS_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V08_PROTOCOL_NEGATIVE_HARNESS_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         backlog = V08_BACKLOG_SPLIT_DOC.read_text(encoding="utf-8")
         protocol_design = V08_PROTOCOL_HANDLER_DESIGN_DOC.read_text(encoding="utf-8")
         normalized_doc = " ".join(doc.split())
@@ -13337,7 +13346,7 @@ class RedactionGatewayTests(unittest.TestCase):
         doc = V08_TOOL_REGISTRATION_DESIGN_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V08_TOOL_REGISTRATION_DESIGN_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         backlog = V08_BACKLOG_SPLIT_DOC.read_text(encoding="utf-8")
         negative_harness = V08_PROTOCOL_NEGATIVE_HARNESS_DOC.read_text(encoding="utf-8")
         normalized_doc = " ".join(doc.split())
@@ -13545,7 +13554,7 @@ class RedactionGatewayTests(unittest.TestCase):
         doc = V08_READ_ONLY_TOOL_CONTRACT_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V08_READ_ONLY_TOOL_CONTRACT_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         backlog = V08_BACKLOG_SPLIT_DOC.read_text(encoding="utf-8")
         registration = V08_TOOL_REGISTRATION_DESIGN_DOC.read_text(encoding="utf-8")
         normalized_doc = " ".join(doc.split())
@@ -13734,7 +13743,7 @@ class RedactionGatewayTests(unittest.TestCase):
         doc = V08_MINIMAL_SKELETON_PLANNING_DOC.read_text(encoding="utf-8")
         fixture = json.loads(V08_MINIMAL_SKELETON_PLANNING_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         backlog = V08_BACKLOG_SPLIT_DOC.read_text(encoding="utf-8")
         contract = V08_READ_ONLY_TOOL_CONTRACT_DOC.read_text(encoding="utf-8")
         normalized_doc = " ".join(doc.split())
@@ -14002,7 +14011,7 @@ class RedactionGatewayTests(unittest.TestCase):
         mcp_design = MCP_INTEGRATION_DESIGN_DOC.read_text(encoding="utf-8")
         roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
         readiness = V05_RELEASE_READINESS_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
 
         for linked_text in [mcp_design, roadmap, readiness, readme]:
             self.assertIn("BURP_MCP_COMPATIBILITY_v0.5.md", linked_text)
@@ -14073,7 +14082,7 @@ class RedactionGatewayTests(unittest.TestCase):
         roadmap_v06 = ROADMAP_V06_DOC.read_text(encoding="utf-8")
         mcp_design = MCP_INTEGRATION_DESIGN_DOC.read_text(encoding="utf-8")
         compatibility = BURP_MCP_COMPATIBILITY_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
 
         for linked_text in [roadmap_v06, mcp_design, compatibility, readme]:
             self.assertIn("MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_v0.6.md", linked_text)
@@ -14192,7 +14201,7 @@ class RedactionGatewayTests(unittest.TestCase):
         roadmap_v06 = ROADMAP_V06_DOC.read_text(encoding="utf-8")
         contract = MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC.read_text(encoding="utf-8")
         mcp_design = MCP_INTEGRATION_DESIGN_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
 
         for linked_text in [roadmap_v06, contract, mcp_design, readme]:
             self.assertIn("MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_v0.6.md", linked_text)
@@ -14324,7 +14333,7 @@ class RedactionGatewayTests(unittest.TestCase):
         fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
         contract = MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC.read_text(encoding="utf-8")
         preflight = MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_V06_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
 
         for linked_text in [roadmap_v06, fast_track, contract, preflight, readme]:
             self.assertIn("MCP_REGISTRY_ADAPTER_DESIGN_v0.6.md", linked_text)
@@ -14405,7 +14414,7 @@ class RedactionGatewayTests(unittest.TestCase):
         fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
         contract = MCP_READ_ONLY_TOOL_CONTRACT_MATRIX_V06_DOC.read_text(encoding="utf-8")
         preflight = MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_V06_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
 
         for linked_text in [adapter, roadmap_v06, fast_track, contract, preflight, readme]:
             self.assertIn("MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_v0.6.md", linked_text)
@@ -14554,7 +14563,7 @@ class RedactionGatewayTests(unittest.TestCase):
         preflight = MCP_READ_ONLY_PROTOTYPE_PREFLIGHT_V06_DOC.read_text(encoding="utf-8")
         adapter = MCP_REGISTRY_ADAPTER_DESIGN_V06_DOC.read_text(encoding="utf-8")
         fixture_plan = MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_V06_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
 
         for linked_text in [
             roadmap_v06,
@@ -14701,7 +14710,7 @@ class RedactionGatewayTests(unittest.TestCase):
         fixture_plan = MCP_REGISTRY_ADAPTER_FIXTURE_PLAN_V06_DOC.read_text(encoding="utf-8")
         roadmap_v06 = ROADMAP_V06_DOC.read_text(encoding="utf-8")
         fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
 
         for linked_text in [gate_doc, fixture_plan, roadmap_v06, fast_track, readme]:
             self.assertIn("mcp_adapter_dry_run.py", linked_text)
@@ -15033,7 +15042,7 @@ class RedactionGatewayTests(unittest.TestCase):
 
     def test_mcp_runtime_boundary_decision_v06_documents_split_before_server_work(self) -> None:
         decision = MCP_RUNTIME_BOUNDARY_DECISION_V06_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
         fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
         gate_doc = MCP_IMPLEMENTATION_GATE_DESIGN_V06_DOC.read_text(encoding="utf-8")
@@ -15167,7 +15176,7 @@ class RedactionGatewayTests(unittest.TestCase):
         preflight = MCP_SERVER_SKELETON_PREFLIGHT_V06_DOC.read_text(encoding="utf-8")
         fixture = json.loads(MCP_SERVER_SKELETON_PREFLIGHT_V06_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
         fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
         decision = MCP_RUNTIME_BOUNDARY_DECISION_V06_DOC.read_text(encoding="utf-8")
@@ -15340,7 +15349,7 @@ class RedactionGatewayTests(unittest.TestCase):
         consumption_doc = MCP_RUNTIME_BOUNDARY_CONSUMPTION_V06_DOC.read_text(encoding="utf-8")
         fixture = json.loads(MCP_RUNTIME_BOUNDARY_CONSUMPTION_V06_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
         fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
         decision = MCP_RUNTIME_BOUNDARY_DECISION_V06_DOC.read_text(encoding="utf-8")
@@ -15481,7 +15490,7 @@ class RedactionGatewayTests(unittest.TestCase):
 
     def test_mcp_listener_skeleton_decision_v06_stays_design_only(self) -> None:
         listener_decision = MCP_LISTENER_SKELETON_DECISION_V06_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
         fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
         runtime_decision = MCP_RUNTIME_BOUNDARY_DECISION_V06_DOC.read_text(encoding="utf-8")
@@ -15605,7 +15614,7 @@ class RedactionGatewayTests(unittest.TestCase):
         acceptance_doc = MCP_LISTENER_SKELETON_ACCEPTANCE_V06_DOC.read_text(encoding="utf-8")
         fixture = json.loads(MCP_LISTENER_SKELETON_ACCEPTANCE_V06_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
         fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
         decision = MCP_LISTENER_SKELETON_DECISION_V06_DOC.read_text(encoding="utf-8")
@@ -15761,7 +15770,7 @@ class RedactionGatewayTests(unittest.TestCase):
         source_check_doc = MCP_LISTENER_RUNTIME_SOURCE_CHECK_V06_DOC.read_text(encoding="utf-8")
         fixture = json.loads(MCP_LISTENER_RUNTIME_SOURCE_CHECK_V06_FIXTURE.read_text(encoding="utf-8"))
         fixture_text = json.dumps(fixture, sort_keys=True)
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         roadmap = ROADMAP_V06_DOC.read_text(encoding="utf-8")
         fast_track = V06_FAST_TRACK_PLAN_DOC.read_text(encoding="utf-8")
         acceptance = MCP_LISTENER_SKELETON_ACCEPTANCE_V06_DOC.read_text(encoding="utf-8")
@@ -16102,7 +16111,7 @@ class RedactionGatewayTests(unittest.TestCase):
         web_ux = WEB_UX_KO_PLAN_DOC.read_text(encoding="utf-8")
         roadmap = (ROOT / "docs" / "ROADMAP_v0.5.md").read_text(encoding="utf-8")
         readiness = V05_RELEASE_READINESS_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
 
         for linked_text in [roadmap, readiness, readme, local_dashboard]:
@@ -18200,7 +18209,7 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn(".gitleaks.toml", workflow)
 
     def test_real_like_smoke_test_is_documented_as_synthetic_only(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         real_testing = (ROOT / "docs" / "REAL_BURP_EXPORT_TESTING.md").read_text(encoding="utf-8")
         self.assertIn("실제와 유사한 동작 점검", readme)
         self.assertIn("synthetic data만 포함", readme)
@@ -18209,7 +18218,7 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("not a real Burp export compatibility test", real_testing)
 
     def test_real_burp_export_validation_docs_are_raw_free(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         release_checklist = (ROOT / "docs" / "RELEASE_CHECKLIST_v0.4.md").read_text(encoding="utf-8")
         real_testing = (ROOT / "docs" / "REAL_BURP_EXPORT_TESTING.md").read_text(encoding="utf-8")
         validation = (ROOT / "docs" / "REAL_BURP_EXPORT_VALIDATION.md").read_text(encoding="utf-8")
@@ -18295,7 +18304,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn(item, text)
 
     def test_local_real_export_smoke_harness_is_local_only_and_raw_free(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         release_checklist = (ROOT / "docs" / "RELEASE_CHECKLIST_v0.4.md").read_text(encoding="utf-8")
         validation = (ROOT / "docs" / "REAL_BURP_EXPORT_VALIDATION.md").read_text(encoding="utf-8")
         guide = (ROOT / "docs" / "LOCAL_REAL_EXPORT_SMOKE_HARNESS.md").read_text(encoding="utf-8")
@@ -18621,7 +18630,7 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("raw_response", json.dumps(fixture))
 
     def test_localhost_receiver_is_documented(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         doc = RECEIVER_DOC.read_text(encoding="utf-8")
         for text in [readme, doc]:
             self.assertIn("serve --host 127.0.0.1 --port 8765", text)
@@ -18630,7 +18639,7 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("Oversized payloads are rejected", doc)
 
     def test_windows_launcher_scripts_are_documented_and_raw_free(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         quickstart = (ROOT / "docs" / "USER_QUICKSTART.md").read_text(encoding="utf-8")
         start_ps1 = (ROOT / "scripts" / "start_gateway.ps1").read_text(encoding="utf-8")
         start_bat = (ROOT / "scripts" / "start_gateway.bat").read_text(encoding="utf-8")
@@ -18666,7 +18675,7 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("csrf", start_ps1.lower())
 
     def test_windows_launcher_guide_documents_safe_troubleshooting(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         quickstart = (ROOT / "docs" / "USER_QUICKSTART.md").read_text(encoding="utf-8")
         guide = (ROOT / "docs" / "WINDOWS_LAUNCHER_GUIDE.md").read_text(encoding="utf-8")
 
@@ -18700,7 +18709,7 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertIn(value, guide)
 
     def test_gui_user_flow_guide_documents_safe_dashboard_sequence(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         quickstart = (ROOT / "docs" / "USER_QUICKSTART.md").read_text(encoding="utf-8")
         local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
         audit_panel_guide = (ROOT / "docs" / "GUI_AUDIT_PANEL_GUIDE.md").read_text(encoding="utf-8")
@@ -18827,7 +18836,7 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertNotIn("안전 보장", user_flow)
 
     def test_gui_live_capture_readiness_guide_documents_read_only_boundary(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
         user_flow = (ROOT / "docs" / "GUI_USER_FLOW.md").read_text(encoding="utf-8")
         design = (ROOT / "docs" / "LIVE_CAPTURE_WIZARD_DESIGN_v0.5.md").read_text(encoding="utf-8")
@@ -18885,7 +18894,7 @@ class RedactionGatewayTests(unittest.TestCase):
                 self.assertNotIn(item, text)
 
     def test_gui_upload_wizard_guide_documents_state_changing_boundary(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         quickstart = (ROOT / "docs" / "USER_QUICKSTART.md").read_text(encoding="utf-8")
         local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
         user_flow = (ROOT / "docs" / "GUI_USER_FLOW.md").read_text(encoding="utf-8")
@@ -18962,7 +18971,7 @@ class RedactionGatewayTests(unittest.TestCase):
             self.assertNotIn(item, guide)
 
     def test_gui_simple_dashboard_guide_documents_read_only_boundary(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         quickstart = (ROOT / "docs" / "USER_QUICKSTART.md").read_text(encoding="utf-8")
         local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
         user_flow = (ROOT / "docs" / "GUI_USER_FLOW.md").read_text(encoding="utf-8")
@@ -19586,7 +19595,7 @@ class RedactionGatewayTests(unittest.TestCase):
     def test_ko_quickstart_and_output_bundle_v06_are_raw_free_and_operator_focused(self) -> None:
         quickstart = USER_QUICKSTART_KO_V06_DOC.read_text(encoding="utf-8")
         output_guide = OUTPUT_BUNDLE_GUIDE_KO_V06_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         dashboard = (ROOT / "burp_ai_redaction_gateway" / "dashboard.py").read_text(
             encoding="utf-8"
         )
@@ -19672,7 +19681,7 @@ class RedactionGatewayTests(unittest.TestCase):
 
     def test_web_operator_guide_ko_v07_is_raw_free_and_scope_clear(self) -> None:
         guide = WEB_OPERATOR_GUIDE_KO_V07_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         quickstart = USER_QUICKSTART_KO_V06_DOC.read_text(encoding="utf-8")
 
         self.assertTrue(WEB_OPERATOR_GUIDE_KO_V07_DOC.exists())
@@ -19768,7 +19777,7 @@ class RedactionGatewayTests(unittest.TestCase):
 
     def test_web_operator_smoke_checklist_ko_v07_is_raw_free_and_scope_clear(self) -> None:
         checklist = WEB_OPERATOR_SMOKE_CHECKLIST_KO_V07_DOC.read_text(encoding="utf-8")
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         web_operator_guide = WEB_OPERATOR_GUIDE_KO_V07_DOC.read_text(encoding="utf-8")
         upload_wizard = (ROOT / "docs" / "GUI_UPLOAD_WIZARD.md").read_text(encoding="utf-8")
 
@@ -19864,7 +19873,7 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIsNone(re.search(r"\b\d{1,3}(?:\.\d{1,3}){3}\b", checklist))
 
     def test_release_checklist_v04_documents_hardening_flow(self) -> None:
-        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        readme = read_public_documentation()
         quickstart = (ROOT / "docs" / "USER_QUICKSTART.md").read_text(encoding="utf-8")
         local_dashboard = (ROOT / "docs" / "LOCAL_DASHBOARD.md").read_text(encoding="utf-8")
         release_notes = (ROOT / "docs" / "RELEASE_NOTES_v0.4.md").read_text(encoding="utf-8")

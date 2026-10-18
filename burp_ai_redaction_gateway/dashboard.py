@@ -2809,6 +2809,8 @@ def _discover_outputs(root: Path, policy: RedactionPolicy) -> tuple[list[Dashboa
     blocked = 0
     for marker in sorted(root.rglob(OUTPUT_MARKER_FILE)):
         output_dir = marker.parent
+        if output_dir.name == "ai_candidates" and (output_dir.parent / OUTPUT_MARKER_FILE).is_file():
+            continue
         try:
             output_id = _relative_output_id(root, output_dir)
             _reject_sensitive_output_id(output_id)
