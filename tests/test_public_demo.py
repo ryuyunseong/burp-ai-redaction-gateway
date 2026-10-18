@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
+import re
 import struct
 import tempfile
 import unittest
-from datetime import datetime
 from pathlib import Path
 
 from burp_ai_redaction_gateway.policy import load_policy
@@ -16,6 +16,22 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PublicDemoTests(unittest.TestCase):
+    def test_reference_starts_with_current_guides_and_folds_historical_records(self) -> None:
+        reference = (ROOT / "docs" / "REFERENCE.md").read_text(encoding="utf-8")
+        current, history = reference.split("<details>", 1)
+        self.assertLess(len(current.splitlines()), 60)
+        self.assertIn("README", current)
+        self.assertIn("기본 파일 처리에는 대시보드만", current)
+        for name in ("USAGE.md", "MONTOYA_COLLECTOR.md", "READ_ONLY_MCP.md"):
+            self.assertIn(f"]({name})", current)
+        for target in re.findall(r"\]\(([^)]+)\)", current):
+            self.assertTrue((ROOT / "docs" / target).is_file(), target)
+        self.assertNotIn("208개 통과", current)
+        self.assertIn("이전 버전 기록 (일반 사용에는 필요하지 않습니다)", history)
+        self.assertIn("208개 통과", history)
+        self.assertIn("main@4001258da4fba881b3e7e9ef3936e993f05c4f81", history)
+        self.assertEqual(reference.count("<details>"), reference.count("</details>"))
+
     def test_published_prompts_match_current_synthetic_output(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             result = process_export(
@@ -28,15 +44,16 @@ class PublicDemoTests(unittest.TestCase):
                 with self.subTest(name=name):
                     published = (ROOT / "docs" / "examples" / name).read_text(encoding="utf-8")
                     generated = (result.export_dir / name).read_text(encoding="utf-8")
-                    published_intro, published_data = published.split("```json\n", 1)
-                    generated_intro, generated_data = generated.split("```json\n", 1)
-                    self.assertEqual(published_intro, generated_intro)
-                    expected = json.loads(published_data.rsplit("\n```", 1)[0])
-                    actual = json.loads(generated_data.rsplit("\n```", 1)[0])
-                    # Each real run has its own timestamp; all other data must match.
-                    self.assertIsNotNone(datetime.fromisoformat(expected["metadata"].pop("generated_at")).tzinfo)
-                    self.assertIsNotNone(datetime.fromisoformat(actual["metadata"].pop("generated_at")).tzinfo)
-                    self.assertEqual(expected, actual)
+                    self.assertEqual(published, generated)
+                    self.assertNotIn("```json", published)
+                    self.assertLess(len(published.splitlines()), 350)
+                    packet = json.loads((result.export_dir / "analysis_packet.json").read_text(encoding="utf-8"))
+                    for candidate in packet["finding_candidates"]:
+                        self.assertIn(f"### {candidate['finding_id']}:", published)
+                        self.assertIn(candidate["affected_endpoint"], published)
+                        for evidence_id in candidate["evidence_ids"]:
+                            self.assertIn(evidence_id, published)
+                    self.assertEqual(published.count("\n### FC-"), result.candidate_count)
                     self.assertIn(f"docs/examples/{name}", (ROOT / "README.md").read_text(encoding="utf-8"))
                     assert_no_sensitive_text(published)
 

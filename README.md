@@ -42,9 +42,11 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 | 파일 | 내용 |
 | --- | --- |
 | `report_draft.md` | 발견 내용과 확인 방법을 정리한 한글 보고서 초안 |
-| `chatgpt_prompt.md` | ChatGPT에 검토를 요청할 때 쓸 프롬프트 |
-| `codex_task_prompt.md` | Codex에 검토를 요청할 때 쓸 프롬프트 |
-| `analysis_packet.json` | 요청 요약과 확인이 필요한 점검 항목 |
+| `chatgpt_prompt.md` | 후보별 발견 내용과 확인 방법을 담은 ChatGPT 검토 요청 |
+| `codex_task_prompt.md` | 후보별 발견 내용과 확인 방법을 담은 Codex 검토 요청 |
+| `analysis_packet.json` | 상세 근거와 위험도 초안을 보존한 분석 데이터 |
+
+프롬프트에는 긴 JSON 대신 한글 요약이 들어 있습니다. 상세 자료가 필요할 때만 `analysis_packet.json`에서 내용을 확인하세요.
 
 검증에 실패하면 처리를 중단합니다. 다만 자동 검사가 모든 민감정보를 찾는 것은 아닙니다.
 **공유 전에 파일 내용을 직접 확인하고, 원본이나 결과 폴더 전체를 AI에 올리지 마세요.**
@@ -74,7 +76,7 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 - [사용 방법과 오류 해결](docs/USAGE.md): 내 Burp 기록 처리, 명령어 실행, 입력 형식
 - [결과 파일 안내](docs/OUTPUT_BUNDLE_GUIDE_KO_v0.6.md): 공유 전 확인할 내용
 - 선택 설정: [Burp 수집기](docs/MONTOYA_COLLECTOR.md) · [읽기 전용 MCP](docs/READ_ONLY_MCP.md)
-- [프로젝트 요약](docs/PORTFOLIO_SUMMARY_KO.md) · [구성과 이전 버전 참고](docs/REFERENCE.md)
+- [프로젝트 요약](docs/PORTFOLIO_SUMMARY_KO.md) · [구성과 추가 설정](docs/REFERENCE.md)
 
 Burp 수집기와 MCP는 기본 파일 처리에 필요하지 않습니다.
 MCP는 검증된 결과를 읽는 연결이며 Burp를 직접 조작하지 않습니다.

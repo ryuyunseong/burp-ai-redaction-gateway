@@ -2023,21 +2023,31 @@ def _build_prompt_readiness_index(output: DashboardOutput) -> PromptReadinessInd
             name="민감정보 공유 금지 안내",
             status=(
                 "present"
-                if _contains_all(combined_text, ("raw", "Cookie", "Authorization", "token", "domain", "IP"))
+                if (
+                    _contains_all(combined_text, ("raw", "Cookie", "Authorization", "token", "domain", "IP"))
+                    or _contains_all(combined_text, ("요청·응답 원문", "쿠키·인증 헤더·토큰·세션 값", "실제 도메인·IP·개인정보", "복원·출력·저장·로그 기록하지"))
+                )
                 else "needs_manual_review"
             ),
             summary="원문과 인증정보, 실제 대상 주소를 보내지 말라는 안내가 있는지 확인합니다.",
         ),
         PromptReadinessCheck(
             name="사전 검증 안내",
-            status="present" if _contains_any(combined_text, ("verify", "verified")) else "needs_manual_review",
+            status=(
+                "present"
+                if _contains_any(combined_text, ("verify", "verified")) or _contains_all(combined_text, ("검사를 통과한", "자료만 사용"))
+                else "needs_manual_review"
+            ),
             summary="검증을 통과한 결과만 사용하라는 안내가 있는지 확인합니다.",
         ),
         PromptReadinessCheck(
             name="후보와 초안에 대한 안내",
             status=(
                 "present"
-                if _contains_all(combined_text, ("candidate", "draft", "manual"))
+                if (
+                    _contains_all(combined_text, ("candidate", "draft", "manual"))
+                    or _contains_all(combined_text, ("모든 항목은 검토 후보", "위험도 초안은 확정 평가가 아니며", "사람이 직접 확인"))
+                )
                 else "needs_manual_review"
             ),
             summary="점검 결과와 위험도는 초안이며 직접 확인해야 한다는 안내가 있는지 확인합니다.",
@@ -2046,7 +2056,10 @@ def _build_prompt_readiness_index(output: DashboardOutput) -> PromptReadinessInd
             name="최종 심각도 수동 결정 경고",
             status=(
                 "present"
-                if _contains_any(combined_text, ("severity decision", "manual-review severity draft"))
+                if (
+                    _contains_any(combined_text, ("severity decision", "manual-review severity draft"))
+                    or _contains_all(combined_text, ("위험도 초안은 확정 평가가 아니며", "심각도 결정·위험도 평가 완료를 단정하지"))
+                )
                 else "needs_manual_review"
             ),
             summary="최종 심각도는 직접 판단해야 한다는 안내가 있는지 확인합니다.",
@@ -2055,7 +2068,10 @@ def _build_prompt_readiness_index(output: DashboardOutput) -> PromptReadinessInd
             name="원문 요청·응답 공유 금지 안내",
             status=(
                 "present"
-                if _contains_any(combined_text, ("raw request/response", "raw request or response", "raw HTTP"))
+                if (
+                    _contains_any(combined_text, ("raw request/response", "raw request or response", "raw HTTP"))
+                    or _contains_all(combined_text, ("요청·응답 원문", "요청하거나 복원·출력·저장·로그 기록하지"))
+                )
                 else "needs_manual_review"
             ),
             summary="원문 요청·응답을 요구하거나 복원하지 말라는 안내가 있는지 확인합니다.",
@@ -2064,7 +2080,10 @@ def _build_prompt_readiness_index(output: DashboardOutput) -> PromptReadinessInd
             name="Codex 작업 범위 안내",
             status=(
                 "present"
-                if _contains_all(codex_text, ("Hard requirements", "Do not", "manual verification"))
+                if (
+                    _contains_all(codex_text, ("Hard requirements", "Do not", "manual verification"))
+                    or _contains_all(codex_text, ("## 검토 기준", "코드가 없으면", "능동 스캔·외부 전송은 실행하지"))
+                )
                 else "needs_manual_review"
             ),
             summary="Codex에 요청할 작업과 금지한 작업이 구분되어 있는지 확인합니다.",
@@ -2073,7 +2092,10 @@ def _build_prompt_readiness_index(output: DashboardOutput) -> PromptReadinessInd
             name="ChatGPT 분석 범위 안내",
             status=(
                 "present"
-                if _contains_all(chatgpt_text, ("Analyze", "candidate", "manual verification"))
+                if (
+                    _contains_all(chatgpt_text, ("Analyze", "candidate", "manual verification"))
+                    or _contains_all(chatgpt_text, ("ChatGPT 검토 요청", "후보별 발견 내용과 근거", "직접 확인할 방법과 조치 제안", "## 검토 기준"))
+                )
                 else "needs_manual_review"
             ),
             summary="분석 목적과 직접 확인할 부분을 안내하는지 확인합니다.",
