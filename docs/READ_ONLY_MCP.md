@@ -11,42 +11,45 @@ Python 3.12 이상과 **로컬 MCP 서버 연결을 지원하는 AI 프로그램
 README.md가 있는 폴더의 PowerShell에서 실행합니다. 실제 고객 기록이 아닌 가상 샘플입니다.
 
 ```powershell
-python -m burp_ai_redaction_gateway process --input samples/synthetic_burp_history.json --output out/mcp_demo --project mcp_demo
+python -m burp_ai_redaction_gateway process --input samples/synthetic_burp_history.json --output out/codex_mcp_sample/demo --project demo
 ```
 
-완료되면 `out/mcp_demo`의 보고서와 프롬프트를 직접 읽어보세요.
-기존 결과가 있으면 `mcp_demo2`처럼 이름을 바꾸고 아래 연결에서도 같은 이름을 사용합니다.
+완료되면 `out/codex_mcp_sample/demo/ai_candidates`의 보고서를 직접 읽어보세요.
+기존 결과가 있으면 `demo2`처럼 마지막 폴더와 작업 이름을 바꾸고 아래 조회에도 같은 이름을 사용합니다.
 
-## 2. AI 프로그램에 연결하기
+## 2. Codex에 연결하기
 
-사용할 AI 프로그램에서 **로컬 MCP 서버 추가** 설정을 엽니다. 메뉴 이름은 프로그램마다 다릅니다.
+Codex CLI를 설치하고 로그인한 상태에서 같은 PowerShell에 입력합니다.
 
-| 설정 | 입력할 값 |
-| --- | --- |
-| 연결 방식 | 표준 입출력(stdio) |
-| 실행 프로그램 | `python` |
-| 인수 | `-m burp_ai_redaction_gateway mcp --root out` |
-| 작업 폴더 | README.md가 있는 저장소 폴더 |
+```powershell
+$repo = (Get-Location).Path
+$python = python -c "import sys; print(sys.executable)"
+codex mcp add burp_sample --env "PYTHONPATH=$repo" --env PYTHONUTF8=1 -- $python -m burp_ai_redaction_gateway mcp --root "$repo/out/codex_mcp_sample" --policy "$repo/policy.json"
+codex mcp list
+```
 
-이 서버는 웹 주소로 연결하지 않습니다. AI 프로그램이 위 명령을 실행하므로 별도 터미널에서 서버를 켜둘 필요는 없습니다.
-작업 폴더를 지정할 수 없다면 저장소 폴더에서 AI 프로그램을 실행하거나, 해당 프로그램의 로컬 설정에서 절대 경로를 지정하세요. 개인 경로가 든 설정은 저장소에 올리지 않습니다.
+`burp_sample`은 가상 샘플 폴더만 읽습니다. Codex가 서버를 실행하므로 별도 서버 터미널이나 웹 주소는 필요 없습니다.
+설정은 이 PC의 Codex에 저장됩니다. 개인 경로가 든 설정은 저장소에 올리지 마세요. 기존 승인·보안 설정을 바꿀 필요는 없습니다.
+Codex를 다시 열어 새 대화에서 확인하세요. CLI에서는 `/mcp`로 연결 상태를 볼 수 있습니다. [Codex 공식 설정 안내](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)
 
 ## 3. 연결 확인하기
 
-AI 프로그램에서 `list_findings`를 선택하고 작업 이름인 `project`에 `mcp_demo`를 입력합니다.
-자연어 요청을 지원한다면 **“mcp_demo의 점검 후보 목록만 보여줘”**라고 요청해도 됩니다. 도구 실행을 묻는 화면이 나오면 읽을 대상과 인수를 확인하세요.
+Codex에 **“burp_sample에서 demo의 점검 후보 목록과 보고서 초안을 읽어줘”**라고 요청합니다.
+호출할 도구는 `list_findings`, `get_report_draft`이며 둘 다 `project`에 `demo`를 지정합니다. 도구 실행을 묻는 화면에서는 대상과 인수를 확인하세요.
 
 가상 샘플을 그대로 처리했다면 검토 후보 **22개**가 나옵니다. 확정 취약점 수가 아닙니다.
-보고서는 `get_report_draft`에 같은 `project`를 지정해 읽습니다.
+Codex의 도구 호출 기록에 두 이름이 나오면 MCP로 읽은 것입니다.
+2026-10-19 Windows의 Codex CLI 0.163.0-alpha.10.2에서 두 도구 호출과 한글 보고서 조회를 확인했습니다.
 
 ## 읽지 못할 때
 
 | 상황 | 확인할 내용 |
 | --- | --- |
 | 서버를 실행할 수 없음 | Python과 작업 폴더를 확인하세요. 오류에 모듈을 찾을 수 없다고 나오면 README.md가 있는 폴더인지 확인합니다. |
-| 결과를 찾을 수 없음 | `--root out`이면 `project`는 `out/mcp_demo`가 아닌 `mcp_demo`입니다. |
-| 검증 실패 | `python -m burp_ai_redaction_gateway verify --input out/mcp_demo`로 확인하세요. 실패한 결과는 반환하지 않습니다. |
-| 터미널에 아무 화면도 안 나옴 | `mcp --root out`은 요청을 기다리는 명령입니다. 웹 페이지를 열지 않습니다. 직접 켰다면 `Ctrl+C`로 종료하고 AI 프로그램에서 연결하세요. |
+| 결과를 찾을 수 없음 | 위 설정의 `project`는 경로가 아닌 `demo`입니다. 저장소를 옮겼다면 새 위치에서 연결 명령을 다시 실행하세요. |
+| 검증 실패 | `python -m burp_ai_redaction_gateway verify --input out/codex_mcp_sample/demo`로 확인하세요. 실패한 결과는 반환하지 않습니다. |
+| 모델을 지원하지 않는다는 오류 | Codex 버전과 로그인 상태, 사용 가능한 모델을 확인하세요. 서버의 보안 검사를 끄는 것으로 해결되지 않습니다. |
+| 터미널에 아무 화면도 안 나옴 | `mcp --root out/codex_mcp_sample`은 요청을 기다리는 명령입니다. 직접 켰다면 `Ctrl+C`로 종료하고 Codex에서 연결하세요. |
 
 ## 접근과 공유 제한
 
@@ -59,7 +62,10 @@ AI 프로그램에서 `list_findings`를 선택하고 작업 이름인 `project`
 - 연결 도구의 공유·외부 전송 설정도 확인하세요. 이 서버의 검사는 사용자의 공유 판단이나 `verify`, `review`, `report` 절차를 대신하지 않습니다.
 
 <details>
-<summary>도구 목록과 호출 기록 (선택)</summary>
+<summary>다른 AI 프로그램, 도구 목록과 호출 기록 (선택)</summary>
+
+다른 AI 프로그램에서는 표준 입출력(stdio) 연결을 선택하고, 위 명령에서 `--` 뒤의 실행 프로그램과 인수를 사용합니다.
+`PYTHONPATH`에는 저장소 폴더, `PYTHONUTF8`에는 `1`을 지정합니다. 모듈 검색 경로와 한글 입출력을 위한 설정입니다.
 
 | 도구 이름 | 하는 일 |
 | --- | --- |
@@ -73,7 +79,7 @@ AI 프로그램에서 `list_findings`를 선택하고 작업 이름인 `project`
 호출 기록은 `<root>/.audit/mcp_audit.jsonl`과 표준 오류(stderr)에 남으며, 원문·보고서 본문·인증정보·실제 주소·개인정보·오류 추적 전문은 기록하지 않습니다.
 
 ```powershell
-python -m burp_ai_redaction_gateway review-audit --input out/.audit
+python -m burp_ai_redaction_gateway review-audit --input out/codex_mcp_sample/.audit
 ```
 
 감사 기록은 형식, 순번, 해시 연결과 민감정보를 검사합니다. 오래되거나 깨진 기록은 실패할 수 있으며, 기록을 지워 오류를 숨기지 마세요.

@@ -28,6 +28,20 @@ def process_command(name: str) -> list[str]:
     return shlex.split(line)
 
 
+def codex_server_command(root: Path) -> tuple[list[str], dict[str, str]]:
+    line = next(line for line in guide("READ_ONLY_MCP.md").splitlines() if line.startswith("codex mcp add "))
+    args = shlex.split(line)
+    env = dict(os.environ)
+    for index, argument in enumerate(args):
+        if argument == "--env":
+            key, value = args[index + 1].split("=", 1)
+            env[key] = value.replace("$repo", str(ROOT))
+    command = [argument.replace("$repo", str(ROOT)) for argument in args[args.index("--") + 1:]]
+    command[0] = sys.executable
+    command[command.index("--root") + 1] = str(root)
+    return command, env
+
+
 class BeginnerGuideTests(unittest.TestCase):
     def test_guides_keep_short_korean_steps_and_working_links(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -71,13 +85,68 @@ class BeginnerGuideTests(unittest.TestCase):
     def test_mcp_setup_and_tools_match_documented_sample(self) -> None:
         text = guide("READ_ONLY_MCP.md")
         args = process_command("READ_ONLY_MCP.md")
-        self.assertEqual(args[args.index("--output") + 1], "out/mcp_demo")
-        self.assertEqual(args[args.index("--project") + 1], "mcp_demo")
-        for phrase in ("stdio", "mcp --root out", "작업 폴더", "project`에 `mcp_demo", "22개", "반환할 내용도 다시 검사", "상위 폴더로 벗어나는 경로는 거절", "개인 경로가 든 설정은 저장소에 올리지", "연결 도구의 공유·외부 전송 설정"):
+        self.assertEqual(args[args.index("--output") + 1], "out/codex_mcp_sample/demo")
+        self.assertEqual(args[args.index("--project") + 1], "demo")
+        for phrase in ("stdio", "mcp --root out/codex_mcp_sample", "작업 폴더", "project`에 `demo", "22개", "반환할 내용도 다시 검사", "상위 폴더로 벗어나는 경로는 거절", "개인 경로가 든 설정은 저장소에 올리지", "연결 도구의 공유·외부 전송 설정"):
             self.assertIn(phrase, text)
         for tool in tool_definitions():
             self.assertIn(f"`{tool['name']}`", text)
             self.assertTrue(tool["annotations"]["readOnlyHint"])
+
+    def test_codex_mcp_registration_uses_sample_only_root_and_explicit_policy(self) -> None:
+        text = guide("READ_ONLY_MCP.md")
+        line = next(line for line in text.splitlines() if line.startswith("codex mcp add "))
+        self.assertEqual(shlex.split(line), [
+            "codex", "mcp", "add", "burp_sample", "--env", "PYTHONPATH=$repo", "--env", "PYTHONUTF8=1",
+            "--", "$python", "-m", "burp_ai_redaction_gateway", "mcp",
+            "--root", "$repo/out/codex_mcp_sample", "--policy", "$repo/policy.json",
+        ])
+        for phrase in ("print(sys.executable)", "codex mcp list", "/mcp", "새 대화", "가상 샘플 폴더만", "기존 승인·보안 설정", "도구 호출 기록"):
+            self.assertIn(phrase, text)
+
+    def test_codex_mcp_documented_server_reads_sample_from_another_working_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            root = base / "샘플 작업"
+            project = root / "demo"
+            outside = base / "client"
+            outside.mkdir()
+            process = process_command("READ_ONLY_MCP.md")
+            process[0] = sys.executable
+            process[process.index("--output") + 1] = str(project)
+            generated = subprocess.run(process, cwd=ROOT, env=dict(os.environ, PYTHONUTF8="1"), capture_output=True, encoding="utf-8", timeout=30)
+            self.assertEqual(generated.returncode, 0, generated.stdout + generated.stderr)
+            before = {str(path.relative_to(project)): hashlib.sha256(path.read_bytes()).hexdigest() for path in project.rglob("*") if path.is_file()}
+            command, env = codex_server_command(root)
+            messages = [
+                {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "setup-regression", "version": "1"}}},
+                {"jsonrpc": "2.0", "method": "notifications/initialized"},
+                {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "list_findings", "arguments": {"project": "demo"}}},
+                {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "get_report_draft", "arguments": {"project": "demo"}}},
+            ]
+            for request_id, name in enumerate(("../outside", "demo/local_only"), start=4):
+                messages.append({"jsonrpc": "2.0", "id": request_id, "method": "tools/call", "params": {"name": "get_report_draft", "arguments": {"project": name}}})
+            result = subprocess.run(command, cwd=outside, env=env, input="\n".join(json.dumps(message) for message in messages) + "\n", capture_output=True, encoding="utf-8", timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            responses = {message["id"]: message for message in map(json.loads, result.stdout.splitlines())}
+            findings = responses[2]["result"]
+            self.assertFalse(findings["isError"])
+            self.assertEqual(findings["structuredContent"]["candidate_count"], 22)
+            self.assertTrue(all(item["manual_verification_required"] for item in findings["structuredContent"]["findings"]))
+            report = responses[3]["result"]
+            self.assertFalse(report["isError"])
+            self.assertEqual(report["structuredContent"]["report_draft"], (project / "report_draft.md").read_text(encoding="utf-8"))
+            self.assertIn("검토 후보", report["structuredContent"]["report_draft"])
+            for request_id, reason in ((4, "path_traversal_forbidden"), (5, "forbidden_directory")):
+                blocked = responses[request_id]["result"]
+                self.assertTrue(blocked["isError"])
+                self.assertEqual(blocked["structuredContent"], {"error_type": reason, "raw_data_included": False})
+            for response in responses.values():
+                if "structuredContent" in response["result"]:
+                    self.assertIs(response["result"]["structuredContent"]["raw_data_included"], False)
+                assert_no_sensitive_text(json.dumps(response))
+            after = {str(path.relative_to(project)): hashlib.sha256(path.read_bytes()).hexdigest() for path in project.rglob("*") if path.is_file()}
+            self.assertEqual(before, after)
 
     def test_documented_process_commands_generate_verified_four_file_bundle(self) -> None:
         sample = ROOT / "samples" / "synthetic_burp_history.json"

@@ -75,7 +75,7 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 
 - [사용 방법과 오류 해결](docs/USAGE.md): 내 Burp 기록 처리, 명령어 실행, 입력 형식
 - [결과 파일 안내](docs/OUTPUT_BUNDLE_GUIDE_KO_v0.6.md): 공유 전 확인할 내용
-- 선택 설정: [Burp 수집기](docs/MONTOYA_COLLECTOR.md) · [읽기 전용 MCP](docs/READ_ONLY_MCP.md)
+- 선택 설정: [Burp 수집기](docs/MONTOYA_COLLECTOR.md) · [Codex·읽기 전용 MCP 연결](docs/READ_ONLY_MCP.md)
 - [프로젝트 요약](docs/PORTFOLIO_SUMMARY_KO.md) · [구성과 추가 설정](docs/REFERENCE.md)
 
 Burp 수집기와 MCP는 기본 파일 처리에 필요하지 않습니다.
