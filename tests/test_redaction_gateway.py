@@ -17555,6 +17555,24 @@ class RedactionGatewayTests(unittest.TestCase):
         sample = SAMPLE.read_text(encoding="utf-8")
         self.assertNotIn("test_api_key_1234567890abcdef", sample)
 
+    def test_readme_quickstart_links_match_current_usage(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        usage = (ROOT / "docs" / "USAGE.md").read_text(encoding="utf-8")
+        command = "python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out"
+        for text in [readme, usage]:
+            self.assertIn(command, text)
+            self.assertIn("samples/synthetic_burp_history.json", text)
+            self.assertIn("10 MiB", text)
+            self.assertIn("local_only/", text)
+        self.assertIn("16 MiB", usage)
+        for filename in ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"]:
+            self.assertIn(filename, readme)
+        for target in re.findall(r"\]\(([^)]+)\)", readme):
+            if "://" not in target and not target.startswith("#"):
+                self.assertTrue((ROOT / target.split("#")[0]).is_file(), target)
+        self.assertIn("AI에 자동으로 보내지 않습니다", readme)
+        self.assertIn("공유 전에 파일 내용을 직접 확인", readme)
+
     def test_current_korean_guides_keep_links_commands_and_boundaries(self) -> None:
         for name in ["USAGE.md", "MONTOYA_COLLECTOR.md", "LOCALHOST_RECEIVER.md", "READ_ONLY_MCP.md", "SECURITY_MODEL.md", "OUTPUT_BUNDLE_GUIDE_KO_v0.6.md"]:
             path = ROOT / "docs" / name

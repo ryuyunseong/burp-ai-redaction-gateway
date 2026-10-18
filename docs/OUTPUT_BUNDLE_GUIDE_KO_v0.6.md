@@ -41,6 +41,5 @@ process 명령은 네 파일을 ai_candidates/에 따로 복사합니다.
 [빠른 시작 실행 점검](V0.6_QUICKSTART_SMOKE.md),
 [릴리스 노트 초안](V0.6_RELEASE_NOTES_DRAFT.md)을 참고하세요.
 현재 실행 방법은 [사용 방법](USAGE.md)에 있습니다.
-이 문서가 태그나 GitHub Release를 생성하지는 않습니다.
 
 </details>

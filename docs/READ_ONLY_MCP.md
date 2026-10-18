@@ -58,6 +58,16 @@ python -m burp_ai_redaction_gateway mcp --root out
 - 도구의 readOnlyHint 표시뿐 아니라 서버 코드에서 읽기 전용 접근을 제한합니다.
 - 이 연결은 verify, review, report 검증 단계를 대신하지 않습니다.
 
+## 읽지 못할 때
+
+- 작업 폴더와 Python 실행 환경을 확인하세요.
+- --root와 project가 같은 결과를 가리키는지 확인하세요.
+- 검증에 실패한 결과는 반환하지 않습니다. 먼저 verify 결과를 확인하세요.
+- 서버를 외부에 공개하거나 원본 폴더를 읽기 대상으로 추가하지 마세요.
+
+<details>
+<summary>호출 기록 확인과 보관 설정 (선택)</summary>
+
 ## 사용 기록 확인
 
 호출 상태는 표준 오류(stderr)와 다음 감사 파일에 기록합니다.
@@ -137,9 +147,4 @@ python -m burp_ai_redaction_gateway audit-compressed-hmac-verify --input out/.au
 
 </details>
 
-## 읽지 못할 때
-
-- 작업 폴더와 Python 실행 환경을 확인하세요.
-- --root와 project가 같은 결과를 가리키는지 확인하세요.
-- 검증에 실패한 결과는 반환하지 않습니다. 먼저 verify 결과를 확인하세요.
-- 서버를 외부에 공개하거나 원본 폴더를 읽기 대상으로 추가하지 마세요.
+</details>
