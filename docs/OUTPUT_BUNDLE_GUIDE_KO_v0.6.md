@@ -1,61 +1,46 @@
-# 산출물 묶음 안내 v0.6
+# 결과 파일 안내
 
-이 문서는 redaction output에서 사람이 먼저 볼 파일과 필요할 때만 볼 고급 산출물을
-구분합니다. 파일 구조는 기존 4개 후보를 유지하며, 자동 전송 기능을 추가하지 않습니다.
+확인할 파일은 네 개입니다. 처음에는 보고서 초안과 ChatGPT용 프롬프트를 먼저 읽으세요.
 
 ## 기본 보기
 
-| 파일 | 화면에서 읽는 이름 | 용도 | 확인 기준 |
-| --- | --- | --- | --- |
-| `report_draft.md` | 보고서 초안 | 사람이 편집할 draft report | 제출 전 수동 확인 필요 |
-| `chatgpt_prompt.md` | ChatGPT용 프롬프트 | 사람이 AI에 복사할 수 있는 prompt 후보 | 자동 전송 없음 |
-
-처음 사용하는 사용자는 기본 보기 2개만 먼저 확인하면 됩니다. 이 두 파일도 공유 안전
-보장 파일이 아니며, 사람이 내용을 검토한 뒤 필요한 부분만 사용합니다.
+| 파일 | 용도 |
+| --- | --- |
+| report_draft.md | 검토하고 수정할 보고서 초안 |
+| chatgpt_prompt.md | ChatGPT에 분석 검토를 요청할 때 사용할 프롬프트 |
 
 ## 고급 보기
 
-| 파일 | 화면에서 읽는 이름 | 용도 | 확인 기준 |
-| --- | --- | --- | --- |
-| `analysis_packet.json` | 고급 산출물 | 구조화된 분석 packet | finding 후보 구조 확인 |
-| `codex_task_prompt.md` | 고급 산출물 | Codex 작업 프롬프트 | 작업 범위와 금지 데이터 확인 |
+| 파일 | 용도 |
+| --- | --- |
+| analysis_packet.json | 요청 요약과 점검 후보를 모은 데이터 |
+| codex_task_prompt.md | Codex에 코드 검토나 작업을 요청할 때 사용할 프롬프트 |
 
-고급 보기 파일은 자동 분석 결과를 확정하는 파일이 아닙니다. finding은 candidate
-finding이고, risk는 draft risk이며, severity/CVSS는 사람이 수동 판단합니다.
+점검 항목은 확인이 필요한 후보이며 위험도도 초안입니다.
+실제 취약점 여부와 최종 심각도·CVSS는 재현과 영향 검토 후 직접 판단합니다.
 
-## 원문 포함 여부
+## 확인 순서
 
-4개 후보 파일은 원문 traffic을 직접 보여주기 위한 파일이 아닙니다. 그래도 아래 경계는
-항상 유지합니다.
+1. 검증이 통과했는지 확인합니다. 실패한 결과는 사용하지 않습니다.
+2. **결과 파일 확인**에서 파일 내용을 읽습니다.
+3. 민감정보와 실제 대상 주소, 전체 로컬 경로가 남아 있지 않은지 확인합니다.
+4. 필요한 파일이나 내용만 사용합니다. 결과 폴더 전체를 AI에 올리지 마세요.
 
-- 대상 식별자, 쿠키 값, 인증 헤더 값, 토큰 값, 세션 값, 개인정보를 옮기지 않습니다.
-- 전체 로컬 경로와 로컬 전용 파일명을 문서나 PR에 남기지 않습니다.
-- 원문 traffic, replay, active scan, 자동 ChatGPT 전송은 이 묶음의 범위가 아닙니다.
-- AI에 넣기 전 사람이 수동 검토합니다.
+process 명령은 네 파일을 ai_candidates/에 따로 복사합니다.
+대시보드에서는 **파일 4개 내보내기**를 사용할 수 있습니다.
+**파일 상태** 화면은 생성 여부를 보여주며, 상세 정보에서 크기·수정 시각·해시를 확인할 수 있습니다.
 
-## 대시보드에서 읽는 법
+원본 요청·응답과 쿠키·인증 헤더·토큰·세션 값, 개인정보는 공유하지 않습니다.
+파일을 만들었다고 공유 안전이 보장되는 것은 아닙니다. 요청 재전송, 능동 스캔, 자동 AI 전송은 제공하지 않습니다.
 
-- 기본 보기: `report_draft.md`, `chatgpt_prompt.md`
-- 고급 보기: `analysis_packet.json`, `codex_task_prompt.md`
-- 상태 표시는 존재 여부와 안전 metadata 중심입니다.
-- 파일 본문, 전체 경로, secret 값, CSRF 값은 표시하지 않습니다.
+<details>
+<summary>v0.6 출시 당시 참고 자료</summary>
 
-## 운영자 체크
+이 안내는 v0.6의 네 파일 구성을 유지합니다.
+당시 기준은 [출시 전 점검표](V0.6_RC_READINESS_CHECKLIST.md),
+[빠른 시작 실행 점검](V0.6_QUICKSTART_SMOKE.md),
+[릴리스 노트 초안](V0.6_RELEASE_NOTES_DRAFT.md)을 참고하세요.
+현재 실행 방법은 [사용 방법](USAGE.md)에 있습니다.
+이 문서가 태그나 GitHub Release를 생성하지는 않습니다.
 
-1. `verify`가 통과했는지 확인합니다.
-2. 기본 보기 2개를 먼저 읽습니다.
-3. 필요하면 고급 보기 2개를 추가로 봅니다.
-4. AI에 넣을 내용은 사람이 직접 선택합니다.
-5. 최종 보고서와 severity/CVSS는 사람이 결정합니다.
-
-## RC readiness 참고
-
-v0.6 RC 후보 판단에서 이 산출물 묶음은
-[`V0.6_RC_READINESS_CHECKLIST.md`](V0.6_RC_READINESS_CHECKLIST.md)의 output
-bundle criteria로 다시 확인합니다. 이 안내는 tag 또는 GitHub Release를 만들지
-않습니다.
-quickstart smoke 절차는
-[`V0.6_QUICKSTART_SMOKE.md`](V0.6_QUICKSTART_SMOKE.md)를 사용하고,
-release notes 초안은
-[`V0.6_RELEASE_NOTES_DRAFT.md`](V0.6_RELEASE_NOTES_DRAFT.md)를 사용합니다.
-두 문서도 output bundle 4개 구조를 변경하지 않습니다.
+</details>

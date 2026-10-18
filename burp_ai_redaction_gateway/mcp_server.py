@@ -297,26 +297,26 @@ def serve_mcp_stdio(root: Path, policy: RedactionPolicy) -> None:
 def tool_definitions() -> list[dict[str, Any]]:
     project_property = {
         "type": "string",
-        "description": "Verified output directory relative to the configured root.",
+        "description": "허용한 결과 폴더 아래의 작업 이름입니다.",
     }
     read_only_annotations = {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}
     return [
         {
             "name": "list_findings",
-            "title": "List sanitized finding candidates",
-            "description": "Return sanitized finding candidate summaries from a verified output directory.",
+            "title": "점검 후보 목록",
+            "description": "검증된 결과에서 확인이 필요한 항목을 읽습니다.",
             "inputSchema": {"type": "object", "properties": {"project": project_property}, "required": ["project"]},
             "annotations": read_only_annotations,
         },
         {
             "name": "get_finding",
-            "title": "Get sanitized finding candidate",
-            "description": "Return one sanitized finding candidate by finding_id.",
+            "title": "점검 후보 상세",
+            "description": "항목 번호로 후보의 근거와 확인할 내용을 읽습니다.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "project": project_property,
-                    "finding_id": {"type": "string", "description": "Finding candidate id such as FC-0001."},
+                    "finding_id": {"type": "string", "description": "FC-0001 형태의 점검 항목 번호입니다."},
                 },
                 "required": ["project", "finding_id"],
             },
@@ -324,22 +324,22 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "get_analysis_packet",
-            "title": "Get sanitized analysis packet",
-            "description": "Return analysis_packet.json from a verified output directory.",
+            "title": "분석 요약",
+            "description": "검증된 결과의 analysis_packet.json을 읽습니다.",
             "inputSchema": {"type": "object", "properties": {"project": project_property}, "required": ["project"]},
             "annotations": read_only_annotations,
         },
         {
             "name": "get_report_draft",
-            "title": "Get sanitized report draft",
-            "description": "Return a sanitized report draft markdown file from a verified output directory.",
+            "title": "보고서 초안",
+            "description": "검증된 결과에서 검토용 보고서 초안을 읽습니다.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "project": project_property,
                     "report_name": {
                         "type": "string",
-                        "description": "Report markdown filename. Defaults to report_draft.md.",
+                        "description": "보고서 파일 이름입니다. 기본값은 report_draft.md입니다.",
                     },
                 },
                 "required": ["project"],
@@ -348,8 +348,8 @@ def tool_definitions() -> list[dict[str, Any]]:
         },
         {
             "name": "list_prompt_files",
-            "title": "List sanitized prompt files",
-            "description": "List safe prompt packet files available in a verified output directory.",
+            "title": "프롬프트 파일 목록",
+            "description": "검증된 결과에서 사용할 수 있는 프롬프트 파일 목록을 읽습니다.",
             "inputSchema": {"type": "object", "properties": {"project": project_property}, "required": ["project"]},
             "annotations": read_only_annotations,
         },

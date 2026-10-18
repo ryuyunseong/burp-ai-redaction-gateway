@@ -1214,181 +1214,66 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
 
 
 def render_settings(root: Path) -> str:
-    audit_status = _audit_status(root)
-    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
-    profiles = ", ".join(REPORT_PROFILE_NAMES)
-    risk_profiles = ", ".join(RISK_RATING_PROFILE_NAMES)
     return _page(
-        "설정 및 보안 상태",
+        "설정 확인",
         f"""
-        <section class="topbar">
-          <div>
-            <a class="back" href="/">산출물 목록으로</a>
-            <h1>설정 및 보안 상태</h1>
-            <p class="subtitle">로컬 대시보드의 안전 경계와 설정 상태만 표시합니다. 비밀값, 환경변수 값, 원문 데이터는 표시하지 않습니다.</p>
-          </div>
-          <div class="status-stack">
-            <span class="badge good">조회 전용</span>
-            <span class="badge neutral">메타데이터만</span>
-            <a class="button secondary" href="/live-capture">Live Capture 준비</a>
-            <a class="button secondary" href="/help">운영 가이드</a>
-          </div>
-        </section>
-        <section class="safety-strip">
-          <div class="rail"><span>바인딩</span><strong>localhost-only</strong></div>
-          <div class="rail"><span>실행 요청</span><strong>CSRF 보호</strong></div>
-          <div class="rail"><span>위험도</span><strong>draft only</strong></div>
-          <div class="rail"><span>원문 표시</span><strong>false</strong></div>
-        </section>
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>대시보드 상태</h2><span class="muted">설정 변경 기능은 없습니다.</span></div>
-            <dl class="facts">
-              <div><dt>root 별칭</dt><dd>{_h(_safe_root_alias(root))}</dd></div>
-              <div><dt>바인딩 모드</dt><dd>127.0.0.1 전용</dd></div>
-              <div><dt>대시보드 모드</dt><dd>안전 action 사용 가능</dd></div>
-              <div><dt>설정 화면</dt><dd>조회 전용</dd></div>
-              <div><dt>CSRF 보호</dt><dd>활성화됨; 값 숨김</dd></div>
-              <div><dt>HTML 출력</dt><dd>escaped</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>허용된 안전 파일</h2><span class="muted">미리보기와 다운로드 허용 목록입니다.</span></div>
-            <ul class="safe-list">{safe_files}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>보고서와 위험도</h2><span class="muted">확정 심각도는 별도 수동 검토가 필요합니다.</span></div>
-            <dl class="facts">
-              <div><dt>보고서 profile</dt><dd>{_h(profiles)}</dd></div>
-              <div><dt>위험도 profile</dt><dd>{_h(risk_profiles)}</dd></div>
-              <div><dt>기본 위험도 profile</dt><dd>{_h(DEFAULT_RISK_RATING_PROFILE)}</dd></div>
-              <div><dt>위험도 모드</dt><dd>초안 전용</dd></div>
-              <div><dt>confidence_is_severity</dt><dd>false</dd></div>
-              <div><dt>심각도 결정</dt><dd>수동 검토 필요</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>감사와 무결성</h2><span class="muted">감사 row와 비밀값은 표시하지 않습니다.</span></div>
-            <dl class="facts">
-              <div><dt>감사 schema</dt><dd>{_h(AUDIT_SCHEMA_VERSION)}</dd></div>
-              <div><dt>감사 경로 별칭</dt><dd>&lt;root&gt;/.audit/{_h(AUDIT_FILE_NAME)}</dd></div>
-              <div><dt>감사 검토</dt><dd>{_status_badge(audit_status["review_status"])}</dd></div>
-              <div><dt>감사 로그</dt><dd>{_status_badge(audit_status["audit_log_status"])}</dd></div>
-              <div><dt>HMAC 설정</dt><dd>{_h(_hmac_configured_label())}</dd></div>
-              <div><dt>HMAC manifest</dt><dd>{_status_badge(audit_status["hmac_status"])}</dd></div>
-              <div><dt>보존 JSONL</dt><dd>{_status_badge(audit_status["retained_status"])}</dd></div>
-              <div><dt>압축 archive</dt><dd>{_status_badge(audit_status["archive_status"])}</dd></div>
-              <div><dt>압축 archive 검증</dt><dd>{_status_badge(audit_status["archive_verify_status"])}</dd></div>
-              <div><dt>압축 archive HMAC manifest</dt><dd>{_status_badge(audit_status["archive_hmac_manifest_status"])}</dd></div>
-              <div><dt>압축 archive HMAC 검증</dt><dd>{_status_badge(audit_status["archive_hmac_status"])}</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>차단 범위</h2><span class="muted">대시보드에 추가하지 않는 기능입니다.</span></div>
-            <ul class="safe-list">
-              <li>원문 요청/응답 보기 없음</li>
-              <li>재전송 또는 active scan 없음</li>
-              <li>delete/edit 기능 없음</li>
-              <li>비밀값 또는 환경변수 값 표시 없음</li>
-              <li>검증 실패 산출물 사용 금지</li>
-            </ul>
-          </div>
-        </section>
+        <header class="topbar">
+          <div><a class="back" href="/">처리한 기록으로</a><h1>설정 확인</h1></div>
+          <a class="button secondary" href="/help">도움말</a>
+        </header>
+        <p>현재 설정을 확인하는 화면입니다. 여기서는 설정을 변경하지 않습니다.</p>
+        <dl class="facts">
+          <div><dt>결과 폴더 이름</dt><dd>{_h(_safe_root_alias(root))}</dd></div>
+          <div><dt>접속 범위</dt><dd>이 컴퓨터만 (127.0.0.1)</dd></div>
+          <div><dt>요청 위조 방지(CSRF)</dt><dd>사용 중 · 보호값은 숨김</dd></div>
+          <div><dt>HTML 문자 처리</dt><dd>화면에 코드를 삽입하지 못하도록 문자 변환</dd></div>
+          <div><dt>보고서 작성 방식</dt><dd>기본 검토용 / 상세 검토용</dd></div>
+          <div><dt>위험도</dt><dd>참고용 초안 · 최종 판단은 직접 확인</dd></div>
+        </dl>
+        <p class="review-note">원본 요청·응답, 인증정보, 비밀값, 환경변수 값은 표시하지 않습니다.
+        요청 재전송, 능동 스캔, 파일 삭제 기능도 제공하지 않습니다.</p>
+        <details class="secondary-details"><summary>감사 기록과 위변조 검사</summary>
+          {_audit_panel(_audit_status(root))}
+          <p>무결성 검사용 비밀키 설정: {_h(_status_label(_hmac_configured_label()))}</p>
+          <p>감사 형식 버전: {_h(AUDIT_SCHEMA_VERSION)}</p>
+        </details>
         """,
     )
 
 
 def render_operations_help() -> str:
-    guide_cards = "".join(_guide_card(title, path, description) for title, path, description in OPERATIONS_GUIDES)
-    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
-    forbidden_items = "".join(f"<li>{_h(name)}</li>" for name in FORBIDDEN_AI_ITEMS)
     return _page(
         "도움말",
-        f"""
-        <section class="topbar">
-          <div>
-            <a class="back" href="/">처리한 기록으로</a>
-            <h1>도움말</h1>
-            <p class="subtitle">파일 처리부터 결과 확인까지</p>
-          </div>
-          <div class="status-stack">
-            <a class="button" href="/upload">파일 업로드</a>
-            <a class="button secondary" href="/settings">설정</a>
-          </div>
-        </section>
+        """
+        <header class="topbar">
+          <div><a class="back" href="/">처리한 기록으로</a><h1>도움말</h1></div>
+          <a class="button" href="/upload">파일 업로드</a>
+        </header>
         <section class="workspace-section">
           <h2>사용 순서</h2>
           <ol class="safe-list">
-            <li>Burp의 HTTP history에서 필요한 항목을 XML로 저장합니다. 예제 JSON도 사용할 수 있습니다.</li>
-            <li><a href="/upload">파일 업로드</a>에서 파일과 새 작업 이름을 입력하고 민감정보 제거를 시작합니다.</li>
-            <li>처리가 끝나면 결과 파일 확인을 엽니다. 검증에 실패한 기록은 사용할 수 없습니다.</li>
-            <li>파일 내용을 직접 읽고 필요한 파일만 내려받습니다. AI로 자동 전송하지 않습니다.</li>
+            <li>Burp의 HTTP history에서 필요한 요청을 XML로 저장합니다. 예제 JSON도 사용할 수 있습니다.</li>
+            <li>파일 업로드에서 파일을 선택하고 새 작업 이름을 입력합니다.</li>
+            <li>처리가 끝나면 결과 파일 확인에서 내용을 읽고 필요한 파일만 내려받습니다.</li>
           </ol>
+          <p class="review-note">검증에 실패한 기록은 사용할 수 없습니다. 점검 결과는 취약점 후보이고 보고서는 초안입니다.
+          실제 취약점 여부와 최종 심각도는 직접 확인하세요. AI로 자동 전송하지 않습니다.</p>
         </section>
         <section class="workspace-section">
           <h2>처리가 안 될 때</h2>
           <ul class="safe-list">
-            <li>파일은 XML 또는 JSON이어야 하며 10 MiB 이하여야 합니다.</li>
-            <li>이미 사용한 작업 이름은 다른 이름으로 바꿉니다.</li>
-            <li>파일을 읽지 못하면 Burp에서 요청 항목을 선택해 다시 저장합니다.</li>
+            <li>파일이 XML 또는 JSON인지, 크기가 10 MiB 이하인지 확인하세요.</li>
+            <li>이미 사용한 작업 이름은 다른 이름으로 바꾸세요.</li>
+            <li>파일을 읽지 못하면 Burp에서 요청을 선택해 다시 저장하세요.</li>
           </ul>
         </section>
-        <p class="review-note">점검 항목은 취약점 후보이며 보고서는 초안입니다. 최종 심각도와 공유 여부는 직접 판단하세요.</p>
-        <details class="secondary-details">
-          <summary>Burp 수집기와 기술 참고</summary>
-          <p>Burp 탐색 중 수집은 별도 수신기와 Montoya 확장 설정이 필요합니다. <a href="/live-capture">Burp 수집 상태</a> 화면만 열어서는 수집이 시작되지 않습니다.</p>
-        <section class="safety-strip">
-          <div class="rail"><span>접속</span><strong>127.0.0.1 전용</strong></div>
-          <div class="rail"><span>표시</span><strong>HTML escape 적용</strong></div>
-          <div class="rail"><span>finding</span><strong>후보</strong></div>
-          <div class="rail"><span>위험도</span><strong>초안</strong></div>
-        </section>
-        {_read_only_troubleshooting_panel()}
-        {_release_readiness_status_panel()}
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>빠른 흐름</h2><span class="muted">CLI와 GUI 병행 사용 순서입니다.</span></div>
-            <ol class="safe-list">
-              <li>receiver를 127.0.0.1에서 실행합니다.</li>
-              <li>Burp scoped HTTP history를 로컬 receiver로 전송합니다.</li>
-              <li>정제 산출물이 생성되고 verify를 통과했는지 확인합니다.</li>
-              <li>dashboard에서 산출물을 선택합니다.</li>
-              <li>검증, 리뷰, 보고서, 내보내기를 verified safe output에만 실행합니다.</li>
-              <li>AI에는 아래 안전 파일 4개만 넣습니다.</li>
-            </ol>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>문서 진입점</h2><span class="muted">repository-relative 경로만 표시합니다.</span></div>
-            <div class="file-grid">{guide_cards}</div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>AI 사용 가능 파일</h2><span class="muted">검증 통과 후에만 사용합니다.</span></div>
-            <ul class="safe-list">{safe_files}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>AI/문서/PR 금지 항목</h2><span class="muted">원문 또는 민감값은 옮기지 않습니다.</span></div>
-            <ul class="safe-list">{forbidden_items}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>결과 해석</h2><span class="muted">확정 표현을 피합니다.</span></div>
-            <dl class="facts">
-              <div><dt>finding</dt><dd>후보이며 수동 검증 전 확정 취약점이 아닙니다.</dd></div>
-              <div><dt>위험도</dt><dd>초안이며 최종 심각도가 아닙니다.</dd></div>
-              <div><dt>confidence</dt><dd>증거 신뢰도이며 심각도가 아닙니다.</dd></div>
-              <div><dt>최종 심각도</dt><dd>Burp 재현, 권한별 비교, 영향도 판단 후 수동 결정합니다.</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>이번 화면의 경계</h2><span class="muted">상태 안내만 제공합니다.</span></div>
-            <ul class="safe-list">
-              <li>raw viewer를 제공하지 않습니다.</li>
-              <li>재전송 또는 active scan을 제공하지 않습니다.</li>
-              <li>archive/HMAC 생성 또는 검증 실행 버튼을 제공하지 않습니다.</li>
-              <li>risk profile 변경 버튼을 제공하지 않습니다.</li>
-              <li>form, POST action, delete/edit 기능을 추가하지 않습니다.</li>
-            </ul>
-          </div>
-        </section>
+        <details class="secondary-details"><summary>Burp 수집기와 MCP 설정</summary>
+          <p>파일 업로드만 사용한다면 별도 연결은 필요 없습니다.</p>
+          <p>Burp 탐색 중 수집은 별도 수신기와 확장이 필요합니다.
+          <a href="/live-capture">Burp 수집 상태</a> 화면만 열어서는 수집이 시작되지 않습니다.</p>
+          <p>설정 문서: <code>docs/MONTOYA_COLLECTOR.md</code>, <code>docs/LOCALHOST_RECEIVER.md</code></p>
+          <p>MCP는 검증된 결과를 읽는 연결입니다. Burp를 직접 조작하지 않습니다.
+          설정 문서: <code>docs/READ_ONLY_MCP.md</code></p>
         </details>
         """,
     )
@@ -1401,160 +1286,47 @@ def render_live_capture_readiness(
     output: DashboardOutput | None = None,
     alias_selector_html: str = "",
 ) -> str:
-    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
-    receiver_evidence = _build_live_capture_receiver_output_evidence(output)
-    result_panel = ""
-    if result:
-        summary = "".join(f"<li>{_h(line)}</li>" for line in result.summary_lines)
-        result_panel = f"""
-          <div class="panel">
-            <div class="panel-head"><h2>Live Capture action result</h2><span class="muted">raw-free metadata only</span></div>
-            <dl class="facts">
-              <div><dt>action</dt><dd>{_h(result.action_name)}</dd></div>
-              <div><dt>result status</dt><dd>{_h(result.status)}</dd></div>
-              <div><dt>blocked reason</dt><dd>{_h(result.blocked_reason or "none")}</dd></div>
-              <div><dt>raw_data_included</dt><dd>false</dd></div>
-            </dl>
-            <ul class="safe-list">{summary}</ul>
-          </div>
-        """
-    receiver_output_alias = receiver_evidence.receiver_output_alias
-    receiver_verify_status = receiver_evidence.receiver_verify_status
-    safe_navigation_status = receiver_evidence.safe_file_existence_status
-    raw_data_included = "true" if receiver_evidence.raw_data_included else "false"
-    safe_navigation = (
-        f"""
-          <div class="panel">
-            <div class="panel-head"><h2>Verified receiver output navigation</h2><span class="muted">read-only links</span></div>
-            <dl class="facts">
-              <div><dt>evidence source</dt><dd>{_h(receiver_evidence.evidence_source)}</dd></div>
-              <div><dt>receiver output alias</dt><dd>{_h(receiver_evidence.receiver_output_alias)}</dd></div>
-              <div><dt>receiver verify status</dt><dd>{_status_badge("passed")}</dd></div>
-              <div><dt>safe files</dt><dd>{_status_badge(receiver_evidence.safe_file_existence_status)}</dd></div>
-              <div><dt>candidate count</dt><dd>{_h(str(receiver_evidence.candidate_count))}</dd></div>
-              <div><dt>raw_data_included</dt><dd>{raw_data_included}</dd></div>
-            </dl>
-            <ul class="safe-list">
-              <li><a href="{_simple_dashboard_href(output.output_id)}">simple dashboard</a></li>
-              <li><a href="{_safe_files_href(output.output_id)}">safe files</a></li>
-              <li><a href="{_triage_href(output.output_id)}">triage</a></li>
-              <li><a href="{_report_readiness_href(output.output_id)}">report readiness</a></li>
-              <li><a href="{_workflow_href(output.output_id)}">workflow</a></li>
-            </ul>
-          </div>
-        """
-        if output and receiver_evidence.safe_navigation_available
-        else """
-          <div class="panel">
-            <div class="panel-head"><h2>Verified receiver output navigation</h2><span class="muted">hidden until verify passes</span></div>
-            <dl class="facts">
-              <div><dt>evidence source</dt><dd>receiver_output_alias</dd></div>
-              <div><dt>receiver output alias</dt><dd>not selected</dd></div>
-              <div><dt>receiver verify status</dt><dd>not selected</dd></div>
-              <div><dt>safe files</dt><dd>hidden until verify passes</dd></div>
-              <div><dt>candidate count</dt><dd>0</dd></div>
-              <div><dt>raw_data_included</dt><dd>false</dd></div>
-            </dl>
-            <p class="muted">Open this page with a verified receiver output alias to show safe navigation links.</p>
-          </div>
-        """
+    evidence = _build_live_capture_receiver_output_evidence(output)
+    navigation = (
+        f'<a class="button" href="{_output_href(output.output_id)}">결과 파일 확인</a>'
+        f'<a class="button secondary" href="{_simple_dashboard_href(output.output_id)}">결과 요약</a>'
+        if output and evidence.safe_navigation_available
+        else '<p>검증된 기록을 선택하면 결과를 확인할 수 있습니다.</p>'
+    )
+    result_summary = (
+        f'<p>처리 결과: {_status_badge(result.status)}</p>'
+        f'<p>차단 사유: {_h(result.blocked_reason)}</p>'
+        if result else ""
     )
     return _page(
-        "Live Capture read-only status",
+        "Burp 수집 상태",
         f"""
-        <section class="topbar">
-          <div>
-            <a class="back" href="/">대시보드로 돌아가기</a>
-            <h1>Live Capture read-only status</h1>
-            <p class="subtitle">v0.5 Live Capture의 read-only 상태 패널입니다. runtime smoke 상태와 verified receiver output alias만 안내하며 dashboard에서 capture를 시작하거나 중지하지 않습니다.</p>
-          </div>
-          <div class="status-stack">
-            <span class="badge good">read-only</span>
-            <span class="badge neutral">no form</span>
-            <span class="badge neutral">no POST action</span>
-          </div>
+        <header class="topbar">
+          <div><a class="back" href="/">처리한 기록으로</a><h1>Burp 수집 상태</h1></div>
+          <a class="button secondary" href="/upload">파일 업로드</a>
+        </header>
+        <p>별도로 실행한 수신기의 결과를 확인합니다. 이 화면에서 수집을 시작하거나 중지하지 않습니다.</p>
+        <p class="review-note">확장과 수신기의 실제 실행 여부나 전송 건수는 이 화면에서 확인하지 않습니다.
+        현재 작업 상태와 수신 결과의 검증 상태는 서로 다릅니다.</p>
+        <section class="workspace-section">
+          <h2>수신 결과</h2>
+          <dl class="facts">
+            <div><dt>작업 이름</dt><dd>{_h(_status_label(evidence.receiver_output_alias))}</dd></div>
+            <div><dt>검증</dt><dd>{_status_badge(evidence.receiver_verify_status)}</dd></div>
+            <div><dt>전달 후보 파일</dt><dd>{_status_badge(evidence.safe_file_existence_status)}</dd></div>
+            <div><dt>검토할 항목</dt><dd>{evidence.candidate_count}개</dd></div>
+          </dl>
+          <div class="actions">{navigation}</div>
         </section>
-        <section class="safety-strip">
-          <div class="rail"><span>session state</span><strong>{_h(session.status)}</strong></div>
-          <div class="rail"><span>receiver verify</span><strong>{_h(receiver_verify_status)}</strong></div>
-          <div class="rail"><span>receiver output alias</span><strong>{_h(receiver_output_alias)}</strong></div>
-          <div class="rail"><span>safe navigation</span><strong>{_h(safe_navigation_status)}</strong></div>
-          <div class="rail"><span>evidence source</span><strong>{_h(receiver_evidence.evidence_source)}</strong></div>
-          <div class="rail"><span>raw_data_included</span><strong>{raw_data_included}</strong></div>
-        </section>
-        {alias_selector_html}
-        {_read_only_troubleshooting_panel()}
-        <section class="grid">
-          {result_panel}
-          <div class="panel">
-            <div class="panel-head"><h2>Runtime smoke status panel</h2><span class="muted">count/status labels only</span></div>
-            <dl class="facts">
-              <div><dt>extension load status</dt><dd>manual evidence not recorded in dashboard</dd></div>
-              <div><dt>local receiver status</dt><dd>manual evidence not recorded in dashboard</dd></div>
-              <div><dt>in-scope handoff count</dt><dd>not recorded in dashboard</dd></div>
-              <div><dt>out-of-scope skip count</dt><dd>not recorded in dashboard</dd></div>
-              <div><dt>missing_host_skipped</dt><dd>not recorded in dashboard</dd></div>
-              <div><dt>invalid_host_skipped</dt><dd>not recorded in dashboard</dd></div>
-              <div><dt>receiver verify status</dt><dd>{_h(receiver_verify_status)}</dd></div>
-              <div><dt>receiver output alias</dt><dd>{_h(receiver_output_alias)}</dd></div>
-              <div><dt>safe file existence status</dt><dd>{_h(receiver_evidence.safe_file_existence_status)}</dd></div>
-              <div><dt>candidate count</dt><dd>{_h(str(receiver_evidence.candidate_count))}</dd></div>
-              <div><dt>evidence source</dt><dd>{_h(receiver_evidence.evidence_source)}</dd></div>
-              <div><dt>raw_data_included</dt><dd>{raw_data_included}</dd></div>
-            </dl>
-          </div>
-          {safe_navigation}
-          <div class="panel">
-            <div class="panel-head"><h2>Current session</h2><span class="muted">dashboard-local metadata only</span></div>
-            <dl class="facts">
-              <div><dt>status</dt><dd>{_h(session.status)}</dd></div>
-              <div><dt>session alias</dt><dd>{_h(session.session_alias)}</dd></div>
-              <div><dt>target alias</dt><dd>{_h(session.target_alias)}</dd></div>
-              <div><dt>updated UTC</dt><dd>{_h(session.updated_at_utc or "none")}</dd></div>
-              <div><dt>collector/receiver integration</dt><dd>separate PR</dd></div>
-              <div><dt>dashboard capture execution</dt><dd>false</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>Read-only boundary</h2><span class="muted">no dashboard execution</span></div>
-            <dl class="facts">
-              <div><dt>GET /live-capture</dt><dd>read-only status panel</dd></div>
-              <div><dt>dashboard form</dt><dd>none</dd></div>
-              <div><dt>dashboard action button</dt><dd>none</dd></div>
-              <div><dt>collector forwarding changes</dt><dd>none</dd></div>
-              <div><dt>receiver ingest changes</dt><dd>none</dd></div>
-              <div><dt>raw preview/download</dt><dd>none</dd></div>
-              <div><dt>replay or active scan</dt><dd>none</dd></div>
-              <div><dt>AI automatic handoff</dt><dd>false</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>AI input candidate files</h2><span class="muted">manual review required</span></div>
-            <ul class="safe-list">{safe_files}</ul>
-            <p class="muted">Findings remain candidates. Risk remains draft. Final severity and CVSS remain manual decisions.</p>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>Values not displayed</h2><span class="muted">principles only</span></div>
-            <ul class="safe-list">
-              <li>raw request or response body</li>
-              <li>credential, cookie, token, JWT, or session value</li>
-              <li>actual target identifier or full local path</li>
-              <li>personal data, integrity secret, or request forgery token value</li>
-              <li>unverified output, raw audit row, or archive content</li>
-            </ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>Related routes and documents</h2><span class="muted">read-only references</span></div>
-            <dl class="facts">
-              <div><dt>operations hub</dt><dd><a href="/help">/help</a></dd></div>
-              <div><dt>upload flow</dt><dd><a href="/upload">/upload</a></dd></div>
-              <div><dt>integration plan</dt><dd>docs/LIVE_CAPTURE_DASHBOARD_INTEGRATION_PLAN_v0.5.md</dd></div>
-              <div><dt>runtime smoke checklist</dt><dd>docs/LIVE_CAPTURE_RUNTIME_SMOKE_CHECKLIST_v0.5.md</dd></div>
-              <div><dt>troubleshooting</dt><dd>docs/TROUBLESHOOTING_v0.5.md</dd></div>
-              <div><dt>dashboard home</dt><dd><a href="/">/</a></dd></div>
-            </dl>
-          </div>
-        </section>
+        <details class="secondary-details"><summary>다른 기록 선택</summary>{alias_selector_html}</details>
+        <details class="secondary-details"><summary>작업 상태</summary>
+          <p>상태: {_status_badge(session.status)}</p>
+          <p>작업 별칭: {_h(session.session_alias)}</p>
+          <p>대상 별칭: {_h(session.target_alias)}</p>
+          <p>갱신 시각(UTC): {_h(session.updated_at_utc or "없음")}</p>
+          {result_summary}
+        </details>
+        <p>설정 방법은 저장소의 <code>docs/MONTOYA_COLLECTOR.md</code>를 참고하세요.</p>
         """,
     )
 def render_upload_wizard(csrf_token: str) -> str:
@@ -1709,13 +1481,13 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
           <summary>공유 전 추가 점검</summary>
           <nav class="secondary-links">
             <a href="{_preflight_href(output.output_id)}">공유 전 점검</a>
-            <a href="{_handoff_href(output.output_id)}">전달 자료 목록</a>
+            <a href="{_handoff_href(output.output_id)}">전달할 파일</a>
             <a href="{_triage_href(output.output_id)}">검토할 항목</a>
-            <a href="{_report_readiness_href(output.output_id)}">보고서 준비 상태</a>
-            <a href="{_prompt_readiness_href(output.output_id)}">프롬프트 준비 상태</a>
-            <a href="{_evidence_boundary_href(output.output_id)}">근거 자료 범위</a>
-            <a href="{_workflow_href(output.output_id)}">처리 이력</a>
-            <a href="{_operator_runbook_href(output.output_id)}">운영 순서</a>
+            <a href="{_report_readiness_href(output.output_id)}">보고서 확인</a>
+            <a href="{_prompt_readiness_href(output.output_id)}">프롬프트 확인</a>
+            <a href="{_evidence_boundary_href(output.output_id)}">공유할 자료</a>
+            <a href="{_workflow_href(output.output_id)}">처리 순서</a>
+            <a href="{_operator_runbook_href(output.output_id)}">사용 순서</a>
             <a href="{_safe_files_href(output.output_id)}">파일 상태</a>
           </nav>
         </details>
@@ -1758,10 +1530,10 @@ def render_simple_dashboard(output: DashboardOutput) -> str:
             <a href="{_safe_files_href(output.output_id)}">파일 상태</a>
             <a href="{_preflight_href(output.output_id)}">공유 전 점검</a>
             <a href="{_triage_href(output.output_id)}">검토할 항목</a>
-            <a href="{_report_readiness_href(output.output_id)}">보고서 준비 상태</a>
-            <a href="{_workflow_href(output.output_id)}">처리 이력</a>
-            <a href="{_evidence_boundary_href(output.output_id)}">근거 자료 범위</a>
-            <a href="{_operator_runbook_href(output.output_id)}">운영 순서</a>
+            <a href="{_report_readiness_href(output.output_id)}">보고서 확인</a>
+            <a href="{_workflow_href(output.output_id)}">처리 순서</a>
+            <a href="{_evidence_boundary_href(output.output_id)}">공유할 자료</a>
+            <a href="{_operator_runbook_href(output.output_id)}">사용 순서</a>
             <a href="/live-capture">Burp 수집 상태</a>
           </nav>
         </details>
@@ -1769,830 +1541,189 @@ def render_simple_dashboard(output: DashboardOutput) -> str:
     )
 
 
-def render_ai_handoff_index(index: AiHandoffIndex) -> str:
-    output = index.output
-    file_rows = "\n".join(_handoff_file_card(file) for file in index.files)
-    forbidden_items = "".join(
-        f"<li>{_h(item)}</li>"
-        for item in (
-            "raw 요청/응답",
-            "Cookie 또는 Authorization 값",
-            "token, JWT, session 값",
-            "실제 도메인, URL, IP 값",
-            "개인정보",
-            "무결성 검증 비밀값 또는 요청 위조 방지 값",
-            "로컬 전용 raw 저장소 또는 검증 전 산출물",
-            "감사 로그, 압축 archive, manifest",
-        )
+def _advanced_check_page(title: str, output: DashboardOutput, content: str, details: str = "") -> str:
+    links = (
+        ("파일 상태", _safe_files_href(output.output_id)),
+        ("공유 전 점검", _preflight_href(output.output_id)),
+        ("검토할 항목", _triage_href(output.output_id)),
+        ("보고서 확인", _report_readiness_href(output.output_id)),
+        ("프롬프트 확인", _prompt_readiness_href(output.output_id)),
+        ("전달할 파일", _handoff_href(output.output_id)),
+        ("공유할 자료", _evidence_boundary_href(output.output_id)),
+        ("사용 순서", _operator_runbook_href(output.output_id)),
+        ("처리 순서", _workflow_href(output.output_id)),
+    )
+    navigation = "".join(
+        f'<a href="{_h(href)}">{_h(label)}</a>' for label, href in links if label != title
+    )
+    extra = (
+        f'<details class="secondary-details"><summary>상세 정보</summary>{details}</details>'
+        if details else ""
     )
     return _page(
-        f"AI 핸드오프 인덱스 {output.label}",
+        f"{title} {output.label}",
         f"""
-        <section class="topbar">
-          <div>
-            <a class="back" href="{_output_href(output.output_id)}">산출물로 돌아가기</a>
-            <h1>AI 핸드오프 인덱스</h1>
-            <p class="subtitle">AI 안전 후보 파일의 조회 전용 핸드오프 점검입니다. 먼저 검증하고 수동 검토해야 합니다.</p>
-          </div>
-          <span class="badge good">조회 전용</span>
-        </section>
-        <section class="safety-strip">
-          <div class="rail"><span>파일 묶음</span><strong>AI 안전 후보 파일</strong></div>
-          <div class="rail"><span>검증</span><strong>먼저 verify</strong></div>
-          <div class="rail"><span>검토</span><strong>수동 검토 필요</strong></div>
-          <div class="rail"><span>심각도</span><strong>사람이 결정</strong></div>
-        </section>
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>핸드오프 요약</h2><span class="muted">메타데이터만 표시합니다.</span></div>
-            {_handoff_summary(index)}
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>권장 확인 순서</h2><span class="muted">운영자 읽기 순서입니다.</span></div>
-            <div class="file-grid">{file_rows}</div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>관련 흐름</h2><span class="muted">조회 전용 이동 링크입니다.</span></div>
-            <dl class="facts">
-              <div><dt>사전 점검 상태</dt><dd><a href="{_preflight_href(output.output_id)}">사전 점검 열기</a></dd></div>
-              <div><dt>리뷰/보고서/내보내기 흐름</dt><dd><a href="{_output_href(output.output_id)}">검증된 산출물 상세로 돌아가기</a></dd></div>
-              <div><dt>finding</dt><dd>수동 검증이 끝날 때까지 후보입니다.</dd></div>
-              <div><dt>위험도</dt><dd>초안이며 심각도 확정이 아닙니다.</dd></div>
-              <div><dt>최종 심각도</dt><dd>최종 심각도는 사람이 결정합니다.</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>전송 금지 항목</h2><span class="muted">분류만 표시하고 실제 값은 표시하지 않습니다.</span></div>
-            <ul class="safe-list">{forbidden_items}</ul>
-          </div>
-        </section>
+        <header class="topbar">
+          <div><a class="back" href="/">처리한 기록으로</a><h1>{_h(title)}</h1>
+            <p class="subtitle">{_h(output.label)}</p></div>
+          <a class="button" href="{_output_href(output.output_id)}">결과 파일 확인</a>
+        </header>
+        <div class="summary-line">
+          <span>검토할 항목 <strong>{output.candidate_count}개</strong></span>
+          <span class="badge good">검증 통과</span>
+          <span class="badge neutral">조회 전용</span>
+        </div>
+        <section class="workspace-section">{content}</section>
+        <p class="review-note">점검 항목은 확인이 필요한 후보이며 보고서는 초안입니다.
+        실제 취약점 여부와 최종 심각도는 직접 확인해야 합니다. 공유 전 파일 내용을 읽어보세요.</p>
+        {extra}
+        <details class="secondary-details"><summary>다른 점검</summary>
+          <nav class="secondary-links">{navigation}</nav>
+        </details>
         """,
+    )
+
+
+def render_ai_handoff_index(index: AiHandoffIndex) -> str:
+    rows = "\n".join(
+        f"<tr><td>{file.order}</td><td>{_h(file.name)}</td>"
+        f"<td>{_h(_safe_file_description(file.name))}</td><td>{_status_badge(file.status)}</td></tr>"
+        for file in index.files
+    )
+    details = _handoff_summary(index) + '<div class="file-grid">' + "".join(
+        _handoff_file_card(file) for file in index.files
+    ) + "</div>"
+    return _advanced_check_page(
+        "전달할 파일", index.output,
+        f'<p>아래 순서로 내용을 읽고 필요한 파일만 사용하세요. AI로 자동 전송하지 않습니다.</p>'
+        f'<table class="result-table handoff-table"><thead><tr><th>순서</th><th>파일</th><th>내용</th><th>상태</th></tr></thead><tbody>{rows}</tbody></table>',
+        details,
     )
 
 
 def render_finding_triage_index(index: FindingTriageIndex, alias_selector_html: str = "") -> str:
-    output = index.output
-    candidate_rows = "\n".join(_triage_candidate_card(candidate) for candidate in index.candidates) or (
-        '<div class="empty">분류할 finding 후보가 없습니다.</div>'
-    )
-    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
-    forbidden_items = "".join(
-        f"<li>{_h(item)}</li>"
-        for item in (
-            "raw 요청/응답",
-            "Cookie 또는 Authorization 값",
-            "token, JWT, session 값",
-            "실제 도메인, URL, IP 값",
-            "개인정보",
-            "무결성 검증 비밀값 또는 요청 위조 방지 값",
-            "전체 로컬 경로",
-            "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
-        )
-    )
-    return _page(
-        f"Finding 후보 분류 인덱스 {output.label}",
-        f"""
-        <section class="topbar">
-          <div>
-            <a class="back" href="{_output_href(output.output_id)}">산출물로 돌아가기</a>
-            <h1>Finding 후보 분류 인덱스</h1>
-            <p class="subtitle">정제된 finding 후보를 검토하는 조회 전용 분류 점검입니다. 후보 finding과 위험도 초안은 수동 검토가 필요합니다.</p>
-          </div>
-          <span class="badge good">조회 전용</span>
-        </section>
-        <section class="safety-strip">
-          <div class="rail"><span>프로젝트 별칭</span><strong>{_h(output.label)}</strong></div>
-          <div class="rail"><span>finding 후보</span><strong>{len(index.candidates)}</strong></div>
-          <div class="rail"><span>finding 상태</span><strong>후보</strong></div>
-          <div class="rail"><span>심각도 결정</span><strong>수동 검토 필요</strong></div>
-        </section>
-        {alias_selector_html}
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>분류 요약</h2><span class="muted">안전 메타데이터만 표시합니다.</span></div>
-            <dl class="facts">
-              <div><dt>프로젝트 별칭</dt><dd>{_h(output.label)}</dd></div>
-              <div><dt>finding 후보 수</dt><dd>{len(index.candidates)}</dd></div>
-              <div><dt>analysis_packet.json</dt><dd>{_status_badge(index.analysis_packet_status)}</dd></div>
-              <div><dt>report_draft.md</dt><dd>{_status_badge(index.report_draft_status)}</dd></div>
-              <div><dt>raw_data_included</dt><dd>false</dd></div>
-              <div><dt>파일 경로 표시</dt><dd>false</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>AI 안전 파일 allowlist</h2><span class="muted">검증된 파일만 사용합니다.</span></div>
-            <ul class="safe-list">{safe_files}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>관련 흐름</h2><span class="muted">조회 전용 이동 링크입니다.</span></div>
-            <dl class="facts">
-              <div><dt>사전 점검</dt><dd><a href="{_preflight_href(output.output_id)}">AI 안전 사전 점검 열기</a></dd></div>
-              <div><dt>핸드오프</dt><dd><a href="{_handoff_href(output.output_id)}">AI 핸드오프 인덱스 열기</a></dd></div>
-              <div><dt>보고서 준비</dt><dd><a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스 열기</a></dd></div>
-              <div><dt>리뷰/보고서/내보내기 흐름</dt><dd><a href="{_output_href(output.output_id)}">검증된 산출물 상세로 돌아가기</a></dd></div>
-              <div><dt>경계</dt><dd>조회 전용 분류 점검이며 form 또는 POST action이 없습니다.</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>해석 경계</h2><span class="muted">후보와 초안으로만 봅니다.</span></div>
-            <dl class="facts">
-              <div><dt>finding</dt><dd>수동 검증이 끝날 때까지 후보입니다.</dd></div>
-              <div><dt>위험도</dt><dd>초안이며 심각도 확정이 아닙니다.</dd></div>
-              <div><dt>confidence</dt><dd>증거 신뢰도이며 심각도가 아닙니다.</dd></div>
-              <div><dt>최종 심각도</dt><dd>최종 심각도는 수동 결정이 필요합니다.</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>분류에 사용 금지</h2><span class="muted">분류만 표시하고 실제 값은 표시하지 않습니다.</span></div>
-            <ul class="safe-list">{forbidden_items}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>후보 점검</h2><span class="muted">정제된 메타데이터만 표시합니다.</span></div>
-            <div class="candidate-list">{candidate_rows}</div>
-          </div>
-        </section>
-        """,
+    candidates = "\n".join(_triage_candidate_card(candidate) for candidate in index.candidates)
+    return _advanced_check_page(
+        "검토할 항목", index.output,
+        '<p>자동 점검에서 확인이 필요하다고 분류한 항목입니다. 실제 재현과 영향은 별도로 확인하세요.</p>'
+        f'<div class="candidate-list">{candidates or "<p>검토할 항목이 없습니다.</p>"}</div>',
+        alias_selector_html,
     )
 
 
 def render_report_readiness_index(index: ReportReadinessIndex, alias_selector_html: str = "") -> str:
-    output = index.output
-    file_rows = "\n".join(_report_readiness_file_card(file) for file in index.files)
-    checklist_items = "".join(
-        f"<li>{_h(item)}</li>"
-        for item in (
-            "범위 확인",
-            "영향 endpoint 확인",
-            "증거 품질 확인",
-            "false positive 가능성 검토",
-            "영향 설명 검토",
-            "조치 문구 검토",
-            "최종 심각도 수동 결정",
-            "고객 제출 전 민감정보 검토",
+    checklist = "".join(
+        f"<li>{item}</li>" for item in (
+            "점검 범위와 요청 경로가 맞는지 확인합니다.",
+            "탐지 오류 가능성과 실제 영향을 검토합니다.",
+            "근거가 충분한지 확인하고 조치 방법을 보완합니다.",
+            "최종 심각도를 결정하고 민감정보가 남아 있지 않은지 확인합니다.",
         )
     )
-    forbidden_items = "".join(
-        f"<li>{_h(item)}</li>"
-        for item in (
-            "raw 요청/응답",
-            "raw 감사 row body",
-            "Cookie 또는 Authorization 값",
-            "token, JWT, session 값",
-            "실제 도메인, URL, IP 값",
-            "개인정보",
-            "무결성 검증 비밀값 또는 요청 위조 방지 값",
-            "전체 로컬 경로",
-            "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
-        )
-    )
-    return _page(
-        f"보고서 준비 인덱스 {output.label}",
-        f"""
-        <section class="topbar">
-          <div>
-            <a class="back" href="{_output_href(output.output_id)}">산출물로 돌아가기</a>
-            <h1>보고서 준비 인덱스</h1>
-            <p class="subtitle">수동 검토 전 사용하는 조회 전용 보고서 초안 점검입니다. report_draft.md는 제출용 보고서가 아니라 초안입니다.</p>
-          </div>
-          <span class="badge good">조회 전용</span>
-        </section>
-        <section class="safety-strip">
-          <div class="rail"><span>프로젝트 별칭</span><strong>{_h(output.label)}</strong></div>
-          <div class="rail"><span>보고서 초안 상태</span><strong>{_h(_status_label(index.report_status))}</strong></div>
-          <div class="rail"><span>finding 후보</span><strong>{index.candidate_count}</strong></div>
-          <div class="rail"><span>심각도 결정</span><strong>수동 검토 필요</strong></div>
-        </section>
-        {alias_selector_html}
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>준비 상태 요약</h2><span class="muted">안전 메타데이터만 표시합니다.</span></div>
-            <dl class="facts">
-              <div><dt>프로젝트 별칭</dt><dd>{_h(output.label)}</dd></div>
-              <div><dt>report_draft.md</dt><dd>{_status_badge(index.report_status)}</dd></div>
-              <div><dt>analysis_packet.json</dt><dd>{_status_badge(index.analysis_status)}</dd></div>
-              <div><dt>finding 후보 수</dt><dd>{index.candidate_count}</dd></div>
-              <div><dt>보고서 초안 상태 요약</dt><dd>{_h(_report_readiness_status_summary(index))}</dd></div>
-              <div><dt>raw_data_included</dt><dd>false</dd></div>
-              <div><dt>파일 경로 표시</dt><dd>false</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>관련 흐름</h2><span class="muted">조회 전용 이동 링크입니다.</span></div>
-            <dl class="facts">
-              <div><dt>후보 분류 링크</dt><dd><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스 열기</a></dd></div>
-              <div><dt>사전 점검 링크</dt><dd><a href="{_preflight_href(output.output_id)}">AI 안전 사전 점검 열기</a></dd></div>
-              <div><dt>핸드오프 링크</dt><dd><a href="{_handoff_href(output.output_id)}">AI 핸드오프 인덱스 열기</a></dd></div>
-              <div><dt>내보내기/리뷰/보고서 흐름 링크</dt><dd><a href="{_output_href(output.output_id)}">검증된 산출물 상세로 돌아가기</a></dd></div>
-              <div><dt>경계</dt><dd>조회 전용 보고서 초안 점검이며 form 또는 POST action이 없습니다.</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>파일 메타데이터</h2><span class="muted">본문 미리보기는 제공하지 않습니다.</span></div>
-            <div class="file-grid">{file_rows}</div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>운영자 점검</h2><span class="muted">수동 검토가 필요합니다.</span></div>
-            <ul class="safe-list">{checklist_items}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>해석 경계</h2><span class="muted">후보와 초안으로만 봅니다.</span></div>
-            <dl class="facts">
-              <div><dt>findings</dt><dd>수동 검증이 끝날 때까지 finding 후보입니다.</dd></div>
-              <div><dt>risk</dt><dd>초안이며 심각도 확정이 아닙니다.</dd></div>
-              <div><dt>confidence</dt><dd>증거 신뢰도이며 심각도가 아닙니다.</dd></div>
-              <div><dt>report draft</dt><dd>report_draft.md는 제출용 보고서가 아니라 초안입니다.</dd></div>
-              <div><dt>심각도 결정</dt><dd>최종 심각도는 수동 결정입니다.</dd></div>
-              <div><dt>hash 종류</dt><dd>SHA-256 파일 fingerprint이며 HMAC이 아닙니다.</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>보고서 준비에 사용 금지</h2><span class="muted">분류만 표시하고 실제 값은 표시하지 않습니다.</span></div>
-            <ul class="safe-list">{forbidden_items}</ul>
-          </div>
-        </section>
-        """,
+    details = alias_selector_html + '<div class="file-grid">' + "".join(
+        _report_readiness_file_card(file) for file in index.files
+    ) + "</div>"
+    return _advanced_check_page(
+        "보고서 확인", index.output,
+        f'<p>보고서 초안: {_status_badge(index.report_status)}</p>'
+        '<p><code>report_draft.md</code>는 검토용 초안입니다. 제출 전 아래 내용을 확인하세요.</p>'
+        f'<ol class="safe-list">{checklist}</ol>',
+        details,
     )
 
 
 def render_prompt_readiness_index(index: PromptReadinessIndex) -> str:
-    output = index.output
-    file_rows = "\n".join(_prompt_readiness_file_card(file) for file in index.files)
-    check_rows = "\n".join(_prompt_readiness_check_card(check) for check in index.checks)
-    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
-    forbidden_items = "".join(
-        f"<li>{_h(item)}</li>"
-        for item in (
-            "raw 요청/응답",
-            "raw 감사 row body",
-            "Cookie 또는 Authorization 값",
-            "token, JWT, session 값",
-            "실제 도메인, URL, IP 값",
-            "개인정보",
-            "무결성 검증 비밀값 또는 요청 위조 방지 값",
-            "전체 로컬 경로",
-            "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
-        )
+    rows = "".join(
+        f"<tr><td>{_h(check.name)}</td><td>{_status_badge(check.status)}</td></tr>"
+        for check in index.checks
     )
-    return _page(
-        f"Prompt readiness 인덱스 {output.label}",
-        f"""
-        <section class="topbar">
-          <div>
-            <a class="back" href="{_output_href(output.output_id)}">검증된 산출물 상세</a>
-            <h1>Prompt readiness 인덱스</h1>
-            <p class="subtitle">chatgpt_prompt.md와 codex_task_prompt.md를 AI에 넣기 전에 상태를 점검하는 조회 전용 prompt readiness checklist입니다. 이 화면은 판단을 대신하지 않습니다.</p>
-          </div>
-          <span class="badge good">조회 전용</span>
-        </section>
-        <section class="safety-strip">
-          <div class="rail"><span>프로젝트 별칭</span><strong>{_h(output.label)}</strong></div>
-          <div class="rail"><span>prompt 상태</span><strong>{_h(_status_label(index.prompt_status))}</strong></div>
-          <div class="rail"><span>safe files</span><strong>{index.safe_file_count}/{len(SAFE_PREVIEW_FILES)}</strong></div>
-          <div class="rail"><span>본문 preview</span><strong>false</strong></div>
-        </section>
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>준비 상태 요약</h2><span class="muted">본문 없이 메타데이터와 점검 결과만 표시합니다.</span></div>
-            <dl class="facts">
-              <div><dt>프로젝트 별칭</dt><dd>{_h(output.label)}</dd></div>
-              <div><dt>chatgpt_prompt.md</dt><dd>{_status_badge(index.chatgpt_status)}</dd></div>
-              <div><dt>codex_task_prompt.md</dt><dd>{_status_badge(index.codex_status)}</dd></div>
-              <div><dt>analysis_packet.json</dt><dd>{_status_badge(_file_status(output.path, "analysis_packet.json"))}</dd></div>
-              <div><dt>report_draft.md</dt><dd>{_status_badge(_file_status(output.path, "report_draft.md"))}</dd></div>
-              <div><dt>검증 선행</dt><dd>이 화면은 verify를 통과한 산출물에만 표시됩니다.</dd></div>
-              <div><dt>raw_data_included</dt><dd>false</dd></div>
-              <div><dt>파일 본문 preview</dt><dd>false</dd></div>
-              <div><dt>전체 로컬 경로 표시</dt><dd>false</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>safe files 4개</h2><span class="muted">AI 투입 후보 파일 allowlist입니다.</span></div>
-            <ul class="safe-list">{safe_files}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>Prompt 파일 메타데이터</h2><span class="muted">SHA-256은 HMAC이 아닌 파일 fingerprint입니다.</span></div>
-            <div class="file-grid">{file_rows}</div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>Prompt readiness 점검</h2><span class="muted">본문을 표시하지 않고 검사 결과만 요약합니다.</span></div>
-            <div class="file-grid">{check_rows}</div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>Prompt 목적과 차이</h2><span class="muted">사용 전에 사람이 읽고 확인해야 합니다.</span></div>
-            <dl class="facts">
-              <div><dt>ChatGPT용 prompt</dt><dd>정제된 후보 분석, 수동 검토 보조, 조심스러운 보고서 문구 초안에 사용합니다.</dd></div>
-              <div><dt>Codex용 prompt</dt><dd>구현, 리뷰, 테스트 보강 같은 작업 보조에 사용하되 금지 범위를 함께 확인합니다.</dd></div>
-              <div><dt>finding</dt><dd>수동 검증이 끝날 때까지 후보입니다.</dd></div>
-              <div><dt>risk</dt><dd>초안이며 심각도 확정이 아닙니다.</dd></div>
-              <div><dt>최종 심각도 결정</dt><dd>Burp 재현, 권한별 비교, 영향도 판단 후 사람이 결정합니다.</dd></div>
-              <div><dt>prompt 파일</dt><dd>검증된 산출물이더라도 AI 투입 전 사람이 직접 검토해야 합니다.</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>권장 사용 순서</h2><span class="muted">조회 전용 링크입니다.</span></div>
-            <ol class="safe-list">
-              <li><a href="{_preflight_href(output.output_id)}">AI 안전 사전 점검</a>에서 safe files 상태를 봅니다.</li>
-              <li><a href="{_handoff_href(output.output_id)}">AI 핸드오프 인덱스</a>에서 파일 목적과 순서를 봅니다.</li>
-              <li><a href="{_workflow_href(output.output_id)}">작업 흐름 상태 인덱스</a>에서 전체 흐름을 봅니다.</li>
-              <li><a href="{_evidence_boundary_href(output.output_id)}">Evidence boundary 인덱스</a>에서 정제 증거와 raw 금지 범위를 봅니다.</li>
-              <li><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스</a>와 <a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스</a>에서 후보/초안 경계를 봅니다.</li>
-              <li>prompt 파일을 사람이 검토한 뒤 필요한 안전 파일만 AI에 입력합니다.</li>
-            </ol>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>Prompt에 넣으면 안 되는 항목</h2><span class="muted">분류명만 표시하고 실제 값은 표시하지 않습니다.</span></div>
-            <ul class="safe-list">{forbidden_items}</ul>
-          </div>
-        </section>
-        """,
+    descriptions = '<h2>검사 항목 설명</h2><dl class="facts">' + "".join(
+        f"<div><dt>{_h(check.name)}</dt><dd>{_h(check.summary)}</dd></div>" for check in index.checks
+    ) + "</dl>"
+    details = descriptions + '<div class="file-grid">' + "".join(
+        _prompt_readiness_file_card(file) for file in index.files
+    ) + "</div>"
+    return _advanced_check_page(
+        "프롬프트 확인", index.output,
+        '<p>ChatGPT용 파일은 분석 검토에, Codex용 파일은 코드 검토와 작업 요청에 사용합니다.</p>'
+        '<p>아래 검사는 안내 문구의 키워드 유무만 확인합니다. 내용을 직접 읽는 검토를 대신하지 않습니다.</p>'
+        f'<p>안내 문구 점검: {_status_badge(index.prompt_status)}</p>'
+        f'<table class="result-table check-table"><thead><tr><th>확인 항목</th><th>결과</th></tr></thead><tbody>{rows}</tbody></table>',
+        details,
     )
 
 
 def render_evidence_boundary_index(index: EvidenceBoundaryIndex) -> str:
-    output = index.output
-    file_rows = "\n".join(_evidence_boundary_file_card(file) for file in index.files)
-    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
-    allowed_items = "".join(
-        f"<li>{_h(item)}</li>"
-        for item in (
-            "검증 통과 후 생성된 safe files 4개",
-            "analysis_packet.json의 정제 finding 후보 구조",
-            "report_draft.md의 보고서 초안",
-            "chatgpt_prompt.md와 codex_task_prompt.md의 AI 작업 안내",
-            "후보 수, 파일 크기, 수정 시각, SHA-256 fingerprint 같은 안전 메타데이터",
-        )
-    )
-    forbidden_items = "".join(
-        f"<li>{_h(item)}</li>"
-        for item in (
-            "raw 요청/응답 본문",
-            "raw 감사 row 전문",
-            "Cookie 또는 Authorization 값",
-            "token, JWT, session 값",
-            "실제 도메인, URL, IP 값",
-            "개인정보",
-            "무결성 검증 비밀값 또는 요청 위조 방지 값",
-            "전체 로컬 경로",
-            "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
-        )
-    )
-    return _page(
-        f"Evidence boundary 인덱스 {output.label}",
-        f"""
-        <section class="topbar">
-          <div>
-            <a class="back" href="{_output_href(output.output_id)}">검증된 산출물 상세</a>
-            <h1>Evidence boundary 인덱스</h1>
-            <p class="subtitle">보고서와 AI 검토에 사용할 정제 증거와 절대 노출하지 않을 raw 증거 범위를 구분하는 조회 전용 evidence boundary checklist입니다.</p>
-          </div>
-          <span class="badge good">조회 전용</span>
-        </section>
-        <section class="safety-strip">
-          <div class="rail"><span>프로젝트 별칭</span><strong>{_h(output.label)}</strong></div>
-          <div class="rail"><span>정제 증거</span><strong>{_h(_status_label(index.sanitized_evidence_status))}</strong></div>
-          <div class="rail"><span>finding 후보 수</span><strong>{index.candidate_count}</strong></div>
-          <div class="rail"><span>raw 표시</span><strong>false</strong></div>
-        </section>
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>조회 전용 증거 경계 요약</h2><span class="muted">본문 없이 안전 메타데이터만 표시합니다.</span></div>
-            <dl class="facts">
-              <div><dt>프로젝트 별칭</dt><dd>{_h(output.label)}</dd></div>
-              <div><dt>정제 evidence</dt><dd>{_status_badge(index.sanitized_evidence_status)}</dd></div>
-              <div><dt>finding candidate</dt><dd>{_status_badge(index.finding_candidate_status)}</dd></div>
-              <div><dt>candidate count</dt><dd>{index.candidate_count}</dd></div>
-              <div><dt>analysis_packet.json</dt><dd>{_status_badge(index.analysis_status)}</dd></div>
-              <div><dt>report_draft.md</dt><dd>{_status_badge(index.report_status)}</dd></div>
-              <div><dt>chatgpt_prompt.md</dt><dd>{_status_badge(index.chatgpt_status)}</dd></div>
-              <div><dt>codex_task_prompt.md</dt><dd>{_status_badge(index.codex_status)}</dd></div>
-              <div><dt>safe files</dt><dd>{index.safe_file_count}/{len(SAFE_PREVIEW_FILES)}</dd></div>
-              <div><dt>raw_data_included</dt><dd>false</dd></div>
-              <div><dt>본문 preview</dt><dd>false</dd></div>
-              <div><dt>전체 로컬 경로 표시</dt><dd>false</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>정제 증거 파일 메타데이터</h2><span class="muted">safe files allowlist만 표시합니다.</span></div>
-            <div class="file-grid">{file_rows}</div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>허용되는 evidence 범위</h2><span class="muted">검증 통과 후 사람이 검토해야 합니다.</span></div>
-            <ul class="safe-list">{allowed_items}</ul>
-            <ul class="safe-list">{safe_files}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>금지되는 raw evidence 범위</h2><span class="muted">분류명만 표시하고 실제 값은 표시하지 않습니다.</span></div>
-            <ul class="safe-list">{forbidden_items}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>후보와 초안 경계</h2><span class="muted">확정 판단을 대신하지 않습니다.</span></div>
-            <dl class="facts">
-              <div><dt>finding</dt><dd>수동 검증이 끝날 때까지 candidate입니다.</dd></div>
-              <div><dt>risk</dt><dd>draft이며 severity 결정으로 취급하지 않습니다.</dd></div>
-              <div><dt>evidence confidence</dt><dd>증거 신뢰도이며 severity가 아닙니다.</dd></div>
-              <div><dt>최종 심각도</dt><dd>Burp 재현, 권한별 비교, 영향도 판단 후 사람이 결정합니다.</dd></div>
-              <div><dt>CVSS</dt><dd>별도 산정 범위입니다.</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>관련 조회 전용 인덱스</h2><span class="muted">GET 링크만 제공합니다.</span></div>
-            <dl class="facts">
-              <div><dt>사전 점검</dt><dd><a href="{_preflight_href(output.output_id)}">AI 안전 사전 점검 열기</a></dd></div>
-              <div><dt>핸드오프</dt><dd><a href="{_handoff_href(output.output_id)}">AI 핸드오프 인덱스 열기</a></dd></div>
-              <div><dt>Prompt readiness</dt><dd><a href="{_prompt_readiness_href(output.output_id)}">Prompt readiness 인덱스 열기</a></dd></div>
-              <div><dt>Evidence boundary</dt><dd><a href="{_evidence_boundary_href(output.output_id)}">Evidence boundary 인덱스 열기</a></dd></div>
-              <div><dt>Safe file inventory</dt><dd><a href="{_safe_files_href(output.output_id)}">Safe file inventory 인덱스 열기</a></dd></div>
-              <div><dt>후보 분류</dt><dd><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스 열기</a></dd></div>
-              <div><dt>보고서 준비</dt><dd><a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스 열기</a></dd></div>
-              <div><dt>작업 흐름</dt><dd><a href="{_workflow_href(output.output_id)}">작업 흐름 상태 인덱스 열기</a></dd></div>
-              <div><dt>운영 runbook</dt><dd><a href="{_operator_runbook_href(output.output_id)}">Operator runbook 인덱스 열기</a></dd></div>
-              <div><dt>경계</dt><dd>read-only evidence boundary checklist이며 form, POST action, download action이 없습니다.</dd></div>
-            </dl>
-          </div>
-        </section>
-        """,
+    details = '<div class="file-grid">' + "".join(
+        _evidence_boundary_file_card(file) for file in index.files
+    ) + "</div>"
+    return _advanced_check_page(
+        "공유할 자료", index.output,
+        '<h2>공유 전 확인할 파일</h2>'
+        '<p>분석 요약, 프롬프트, 보고서 초안만 검토 대상입니다. 결과 폴더 전체를 올리지 마세요.</p>'
+        '<ul class="safe-list">' + "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES) + "</ul>"
+        '<h2>공유하지 않을 자료</h2>'
+        '<p>원본 요청·응답, 인증정보, 개인정보, 실제 대상 주소, 전체 로컬 경로는 보내지 마세요. '
+        '원본 보관 폴더와 감사 기록도 AI 전달 대상이 아닙니다.</p>',
+        details,
     )
 
 
 def render_operator_runbook_index(index: OperatorRunbookIndex) -> str:
-    output = index.output
-    step_cards = "\n".join(_operator_runbook_step_card(step) for step in index.steps)
-    file_rows = "\n".join(
-        f"<div><dt>{_h(name)}</dt><dd>{_status_badge(status)}</dd></div>"
-        for name, status in index.file_statuses
-    )
-    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
-    ai_candidate_items = "".join(
-        f"<li>{_h(item)}</li>"
-        for item in (
-            "검증을 통과한 safe files 4개",
-            "sanitized finding candidate metadata",
-            "candidate count, 파일 크기, 수정 시각, SHA-256 fingerprint",
-            "preflight, handoff, triage, report-readiness, prompt-readiness, evidence-boundary 상태",
-            "workflow status recap에서 확인한 운영 순서",
-        )
-    )
-    forbidden_items = "".join(
-        f"<li>{_h(item)}</li>"
-        for item in (
-            "raw request/response body",
-            "raw audit row 전문",
-            "Cookie 값",
-            "Authorization 값",
-            "token/JWT/session 값",
-            "실제 URL/도메인/IP",
-            "개인정보",
-            "무결성 검증 비밀값",
-            "요청 위조 방지 값",
-            "전체 로컬 경로",
-            "local_only/, raw/, raw_vault/, verify 전 out/, out/.audit 산출물",
-        )
-    )
-    return _page(
-        f"Operator runbook 인덱스 {output.label}",
-        f"""
-        <section class="topbar">
-          <div>
-            <a class="back" href="{_output_href(output.output_id)}">검증된 산출물 상세</a>
-            <h1>Operator runbook 인덱스</h1>
-            <p class="subtitle">Burp 수집부터 AI 투입 전 수동 검토까지 운영자가 확인할 순서를 보여주는 조회 전용 operator runbook checklist입니다.</p>
-          </div>
-          <span class="badge good">조회 전용</span>
-        </section>
-        <section class="safety-strip">
-          <div class="rail"><span>프로젝트 별칭</span><strong>{_h(output.label)}</strong></div>
-          <div class="rail"><span>운영 단계</span><strong>{len(index.steps)}</strong></div>
-          <div class="rail"><span>safe files</span><strong>{index.safe_file_count}/{len(SAFE_PREVIEW_FILES)}</strong></div>
-          <div class="rail"><span>raw 표시</span><strong>false</strong></div>
-        </section>
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>운영 runbook 요약</h2><span class="muted">본문 미리보기 없이 안전 metadata만 표시합니다.</span></div>
-            <dl class="facts">
-              <div><dt>프로젝트 별칭</dt><dd>{_h(output.label)}</dd></div>
-              <div><dt>verify gate</dt><dd>{_status_badge("passed")}</dd></div>
-              <div><dt>review 후보 상태</dt><dd>{_status_badge(index.review_status)}</dd></div>
-              <div><dt>finding candidate count</dt><dd>{index.candidate_count}</dd></div>
-              <div><dt>analysis_packet.json</dt><dd>{_status_badge(index.analysis_status)}</dd></div>
-              <div><dt>report_draft.md</dt><dd>{_status_badge(index.report_status)}</dd></div>
-              <div><dt>raw_data_included</dt><dd>false</dd></div>
-              <div><dt>body preview</dt><dd>false</dd></div>
-              <div><dt>전체 로컬 경로 표시</dt><dd>false</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>운영 순서</h2><span class="muted">각 단계는 실행 버튼이 아니라 조회 전용 이동 링크입니다.</span></div>
-            <div class="file-grid">{step_cards}</div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>safe files 4개</h2><span class="muted">AI 후보 파일 allowlist입니다.</span></div>
-            <dl class="facts">{file_rows}</dl>
-            <ul class="safe-list">{safe_files}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>AI 후보 입력 범위</h2><span class="muted">검증 후 사람이 다시 확인해야 하는 후보입니다.</span></div>
-            <ul class="safe-list">{ai_candidate_items}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>금지 데이터 경계</h2><span class="muted">분류명만 표시하고 실제 값은 표시하지 않습니다.</span></div>
-            <ul class="safe-list">{forbidden_items}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>해석 경계</h2><span class="muted">자동 판단으로 확정하지 않습니다.</span></div>
-            <dl class="facts">
-              <div><dt>finding</dt><dd>수동 검증이 끝날 때까지 candidate입니다.</dd></div>
-              <div><dt>risk</dt><dd>risk rating은 draft이며 최종 심각도가 아닙니다.</dd></div>
-              <div><dt>confidence</dt><dd>evidence confidence이며 severity가 아닙니다.</dd></div>
-              <div><dt>최종 심각도</dt><dd>Burp 재현, 권한별 비교, 영향도 판단 후 사람이 수동 결정합니다.</dd></div>
-              <div><dt>report_draft.md</dt><dd>최종 보고서가 아니라 수동 검토용 초안입니다.</dd></div>
-              <div><dt>prompt/evidence/report</dt><dd>모두 AI 투입 또는 공유 전 사람 검토가 필요합니다.</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>관련 조회 화면</h2><span class="muted">GET 링크만 제공합니다.</span></div>
-            <dl class="facts">
-              <div><dt>산출물 상세</dt><dd><a href="{_output_href(output.output_id)}">검증된 산출물 상세 열기</a></dd></div>
-              <div><dt>도움말</dt><dd><a href="/help">운영 도움말 열기</a></dd></div>
-              <div><dt>운영 허브</dt><dd><a href="/operations">운영 허브 열기</a></dd></div>
-              <div><dt>Live Capture 준비</dt><dd><a href="/live-capture">Live Capture 준비 화면 열기</a></dd></div>
-              <div><dt>사전 점검</dt><dd><a href="{_preflight_href(output.output_id)}">AI 안전 사전 점검 열기</a></dd></div>
-              <div><dt>핸드오프</dt><dd><a href="{_handoff_href(output.output_id)}">AI 핸드오프 인덱스 열기</a></dd></div>
-              <div><dt>후보 분류</dt><dd><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스 열기</a></dd></div>
-              <div><dt>보고서 준비</dt><dd><a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스 열기</a></dd></div>
-              <div><dt>Prompt readiness</dt><dd><a href="{_prompt_readiness_href(output.output_id)}">Prompt readiness 인덱스 열기</a></dd></div>
-              <div><dt>Evidence boundary</dt><dd><a href="{_evidence_boundary_href(output.output_id)}">Evidence boundary 인덱스 열기</a></dd></div>
-              <div><dt>Safe file inventory</dt><dd><a href="{_safe_files_href(output.output_id)}">Safe file inventory 인덱스 열기</a></dd></div>
-              <div><dt>Workflow status recap</dt><dd><a href="{_workflow_href(output.output_id)}">작업 흐름 상태 인덱스 열기</a></dd></div>
-              <div><dt>경계</dt><dd>이 화면은 조회 전용이며 form, POST action, 실행 버튼, 파일 내려받기를 제공하지 않습니다.</dd></div>
-            </dl>
-          </div>
-        </section>
-        """,
+    details = '<div class="file-grid">' + "".join(
+        _operator_runbook_step_card(step) for step in index.steps
+    ) + "</div>"
+    return _advanced_check_page(
+        "사용 순서", index.output,
+        '<ol class="safe-list">'
+        '<li><a href="/upload">파일 업로드</a>에서 Burp XML 또는 JSON을 처리합니다.</li>'
+        '<li>처리가 끝나면 결과 파일 확인에서 네 파일의 내용을 읽습니다.</li>'
+        '<li>검토할 항목을 재현하고 보고서 초안을 수정합니다.</li>'
+        '<li>민감정보가 없는지 확인한 뒤 필요한 파일만 사용합니다.</li></ol>'
+        '<p>Burp 탐색 중 수집은 별도 수신기와 확장이 필요합니다. '
+        '<a href="/live-capture">Burp 수집 상태</a>에서 결과를 확인할 수 있지만 수집을 시작하거나 중지할 수는 없습니다.</p>',
+        details,
     )
 
 
 def render_safe_file_inventory_index(index: SafeFileInventoryIndex, alias_selector_html: str = "") -> str:
-    output = index.output
-    file_cards = "\n".join(_safe_file_inventory_card(file) for file in index.files)
-    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
-    forbidden_items = "".join(
-        f"<li>{_h(item)}</li>"
-        for item in (
-            "raw request/response body",
-            "request body 또는 response body preview",
-            "prompt/report/evidence body preview",
-            "Cookie 값",
-            "Authorization 값",
-            "token/JWT/session 값",
-            "실제 URL/도메인/IP",
-            "개인정보",
-            "무결성 검증 비밀값",
-            "요청 위조 방지 값",
-            "전체 로컬 경로",
-            "local_only/, raw/, raw_vault/, verify 전 out/, out/.audit 산출물",
-        )
+    rows = "".join(
+        f"<tr><td>{_h(file.name)}</td><td>{_h(_safe_file_description(file.name))}</td>"
+        f"<td>{_status_badge(file.status)}</td></tr>" for file in index.files
     )
-    related_links = "".join(
-        f'<div><dt>{_h(label)}</dt><dd><a href="{_h(href)}">{_h(text)}</a></dd></div>'
-        for label, href, text in (
-            ("사전 점검", _preflight_href(output.output_id), "AI 안전 사전 점검 열기"),
-            ("핸드오프", _handoff_href(output.output_id), "AI 핸드오프 인덱스 열기"),
-            ("Prompt readiness", _prompt_readiness_href(output.output_id), "Prompt readiness 인덱스 열기"),
-            ("Evidence boundary", _evidence_boundary_href(output.output_id), "Evidence boundary 인덱스 열기"),
-            ("후보 분류", _triage_href(output.output_id), "finding 후보 분류 인덱스 열기"),
-            ("보고서 준비", _report_readiness_href(output.output_id), "보고서 준비 인덱스 열기"),
-            ("Workflow", _workflow_href(output.output_id), "작업 흐름 상태 인덱스 열기"),
-            ("Operator runbook", _operator_runbook_href(output.output_id), "Operator runbook 인덱스 열기"),
-        )
-    )
-    return _page(
-        f"Safe file inventory 인덱스 {output.label}",
-        f"""
-        <section class="topbar">
-          <div>
-            <a class="back" href="{_output_href(output.output_id)}">검증된 산출물 상세</a>
-            <h1>Safe file inventory 인덱스</h1>
-            <p class="subtitle">AI 투입 후보 파일 4개의 존재 여부와 안전 메타데이터를 보여주는 조회 전용 safe file inventory checklist입니다.</p>
-          </div>
-          <span class="badge good">조회 전용</span>
-        </section>
-        <section class="safety-strip">
-          <div class="rail"><span>프로젝트 별칭</span><strong>{_h(output.label)}</strong></div>
-          <div class="rail"><span>safe files</span><strong>{index.safe_file_count}/{len(SAFE_PREVIEW_FILES)}</strong></div>
-          <div class="rail"><span>finding 후보 수</span><strong>{index.candidate_count}</strong></div>
-          <div class="rail"><span>raw 표시</span><strong>false</strong></div>
-        </section>
-        {alias_selector_html}
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>Inventory 요약</h2><span class="muted">본문 preview 없이 파일 메타데이터만 표시합니다.</span></div>
-            <dl class="facts">
-              <div><dt>프로젝트 별칭</dt><dd>{_h(output.label)}</dd></div>
-              <div><dt>verify gate</dt><dd>{_status_badge("passed")}</dd></div>
-              <div><dt>finding candidate count</dt><dd>{index.candidate_count}</dd></div>
-              <div><dt>analysis_packet.json</dt><dd>{_status_badge(index.analysis_status)}</dd></div>
-              <div><dt>report_draft.md</dt><dd>{_status_badge(index.report_status)}</dd></div>
-              <div><dt>final severity</dt><dd>수동 결정입니다.</dd></div>
-              <div><dt>file body preview</dt><dd>false</dd></div>
-              <div><dt>download action</dt><dd>false</dd></div>
-              <div><dt>전체 로컬 경로 표시</dt><dd>false</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>safe files 4개</h2><span class="muted">AI 후보 파일 allowlist입니다.</span></div>
-            <ul class="safe-list">{safe_files}</ul>
-            <p class="muted">각 파일은 verify 통과 후에도 사람이 직접 검토해야 합니다.</p>
-          </div>
-          <div class="panel wide">
-            <div class="panel-head"><h2>파일 inventory</h2><span class="muted">exists/missing, size, modified UTC, SHA-256 fingerprint만 표시합니다.</span></div>
-            <div class="file-grid">{file_cards}</div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>AI 투입 해석 경계</h2><span class="muted">사람 검토 전 확정 상태가 아닙니다.</span></div>
-            <dl class="facts">
-              <div><dt>finding</dt><dd>수동 검증이 끝날 때까지 candidate입니다.</dd></div>
-              <div><dt>risk</dt><dd>risk rating은 초안이며 최종 심각도가 아닙니다.</dd></div>
-              <div><dt>confidence</dt><dd>evidence confidence이며 severity가 아닙니다.</dd></div>
-              <div><dt>final severity</dt><dd>Burp 재현, 권한별 비교, 영향도 판단 후 사람이 수동 결정합니다.</dd></div>
-              <div><dt>report_draft.md</dt><dd>final report가 아니라 수동 검토용 보고서 초안입니다.</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>금지 데이터 경계</h2><span class="muted">분류명만 표시하며 실제 값은 표시하지 않습니다.</span></div>
-            <ul class="safe-list">{forbidden_items}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>관련 조회 전용 인덱스</h2><span class="muted">GET 링크만 제공합니다.</span></div>
-            <dl class="facts">
-              {related_links}
-              <div><dt>경계</dt><dd>이 화면은 조회 전용이며 form, POST action, 실행 버튼, 파일 내려받기를 제공하지 않습니다.</dd></div>
-            </dl>
-          </div>
-        </section>
-        """,
+    details = alias_selector_html + '<div class="file-grid">' + "".join(
+        _safe_file_inventory_card(file) for file in index.files
+    ) + "</div>"
+    return _advanced_check_page(
+        "파일 상태", index.output,
+        '<p>전달 후보 파일이 만들어졌는지 확인합니다. 내용을 읽거나 내려받으려면 결과 파일 확인으로 이동하세요.</p>'
+        f'<table class="result-table"><thead><tr><th>파일</th><th>내용</th><th>상태</th></tr></thead><tbody>{rows}</tbody></table>',
+        details,
     )
 
 
 def render_workflow_status_index(index: WorkflowStatusIndex, alias_selector_html: str = "") -> str:
-    output = index.output
-    step_cards = "\n".join(_workflow_step_card(step) for step in index.steps)
-    file_rows = "\n".join(
-        f"<div><dt>{_h(name)}</dt><dd>{_status_badge(status)}</dd></div>"
-        for name, status in index.file_statuses
-    )
-    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
-    forbidden_items = "".join(
-        f"<li>{_h(item)}</li>"
-        for item in (
-            "raw 요청/응답",
-            "raw 감사 row body",
-            "Cookie 또는 Authorization 값",
-            "token, JWT, session 값",
-            "실제 도메인, URL, IP 값",
-            "개인정보",
-            "무결성 검증 비밀값 또는 요청 위조 방지 값",
-            "전체 로컬 경로",
-            "local_only/, raw/, raw_vault/, 검증 전 out/, out/.audit 산출물",
-        )
-    )
-    return _page(
-        f"작업 흐름 상태 인덱스 {output.label}",
-        f"""
-        <section class="topbar">
-          <div>
-            <a class="back" href="{_output_href(output.output_id)}">검증된 산출물 상세</a>
-            <h1>작업 흐름 상태 인덱스</h1>
-            <p class="subtitle">검증된 산출물 리뷰를 위한 조회 전용 작업 흐름 점검입니다. 실행 없이 안전한 대시보드 순서만 연결합니다.</p>
-          </div>
-          <span class="badge good">조회 전용</span>
-        </section>
-        <section class="safety-strip">
-          <div class="rail"><span>프로젝트 별칭</span><strong>{_h(output.label)}</strong></div>
-          <div class="rail"><span>검증 상태 요약</span><strong>통과</strong></div>
-          <div class="rail"><span>finding 후보 수</span><strong>{index.candidate_count}</strong></div>
-          <div class="rail"><span>심각도 결정</span><strong>수동 검토 필요</strong></div>
-        </section>
-        {alias_selector_html}
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>조회 전용 작업 흐름 점검</h2><span class="muted">안전 메타데이터만 표시합니다.</span></div>
-            <dl class="facts">
-              <div><dt>프로젝트 별칭</dt><dd>{_h(output.label)}</dd></div>
-              <div><dt>검증 상태 요약</dt><dd>{_status_badge("passed")}</dd></div>
-              <div><dt>리뷰 상태 요약</dt><dd>{_status_badge(index.review_status)}</dd></div>
-              <div><dt>finding 후보 수</dt><dd>{index.candidate_count}</dd></div>
-              <div><dt>report_draft.md</dt><dd>{_status_badge(index.report_status)}</dd></div>
-              <div><dt>analysis_packet.json</dt><dd>{_status_badge(index.analysis_status)}</dd></div>
-              <div><dt>raw_data_included</dt><dd>false</dd></div>
-              <div><dt>파일 경로 표시</dt><dd>false</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>작업 흐름 단계</h2><span class="muted">조회 전용 링크입니다.</span></div>
-            <div class="file-grid">{step_cards}</div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>안전 파일 상태</h2><span class="muted">4개 allowlist만 표시합니다.</span></div>
-            <dl class="facts">{file_rows}</dl>
-            <ul class="safe-list">{safe_files}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>관련 인덱스</h2><span class="muted">GET 이동만 제공합니다.</span></div>
-            <dl class="facts">
-              <div><dt>사전 점검</dt><dd><a href="{_preflight_href(output.output_id)}">AI 안전 사전 점검 열기</a></dd></div>
-              <div><dt>핸드오프</dt><dd><a href="{_handoff_href(output.output_id)}">AI 핸드오프 인덱스 열기</a></dd></div>
-              <div><dt>Prompt readiness</dt><dd><a href="{_prompt_readiness_href(output.output_id)}">Prompt readiness 인덱스 열기</a></dd></div>
-              <div><dt>Safe file inventory</dt><dd><a href="{_safe_files_href(output.output_id)}">Safe file inventory 인덱스 열기</a></dd></div>
-              <div><dt>후보 분류</dt><dd><a href="{_triage_href(output.output_id)}">finding 후보 분류 인덱스 열기</a></dd></div>
-              <div><dt>보고서 준비</dt><dd><a href="{_report_readiness_href(output.output_id)}">보고서 준비 인덱스 열기</a></dd></div>
-              <div><dt>운영 runbook</dt><dd><a href="{_operator_runbook_href(output.output_id)}">Operator runbook 인덱스 열기</a></dd></div>
-              <div><dt>리뷰/보고서/내보내기 흐름</dt><dd><a href="{_output_href(output.output_id)}">검증된 산출물 상세로 돌아가기</a></dd></div>
-              <div><dt>Live Capture 준비</dt><dd><a href="/live-capture">Live Capture 준비 화면 열기</a></dd></div>
-              <div><dt>경계</dt><dd>조회 전용 작업 흐름 점검이며 form 또는 POST action이 없습니다.</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>해석 경계</h2><span class="muted">후보와 초안으로만 봅니다.</span></div>
-            <dl class="facts">
-              <div><dt>finding</dt><dd>수동 검증이 끝날 때까지 후보입니다.</dd></div>
-              <div><dt>risk</dt><dd>초안이며 별도 검토가 필요합니다.</dd></div>
-              <div><dt>confidence</dt><dd>증거 신뢰도이며 심각도가 아닙니다.</dd></div>
-              <div><dt>report draft</dt><dd>report_draft.md는 제출용 보고서가 아니라 초안입니다.</dd></div>
-              <div><dt>최종 심각도</dt><dd>최종 심각도는 수동 결정입니다.</dd></div>
-              <div><dt>안전 파일</dt><dd>검토 후 검증된 안전 파일만 사용합니다.</dd></div>
-            </dl>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>금지 데이터</h2><span class="muted">분류만 표시하고 실제 값은 표시하지 않습니다.</span></div>
-            <ul class="safe-list">{forbidden_items}</ul>
-          </div>
-        </section>
-        """,
+    steps = "".join(_workflow_step_card(step) for step in index.steps)
+    return _advanced_check_page(
+        "처리 순서", index.output,
+        '<p>각 단계의 결과를 확인하는 화면입니다. 링크를 눌러도 처리를 다시 실행하지 않습니다.</p>'
+        f'<div class="file-grid">{steps}</div>',
+        alias_selector_html,
     )
 
 
 def render_ai_safe_preflight(preflight: AiSafePreflight) -> str:
-    output = preflight.output
-    file_rows = "\n".join(
-        f"<div><dt>{_h(name)}</dt><dd>{_status_badge(status)}</dd></div>"
+    rows = "".join(
+        f"<tr><td>{_h(name)}</td><td>{_status_badge(status)}</td></tr>"
         for name, status in preflight.file_statuses
     )
-    safe_files = "".join(f"<li>{_h(name)}</li>" for name in SAFE_PREVIEW_FILES)
-    forbidden_items = "".join(
-        f"<li>{_h(item)}</li>"
-        for item in (
-            "raw 요청/응답",
-            "Cookie 또는 Authorization 값",
-            "token, JWT, session 값",
-            "실제 도메인, URL, IP 값",
-            "개인정보",
-            "무결성 검증 비밀값 또는 요청 위조 방지 값",
-            "로컬 전용 raw 저장소 또는 검증 전 산출물",
-            "감사 로그, 압축 archive, manifest",
-        )
-    )
-    return _page(
-        f"AI 안전 사전 점검 {output.label}",
-        f"""
-        <section class="topbar">
-          <div>
-            <a class="back" href="{_output_href(output.output_id)}">산출물로 돌아가기</a>
-            <h1>AI 안전 사전 점검</h1>
-            <p class="subtitle">ChatGPT 또는 Codex 핸드오프 전 조회 전용 점검입니다. 별칭과 상태 메타데이터만 표시합니다.</p>
-          </div>
-          <span class="badge good">조회 전용</span>
-        </section>
-        <section class="safety-strip">
-          <div class="rail"><span>검증</span><strong>{_h(_status_label("passed"))}</strong></div>
-          <div class="rail"><span>핸드오프</span><strong>{_h(_status_label(preflight.ready_status))}</strong></div>
-          <div class="rail"><span>raw 데이터 포함</span><strong>false</strong></div>
-          <div class="rail"><span>최종 심각도</span><strong>수동 결정</strong></div>
-        </section>
-        <section class="grid">
-          <div class="panel">
-            <div class="panel-head"><h2>사전 점검 요약</h2><span class="muted">안전 메타데이터만 표시합니다.</span></div>
-            {_preflight_summary(preflight)}
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>AI용 안전 파일</h2><span class="muted">먼저 검증하고 수동 검토해야 합니다.</span></div>
-            <dl class="facts">{file_rows}</dl>
-            <ul class="safe-list">{safe_files}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>전송 금지 항목</h2><span class="muted">분류만 표시하고 실제 값은 표시하지 않습니다.</span></div>
-            <ul class="safe-list">{forbidden_items}</ul>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h2>해석 경계</h2><span class="muted">후보와 초안으로만 봅니다.</span></div>
-            <dl class="facts">
-              <div><dt>finding</dt><dd>수동 검증이 끝날 때까지 후보입니다.</dd></div>
-              <div><dt>위험도</dt><dd>초안이며 최종 심각도가 아닙니다.</dd></div>
-              <div><dt>confidence</dt><dd>증거 신뢰도이며 심각도가 아닙니다.</dd></div>
-              <div><dt>CVSS</dt><dd>별도 산정 범위입니다.</dd></div>
-            </dl>
-          </div>
-        </section>
-        """,
+    return _advanced_check_page(
+        "공유 전 점검", preflight.output,
+        f'<p>파일 준비 상태: {_status_badge(preflight.ready_status)}</p>'
+        f'<p>민감정보 검사: {_status_badge(preflight.marker_scan_status)}</p>'
+        '<p>검증을 통과했더라도 파일 내용을 직접 확인하세요. 검사 통과가 외부 공유 승인을 뜻하지는 않습니다.</p>'
+        f'<table class="result-table"><thead><tr><th>파일</th><th>상태</th></tr></thead><tbody>{rows}</tbody></table>',
+        _preflight_summary(preflight),
     )
 
 
@@ -2721,57 +1852,32 @@ def _render_output_alias_selector(
 ) -> str:
     verified_outputs = outputs if outputs is not None else _discover_outputs(root, policy)[0]
     if not verified_outputs:
-        return """
-        <section class="panel output-alias-selector" aria-label="검증된 output 산출물 선택">
-          <div class="panel-head">
-            <h2>검증된 output 산출물 선택</h2>
-            <span class="muted">검증을 통과한 output 별칭이 아직 없습니다.</span>
-          </div>
-          <p class="muted">먼저 Burp export 또는 receiver output을 redaction/verify한 뒤 이 화면에서 별칭을 선택하세요. Output alias는 안전한 표시용 이름이며 전체 로컬 경로나 실제 target을 표시하지 않습니다. Raw traffic은 표시하지 않습니다.</p>
-          <a class="button secondary" href="/help">운영 가이드 보기</a>
-        </section>
-        """
-
-    cards = "\n".join(
-        _output_alias_selector_card(output, current_output_id)
-        for output in verified_outputs
-    )
-    return f"""
-        <section class="panel output-alias-selector" aria-label="검증된 output 산출물 선택">
-          <div class="panel-head">
-            <h2>검증된 output 산출물 선택</h2>
-            <span class="muted">verify를 통과한 별칭만 표시합니다.</span>
-          </div>
-          <p class="muted">Safe files는 AI 입력 후보이며 수동 검토가 필요합니다. Finding은 후보, risk는 초안입니다. Final severity와 CVSS는 사람이 수동 결정합니다. Raw traffic은 표시하지 않습니다.</p>
-          <p class="muted">Output alias는 안전한 표시용 이름입니다. 전체 로컬 경로, 실제 target 식별자, raw traffic, credential 값은 표시하지 않습니다.</p>
-          <div class="file-grid">{cards}</div>
-        </section>
-        """
+        return '<p>검증을 통과한 기록이 없습니다. <a href="/upload">파일 업로드</a>에서 시작하세요.</p>'
+    cards = "".join(_output_alias_selector_card(output, current_output_id) for output in verified_outputs)
+    return f'<section class="workspace-section"><h2>다른 기록 선택</h2><div class="file-grid">{cards}</div></section>'
 
 
 def _output_alias_selector_card(output: DashboardOutput, current_output_id: str) -> str:
-    selected_badge = '<span class="badge good">선택됨</span>' if output.output_id == current_output_id else ""
-    safe_file_count = len(output.prompt_files)
+    selected = '<span class="badge good">선택됨</span>' if output.output_id == current_output_id else ""
     links = "".join(
-        f'<a class="button small secondary" href="{_h(href)}">{_h(label)}</a>'
+        f'<a href="{_h(href)}">{_h(label)}</a>'
         for label, href in _output_alias_selector_links(output.output_id)
     )
     return f"""
-            <div class="guide-card output-alias-card">
-              <strong>{_h(output.label)}</strong>
-              <span>finding 후보 {output.candidate_count}개 · safe files {safe_file_count}/{len(SAFE_PREVIEW_FILES)}</span>
-              <small>별칭만 표시합니다. 로컬 경로와 target 식별자는 표시하지 않습니다. {selected_badge}</small>
-              <div class="actions">{links}</div>
-            </div>
+    <div class="guide-card output-alias-card">
+      <strong>{_h(output.label)}</strong>{selected}
+      <span>검토할 항목 {output.candidate_count}개 · 전달 후보 파일 {len(output.prompt_files)}/4개</span>
+      <nav class="secondary-links">{links}</nav>
+    </div>
     """
 
 
 def _output_alias_selector_links(output_id: str) -> tuple[tuple[str, str], ...]:
     return (
-        ("Safe files", _safe_files_href(output_id)),
-        ("Triage", _triage_href(output_id)),
-        ("Report readiness", _report_readiness_href(output_id)),
-        ("Workflow", _workflow_href(output_id)),
+        ("파일 상태", _safe_files_href(output_id)),
+        ("검토할 항목", _triage_href(output_id)),
+        ("보고서 확인", _report_readiness_href(output_id)),
+        ("처리 순서", _workflow_href(output_id)),
     )
 
 
@@ -2909,32 +2015,32 @@ def _build_prompt_readiness_index(output: DashboardOutput) -> PromptReadinessInd
     combined_text = "\n".join(text for text in (chatgpt_text, codex_text) if text)
     checks = [
         PromptReadinessCheck(
-            name="safe files 4개 언급",
+            name="전달 후보 파일 안내",
             status="present" if _contains_all(combined_text, SAFE_PREVIEW_FILES) else "needs_manual_review",
-            summary="analysis_packet.json, chatgpt_prompt.md, codex_task_prompt.md, report_draft.md가 prompt 본문에 모두 언급되는지 봅니다.",
+            summary="전달 후보 파일 네 개를 안내하는지 확인합니다.",
         ),
         PromptReadinessCheck(
-            name="forbidden data warning",
+            name="민감정보 공유 금지 안내",
             status=(
                 "present"
                 if _contains_all(combined_text, ("raw", "Cookie", "Authorization", "token", "domain", "IP"))
                 else "needs_manual_review"
             ),
-            summary="원문, 인증 헤더, 토큰, 실제 도메인/IP 같은 금지 범위가 prompt에 경고되는지 봅니다.",
+            summary="원문과 인증정보, 실제 대상 주소를 보내지 말라는 안내가 있는지 확인합니다.",
         ),
         PromptReadinessCheck(
-            name="verify-first warning",
+            name="사전 검증 안내",
             status="present" if _contains_any(combined_text, ("verify", "verified")) else "needs_manual_review",
-            summary="AI 투입 전 verify 통과 산출물만 사용한다는 경계가 있는지 봅니다.",
+            summary="검증을 통과한 결과만 사용하라는 안내가 있는지 확인합니다.",
         ),
         PromptReadinessCheck(
-            name="candidate/draft/manual review boundary",
+            name="후보와 초안에 대한 안내",
             status=(
                 "present"
                 if _contains_all(combined_text, ("candidate", "draft", "manual"))
                 else "needs_manual_review"
             ),
-            summary="finding은 후보, risk는 초안, 수동 검토가 필요하다는 경계가 있는지 봅니다.",
+            summary="점검 결과와 위험도는 초안이며 직접 확인해야 한다는 안내가 있는지 확인합니다.",
         ),
         PromptReadinessCheck(
             name="최종 심각도 수동 결정 경고",
@@ -2943,34 +2049,34 @@ def _build_prompt_readiness_index(output: DashboardOutput) -> PromptReadinessInd
                 if _contains_any(combined_text, ("severity decision", "manual-review severity draft"))
                 else "needs_manual_review"
             ),
-            summary="심각도 초안이 최종 결정이 아니라는 문구가 있는지 봅니다.",
+            summary="최종 심각도는 직접 판단해야 한다는 안내가 있는지 확인합니다.",
         ),
         PromptReadinessCheck(
-            name="raw data prohibition warning",
+            name="원문 요청·응답 공유 금지 안내",
             status=(
                 "present"
                 if _contains_any(combined_text, ("raw request/response", "raw request or response", "raw HTTP"))
                 else "needs_manual_review"
             ),
-            summary="raw 요청/응답을 요청하거나 재구성하지 말라는 경계가 있는지 봅니다.",
+            summary="원문 요청·응답을 요구하거나 복원하지 말라는 안내가 있는지 확인합니다.",
         ),
         PromptReadinessCheck(
-            name="Codex prompt 범위 구분",
+            name="Codex 작업 범위 안내",
             status=(
                 "present"
                 if _contains_all(codex_text, ("Hard requirements", "Do not", "manual verification"))
                 else "needs_manual_review"
             ),
-            summary="Codex용 prompt에 구현 보조 범위와 금지 범위가 분리되어 있는지 봅니다.",
+            summary="Codex에 요청할 작업과 금지한 작업이 구분되어 있는지 확인합니다.",
         ),
         PromptReadinessCheck(
-            name="ChatGPT prompt 분석 경계",
+            name="ChatGPT 분석 범위 안내",
             status=(
                 "present"
                 if _contains_all(chatgpt_text, ("Analyze", "candidate", "manual verification"))
                 else "needs_manual_review"
             ),
-            summary="ChatGPT용 prompt에 분석 목적과 수동 검토 경계가 분리되어 있는지 봅니다.",
+            summary="분석 목적과 직접 확인할 부분을 안내하는지 확인합니다.",
         ),
     ]
     prompt_status = "present" if all(check.status == "present" for check in checks) else "needs_manual_review"
@@ -3024,13 +2130,13 @@ def _build_workflow_status_index(output: DashboardOutput) -> WorkflowStatusIndex
         WorkflowStep(
             name="검증",
             status="passed",
-            summary="이 화면은 검증 gate를 통과한 산출물에만 표시됩니다.",
+            summary="검증을 통과한 결과만 확인할 수 있습니다.",
             href=_output_href(output.output_id),
         ),
         WorkflowStep(
-            name="리뷰",
+            name="후보 검토",
             status=review_status,
-            summary="후보 리뷰 요약은 정제된 메타데이터로만 표시합니다.",
+            summary="확인이 필요한 항목을 요약해서 보여줍니다.",
             href=_output_href(output.output_id),
         ),
         WorkflowStep(
@@ -3040,51 +2146,51 @@ def _build_workflow_status_index(output: DashboardOutput) -> WorkflowStatusIndex
             href=_output_href(output.output_id),
         ),
         WorkflowStep(
-            name="AI 안전 사전 점검",
+            name="공유 전 점검",
             status="manual review required",
-            summary="AI 핸드오프 전 안전 파일 4개가 있는지 확인합니다.",
+            summary="공유 전 네 파일의 상태를 확인합니다.",
             href=_preflight_href(output.output_id),
         ),
         WorkflowStep(
-            name="Safe file inventory 인덱스",
+            name="파일 상태",
             status="manual review required",
-            summary="safe files 4개의 존재 여부, 크기, 수정 시각, SHA-256 fingerprint를 확인합니다.",
+            summary="네 파일이 만들어졌는지 확인합니다. 크기와 해시는 상세 정보에서 볼 수 있습니다.",
             href=_safe_files_href(output.output_id),
         ),
         WorkflowStep(
-            name="AI 핸드오프 인덱스",
+            name="전달할 파일",
             status="manual review required",
-            summary="안전 파일 별칭, 순서, 목적, 메타데이터를 확인합니다.",
+            summary="사용할 파일의 목적과 읽는 순서를 확인합니다.",
             href=_handoff_href(output.output_id),
         ),
         WorkflowStep(
-            name="Prompt readiness 인덱스",
+            name="프롬프트 확인",
             status="manual review required",
-            summary="prompt 파일 본문을 표시하지 않고 투입 전 점검 결과만 확인합니다.",
+            summary="프롬프트에 필요한 주의사항이 있는지 확인합니다.",
             href=_prompt_readiness_href(output.output_id),
         ),
         WorkflowStep(
-            name="Evidence boundary 인덱스",
+            name="공유할 자료",
             status="manual review required",
-            summary="정제 증거와 raw 금지 범위의 조회 전용 경계를 확인합니다.",
+            summary="공유할 수 있는 자료와 보내면 안 되는 원본을 구분합니다.",
             href=_evidence_boundary_href(output.output_id),
         ),
         WorkflowStep(
-            name="Finding 후보 분류 인덱스",
+            name="검토할 항목",
             status="manual review required",
-            summary="정제된 finding 후보를 심각도 확정 없이 검토합니다.",
+            summary="확인이 필요한 항목의 근거와 위험도 초안을 검토합니다.",
             href=_triage_href(output.output_id),
         ),
         WorkflowStep(
-            name="보고서 준비 인덱스",
+            name="보고서 확인",
             status="manual review required",
-            summary="제출 승인 없이 보고서 초안 준비 상태를 확인합니다.",
+            summary="보고서 초안과 제출 전 확인할 항목을 봅니다.",
             href=_report_readiness_href(output.output_id),
         ),
         WorkflowStep(
-            name="리뷰/보고서/내보내기 흐름",
+            name="결과 파일 확인",
             status="manual review required",
-            summary="CSRF 보호 action은 검증된 산출물 상세에서만 실행합니다.",
+            summary="파일 확인과 다시 검증은 결과 파일 화면에서 사용합니다.",
             href=_output_href(output.output_id),
         ),
     ]
@@ -3111,39 +2217,39 @@ def _build_operator_runbook_index(output: DashboardOutput) -> OperatorRunbookInd
     steps = [
         OperatorRunbookStep(
             order=1,
-            name="Burp HTTP history 수집",
+            name="Burp 기록 준비",
             status="manual review required",
-            purpose="스코프가 확인된 HTTP history만 로컬 receiver로 보낼 준비를 확인합니다.",
+            purpose="점검이 허용된 범위의 Burp 기록만 준비합니다.",
             safe_metadata=("스코프 확인", "대상 별칭", "원문 값 미표시"),
             href="/help",
         ),
         OperatorRunbookStep(
             order=2,
-            name="localhost receiver 저장",
+            name="로컬 수신 결과 확인",
             status="manual review required",
-            purpose="127.0.0.1 receiver가 sanitized output alias를 생성했는지 확인합니다.",
+            purpose="이 컴퓨터에서 실행한 수신기가 결과를 만들었는지 확인합니다.",
             safe_metadata=("receiver 포트", "output alias", "project alias"),
             href="/operations",
         ),
         OperatorRunbookStep(
             order=3,
-            name="redaction/verify",
+            name="민감정보 제거와 검증",
             status="passed",
-            purpose="검증 gate를 통과한 산출물만 다음 단계로 넘깁니다.",
+            purpose="검증을 통과한 결과만 다음 단계에서 사용합니다.",
             safe_metadata=("검증한 파일 수", "safe file 상태", "raw_data_included=false"),
             href=_output_href(output.output_id),
         ),
         OperatorRunbookStep(
             order=4,
-            name="review candidate findings",
+            name="후보 검토",
             status=review_status,
-            purpose="정제된 finding candidate metadata와 후보 수를 확인합니다.",
+            purpose="검토할 항목과 근거를 확인합니다.",
             safe_metadata=("candidate count", "finding id", "risk draft metadata"),
             href=_triage_href(output.output_id),
         ),
         OperatorRunbookStep(
             order=5,
-            name="report_draft.md 생성",
+            name="보고서 초안 확인",
             status=report_status,
             purpose="수동 검토용 보고서 초안 존재 여부를 확인합니다.",
             safe_metadata=("report_draft.md 상태", "파일 fingerprint", "초안 경계"),
@@ -3151,31 +2257,31 @@ def _build_operator_runbook_index(output: DashboardOutput) -> OperatorRunbookInd
         ),
         OperatorRunbookStep(
             order=6,
-            name="preflight",
+            name="공유 전 점검",
             status="manual review required",
-            purpose="AI 투입 전 safe files 4개와 금지 마커 상태를 확인합니다.",
+            purpose="공유할 네 파일과 민감정보 검사 결과를 확인합니다.",
             safe_metadata=("safe files 4개", "금지 마커 스캔", "verify 선행 여부"),
             href=_preflight_href(output.output_id),
         ),
         OperatorRunbookStep(
             order=7,
-            name="handoff",
+            name="전달할 파일 확인",
             status="manual review required",
-            purpose="AI 후보 파일의 순서, 목적, 안전 metadata를 확인합니다.",
+            purpose="파일을 읽는 순서와 용도를 확인합니다.",
             safe_metadata=("file alias", "purpose", "SHA-256 fingerprint"),
             href=_handoff_href(output.output_id),
         ),
         OperatorRunbookStep(
             order=8,
-            name="triage",
+            name="검토할 항목 확인",
             status="manual review required",
-            purpose="finding 후보가 확정 심각도로 읽히지 않는지 확인합니다.",
+            purpose="점검 항목의 실제 영향과 심각도를 직접 판단합니다.",
             safe_metadata=("candidate status", "confidence", "severity draft"),
             href=_triage_href(output.output_id),
         ),
         OperatorRunbookStep(
             order=9,
-            name="report-readiness",
+            name="보고서 확인",
             status="manual review required",
             purpose="보고서 초안과 수동 제출 전 확인 항목을 분리해 봅니다.",
             safe_metadata=("report draft status", "manual checklist", "safe file metadata"),
@@ -3183,25 +2289,25 @@ def _build_operator_runbook_index(output: DashboardOutput) -> OperatorRunbookInd
         ),
         OperatorRunbookStep(
             order=10,
-            name="prompt-readiness",
+            name="프롬프트 확인",
             status="manual review required",
-            purpose="prompt 파일을 AI에 넣기 전 본문 없이 상태와 경계를 확인합니다.",
+            purpose="프롬프트의 안내 문구와 파일 상태를 확인합니다.",
             safe_metadata=("prompt file status", "body preview=false", "manual review boundary"),
             href=_prompt_readiness_href(output.output_id),
         ),
         OperatorRunbookStep(
             order=11,
-            name="evidence-boundary",
+            name="공유할 자료 확인",
             status="manual review required",
-            purpose="정제 evidence와 raw 금지 범위가 분리되어 있는지 확인합니다.",
+            purpose="공유할 자료에 원본이나 민감정보가 섞이지 않았는지 확인합니다.",
             safe_metadata=("sanitized evidence status", "forbidden data categories", "full path=false"),
             href=_evidence_boundary_href(output.output_id),
         ),
         OperatorRunbookStep(
             order=12,
-            name="workflow status recap",
+            name="처리 순서 확인",
             status="manual review required",
-            purpose="전체 GUI 운영 흐름과 남은 수동 검토 지점을 다시 확인합니다.",
+            purpose="진행한 단계와 추가로 확인할 부분을 봅니다.",
             safe_metadata=("step status", "related index links", "no state change"),
             href=_workflow_href(output.output_id),
         ),
@@ -3403,7 +2509,7 @@ def _triage_candidate_from_json(index: int, candidate: dict[str, Any]) -> Triage
     title = _safe_value(candidate.get("title"), "Finding candidate")
     category = _safe_value(candidate.get("type"), "unknown_type")
     endpoint = _safe_value(candidate.get("affected_endpoint"), "정제된 endpoint 없음")
-    summary = f"{title}; 정제된 endpoint 템플릿: {endpoint}"
+    summary = f"{_finding_label(category, title)}; 요청 경로: {endpoint}"
     return TriageCandidate(
         index=index,
         candidate_id=_safe_value(candidate.get("finding_id") or candidate.get("candidate_id"), f"candidate-{index}"),
@@ -3420,82 +2526,41 @@ def _triage_candidate_from_json(index: int, candidate: dict[str, Any]) -> Triage
 
 
 def _handoff_summary(index: AiHandoffIndex) -> str:
-    present_count = sum(1 for file in index.files if file.status == "present")
     return f"""
     <dl class="facts">
-      <div><dt>핸드오프 상태</dt><dd>{_status_badge(index.preflight.ready_status)}</dd></div>
-      <div><dt>안전 파일 수</dt><dd>{present_count}/{len(SAFE_PREVIEW_FILES)}</dd></div>
-      <div><dt>검증 상태</dt><dd>{_status_badge("passed")}</dd></div>
-      <div><dt>사전 점검 상태</dt><dd>{_status_badge(index.preflight.ready_status)}</dd></div>
-      <div><dt>금지 마커 스캔</dt><dd>{_status_badge(index.preflight.marker_scan_status)}</dd></div>
-      <div><dt>finding 후보 수</dt><dd>{index.preflight.candidate_count}</dd></div>
-      <div><dt>raw_data_included</dt><dd>false</dd></div>
-      <div><dt>파일 경로 표시</dt><dd>false</dd></div>
-      <div><dt>hash 종류</dt><dd>SHA-256 파일 fingerprint이며 HMAC이 아닙니다.</dd></div>
+      <div><dt>파일 준비</dt><dd>{_status_badge(index.preflight.ready_status)}</dd></div>
+      <div><dt>민감정보 검사</dt><dd>{_status_badge(index.preflight.marker_scan_status)}</dd></div>
+      <div><dt>원문 포함</dt><dd>없음</dd></div>
     </dl>
+    <p>파일 해시는 내용이 같은지 확인하는 값입니다. 비밀키로 검증하는 HMAC과는 다릅니다.</p>
+    """
+
+
+def _file_details(file: HandoffFile | ReportReadinessFile | PromptReadinessFile | EvidenceBoundaryFile | SafeFileInventoryFile) -> str:
+    size = f"{file.size_bytes:,} 바이트" if file.size_bytes is not None else "없음"
+    return f"""
+    <article class="file-card">
+      <div><strong>{_h(file.name)}</strong>{_status_badge(file.status)}
+        <small>{_h(_safe_file_description(file.name))}</small></div>
+      <dl class="facts compact">
+        <div><dt>크기</dt><dd>{_h(size)}</dd></div>
+        <div><dt>수정 시각(UTC)</dt><dd>{_h(_status_label(file.modified_utc))}</dd></div>
+        <div><dt>파일 해시(SHA-256)</dt><dd>{_h(_status_label(file.sha256))}</dd></div>
+      </dl>
+    </article>
     """
 
 
 def _handoff_file_card(file: HandoffFile) -> str:
-    size = str(file.size_bytes) if file.size_bytes is not None else "missing"
-    return f"""
-    <article class="file-card">
-      <div>
-        <span class="kicker">순서 {file.order}</span>
-        <strong>{_h(file.name)}</strong>
-        <span>{_status_badge(file.status)}</span>
-        <small>{_h(file.purpose)}</small>
-      </div>
-      <dl class="facts compact">
-        <div><dt>목적</dt><dd>{_h(file.purpose)}</dd></div>
-        <div><dt>크기(bytes)</dt><dd>{_h(size)}</dd></div>
-        <div><dt>수정 시각(UTC)</dt><dd>{_h(file.modified_utc)}</dd></div>
-        <div><dt>SHA-256</dt><dd>{_h(file.sha256)}</dd></div>
-      </dl>
-    </article>
-    """
+    return _file_details(file)
 
 
 def _report_readiness_file_card(file: ReportReadinessFile) -> str:
-    size = str(file.size_bytes) if file.size_bytes is not None else "missing"
-    return f"""
-    <article class="file-card">
-      <div>
-        <span class="kicker">보고서 준비 메타데이터</span>
-        <strong>{_h(file.name)}</strong>
-        <span>{_status_badge(file.status)}</span>
-        <small>{_h(file.purpose)}</small>
-      </div>
-      <dl class="facts compact">
-        <div><dt>목적</dt><dd>{_h(file.purpose)}</dd></div>
-        <div><dt>존재 여부</dt><dd>{_h(_status_label(file.status))}</dd></div>
-        <div><dt>파일 크기(bytes)</dt><dd>{_h(size)}</dd></div>
-        <div><dt>수정 시각(UTC)</dt><dd>{_h(file.modified_utc)}</dd></div>
-        <div><dt>SHA-256 파일 fingerprint</dt><dd>{_h(file.sha256)}</dd></div>
-      </dl>
-    </article>
-    """
+    return _file_details(file)
 
 
 def _prompt_readiness_file_card(file: PromptReadinessFile) -> str:
-    size = str(file.size_bytes) if file.size_bytes is not None else "missing"
-    return f"""
-    <article class="file-card">
-      <div>
-        <span class="kicker">prompt readiness</span>
-        <strong>{_h(file.name)}</strong>
-        <span>{_status_badge(file.status)}</span>
-        <small>{_h(file.purpose)}</small>
-      </div>
-      <dl class="facts compact">
-        <div><dt>목적</dt><dd>{_h(file.purpose)}</dd></div>
-        <div><dt>존재 여부</dt><dd>{_h(_status_label(file.status))}</dd></div>
-        <div><dt>파일 크기(bytes)</dt><dd>{_h(size)}</dd></div>
-        <div><dt>수정 시각(UTC)</dt><dd>{_h(file.modified_utc)}</dd></div>
-        <div><dt>SHA-256 fingerprint</dt><dd>{_h(file.sha256)}</dd></div>
-      </dl>
-    </article>
-    """
+    return _file_details(file)
 
 
 def _prompt_readiness_check_card(check: PromptReadinessCheck) -> str:
@@ -3517,132 +2582,78 @@ def _prompt_readiness_check_card(check: PromptReadinessCheck) -> str:
 
 
 def _evidence_boundary_file_card(file: EvidenceBoundaryFile) -> str:
-    size = str(file.size_bytes) if file.size_bytes is not None else "missing"
-    return f"""
-    <article class="file-card">
-      <div>
-        <span class="kicker">evidence boundary</span>
-        <strong>{_h(file.name)}</strong>
-        <span>{_status_badge(file.status)}</span>
-        <small>{_h(file.purpose)}</small>
-      </div>
-      <dl class="facts compact">
-        <div><dt>목적</dt><dd>{_h(file.purpose)}</dd></div>
-        <div><dt>존재 여부</dt><dd>{_h(_status_label(file.status))}</dd></div>
-        <div><dt>파일 크기(bytes)</dt><dd>{_h(size)}</dd></div>
-        <div><dt>수정 시각(UTC)</dt><dd>{_h(file.modified_utc)}</dd></div>
-        <div><dt>SHA-256 fingerprint</dt><dd>{_h(file.sha256)}</dd></div>
-      </dl>
-    </article>
-    """
+    return _file_details(file)
 
 
 def _workflow_step_card(step: WorkflowStep) -> str:
     return f"""
     <article class="file-card">
-      <div>
-        <span class="kicker">작업 흐름 단계</span>
-        <strong>{_h(step.name)}</strong>
-        <span>{_status_badge(step.status)}</span>
-        <small>{_h(step.summary)}</small>
-      </div>
-      <dl class="facts compact">
-        <div><dt>상태</dt><dd>{_h(_status_label(step.status))}</dd></div>
-        <div><dt>링크</dt><dd><a href="{_h(step.href)}">조회 전용 단계 열기</a></dd></div>
-        <div><dt>action 표면</dt><dd>form 없음, POST action 없음, 상태 변경 버튼 없음</dd></div>
-      </dl>
+      <div><strong>{_h(step.name)}</strong>{_status_badge(step.status)}<small>{_h(step.summary)}</small></div>
+      <a href="{_h(step.href)}">확인하기</a>
     </article>
     """
 
 
 def _operator_runbook_step_card(step: OperatorRunbookStep) -> str:
-    metadata = "".join(f"<li>{_h(item)}</li>" for item in step.safe_metadata)
     return f"""
     <article class="file-card">
-      <div>
-        <span class="kicker">runbook step {step.order}</span>
-        <strong>{_h(step.name)}</strong>
-        <span>{_status_badge(step.status)}</span>
-        <small>{_h(step.purpose)}</small>
-      </div>
-      <dl class="facts compact">
-        <div><dt>상태</dt><dd>{_h(_status_label(step.status))}</dd></div>
-        <div><dt>확인 metadata</dt><dd><ul class="safe-list compact">{metadata}</ul></dd></div>
-        <div><dt>관련 화면</dt><dd><a href="{_h(step.href)}">조회 전용 화면 열기</a></dd></div>
-        <div><dt>action 표면</dt><dd>form 없음, POST action 없음, 상태 변경 버튼 없음</dd></div>
-      </dl>
+      <div><strong>{step.order}. {_h(step.name)}</strong>{_status_badge(step.status)}
+        <small>{_h(step.purpose)}</small></div>
+      <a href="{_h(step.href)}">확인하기</a>
     </article>
     """
 
 
 def _safe_file_inventory_card(file: SafeFileInventoryFile) -> str:
-    size = str(file.size_bytes) if file.size_bytes is not None else "missing"
-    verify_required = "true" if file.verify_required else "false"
-    return f"""
-    <article class="file-card">
-      <div>
-        <span class="kicker">safe file</span>
-        <strong>{_h(file.name)}</strong>
-        <span>{_status_badge(file.status)}</span>
-        <small>{_h(file.purpose)}</small>
-      </div>
-      <dl class="facts compact">
-        <div><dt>exists</dt><dd>{_h(file.status)}</dd></div>
-        <div><dt>파일 목적</dt><dd>{_h(file.purpose)}</dd></div>
-        <div><dt>권장 사용 위치</dt><dd>{_h(file.recommended_use)}</dd></div>
-        <div><dt>verify 선행 필요</dt><dd>{verify_required}</dd></div>
-        <div><dt>file size</dt><dd>{_h(size)}</dd></div>
-        <div><dt>modified UTC</dt><dd>{_h(file.modified_utc)}</dd></div>
-        <div><dt>SHA-256 fingerprint</dt><dd>{_h(file.sha256)}</dd></div>
-        <div><dt>사람 수동 검토</dt><dd>필수</dd></div>
-        <div><dt>body preview</dt><dd>false</dd></div>
-      </dl>
-    </article>
-    """
+    return _file_details(file)
+
+
+def _finding_label(category: str, fallback: str) -> str:
+    labels = {
+        "missing_security_headers": "보안 헤더 누락 확인",
+        "weak_cookie_attributes": "쿠키 보호 설정 확인",
+        "cors_candidate": "다른 출처의 접근 허용 설정 확인",
+        "cache_control_on_authenticated_response": "로그인 응답의 캐시 설정 확인",
+        "error_exposure": "오류 메시지의 내부 정보 노출 확인",
+        "idor_candidate": "다른 사용자 자료에 접근할 수 있는지 확인",
+        "sensitive_data_exposure_candidate": "응답의 민감정보 노출 확인",
+    }
+    return labels.get(category, fallback)
 
 
 def _triage_candidate_card(candidate: TriageCandidate) -> str:
-    manual_required = "예" if candidate.manual_required else "아니오"
+    title = _finding_label(candidate.category, candidate.title)
     return f"""
     <article class="candidate">
       <div class="candidate-head">
-        <div>
-          <span class="kicker">후보 #{candidate.index}</span>
-          <h3>{_h(candidate.candidate_id)} - {_h(candidate.title)}</h3>
-          <p>{_h(candidate.category)}</p>
-        </div>
-        <div class="status-stack">
-          <span class="badge neutral">신뢰도: {_h(candidate.confidence)}</span>
-          <span class="badge warning">수동 검토 필요</span>
-        </div>
+        <div><span class="kicker">후보 #{candidate.index}</span>
+          <h3>{_h(title)}</h3><p>{_h(candidate.candidate_id)}</p></div>
+        <span class="badge warning">확인 필요</span>
       </div>
       <dl class="facts compact">
-        <div><dt>안정 ID</dt><dd>{_h(candidate.candidate_id)}</dd></div>
-        <div><dt>분류/type</dt><dd>{_h(candidate.category)}</dd></div>
-        <div><dt>정제된 요약</dt><dd>{_h(candidate.summary)}</dd></div>
-        <div><dt>위험도 초안</dt><dd>profile: {_h(candidate.risk_profile)}; 심각도 초안: {_h(candidate.severity_draft)}; 가능성 초안: {_h(candidate.likelihood_draft)}; 영향도 초안: {_h(candidate.impact_draft)}</dd></div>
-        <div><dt>confidence</dt><dd>{_h(candidate.confidence)} 증거 신뢰도이며 심각도가 아닙니다.</dd></div>
-        <div><dt>수동 검증 필요</dt><dd>{_h(manual_required)}</dd></div>
-        <div><dt>최종 심각도</dt><dd>최종 심각도는 수동 결정이 필요합니다.</dd></div>
+        <div><dt>근거 신뢰도</dt><dd>{_h(_status_label(candidate.confidence))}</dd></div>
+        <div><dt>심각도 초안</dt><dd>{_h(_status_label(candidate.severity_draft))}</dd></div>
+        <div><dt>발생 가능성</dt><dd>{_h(_status_label(candidate.likelihood_draft))}</dd></div>
+        <div><dt>영향도</dt><dd>{_h(_status_label(candidate.impact_draft))}</dd></div>
+        <div><dt>직접 확인 필요</dt><dd>{"예" if candidate.manual_required else "아니오"}</dd></div>
       </dl>
+      <p class="review-note">근거 신뢰도는 판단을 뒷받침하는 자료의 정도이며 위험도와 다릅니다.</p>
+      <details class="secondary-details"><summary>분류 코드와 분석 요약</summary>
+        <p>분류 코드: {_h(candidate.category)}</p><p>{_h(candidate.summary)}</p>
+        <p>평가 기준: {_h(_status_label(candidate.risk_profile))}</p>
+      </details>
     </article>
     """
 
 
 def _preflight_summary(preflight: AiSafePreflight) -> str:
-    missing = ", ".join(preflight.missing_files) if preflight.missing_files else "none"
-    report_status = "present" if preflight.report_available else "missing"
+    missing = ", ".join(preflight.missing_files) if preflight.missing_files else "없음"
     return f"""
     <dl class="facts">
-      <div><dt>사전 점검 상태</dt><dd>{_status_badge(preflight.ready_status)}</dd></div>
-      <div><dt>검증 상태</dt><dd>{_status_badge("passed")}</dd></div>
       <div><dt>검증한 파일 수</dt><dd>{preflight.files_checked}</dd></div>
-      <div><dt>finding 후보 수</dt><dd>{preflight.candidate_count}</dd></div>
-      <div><dt>report_draft.md</dt><dd>{_status_badge(report_status)}</dd></div>
-      <div><dt>금지 마커 스캔</dt><dd>{_status_badge(preflight.marker_scan_status)}</dd></div>
-      <div><dt>스캔한 안전 파일 수</dt><dd>{preflight.marker_scan_files}</dd></div>
-      <div><dt>누락된 안전 파일</dt><dd>{_h(missing)}</dd></div>
-      <div><dt>raw_data_included</dt><dd>false</dd></div>
+      <div><dt>민감정보를 검사한 전달 후보 파일</dt><dd>{preflight.marker_scan_files}개</dd></div>
+      <div><dt>누락 파일</dt><dd>{_h(missing)}</dd></div>
+      <div><dt>원문 포함</dt><dd>없음</dd></div>
     </dl>
     """
 
@@ -3932,9 +2943,10 @@ def _candidate_card(candidate: dict[str, Any]) -> str:
     finding_id = _safe_value(candidate.get("finding_id"), "candidate")
     title = _safe_value(candidate.get("title"), "탐지 후보")
     kind = _safe_value(candidate.get("type"), "unknown_type")
+    title = _finding_label(kind, title)
     endpoint = _safe_value(candidate.get("affected_endpoint"), "unknown_endpoint")
     confidence = _safe_value(candidate.get("confidence"), "unknown")
-    manual_required = str(bool(candidate.get("manual_verification_required", True))).lower()
+    manual_required = "예" if candidate.get("manual_verification_required", True) else "아니오"
     rationale = _safe_list(candidate.get("rationale"))
     confidence_rationale = _safe_list(candidate.get("confidence_rationale"))
     manual_tests = _safe_list(candidate.get("recommended_manual_tests"))
@@ -3949,7 +2961,7 @@ def _candidate_card(candidate: dict[str, Any]) -> str:
           <p>{_h(kind)} / {_h(endpoint)}</p>
         </div>
         <div class="status-stack">
-          <span class="badge neutral">증거 신뢰도: {_h(confidence)}</span>
+          <span class="badge neutral">근거 신뢰도: {_h(_status_label(confidence))}</span>
           <span class="badge warning">수동 확인 필요</span>
         </div>
       </div>
@@ -3974,27 +2986,27 @@ def _risk_rating_summary(value: Any) -> str:
     risk_profile = _safe_value(value.get("risk_profile"), DEFAULT_RISK_RATING_PROFILE)
     finalized = str(bool(value.get("risk_rating_finalized", False))).lower()
     return (
-        f"profile: {_h(risk_profile)}; "
-        f"심각도 초안: {_h(severity)}; "
-        f"likelihood 초안: {_h(likelihood)}; "
-        f"impact 초안: {_h(impact)}; "
-        f"확정 여부: {_h(finalized)}"
+        f"평가 기준: {_h(_status_label(risk_profile))}; "
+        f"심각도 초안: {_h(_status_label(severity))}; "
+        f"발생 가능성: {_h(_status_label(likelihood))}; "
+        f"영향도: {_h(_status_label(impact))}; "
+        f"확정 여부: {'예' if finalized == 'true' else '아니오'}"
     )
 
 
 def _audit_panel(status: dict[str, str]) -> str:
     return f"""
     <dl class="facts">
-      <div><dt>검토 상태</dt><dd>{_status_badge(status["review_status"])}</dd></div>
-      <div><dt>검사한 이벤트</dt><dd>{_h(status["events"])}</dd></div>
-      <div><dt>검사한 파일</dt><dd>{_h(status["files"])}</dd></div>
-      <div><dt>보존 JSONL</dt><dd>{_status_badge(status["retained_status"])}</dd></div>
-      <div><dt>HMAC manifest</dt><dd>{_status_badge(status["hmac_status"])}</dd></div>
-      <div><dt>압축 archive</dt><dd>{_status_badge(status["archive_status"])}</dd></div>
-      <div><dt>압축 archive 검증</dt><dd>{_status_badge(status["archive_verify_status"])}</dd></div>
-      <div><dt>압축 archive HMAC manifest</dt><dd>{_status_badge(status["archive_hmac_manifest_status"])}</dd></div>
-      <div><dt>압축 archive HMAC 검증</dt><dd>{_status_badge(status["archive_hmac_status"])}</dd></div>
-      <div><dt>표시 내용</dt><dd>메타데이터만</dd></div>
+      <div><dt>기록 검사</dt><dd>{_status_badge(status["review_status"])}</dd></div>
+      <div><dt>검사한 기록 수</dt><dd>{_h(status["events"])}</dd></div>
+      <div><dt>검사한 파일 수</dt><dd>{_h(status["files"])}</dd></div>
+      <div><dt>보관 기록(JSONL)</dt><dd>{_status_badge(status["retained_status"])}</dd></div>
+      <div><dt>위변조 검사표(HMAC)</dt><dd>{_status_badge(status["hmac_status"])}</dd></div>
+      <div><dt>압축 보관 파일</dt><dd>{_status_badge(status["archive_status"])}</dd></div>
+      <div><dt>압축 파일 검사</dt><dd>{_status_badge(status["archive_verify_status"])}</dd></div>
+      <div><dt>압축 파일 위변조 검사표(HMAC)</dt><dd>{_status_badge(status["archive_hmac_manifest_status"])}</dd></div>
+      <div><dt>압축 파일 위변조 검사</dt><dd>{_status_badge(status["archive_hmac_status"])}</dd></div>
+      <div><dt>표시 내용</dt><dd>상태만</dd></div>
     </dl>
     """
 
@@ -4175,6 +3187,21 @@ def _status_label(value: str) -> str:
         "skipped": "건너뜀",
         "failed safely": "차단됨",
         "stored under local_only alias": "로컬에 보관",
+        "low": "낮음",
+        "medium": "보통",
+        "high": "높음",
+        "critical": "매우 높음",
+        "unknown": "판단 전",
+        "unknown_type": "분류 전",
+        "idle": "대기 중",
+        "running": "진행 중",
+        "stopped": "중지됨",
+        "not selected": "선택 안 됨",
+        "not_selected": "선택 안 됨",
+        "conservative": "기본 검토 기준",
+        "conservative_strict": "보수적인 검토 기준",
+        "configured": "설정됨",
+        "none": "없음",
     }
     return labels.get(value, value)
 
@@ -4736,6 +3763,10 @@ def _page(title: str, body: str) -> str:
       .result-table th:first-child {{ width: 40%; }}
       .result-table th:last-child:not(:nth-child(2)) {{ width: 20%; }}
     }}
+    .check-table th:first-child {{ width: 65%; }}
+    .check-table .badge {{ max-width: 100%; white-space: normal; text-align: center; justify-content: center; }}
+    .handoff-table th:first-child {{ width: 8%; }}
+    .handoff-table th:nth-child(2) {{ width: 35%; }}
   </style>
 </head>
 <body>
