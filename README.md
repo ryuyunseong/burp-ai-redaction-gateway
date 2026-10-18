@@ -71,6 +71,15 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 
 </details>
 
+## Codex 앱에서 읽기 (선택)
+
+1. [MCP 설정 안내](docs/READ_ONLY_MCP.md)에 따라 가상 샘플과 `burp_sample` 연결을 준비합니다.
+2. Codex 앱의 **설정 → MCP servers → burp_sample → Restart(다시 시작)**를 누릅니다. 대화 입력창의 `/mcp`에서 연결을 확인하세요.
+3. **“burp_sample에서 demo의 점검 후보 목록과 보고서 초안을 실제 MCP 도구로 읽어줘”**라고 요청합니다.
+
+앱 대화에서 검토 후보 22개와 한글 보고서 초안을 직접 조회했습니다. 조회할 때 CLI나 별도 서버 터미널은 필요 없습니다.
+요청한 결과가 Codex에 전달되므로 공유해도 되는 자료인지 먼저 확인하세요. 확정 취약점이 아닌 검토 후보입니다.
+
 ## 더 알아보기
 
 - [사용 방법과 오류 해결](docs/USAGE.md): 내 Burp 기록 처리, 명령어 실행, 입력 형식
