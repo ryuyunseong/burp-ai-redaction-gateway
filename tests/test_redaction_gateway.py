@@ -17561,6 +17561,8 @@ class RedactionGatewayTests(unittest.TestCase):
         command = "python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out"
         for text in [readme, usage]:
             self.assertIn(command, text)
+            self.assertIn("New-Item -ItemType Directory -Force out", text)
+            self.assertLess(text.index("New-Item -ItemType Directory -Force out"), text.index(command))
             self.assertIn("samples/synthetic_burp_history.json", text)
             self.assertIn("10 MiB", text)
             self.assertIn("local_only/", text)
