@@ -87,7 +87,7 @@ class BeginnerGuideTests(unittest.TestCase):
         args = process_command("READ_ONLY_MCP.md")
         self.assertEqual(args[args.index("--output") + 1], "out/codex_mcp_sample/demo")
         self.assertEqual(args[args.index("--project") + 1], "demo")
-        for phrase in ("stdio", "mcp --root out/codex_mcp_sample", "작업 폴더", "project`에 `demo", "22개", "반환할 내용도 다시 검사", "상위 폴더로 벗어나는 경로는 거절", "개인 경로가 든 설정은 저장소에 올리지", "연결 도구의 공유·외부 전송 설정"):
+        for phrase in ("STDIO", "mcp --root out/codex_mcp_sample", "작업 폴더", "project`에 `demo", "22개", "반환할 내용도 다시 검사", "상위 폴더로 벗어나는 경로는 거절", "개인 경로가 든 설정은 저장소에 올리지", "연결 도구의 공유·외부 전송 설정"):
             self.assertIn(phrase, text)
         for tool in tool_definitions():
             self.assertIn(f"`{tool['name']}`", text)
@@ -103,6 +103,32 @@ class BeginnerGuideTests(unittest.TestCase):
         ])
         for phrase in ("print(sys.executable)", "codex mcp list", "/mcp", "새 대화", "가상 샘플 폴더만", "기존 승인·보안 설정", "도구 호출 기록"):
             self.assertIn(phrase, text)
+
+    def test_codex_app_setup_matches_server_arguments_and_requires_restart(self) -> None:
+        text = guide("READ_ONLY_MCP.md")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        app_settings = dict(re.findall(r"^\| (이름|실행 프로그램|인수|환경변수) \| (.+) \|$", text, re.MULTILINE))
+        cli_line = next(line for line in text.splitlines() if line.startswith("codex mcp add "))
+        cli_args = shlex.split(cli_line)
+        app_args = shlex.split(app_settings["인수"].strip("`").replace("<저장소폴더>", "$repo"))
+        self.assertEqual(app_args, cli_args[cli_args.index("--") + 2:])
+        self.assertEqual(app_settings["이름"], "`burp_sample`")
+        self.assertEqual(app_settings["실행 프로그램"], "위에서 확인한 Python 경로")
+        self.assertEqual(re.findall(r"`([^`]+)`", app_settings["환경변수"]), ["PYTHONPATH=<저장소폴더>", "PYTHONUTF8=1"])
+        self.assertIn("설정(Settings) → MCP servers → Add server", text)
+        self.assertIn("STDIO(표준 입출력)", text)
+        self.assertLess(text.index("이미 `burp_sample`"), text.index("## 3."))
+        for document in (text, readme):
+            self.assertIn("MCP servers → burp_sample → Restart(다시 시작)", document)
+            self.assertIn("/mcp", document)
+            self.assertIn("실제 MCP 도구로 읽어줘", document)
+            self.assertIn("조회할 때 CLI나 별도 서버 터미널", document)
+            self.assertIn("검토 후보", document)
+        self.assertIn("Codex 앱 대화에서 두 도구를 직접 호출", text)
+        self.assertIn("두 응답의 `raw_data_included`는 `false`", text)
+        for option in ("dangerously-bypass", "danger-full-access", "default_tools_approval_mode", "--ignore-rules"):
+            self.assertNotIn(option, text)
+            self.assertNotIn(option, readme)
 
     def test_codex_mcp_documented_server_reads_sample_from_another_working_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -137,6 +163,8 @@ class BeginnerGuideTests(unittest.TestCase):
             self.assertFalse(report["isError"])
             self.assertEqual(report["structuredContent"]["report_draft"], (project / "report_draft.md").read_text(encoding="utf-8"))
             self.assertIn("검토 후보", report["structuredContent"]["report_draft"])
+            report_title = report["structuredContent"]["report_draft"].splitlines()[0].removeprefix("# ")
+            self.assertIn(f"**{report_title}**", guide("READ_ONLY_MCP.md"))
             for request_id, reason in ((4, "path_traversal_forbidden"), (5, "forbidden_directory")):
                 blocked = responses[request_id]["result"]
                 self.assertTrue(blocked["isError"])
