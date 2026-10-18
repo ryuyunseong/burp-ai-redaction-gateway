@@ -6,13 +6,20 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .findings import DO_NOT_CLAIM
 from .policy import RedactionPolicy
+from .risk import RISK_RATING_PROFILES
 from .scanner import assert_no_sensitive_text
 from .verifier import verify_path
 
 
 DEFAULT_REPORT_NAME = "report_draft.md"
 DEFAULT_REPORT_PROFILE = "conservative"
+_SHARED_RISK_BASIS = {
+    "Draft severity uses likelihood and impact placeholders, not evidence confidence.",
+    "Manual verification and a separate risk rating review are required before using the severity draft.",
+    *(profile.basis for profile in RISK_RATING_PROFILES.values()),
+}
 
 
 @dataclass(frozen=True)
@@ -21,7 +28,6 @@ class ReportProfile:
     title: str
     intro_lines: list[str]
     candidate_label: str
-    status_line: str
     confidence_label: str
     rationale_heading: str
     rationale_fallback: str
@@ -45,7 +51,6 @@ REPORT_PROFILES: dict[str, ReportProfile] = {
             "각 항목을 직접 확인한 뒤 실제 영향과 조치 내용을 보완하세요.",
         ],
         candidate_label="검토 후보",
-        status_line="상태: 직접 확인이 필요한 검토 후보입니다.",
         confidence_label="근거 신뢰도",
         rationale_heading="발견 내용",
         rationale_fallback="분석 자료에 발견 근거가 없습니다.",
@@ -67,7 +72,6 @@ REPORT_PROFILES: dict[str, ReportProfile] = {
             "직접 재현하고 영향을 확인하기 전까지 모든 항목을 검토 후보로 다루세요.",
         ],
         candidate_label="검토 후보",
-        status_line="상태: 직접 확인이 필요한 검토 후보입니다.",
         confidence_label="근거 신뢰도",
         rationale_heading="발견 내용",
         rationale_fallback="분석 자료에 발견 근거가 없습니다.",
@@ -131,7 +135,6 @@ def render_report_draft(candidates: list[dict[str, Any]], profile_name: str = DE
         "- 요청·응답 원문, 쿠키·인증 정보·토큰, 실제 도메인·IP·개인정보를 추가하지 마세요.",
         "- 근거 신뢰도는 관찰한 자료의 신뢰 수준이며, 취약점의 심각도가 아닙니다.",
         "- 위험도는 초안입니다. 직접 재현하고 별도로 위험을 평가한 뒤 확정하세요.",
-        "- 재현을 마치기 전까지 검토 후보라는 표현을 유지하세요.",
         "",
     ]
     if not candidates:
@@ -140,6 +143,19 @@ def render_report_draft(candidates: list[dict[str, Any]], profile_name: str = DE
 
     for candidate in candidates:
         lines.extend(_candidate_section(candidate, profile))
+    lines.extend([f"## {profile.claims_heading}", ""])
+    lines.extend(_bullets(DO_NOT_CLAIM, profile.claims_fallback))
+    common_basis: list[str] = []
+    for candidate in candidates:
+        rating = candidate.get("risk_rating_draft")
+        if isinstance(rating, dict):
+            for basis in _safe_list(rating.get("severity_basis")):
+                if basis in _SHARED_RISK_BASIS and basis not in common_basis:
+                    common_basis.append(basis)
+    if common_basis:
+        lines.extend(["", "### 공통 위험도 평가 기준"])
+        lines.extend(_bullets(common_basis, ""))
+    lines.append("")
     return "\n".join(lines)
 
 
@@ -181,39 +197,30 @@ def _candidate_section(candidate: dict[str, Any], profile: ReportProfile) -> lis
     evidence_ids = _safe_list(candidate.get("evidence_ids"))
     rationale = _safe_list(candidate.get("rationale"))
     manual_tests = _safe_list(candidate.get("recommended_manual_tests"))
-    do_not_claim = _safe_list(candidate.get("do_not_claim"))
+    do_not_claim = [item for item in _safe_list(candidate.get("do_not_claim")) if item not in DO_NOT_CLAIM]
 
     lines = [
         f"## {profile.candidate_label} {finding_id}: {title}",
         "",
-        f"- {profile.status_line}",
-        f"- 점검 유형: {_report_text(kind)}",
         f"- 대상 요청: {endpoint}",
-        f"- {profile.confidence_label}: {confidence}",
-        f"- 직접 확인 필요: {'예' if manual_required else '아니요'}",
-        f"- 근거 번호: {', '.join(evidence_ids) if evidence_ids else '없음'}",
-        "",
-        "### 근거 신뢰도 설명",
+        f"- 근거 번호: {', '.join(evidence_ids) if evidence_ids else '없음'} / 직접 확인 필요: {'예' if manual_required else '아니요'}",
     ]
-    lines.extend(_bullets(confidence_rationale, profile.confidence_fallback))
-    lines.extend([
-        "",
-        "### 위험도 초안",
-    ])
-    lines.extend(_bullets(risk_rating_draft, "심각도를 정하기 전에 별도로 위험을 평가하세요."))
-    lines.extend([
-        "",
-        f"### {profile.rationale_heading}",
-    ])
+    if _report_text(kind) != title:
+        lines.append(f"- 점검 유형: {_report_text(kind)}")
+    lines.extend(["", f"### {profile.rationale_heading}"])
     lines.extend(_bullets(rationale, profile.rationale_fallback))
-    lines.extend(["", f"### {profile.impact_heading}"])
-    lines.extend(_bullets(_impact_draft(kind, profile.name), profile.impact_fallback))
     lines.extend(["", f"### {profile.manual_tests_heading}"])
     lines.extend(_bullets(manual_tests, profile.manual_tests_fallback))
     lines.extend(["", f"### {profile.remediation_heading}"])
     lines.extend(_bullets(_remediation_draft(kind, profile.name), profile.remediation_fallback))
-    lines.extend(["", f"### {profile.claims_heading}"])
-    lines.extend(_bullets(do_not_claim, profile.claims_fallback))
+    lines.extend(["", f"### {profile.impact_heading}"])
+    lines.extend(_bullets(_impact_draft(kind, profile.name), profile.impact_fallback))
+    lines.extend(["", "### 판단 근거", f"- {profile.confidence_label}: {confidence}"])
+    lines.extend(_bullets(confidence_rationale, profile.confidence_fallback))
+    lines.extend(_bullets(risk_rating_draft, "심각도를 정하기 전에 별도로 위험을 평가하세요."))
+    if do_not_claim:
+        lines.extend(["", "### 개별 주의사항"])
+        lines.extend(_bullets(do_not_claim, ""))
     lines.append("")
     return lines
 
@@ -329,17 +336,20 @@ def _risk_rating_draft_lines(value: Any) -> list[str]:
     risk_profile = _safe_text(value.get("risk_profile"), "conservative")
     profile_conservatism = _safe_text(value.get("risk_profile_conservatism"), "unknown")
     status = _safe_text(value.get("status"), "draft_requires_manual_verification")
-    finalized = str(bool(value.get("risk_rating_finalized", False))).lower()
-    confidence_is_severity = str(bool(value.get("confidence_is_severity", False))).lower()
-    basis = _safe_list(value.get("severity_basis"))
+    finalized = bool(value.get("risk_rating_finalized", False))
+    confidence_is_severity = bool(value.get("confidence_is_severity", False))
+    basis = [item for item in _safe_list(value.get("severity_basis")) if item not in _SHARED_RISK_BASIS]
     lines = [
-        f"평가 상태: {_report_text(status)}",
+        f"위험도 초안: 발생 가능성 {_report_text(likelihood)} / 영향 {_report_text(impact)} / 심각도 {_report_text(severity)}",
         f"평가 기준: {_report_text(risk_profile)} / {_report_text(profile_conservatism)}",
-        f"발생 가능성: {_report_text(likelihood)} / 영향: {_report_text(impact)} / 심각도: {_report_text(severity)} (모두 초안)",
-        f"위험도 확정: {_report_text(finalized)}",
-        f"근거 신뢰도를 심각도로 사용: {_report_text(confidence_is_severity)}",
     ]
-    lines.extend(basis or ["심각도 초안을 사용하기 전에 직접 확인하세요."])
+    if status != "draft_requires_manual_verification":
+        lines.append(f"평가 상태(입력 자료): {_report_text(status)}")
+    if finalized:
+        lines.append("위험도 확정 표시(입력 자료): 예. 보고서에서는 검토 후보로 유지합니다.")
+    if confidence_is_severity:
+        lines.append("근거 신뢰도를 심각도로 사용한 표시(입력 자료): 예. 두 기준은 구분해서 검토하세요.")
+    lines.extend(basis)
     return lines
 
 
