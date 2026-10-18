@@ -37,7 +37,7 @@ public final class BurpAiRedactionGatewayExtension implements BurpExtension {
     }
 
     private List<Component> provideMenuItems(ContextMenuEvent event) {
-        JMenuItem sendScopedHistory = new JMenuItem("Send scoped Proxy history to redaction gateway");
+        JMenuItem sendScopedHistory = new JMenuItem("점검 범위의 Proxy 기록을 로컬 도구로 보내기");
         sendScopedHistory.addActionListener(action -> sendScopedHistory());
         return List.of(sendScopedHistory);
     }

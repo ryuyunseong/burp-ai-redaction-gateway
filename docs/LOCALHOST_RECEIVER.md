@@ -1,39 +1,40 @@
-# Localhost Ingest Receiver
+# 로컬 수신기
 
-The receiver accepts Burp Montoya collector handoff payloads on loopback only
-and immediately runs the existing redaction, output, and verification pipeline.
+Burp 확장이 보낸 요청·응답에서 민감정보를 제거하고 검증하는 프로그램입니다.
+127.0.0.1에서만 실행하며 외부에서 접속할 수 있도록 열지 않습니다.
 
-## Run
+## 실행
 
-```powershell
-python -m burp_ai_redaction_gateway serve --host 127.0.0.1 --port 8765 --output out\receiver --project montoya_receiver_alias
-```
+저장소 폴더에서 실행하고 터미널을 열어둡니다.
 
-The command rejects non-`127.0.0.1` bind hosts. The receiver exposes:
+~~~powershell
+python -m burp_ai_redaction_gateway serve --host 127.0.0.1 --port 8765 --output out/receiver --project montoya_receiver_alias
+~~~
 
-- `GET /health`
-- `POST /ingest/burp-history`
+--project에는 실제 고객명이나 서비스명이 아닌 별칭을 사용하세요.
+종료하려면 Ctrl+C를 누릅니다. 확장 설정은 [Burp 수집기](MONTOYA_COLLECTOR.md)를 참고하세요.
 
-## Safety Rules
+| 경로 | 용도 |
+| --- | --- |
+| GET /health | 수신기 응답 확인 |
+| POST /ingest/burp-history | Burp 확장에서 기록 한 건 수신 |
 
-- Raw request and response values are accepted only in memory.
-- Raw request and response values are not logged.
-- Raw values are never written to repository source files.
-- Generated output is written under an ignored output directory.
-- Generated output must pass the existing fail-closed scanner before the HTTP
-  request is accepted.
-- Payloads must use the expected `montoya-handoff-v1` schema.
-- Oversized payloads are rejected before parsing.
-- Use `python -m burp_ai_redaction_gateway review --input <output-dir>` to
-  review verified sanitized packets without printing raw HTTP values.
-- Use `python -m burp_ai_redaction_gateway report --input <output-dir> --profile conservative` to
-  create a candidate-only report draft after verification.
+수신 자료는 montoya-handoff-v1 형식이어야 합니다.
+크기 제한을 넘거나 형식이 다른 요청은 거절합니다.
 
-## Current Scope
+## 결과 확인
 
-This slice receives one Montoya handoff event per request and writes a sanitized
-packet for that event. The generated `finding_candidates.json` uses only
-sanitized event signals and emits passive suspicious finding candidates for
-manual review. `analysis_packet.json`, `chatgpt_prompt.md`, and
-`codex_task_prompt.md` are derived from those candidates and keep every issue in
-candidate status until manual verification is complete.
+전송 요청 한 번에 기록 한 건을 처리합니다. 원본은 메모리에서만 처리하고 로그에 남기지 않습니다.
+민감정보 제거와 검증을 통과한 결과만 Git에서 제외된 출력 폴더에 저장합니다.
+
+~~~powershell
+python -m burp_ai_redaction_gateway verify --input out/receiver
+python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out
+~~~
+
+[대시보드](http://127.0.0.1:8766/)에서 기록을 고르고 **결과 파일 확인**을 엽니다.
+필요하면 검토 요약과 보고서 작성을 실행하세요.
+
+finding_candidates.json의 점검 항목은 확인이 필요한 후보입니다.
+분석 요약과 프롬프트도 후보를 바탕으로 만들며 실제 취약점 여부나 최종 위험도를 확정하지 않습니다.
+원본 기록이나 결과 폴더 전체를 AI에 올리지 마세요.

@@ -1,63 +1,53 @@
-# Security Model
+# 민감정보 처리 원칙
 
-## Core Rule
+원본 기록을 AI에 보내지 않습니다.
+Burp 요청·응답, 쿠키·인증 헤더·토큰, 개인정보, 내부 IP, 실제 고객 도메인은 로컬에만 보관합니다.
+저장소, 이슈, 문서, 로그, 테스트 자료에 실제 값을 넣지 않습니다.
 
-Raw data must not be sent to AI. Raw Burp exports, raw HTTP requests and
-responses, cookies, authorization headers, JWTs, personal data, internal IPs,
-and real customer domains must stay local and must not appear in prompts,
-issues, commits, docs, logs, tests, or generated artifacts.
+## 처리 순서
 
-The only normal AI-facing path is:
+~~~text
+Burp 기록 → 로컬 민감정보 제거 → 검증 → 보고서 초안 → 전달 후보 네 파일 → 직접 확인
+~~~
 
-```text
-Burp export -> local generate -> local verify -> sanitized prompt/output
-```
+process 명령은 마지막 검증을 통과한 경우에만 ai_candidates/를 만듭니다.
+검증에 실패한 결과를 AI 입력이나 보고서 근거로 사용하지 마세요.
 
-Files under `out/` may be used with ChatGPT or Codex only after
-`python -m burp_ai_redaction_gateway verify --input out/...` passes.
+## 자료별 처리
 
-## Data Boundaries
+| 자료 | 처리 방법 |
+| --- | --- |
+| 원본 HTTP 요청·응답 | local_only/에 보관하고 커밋하지 않습니다. |
+| 쿠키 값 | 제거합니다. 허용된 경우 이름만 남깁니다. |
+| Authorization·Basic·Bearer·JWT | 값은 제거하고 인증 방식 등 필요한 구조만 남깁니다. |
+| CSRF·API 키·세션·비밀번호 | 값을 제거하고 필드 구조만 남깁니다. |
+| 이메일·전화번호·주민번호·계좌·카드번호 | 제거 표시나 자료형만 남깁니다. |
+| 실제 호스트·도메인·내부 IP | 별칭이나 네트워크 분류로 바꿉니다. |
+| 요청 방식·응답 상태·경로 | 식별자를 템플릿으로 바꾼 뒤 요약에 사용합니다. |
+| 점검 후보와 근거 | 검증을 통과하고 직접 검토한 뒤 사용합니다. |
 
-| Data class | AI allowed | Handling |
-| --- | --- | --- |
-| Raw HTTP request or response | No | Keep in `local_only/` only. Never commit. |
-| Cookie values | No | Replace with `<REDACTED>` and keep only cookie names when allowed. |
-| Authorization, Basic, Bearer, JWT | No | Keep scheme or structural metadata only. Remove raw values. |
-| CSRF, API key, session, password fields | No | Remove values and emit schema-only metadata. |
-| Email, phone, RRN, account or card number | No | Replace with redacted type markers or schema-only values. |
-| Internal IP address or real host/domain | No | Use network buckets or `host_XX` aliases only. |
-| `evidence_id` | Yes | Stable sanitized reference only. Must not contain raw values. |
-| `raw_reference` | Limited | Local mapping identifier only, for example `LOCAL_ONLY:...`. Must not contain raw values. |
-| Endpoint method, status, path template | Yes | Path identifiers must be templated. |
-| Finding candidates and rationale | Yes | Only after `verify` passes. |
+evidence_id는 정리된 자료를 참조하는 식별자입니다.
+raw_reference는 LOCAL_ONLY:... 형태의 로컬 연결 식별자일 뿐 원문 값을 담으면 안 됩니다.
+로컬 연결용 SQLite 기록도 AI 전달 대상이 아니며 커밋하지 않습니다.
 
-## Fail-Closed Behavior
+## 검증에 실패하면 중단
 
-The gateway is fail-closed. If the scanner finds a likely secret, cookie value,
-JWT, PII, internal IP, real domain, raw marker, or high-entropy token in output,
-the output must be blocked or `verify` must return a non-zero exit code.
+의심스러운 비밀값, 쿠키·토큰, 개인정보, 실제 주소, 원문 표시가 발견되면 결과를 차단합니다.
+verify 명령은 실패 시 0이 아닌 종료 코드를 반환합니다. 이런 방식을 fail-closed라고 합니다.
 
-Fail-closed takes priority over convenience. Do not bypass it for real customer
-work. If a false positive is legitimate, document it in `policy.json` with an
-allowlist note and keep the allowlist narrow.
+편의를 위해 검사를 끄지 마세요. 오탐을 예외로 처리해야 한다면 policy.json에 이유와 좁은 허용 범위를 남깁니다.
+자동 검사가 모든 민감정보를 찾는다는 보장은 없으므로 공유 전 직접 읽어보세요.
 
-## Local Mapping
+## 공개 저장소에 올리지 않을 파일
 
-`evidence_id` and `raw_reference` exist only to connect sanitized findings to
-local evidence. They must never include raw request bodies, raw response bodies,
-tokens, cookies, PII, customer domains, or internal host values.
+local_only/, out/, raw/, raw_vault/, reports/, exports/는 Git에서 제외합니다.
+.env, 비밀키, 실제 Burp 내보내기 파일도 올리지 않습니다.
+samples/에는 가상 자료만 둡니다.
 
-The SQLite audit database is local-only support data. It must not be committed
-and must not be pasted into AI tools.
+~~~powershell
+scripts\git_safety_check.bat
+~~~
 
-## Repository Rules
-
-- Real Burp exports must be stored under `local_only/` only.
-- `local_only/`, `out/`, `raw/`, `raw_vault/`, `reports/`, and `exports/` are
-  ignored by Git.
-- Synthetic fixtures under `samples/` must not contain real customer data.
-- Before committing, run `scripts/pre_commit_check.bat` on Windows or
-  `scripts/pre_commit_check.sh` in Git Bash, WSL, or Linux.
-- Gitleaks is a secondary scanner. The internal `verify` command is still the
-  required gate for generated output.
+Git Bash·WSL·Linux에서는 scripts/pre_commit_check.sh를 사용할 수 있습니다.
+Gitleaks 검사도 수행하되, 생성 결과의 verify 검사를 대신하지는 않습니다.
 
