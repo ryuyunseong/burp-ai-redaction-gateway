@@ -41,7 +41,7 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 
 | 파일 | 내용 |
 | --- | --- |
-| `report_draft.md` | 검토하고 수정할 보고서 초안(영문) |
+| `report_draft.md` | 발견 내용과 확인 방법을 정리한 한글 보고서 초안 |
 | `chatgpt_prompt.md` | ChatGPT에 검토를 요청할 때 쓸 프롬프트 |
 | `codex_task_prompt.md` | Codex에 검토를 요청할 때 쓸 프롬프트 |
 | `analysis_packet.json` | 요청 요약과 확인이 필요한 점검 항목 |
