@@ -21,14 +21,14 @@ python -m burp_ai_redaction_gateway process --input samples/synthetic_burp_histo
 python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out
 ```
 
-1. [대시보드](http://127.0.0.1:8766/)의 **업로드 마법사**를 엽니다.
-2. XML 또는 JSON 파일을 선택하고 `check01` 같은 새 별칭을 입력합니다.
-3. **로컬 마스킹 및 검증 시작**을 누릅니다.
-4. 성공 후 결과 요약, 후보 항목, 파일 4개 상태를 확인합니다.
-5. 산출물 상세 화면에서 **안전 파일 내보내기**를 실행하면 `exports/dashboard/` 아래에 파일을 복사합니다.
+1. [대시보드](http://127.0.0.1:8766/)의 **파일 업로드**를 엽니다.
+2. XML 또는 JSON 파일을 선택하고 `check01` 같은 새 작업 이름을 입력합니다.
+3. **민감정보 제거 시작**을 누릅니다.
+4. **결과 파일 확인**에서 파일을 미리 보거나 내려받습니다. 검토할 항목은 아래에서 펼쳐볼 수 있습니다.
+5. **파일 4개 내보내기**를 누르면 `exports/dashboard/` 아래에 파일을 복사합니다.
 
 웹 업로드는 원본을 `local_only/`에 보관합니다.
-프로젝트 별칭이 이미 사용 중이면 다른 별칭을 선택하세요.
+작업 이름이 이미 사용 중이면 다른 이름을 입력하세요.
 웹 업로드는 XML·JSON, CLI `process`는 XML·JSON·HAR를 지원합니다.
 CLI와 웹의 입력 크기 제한은 각각 16 MiB와 10 MiB입니다.
 
