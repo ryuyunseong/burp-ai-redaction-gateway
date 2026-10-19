@@ -106,7 +106,8 @@ def _add_weak_cookie_attributes(candidates: list[dict[str, Any]], event: Sanitiz
             missing.append("Secure")
         if not cookie["httponly"]:
             missing.append("HttpOnly")
-        if cookie["samesite"].lower() in {"none", "samesite=none", ""}:
+        samesite = cookie["samesite"].strip().lower()
+        if not samesite:
             missing.append("SameSite")
         if not missing:
             continue
@@ -120,6 +121,8 @@ def _add_weak_cookie_attributes(candidates: list[dict[str, Any]], event: Sanitiz
             risk_profile,
         )
         candidate["rationale"] = [f"Set-Cookie for {cookie['name']} is missing: {', '.join(missing)}."]
+        if samesite in {"none", "samesite=none"} and not cookie["secure"]:
+            candidate["rationale"].append(f"Set-Cookie for {cookie['name']} uses SameSite=None without Secure.")
         candidate["recommended_manual_tests"] = [
             "Confirm the cookie is used for authentication or session state.",
             "Verify Secure, HttpOnly, and SameSite behavior in a browser with HTTPS.",

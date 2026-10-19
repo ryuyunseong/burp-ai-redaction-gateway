@@ -304,14 +304,16 @@ class Redactor:
         attrs = {part.split("=", 1)[0].lower(): part for part in parts[1:]}
         secure = "secure" in attrs
         httponly = "httponly" in attrs
-        samesite = attrs.get("samesite", "SameSite=None")
+        samesite = attrs.get("samesite", "")
         domain_alias = ""
         if "domain" in attrs and "=" in attrs["domain"]:
             domain_value = attrs["domain"].split("=", 1)[1].strip().lstrip(".")
             domain_alias = self._host_alias(domain_value)
             counters["set_cookie_domain_alias"] += 1
-        if "=" in samesite:
-            samesite_value = samesite.split("=", 1)[1]
+        if not samesite:
+            samesite_value = ""
+        elif "=" in samesite:
+            samesite_value = samesite.split("=", 1)[1].strip()
         else:
             samesite_value = "present"
         counters["set_cookie_value"] += 1
@@ -319,7 +321,7 @@ class Redactor:
         return {
             "summary": (
                 f"cookie_name {safe_cookie_name}; value redacted{domain_part}; "
-                f"secure {secure}; httponly {httponly}; samesite {samesite_value}"
+                f"secure {secure}; httponly {httponly}; samesite {samesite_value or 'missing'}"
             ),
             "security": {
                 "name": safe_cookie_name,
@@ -791,16 +793,18 @@ def _redact_set_cookie(value: str, counters: Counter[str]) -> dict[str, Any]:
     attrs = {part.split("=", 1)[0].lower(): part for part in parts[1:]}
     secure = "secure" in attrs
     httponly = "httponly" in attrs
-    samesite = attrs.get("samesite", "SameSite=None")
-    if "=" in samesite:
-        samesite_value = samesite.split("=", 1)[1]
+    samesite = attrs.get("samesite", "")
+    if not samesite:
+        samesite_value = ""
+    elif "=" in samesite:
+        samesite_value = samesite.split("=", 1)[1].strip()
     else:
         samesite_value = "present"
     counters["set_cookie_value"] += 1
     return {
         "summary": (
             f"cookie_name {safe_cookie_name}; value redacted; "
-            f"secure {secure}; httponly {httponly}; samesite {samesite_value}"
+            f"secure {secure}; httponly {httponly}; samesite {samesite_value or 'missing'}"
         ),
         "security": {
             "name": safe_cookie_name,
