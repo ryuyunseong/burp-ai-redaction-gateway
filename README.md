@@ -83,6 +83,7 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 ## 더 알아보기
 
 - [사용 방법과 오류 해결](docs/USAGE.md): 내 Burp 기록 처리, 명령어 실행, 입력 형식
+- [Burp에서 후보 확인하기](docs/BURP_MANUAL_CHECKS.md): 테스트 계정 A·B로 따라 하는 점검 순서와 판단 기준
 - [결과 파일 안내](docs/OUTPUT_BUNDLE_GUIDE_KO_v0.6.md): 공유 전 확인할 내용
 - 선택 설정: [Burp 수집기](docs/MONTOYA_COLLECTOR.md) · [Codex·읽기 전용 MCP 연결](docs/READ_ONLY_MCP.md)
 - [프로젝트 요약](docs/PORTFOLIO_SUMMARY_KO.md) · [구성과 추가 설정](docs/REFERENCE.md)
