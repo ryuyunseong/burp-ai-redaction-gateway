@@ -47,6 +47,29 @@ def codex_server_command(root: Path) -> tuple[list[str], dict[str, str]]:
 
 
 class BeginnerGuideTests(unittest.TestCase):
+    def test_project_summary_is_short_and_preserves_security_limits(self) -> None:
+        text = guide("PORTFOLIO_SUMMARY_KO.md")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("](docs/PORTFOLIO_SUMMARY_KO.md)", readme)
+        self.assertNotIn("**", text)
+        self.assertLessEqual(len(text.splitlines()), 30)
+        self.assertEqual(re.findall(r"^## (.+)$", text, re.MULTILINE), ["만든 이유", "주요 기능", "보안상 한계"])
+        for phrase in (
+            "내 컴퓨터에서", "쿠키·로그인 토큰·개인정보", "XML·JSON·HAR",
+            "AI 전달 후보 파일 4개", "웹 업로드(XML·JSON)", "선택 기능", "검증된 결과",
+            "검증에 실패하면 처리를 중단", "전달 후보 폴더를 만들지",
+            "자동 검사가 모든 민감정보를 찾는 것은 아닙니다", "공유 전 직접 읽고",
+            "원본이나 결과 폴더 전체를 AI에 올리지", "확정 취약점이 아닌 검토 후보",
+            "실제 재현·영향과 공유 여부는 사람이 판단", "원문 조회, 요청 재전송, 능동 스캔, 자동 AI 전송은 제공하지",
+            "MCP도 Burp를 직접 조작하지", "공개 예제와 테스트는 가상 자료", "실제 서비스의 취약점 재현 결과가 아닙니다",
+        ):
+            self.assertIn(phrase, text)
+        for marker in ("\ufeff", "\ufffd", "\u200b", "??"):
+            self.assertNotIn(marker, text)
+        for target in re.findall(r"\]\(([^)]+)\)", text):
+            self.assertTrue((ROOT / "docs" / target.split("#")[0]).is_file(), target)
+        assert_no_sensitive_text(text)
+
     def test_output_bundle_guide_matches_files_and_preserves_sharing_checks(self) -> None:
         text = guide("OUTPUT_BUNDLE_GUIDE_KO_v0.6.md")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
