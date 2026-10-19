@@ -138,6 +138,9 @@ class BeginnerGuideTests(unittest.TestCase):
 
     def test_usage_buttons_and_safety_limits_match_implementation(self) -> None:
         text = guide("USAGE.md")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertNotIn("**", readme)
+        self.assertIn("10 MiB(약 10.5 MB)", readme)
         dashboard = (ROOT / "burp_ai_redaction_gateway" / "dashboard.py").read_text(encoding="utf-8")
         for label in ("파일 업로드", "민감정보 제거 시작", "결과 파일 확인", "파일 4개 내보내기"):
             self.assertIn(label, text)
@@ -183,6 +186,9 @@ class BeginnerGuideTests(unittest.TestCase):
     def test_codex_app_setup_matches_server_arguments_and_requires_restart(self) -> None:
         text = guide("READ_ONLY_MCP.md")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        setup_line = next(line for line in readme.splitlines() if line.startswith("1. [MCP 설정 안내]"))
+        self.assertIn("](docs/READ_ONLY_MCP.md)", setup_line)
+        self.assertIn("FC-0010 실제 조회 예시", setup_line)
         app_settings = dict(re.findall(r"^\| (이름|실행 프로그램|인수|환경변수) \| (.+) \|$", text, re.MULTILINE))
         cli_line = next(line for line in text.splitlines() if line.startswith("codex mcp add "))
         cli_args = shlex.split(cli_line)
