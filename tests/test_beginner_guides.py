@@ -128,8 +128,7 @@ class BeginnerGuideTests(unittest.TestCase):
                 text = guide(name)
                 self.assertIn(f"docs/{name}", readme)
                 self.assertLess(len(text.splitlines()), 105)
-                if name in {"USAGE.md", "READ_ONLY_MCP.md"}:
-                    self.assertNotIn("**", text)
+                self.assertNotIn("**", text)
                 self.assertRegex(text, r"## 1\. [가-힣]")
                 self.assertRegex(text, r"## [23]\. [가-힣A-Z]")
                 for marker in ("\ufeff", "\ufffd", "\u200b", "??"):
@@ -165,6 +164,16 @@ class BeginnerGuideTests(unittest.TestCase):
         self.assertIn(f"build/libs/{base_name}-{version}.jar", text)
         self.assertIn("JDK 21", text)
         self.assertIn("java-version: '21'", (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+        source_dir = ROOT / "extensions" / "montoya-collector" / "src" / "main" / "java" / "com" / "ryuyunseong" / "burpai" / "redactiongateway"
+        extension = (source_dir / "BurpAiRedactionGatewayExtension.java").read_text(encoding="utf-8")
+        menu_label = re.search(r'new JMenuItem\("([^"]+)"\)', extension).group(1)
+        self.assertIn(menu_label, text)
+        self.assertLess(text.index("선택한 행만 보내는 메뉴가 아닙니다"), text.index(menu_label))
+        self.assertIn("Output", text)
+        self.assertIn("items_sent", text)
+        self.assertLess(text.index("Ctrl+C"), text.index("verify --input out/receiver"))
+        self.assertLess(text.index("verify --input out/receiver"), text.index("검증이 실패하면 여기서 멈추고"))
+        self.assertLess(text.index("검증이 실패하면 여기서 멈추고"), text.index("dashboard --host"))
         for phrase in ("선택한 행만 보내는 메뉴가 아닙니다", "허가받은 대상만", "외부 주소로 전송하지 못하게 제한", "수신기에서 민감정보를 제거", "원본과 대상 호스트 값은 남기지 않습니다", "보고서 다시 만들기"):
             self.assertIn(phrase, text)
 
