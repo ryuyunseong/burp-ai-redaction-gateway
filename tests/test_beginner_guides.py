@@ -202,6 +202,9 @@ class BeginnerGuideTests(unittest.TestCase):
             self.assertIn("검토 후보", document)
         self.assertIn("Codex 앱 대화에서 세 도구를 직접 호출", text)
         self.assertIn("세 응답의 `raw_data_included`는 `false`", text)
+        self.assertIn("점검 후보 목록, FC-0010의 상세 근거와 보고서 초안을 실제 MCP 도구로 읽어줘", text)
+        self.assertIn("세 도구 모두 `project`에 `demo`", text)
+        self.assertIn("`get_finding`의 `finding_id`는 `FC-0010`", text)
         for option in ("dangerously-bypass", "danger-full-access", "default_tools_approval_mode", "--ignore-rules"):
             self.assertNotIn(option, text)
             self.assertNotIn(option, readme)
