@@ -175,7 +175,11 @@ def read_public_documentation() -> str:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     if "docs/REFERENCE.md" not in readme:
         raise AssertionError("README must link to the technical reference")
-    return readme + "\n" + (ROOT / "docs" / "REFERENCE.md").read_text(encoding="utf-8")
+    reference = (ROOT / "docs" / "REFERENCE.md").read_text(encoding="utf-8")
+    if "](REFERENCE_HISTORY.md)" not in reference:
+        raise AssertionError("Technical reference must link to the historical reference")
+    history = (ROOT / "docs" / "REFERENCE_HISTORY.md").read_text(encoding="utf-8")
+    return "\n".join([readme, reference, history])
 
 
 SAMPLE = ROOT / "samples" / "synthetic_burp_history.json"
