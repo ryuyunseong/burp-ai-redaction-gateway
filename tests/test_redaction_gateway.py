@@ -19046,10 +19046,10 @@ class RedactionGatewayTests(unittest.TestCase):
 
         for required in [
             "결과 파일 안내",
-            "기본 보기",
-            "고급 보기",
+            "파일별 용도",
+            "AI에 전달하기 전",
             "보고서 초안",
-            "ChatGPT에 분석 검토",
+            "ChatGPT에 후보 검토",
             "데이터",
             "원본 요청·응답",
             "자동 AI 전송은 제공하지 않습니다",
