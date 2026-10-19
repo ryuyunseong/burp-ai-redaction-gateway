@@ -43,6 +43,61 @@ def codex_server_command(root: Path) -> tuple[list[str], dict[str, str]]:
 
 
 class BeginnerGuideTests(unittest.TestCase):
+    def test_burp_manual_guide_covers_all_published_sample_candidates(self) -> None:
+        text = guide("BURP_MANUAL_CHECKS.md")
+        report = guide("examples/report_draft.md")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("](docs/BURP_MANUAL_CHECKS.md)", readme)
+        self.assertLessEqual(len(text.splitlines()), 140)
+        groups = {
+            "접근 권한": {"FC-0004", "FC-0019"},
+            "민감정보 포함": {"FC-0005", "FC-0008", "FC-0015", "FC-0020"},
+            "쿠키 보호 설정": {"FC-0002", "FC-0010"},
+            "캐시 설정": {"FC-0003", "FC-0007", "FC-0014", "FC-0018"},
+            "CORS 설정": {"FC-0012"},
+            "오류 메시지": {"FC-0016"},
+            "보안 헤더": {"FC-0001", "FC-0006", "FC-0009", "FC-0011", "FC-0013", "FC-0017", "FC-0021", "FC-0022"},
+        }
+        report_candidates = dict(re.findall(r"^## 검토 후보 (FC-\d{4}): (.+)$", report, re.MULTILINE))
+        documented = set(re.findall(r"\bFC-\d{4}\b", text))
+        self.assertEqual(len(report_candidates), 22)
+        self.assertEqual(documented, set(report_candidates))
+        for label, ids in groups.items():
+            with self.subTest(label=label):
+                row = next(line for line in text.splitlines() if line.startswith(f"| {label} "))
+                self.assertIn(f"{len(ids)}건", row)
+                self.assertEqual(set(re.findall(r"FC-\d{4}", row)), ids)
+                self.assertEqual(len({report_candidates[item] for item in ids}), 1)
+        for number, title in enumerate(("접근 권한", "민감정보 포함", "쿠키 보호 설정", "캐시 설정", "CORS", "오류 메시지", "보안 헤더"), start=1):
+            self.assertIn(f"## {number}. {title}", text)
+        self.assertEqual(text.count("**정상:**"), len(groups))
+        self.assertEqual(text.count("**문제 의심:**"), len(groups) - 1)
+        self.assertIn("**추가 검토:**", text)
+
+    def test_burp_manual_guide_preserves_manual_review_and_security_limits(self) -> None:
+        text = guide("BURP_MANUAL_CHECKS.md")
+        for phrase in (
+            "검토 후보는 확정 취약점이 아닙니다", "가상 기록이며 접속할 서버가 아닙니다",
+            "허가된 실습 환경", "계정 권한을 바꾸지 않습니다", "읽기 전용 조회",
+            "보안 검사·브라우저 보호를 끄거나", "자동 스캔·번호 대입·대량 조회·수정·삭제",
+            "로그인 정보와 조회 대상을 동시에 바꾸지", "쿠키를 서로 교환하지",
+            "no-store", "private", "no-cache", "캐시 때문인지 접근 권한 누락 때문인지",
+            "뒤로가기로 보이는 과거 화면", "OPTIONS", "인증용 쿠키·헤더를 임의로 붙이지",
+            'credentials: "include"', "브라우저는 읽기를 차단", "Burp에서 응답이 보이는 것만으로는 부족",
+            "미확인", "디버그 모드를 켜거나", "500", "200 OK", "401", "304",
+            "실제 값·쿠키·토큰·원문", "위 절차는 사람이 별도로 수행",
+        ):
+            self.assertIn(phrase, text)
+        for marker in ("\ufeff", "\ufffd", "\u200b", "??"):
+            self.assertNotIn(marker, text)
+        for target in re.findall(r"\]\(([^)]+)\)", text):
+            if "://" not in target:
+                self.assertTrue((ROOT / "docs" / target.split("#")[0]).is_file(), target)
+        prose = re.sub(r"\]\([^)]+\)", "]", text)
+        assert_no_sensitive_text(prose)
+        self.assertNotRegex(prose, r"[A-Za-z]:[\\/]|/home/|/Users/")
+        self.assertNotRegex(text, r"[\u3040-\u30ff\u4e00-\u9fff]")
+
     def test_guides_keep_short_korean_steps_and_working_links(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         for name in GUIDES:
