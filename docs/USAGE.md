@@ -83,7 +83,7 @@ python -m burp_ai_redaction_gateway process --input samples/synthetic_burp_histo
 <summary>개발·고급 사용 참고</summary>
 
 결과 화면의 공유 전 추가 점검에서는 파일과 검사 상태만 확인합니다. 파일을 수정하거나 처리를 실행하지 않습니다.
-단계별 명령은 [구성과 추가 설정](REFERENCE.md)을 참고하세요.
+파일 처리는 위의 ‘명령어로 처리하기’를 따르면 됩니다. 선택 설정은 [구성과 추가 설정](REFERENCE.md)에 모았습니다.
 기존 `review --export-dir`은 분석 파일과 프롬프트 3개만 복사합니다. 보고서를 포함한 4개 파일에는 `process` 또는 대시보드 내보내기를 사용하세요.
 
 </details>
