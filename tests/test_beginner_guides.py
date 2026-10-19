@@ -12,9 +12,10 @@ import unittest
 from http.cookies import SimpleCookie
 from pathlib import Path
 
-from burp_ai_redaction_gateway.dashboard import MAX_UPLOAD_BYTES
+from burp_ai_redaction_gateway.dashboard import MAX_UPLOAD_BYTES, SAFE_PREVIEW_FILES
 from burp_ai_redaction_gateway.mcp_server import tool_definitions
 from burp_ai_redaction_gateway.scanner import assert_no_sensitive_text
+from burp_ai_redaction_gateway.viewer import SAFE_FILE_ALLOWLIST
 from burp_ai_redaction_gateway.workflow import MAX_INPUT_BYTES
 
 
@@ -46,6 +47,40 @@ def codex_server_command(root: Path) -> tuple[list[str], dict[str, str]]:
 
 
 class BeginnerGuideTests(unittest.TestCase):
+    def test_output_bundle_guide_matches_files_and_preserves_sharing_checks(self) -> None:
+        text = guide("OUTPUT_BUNDLE_GUIDE_KO_v0.6.md")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("](docs/OUTPUT_BUNDLE_GUIDE_KO_v0.6.md)", readme)
+        self.assertNotIn("**", text)
+        self.assertLessEqual(len(text.splitlines()), 60)
+        rows = re.findall(r"^\| `([^`]+)` \| (.+) \|$", text, re.MULTILINE)
+        self.assertEqual(len(rows), 4)
+        for allowed in (SAFE_FILE_ALLOWLIST, SAFE_PREVIEW_FILES):
+            self.assertEqual({name for name, _ in rows}, set(allowed))
+        for _, purpose in rows:
+            self.assertRegex(purpose, r"[가-힣]")
+        self.assertEqual(re.findall(r"^(\d+)\. ", text, re.MULTILINE), ["1", "2", "3", "4"])
+        dashboard = (ROOT / "burp_ai_redaction_gateway" / "dashboard.py").read_text(encoding="utf-8")
+        for label in ("결과 파일 확인", "파일 4개 내보내기", "파일 상태"):
+            self.assertIn(label, text)
+            self.assertIn(label, dashboard)
+        for phrase in (
+            "검증에 실패한 결과는 사용하지 않습니다", "검사를 끄거나 오류를 무시하지",
+            "자동 검사가 모든 민감정보를 찾는 것은 아닙니다", "원본 요청·응답",
+            "쿠키·인증 헤더·토큰·세션 값", "개인정보", "실제 URL·도메인·IP", "전체 로컬 경로",
+            "결과 폴더 전체를 AI에 올리지", "확정 취약점이 아닌 검토 후보", "위험도는 초안",
+            "최종 심각도·CVSS", "직접 판단", "요약에서 생략한 데이터도 민감정보 검사를",
+            "코드 수정·요청 재전송·능동 스캔·외부 전송을 실행하라고 요청하지",
+            "자동 AI 전송은 제공하지 않습니다", "`ai_candidates/`", "민감정보를 제거한 분석 데이터",
+            "크기·수정 시각·해시만으로 공유해도 된다고 판단하지",
+        ):
+            self.assertIn(phrase, text)
+        for marker in ("\ufeff", "\ufffd", "\u200b", "??"):
+            self.assertNotIn(marker, text)
+        for target in re.findall(r"\]\(([^)]+)\)", text):
+            self.assertTrue((ROOT / "docs" / target.split("#")[0]).is_file(), target)
+        assert_no_sensitive_text(text)
+
     def test_burp_manual_guide_covers_all_published_sample_candidates(self) -> None:
         text = guide("BURP_MANUAL_CHECKS.md")
         report = guide("examples/report_draft.md")
