@@ -41,18 +41,20 @@ python -c "import sys; print(sys.executable)"
 
 1. 저장한 뒤 **MCP servers → burp_sample → Restart(다시 시작)**를 누릅니다. 서버가 활성화되어 있는지도 확인하세요.
 2. 대화 입력창에 `/mcp`를 입력해 `burp_sample`이 보이는지 확인합니다. 안 보이면 앱을 다시 열고 새 대화에서 확인하세요.
-3. **“burp_sample에서 demo의 점검 후보 목록과 보고서 초안을 실제 MCP 도구로 읽어줘”**라고 요청합니다.
+3. **“burp_sample에서 demo의 점검 후보 목록, FC-0010의 상세 근거와 보고서 초안을 실제 MCP 도구로 읽어줘”**라고 요청합니다.
 
-도구 실행을 물으면 대상과 인수를 확인하세요. 두 도구 모두 `project`에 `demo`를 지정합니다.
+도구 실행을 물으면 대상과 인수를 확인하세요. 세 도구 모두 `project`에 `demo`를 지정하고, `get_finding`의 `finding_id`는 `FC-0010`으로 지정합니다.
 Codex가 서버를 실행하므로 조회할 때 CLI나 별도 서버 터미널을 열 필요는 없습니다. [Codex 공식 설정 안내](https://learn.chatgpt.com/docs/extend/mcp?surface=app)
 
 | MCP 도구 | 가상 샘플의 실제 조회 결과 |
 | --- | --- |
 | `list_findings` | 검토 후보 **22개** |
+| `get_finding` (`FC-0010`) | 누락 속성은 **Secure, HttpOnly** |
 | `get_report_draft` | **보안 점검 보고서 초안** |
 
-2026-10-19 Windows의 Codex 앱 대화에서 두 도구를 직접 호출했습니다. 두 응답의 `raw_data_included`는 `false`였습니다.
-도구 호출 기록에 두 이름이 나오는지 확인하세요. 후보와 보고서는 초안이며 확정 취약점이 아닙니다. 실제 취약점 여부와 최종 심각도는 직접 확인해야 합니다.
+2026-10-19 Windows의 Codex 앱 대화에서 세 도구를 직접 호출했습니다. 세 응답의 `raw_data_included`는 `false`였습니다.
+FC-0010의 보고서 문구는 “쿠키 sid에 없는 보호 속성: Secure, HttpOnly.”와 “쿠키 sid는 SameSite=None이지만 Secure가 없습니다.”입니다. `SameSite` 자체를 누락으로 표시하지 않습니다.
+도구 호출 기록에 세 이름이 나오는지 확인하세요. 후보와 보고서는 초안이며 확정 취약점이 아닙니다. 실제 취약점 여부와 최종 심각도는 직접 확인해야 합니다.
 
 ## 읽지 못할 때
 
