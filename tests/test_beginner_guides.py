@@ -12,8 +12,10 @@ import unittest
 from http.cookies import SimpleCookie
 from pathlib import Path
 
+from burp_ai_redaction_gateway.dashboard import MAX_UPLOAD_BYTES
 from burp_ai_redaction_gateway.mcp_server import tool_definitions
 from burp_ai_redaction_gateway.scanner import assert_no_sensitive_text
+from burp_ai_redaction_gateway.workflow import MAX_INPUT_BYTES
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -126,6 +128,8 @@ class BeginnerGuideTests(unittest.TestCase):
                 text = guide(name)
                 self.assertIn(f"docs/{name}", readme)
                 self.assertLess(len(text.splitlines()), 105)
+                if name in {"USAGE.md", "READ_ONLY_MCP.md"}:
+                    self.assertNotIn("**", text)
                 self.assertRegex(text, r"## 1\. [가-힣]")
                 self.assertRegex(text, r"## [23]\. [가-힣A-Z]")
                 for marker in ("\ufeff", "\ufffd", "\u200b", "??"):
@@ -141,6 +145,9 @@ class BeginnerGuideTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertNotIn("**", readme)
         self.assertIn("10 MiB(약 10.5 MB)", readme)
+        for mode, limit in (("웹 업로드", MAX_UPLOAD_BYTES), ("명령어 실행", MAX_INPUT_BYTES)):
+            row = next(line for line in text.splitlines() if line.startswith(f"| {mode} |"))
+            self.assertIn(f"{limit // (1024 * 1024)} MiB(약 {limit / 1_000_000:.1f} MB)", row)
         dashboard = (ROOT / "burp_ai_redaction_gateway" / "dashboard.py").read_text(encoding="utf-8")
         for label in ("파일 업로드", "민감정보 제거 시작", "결과 파일 확인", "파일 4개 내보내기"):
             self.assertIn(label, text)
@@ -250,7 +257,7 @@ class BeginnerGuideTests(unittest.TestCase):
             self.assertEqual(report["structuredContent"]["report_draft"], (project / "report_draft.md").read_text(encoding="utf-8"))
             self.assertIn("검토 후보", report["structuredContent"]["report_draft"])
             report_title = report["structuredContent"]["report_draft"].splitlines()[0].removeprefix("# ")
-            self.assertIn(f"**{report_title}**", guide("READ_ONLY_MCP.md"))
+            self.assertIn(f"| `get_report_draft` | {report_title} |", guide("READ_ONLY_MCP.md"))
             finding = responses[4]["result"]
             self.assertFalse(finding["isError"])
             candidate = finding["structuredContent"]["finding"]
