@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from http.cookies import SimpleCookie
 from pathlib import Path
 
 from burp_ai_redaction_gateway.mcp_server import tool_definitions
@@ -97,6 +98,26 @@ class BeginnerGuideTests(unittest.TestCase):
         assert_no_sensitive_text(prose)
         self.assertNotRegex(prose, r"[A-Za-z]:[\\/]|/home/|/Users/")
         self.assertNotRegex(text, r"[\u3040-\u30ff\u4e00-\u9fff]")
+
+    def test_burp_manual_guide_cookie_observations_match_sample_attributes(self) -> None:
+        text = guide("BURP_MANUAL_CHECKS.md")
+        sample = json.loads((ROOT / "samples" / "synthetic_burp_history.json").read_text(encoding="utf-8"))
+        observed = {}
+        for event in sample["events"]:
+            for name, value in event["response"]["headers"].items():
+                if name.lower() != "set-cookie":
+                    continue
+                for header in value if isinstance(value, list) else [value]:
+                    cookies = SimpleCookie()
+                    cookies.load(header)
+                    for cookie_name, cookie in cookies.items():
+                        observed[cookie_name] = (bool(cookie["secure"]), bool(cookie["httponly"]), cookie["samesite"])
+        self.assertEqual(observed, {"session": (False, True, "Lax"), "sid": (False, False, "None")})
+        for candidate_id, name in (("FC-0002", "session"), ("FC-0010", "sid")):
+            secure, httponly, samesite = observed[name]
+            self.assertIn(f"| {candidate_id} / {name} | {'있음' if secure else '없음'} | {'있음' if httponly else '없음'} | {samesite} |", text)
+        self.assertIn("현재 보고서의 `SameSite` 누락 표시는 `None`도 포함", text)
+        self.assertIn("속성이 없는 것이 아니라 `SameSite=None`", text)
 
     def test_guides_keep_short_korean_steps_and_working_links(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
