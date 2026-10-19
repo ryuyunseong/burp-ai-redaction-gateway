@@ -460,7 +460,8 @@ def _report_text(text: str) -> str:
         return _REPORT_TEXT[text]
     patterns = (
         (r"Response did not include: (.+)\.", "응답에 없는 보안 헤더: {}"),
-        (r"Set-Cookie for (.+) is missing: (.+)\.", "쿠키 {}에 없는 보호 속성: {}"),
+        (r"Set-Cookie for (.+) is missing: (.+)\.", "쿠키 {}에 없는 보호 속성: {}."),
+        (r"Set-Cookie for (.+) uses SameSite=None without Secure\.", "쿠키 {}는 SameSite=None이지만 Secure가 없습니다."),
         (r"Redacted field count: ([0-9]+)\.", "민감정보 제거 대상 항목 수: {}개"),
     )
     for pattern, template in patterns:

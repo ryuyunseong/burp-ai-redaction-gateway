@@ -63,8 +63,9 @@ class KoreanReportTests(unittest.TestCase):
     def test_report_translates_variable_observations_without_losing_values(self) -> None:
         examples = {
             "Response did not include: Secure-Header.": "응답에 없는 보안 헤더: Secure-Header",
-            "Set-Cookie for demo_cookie is missing: Secure, HttpOnly.": "쿠키 demo_cookie에 없는 보호 속성: Secure, HttpOnly",
-            "Set-Cookie for low is missing: Secure.": "쿠키 low에 없는 보호 속성: Secure",
+            "Set-Cookie for demo_cookie is missing: Secure, HttpOnly.": "쿠키 demo_cookie에 없는 보호 속성: Secure, HttpOnly.",
+            "Set-Cookie for low is missing: Secure.": "쿠키 low에 없는 보호 속성: Secure.",
+            "Set-Cookie for sid uses SameSite=None without Secure.": "쿠키 sid는 SameSite=None이지만 Secure가 없습니다.",
             "Response did not include: high.": "응답에 없는 보안 헤더: high",
             "Redacted field count: 12.": "민감정보 제거 대상 항목 수: 12개",
         }

@@ -116,8 +116,8 @@ class BeginnerGuideTests(unittest.TestCase):
         for candidate_id, name in (("FC-0002", "session"), ("FC-0010", "sid")):
             secure, httponly, samesite = observed[name]
             self.assertIn(f"| {candidate_id} / {name} | {'있음' if secure else '없음'} | {'있음' if httponly else '없음'} | {samesite} |", text)
-        self.assertIn("현재 보고서의 `SameSite` 누락 표시는 `None`도 포함", text)
-        self.assertIn("속성이 없는 것이 아니라 `SameSite=None`", text)
+        self.assertIn("`SameSite` 속성 누락과 `SameSite=None`인데 `Secure`가 없는 경우를 구분", text)
+        self.assertIn("이전에 만든 결과는 다시 처리", text)
 
     def test_guides_keep_short_korean_steps_and_working_links(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
