@@ -18107,25 +18107,26 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("scripts\\start_gateway.bat", guide)
         self.assertIn("scripts\\stop_gateway.ps1", guide)
         self.assertIn("http://127.0.0.1:8766/", guide)
-        self.assertIn("Receiver port", guide)
-        self.assertIn("Dashboard port", guide)
-        self.assertIn("Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass", guide)
+        self.assertIn("수신기 주소", guide)
+        self.assertIn("대시보드 주소", guide)
+        self.assertIn("조직의 실행 정책을 유지", guide)
+        self.assertNotIn("Set-ExecutionPolicy", guide)
         self.assertIn("receiver_port_in_use", guide)
         self.assertIn("dashboard_port_in_use", guide)
         self.assertIn("unexpected_process", guide)
-        self.assertIn("raw-free metadata only", guide)
+        self.assertIn("원본 내용은 표시하지 않습니다", guide)
         self.assertIn("raw_data_included=false", guide)
         self.assertIn("out\\.launcher", guide)
 
         blocked_values = [
-            "real Burp data",
-            "customer domains",
-            "tokens",
-            "cookies",
-            "session values",
-            "personal data",
-            "HMAC secrets",
-            "CSRF values",
+            "원본 Burp 자료",
+            "실제 대상 주소",
+            "토큰",
+            "쿠키",
+            "세션 값",
+            "개인정보",
+            "HMAC 비밀키",
+            "CSRF 값",
         ]
         for value in blocked_values:
             self.assertIn(value, guide)

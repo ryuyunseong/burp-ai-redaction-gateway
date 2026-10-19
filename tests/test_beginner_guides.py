@@ -12,7 +12,7 @@ import unittest
 from http.cookies import SimpleCookie
 from pathlib import Path
 
-from burp_ai_redaction_gateway.dashboard import MAX_UPLOAD_BYTES, SAFE_PREVIEW_FILES
+from burp_ai_redaction_gateway.dashboard import MAX_UPLOAD_BYTES, SAFE_PREVIEW_FILES, write_dashboard_action_audit_event
 from burp_ai_redaction_gateway.mcp_server import tool_definitions
 from burp_ai_redaction_gateway.scanner import assert_no_sensitive_text
 from burp_ai_redaction_gateway.viewer import SAFE_FILE_ALLOWLIST
@@ -47,6 +47,69 @@ def codex_server_command(root: Path) -> tuple[list[str], dict[str, str]]:
 
 
 class BeginnerGuideTests(unittest.TestCase):
+    def test_current_usage_documents_keep_plain_korean_and_local_links(self) -> None:
+        documents = [ROOT / "README.md"] + [ROOT / "docs" / name for name in (
+            *GUIDES, "BURP_MANUAL_CHECKS.md", "OUTPUT_BUNDLE_GUIDE_KO_v0.6.md",
+            "PORTFOLIO_SUMMARY_KO.md", "REFERENCE.md", "LOCALHOST_RECEIVER.md",
+            "SECURITY_MODEL.md", "WINDOWS_LAUNCHER_GUIDE.md", "AUDIT_OPERATIONS_GUIDE.md",
+        )]
+        for path in documents:
+            with self.subTest(document=path.name):
+                text = path.read_text(encoding="utf-8")
+                self.assertNotIn("**", text)
+                self.assertNotIn("<strong", text)
+                self.assertNotRegex(text, r"[\ufeff\ufffd\u200b]|\?\?")
+                self.assertNotRegex(text, r"[\u3040-\u30ff\u4e00-\u9fff]")
+                for heading in re.findall(r"^#{1,3} (.+)$", text, re.MULTILINE):
+                    self.assertRegex(heading, r"[가-힣]|Burp AI Redaction Gateway")
+                for target in re.findall(r"!?\[[^\]]*\]\(([^)]+)\)", text):
+                    if "://" not in target and not target.startswith("#"):
+                        self.assertTrue((path.parent / target.split("#")[0]).is_file(), target)
+                self.assertNotRegex(text, r"(?<![A-Za-z])[A-Za-z]:[\\/]|/home/|/Users/")
+
+    def test_receiver_steps_stop_on_verification_failure_and_match_buttons(self) -> None:
+        text = guide("LOCALHOST_RECEIVER.md")
+        self.assertLess(text.index("Ctrl+C"), text.index("verify --input out/receiver"))
+        self.assertLess(text.index("verify --input out/receiver"), text.index("검증이 실패하면 여기서 멈추고"))
+        self.assertLess(text.index("검증이 실패하면"), text.index("dashboard --host"))
+        dashboard = (ROOT / "burp_ai_redaction_gateway" / "dashboard.py").read_text(encoding="utf-8")
+        for label in ("결과 파일 확인", "보고서 다시 만들기", "파일 4개 내보내기"):
+            self.assertIn(label, text)
+            self.assertIn(label, dashboard)
+        for phrase in ("127.0.0.1에서만", "실제 고객명이나 서비스명이 아닌 별칭", "확인이 필요한 후보", "결과 폴더 전체를 AI에 올리지", "검사를 끄거나 외부 접속을 허용하지"):
+            self.assertIn(phrase, text)
+        self.assertNotIn("단계별 명령은", guide("USAGE.md"))
+
+    def test_documented_audit_commands_preserve_source_and_verify_archives(self) -> None:
+        text = guide("AUDIT_OPERATIONS_GUIDE.md")
+        commands = [shlex.split(line) for line in text.splitlines() if line.startswith("python -m burp_ai_redaction_gateway ")]
+        self.assertEqual([command[3] for command in commands], [
+            "review-audit", "audit-retention", "audit-retention", "review-audit",
+            "audit-hmac", "audit-hmac-verify", "audit-compress", "audit-compress-verify",
+            "audit-compressed-hmac", "audit-compressed-hmac-verify",
+        ])
+        for phrase in ("검사에 실패하면 다음 단계로 넘어가지", "원본은 바꾸지 않습니다", "암호화가 아닙니다", "같은 키", "실패를 숨기려고", "검사를 대신하지", "AI 전달 자료가 아니며", "Git에 올리지"):
+            self.assertIn(phrase, text)
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            root = base / "out"
+            write_dashboard_action_audit_event(root, action_name="export", output_id="demo", result_status="ok")
+            source = root / ".audit" / "mcp_audit.jsonl"
+            original_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+            test_key = "synthetic-audit-key-for-documentation-test"
+            env = dict(os.environ, PYTHONUTF8="1", PYTHONPATH=str(ROOT), BURP_AI_AUDIT_HMAC_KEY=test_key)
+            for index, command in enumerate(commands):
+                with self.subTest(command=command[3], step=index):
+                    command[0] = sys.executable
+                    result = subprocess.run(command, cwd=base, env=env, capture_output=True, encoding="utf-8", timeout=30)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertNotIn(test_key, result.stdout + result.stderr)
+                    assert_no_sensitive_text(result.stdout + result.stderr)
+                    self.assertEqual(hashlib.sha256(source.read_bytes()).hexdigest(), original_hash)
+                    if index == 1:
+                        self.assertFalse((root / ".audit" / "mcp_audit.retained.jsonl").exists())
+            self.assertTrue((root / ".audit" / "mcp_audit.retained.jsonl.gz.manifest.json").is_file())
+
     def test_project_summary_is_short_and_preserves_security_limits(self) -> None:
         text = guide("PORTFOLIO_SUMMARY_KO.md")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
