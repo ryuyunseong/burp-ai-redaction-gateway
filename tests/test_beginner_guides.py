@@ -200,8 +200,8 @@ class BeginnerGuideTests(unittest.TestCase):
             self.assertIn("실제 MCP 도구로 읽어줘", document)
             self.assertIn("조회할 때 CLI나 별도 서버 터미널", document)
             self.assertIn("검토 후보", document)
-        self.assertIn("Codex 앱 대화에서 두 도구를 직접 호출", text)
-        self.assertIn("두 응답의 `raw_data_included`는 `false`", text)
+        self.assertIn("Codex 앱 대화에서 세 도구를 직접 호출", text)
+        self.assertIn("세 응답의 `raw_data_included`는 `false`", text)
         for option in ("dangerously-bypass", "danger-full-access", "default_tools_approval_mode", "--ignore-rules"):
             self.assertNotIn(option, text)
             self.assertNotIn(option, readme)
@@ -225,8 +225,9 @@ class BeginnerGuideTests(unittest.TestCase):
                 {"jsonrpc": "2.0", "method": "notifications/initialized"},
                 {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "list_findings", "arguments": {"project": "demo"}}},
                 {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "get_report_draft", "arguments": {"project": "demo"}}},
+                {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "get_finding", "arguments": {"project": "demo", "finding_id": "FC-0010"}}},
             ]
-            for request_id, name in enumerate(("../outside", "demo/local_only"), start=4):
+            for request_id, name in enumerate(("../outside", "demo/local_only"), start=5):
                 messages.append({"jsonrpc": "2.0", "id": request_id, "method": "tools/call", "params": {"name": "get_report_draft", "arguments": {"project": name}}})
             result = subprocess.run(command, cwd=outside, env=env, input="\n".join(json.dumps(message) for message in messages) + "\n", capture_output=True, encoding="utf-8", timeout=30)
             self.assertEqual(result.returncode, 0, result.stderr)
@@ -241,7 +242,28 @@ class BeginnerGuideTests(unittest.TestCase):
             self.assertIn("검토 후보", report["structuredContent"]["report_draft"])
             report_title = report["structuredContent"]["report_draft"].splitlines()[0].removeprefix("# ")
             self.assertIn(f"**{report_title}**", guide("READ_ONLY_MCP.md"))
-            for request_id, reason in ((4, "path_traversal_forbidden"), (5, "forbidden_directory")):
+            finding = responses[4]["result"]
+            self.assertFalse(finding["isError"])
+            candidate = finding["structuredContent"]["finding"]
+            self.assertEqual(candidate["finding_id"], "FC-0010")
+            self.assertTrue(candidate["manual_verification_required"])
+            self.assertEqual(candidate["rationale"], [
+                "Set-Cookie for sid is missing: Secure, HttpOnly.",
+                "Set-Cookie for sid uses SameSite=None without Secure.",
+            ])
+            cookie_section = (
+                report["structuredContent"]["report_draft"]
+                .split("\n## 검토 후보 FC-0010:", 1)[1]
+                .split("\n## 검토 후보 ", 1)[0]
+            )
+            for observation in (
+                "쿠키 sid에 없는 보호 속성: Secure, HttpOnly.",
+                "쿠키 sid는 SameSite=None이지만 Secure가 없습니다.",
+            ):
+                self.assertIn(observation, cookie_section)
+                self.assertIn(observation, guide("READ_ONLY_MCP.md"))
+            self.assertNotIn("없는 보호 속성: Secure, HttpOnly, SameSite", cookie_section)
+            for request_id, reason in ((5, "path_traversal_forbidden"), (6, "forbidden_directory")):
                 blocked = responses[request_id]["result"]
                 self.assertTrue(blocked["isError"])
                 self.assertEqual(blocked["structuredContent"], {"error_type": reason, "raw_data_included": False})
