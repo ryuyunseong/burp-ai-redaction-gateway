@@ -73,9 +73,15 @@ class BeginnerGuideTests(unittest.TestCase):
                 self.assertEqual(len({report_candidates[item] for item in ids}), 1)
         for number, title in enumerate(("접근 권한", "민감정보 포함", "쿠키 보호 설정", "캐시 설정", "CORS", "오류 메시지", "보안 헤더"), start=1):
             self.assertIn(f"## {number}. {title}", text)
-        self.assertEqual(text.count("**정상:**"), len(groups))
-        self.assertEqual(text.count("**문제 의심:**"), len(groups) - 1)
-        self.assertIn("**추가 검토:**", text)
+        self.assertNotIn("**", text)
+        sections = re.findall(r"^## [1-7]\. [^\n]+\n(.*?)(?=^## |\Z)", text, re.MULTILINE | re.DOTALL)
+        self.assertEqual(len(sections), len(groups))
+        for section in sections:
+            steps = re.findall(r"^(\d+)\. ", section, re.MULTILINE)
+            self.assertIn(len(steps), (2, 3))
+            self.assertEqual(steps, [str(number) for number in range(1, len(steps) + 1)])
+            self.assertEqual(len(re.findall(r"^- 정상: .+$", section, re.MULTILINE)), 1)
+            self.assertEqual(len(re.findall(r"^- (?:문제 의심|추가 검토): .+$", section, re.MULTILINE)), 1)
 
     def test_burp_manual_guide_preserves_manual_review_and_security_limits(self) -> None:
         text = guide("BURP_MANUAL_CHECKS.md")
@@ -89,6 +95,10 @@ class BeginnerGuideTests(unittest.TestCase):
             'credentials: "include"', "브라우저는 읽기를 차단", "Burp에서 응답이 보이는 것만으로는 부족",
             "미확인", "디버그 모드를 켜거나", "500", "200 OK", "401", "304",
             "실제 값·쿠키·토큰·원문", "위 절차는 사람이 별도로 수행",
+            "계정 권한도 그대로 적용", "대상 주소와 메서드는 유지", "기존 쿠키 제한은 유지",
+            "쿠키·토큰을 페이지에 직접 붙여 넣지", "캐시를 지우거나 강제로 우회하지",
+            "세 가지가 모두 있어야 정상인 것은 아닙니다", "공개 자료의 `*`도 그 자체로 취약점은 아닙니다",
+            "헤더 누락만으로 공격 성공이나 피해를 단정하지",
         ):
             self.assertIn(phrase, text)
         for marker in ("\ufeff", "\ufffd", "\u200b", "??"):
