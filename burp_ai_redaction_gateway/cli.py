@@ -428,6 +428,8 @@ def _dashboard(host: str, port: int, root: Path, policy_path: Path | None) -> in
         print("Raw HTTP viewing and replay are unavailable. Dashboard actions require CSRF protection.")
     except DashboardError as error:
         print(f"Dashboard startup failed: {error.error_type}")
+        if error.error_type == "port_unavailable":
+            print("포트를 열 수 없습니다. 이미 사용 중이라면 --port에 다른 번호를 지정하세요.")
         return 1
     try:
         server.serve_forever()
@@ -444,6 +446,8 @@ def _serve(host: str, port: int, output_dir: Path, project: str, policy_path: Pa
         server = create_server(host, port, config)
     except ReceiverError as error:
         print(f"Receiver startup failed: {error.error_type}")
+        if error.error_type == "port_unavailable":
+            print("포트를 열 수 없습니다. 이미 사용 중이라면 --port와 Burp 수집기의 전송 포트를 함께 바꾸세요.")
         return 1
 
     print(f"Receiver listening on {host}:{port}")

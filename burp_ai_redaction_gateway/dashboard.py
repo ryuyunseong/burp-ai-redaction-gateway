@@ -12,12 +12,13 @@ from datetime import UTC, datetime
 from email import policy as email_policy
 from email.parser import BytesParser
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, quote, urlsplit
 
 from .findings import build_finding_candidates
+from .http_server import ExclusiveThreadingHTTPServer
 from .audit_compressed_hmac import AuditCompressedHmacError, verify_compressed_audit_hmac_manifest
 from .audit_compression import AuditCompressionError, verify_compressed_audit_jsonl
 from .audit_hmac import DEFAULT_HMAC_ENV_VAR, AuditHmacError, load_hmac_secret, verify_audit_hmac_manifest
@@ -385,7 +386,7 @@ class DashboardError(ValueError):
         self.status = status
 
 
-class DashboardHttpServer(ThreadingHTTPServer):
+class DashboardHttpServer(ExclusiveThreadingHTTPServer):
     def __init__(self, server_address: tuple[str, int], config: DashboardConfig, policy: RedactionPolicy) -> None:
         validated_root = _validated_root(config.root)
         super().__init__(server_address, DashboardRequestHandler)
@@ -793,7 +794,10 @@ def create_dashboard_server(host: str, port: int, config: DashboardConfig) -> Da
     if host != DEFAULT_DASHBOARD_HOST:
         raise DashboardError("non_loopback_bind_rejected", HTTPStatus.FORBIDDEN)
     policy = load_policy(config.policy_path)
-    return DashboardHttpServer((host, port), config, policy)
+    try:
+        return DashboardHttpServer((host, port), config, policy)
+    except OSError:
+        raise DashboardError("port_unavailable", HTTPStatus.SERVICE_UNAVAILABLE) from None
 
 
 def serve_dashboard(host: str, port: int, root: Path, policy_path: Path | None) -> None:

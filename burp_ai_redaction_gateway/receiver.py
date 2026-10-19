@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .findings import build_finding_candidates
+from .http_server import ExclusiveThreadingHTTPServer
 from .output import write_outputs
 from .parser import event_from_montoya_handoff
 from .policy import load_policy
@@ -79,7 +80,10 @@ def create_server(host: str, port: int, config: ReceiverConfig) -> ThreadingHTTP
     class Handler(_IngestHandler):
         receiver_config = config
 
-    return ThreadingHTTPServer((host, port), Handler)
+    try:
+        return ExclusiveThreadingHTTPServer((host, port), Handler)
+    except OSError:
+        raise ReceiverError("port_unavailable", HTTPStatus.SERVICE_UNAVAILABLE) from None
 
 
 def _validate_payload_schema(payload: dict[str, Any]) -> None:

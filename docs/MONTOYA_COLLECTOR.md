@@ -36,7 +36,7 @@ Burp 기록을 받는 동안 이 터미널을 열어 두세요. 기본 수신 �
 
 1. Extensions → Installed → Add를 열고 확장 유형에서 Java를 선택합니다.
 2. Select file로 1단계의 JAR 파일을 고르고 Next를 누릅니다. Errors에 오류가 없으면 Close로 닫습니다.
-3. Proxy → HTTP history에서 우클릭하고 ‘점검 범위의 Proxy 기록을 로컬 도구로 보내기’를 누릅니다.
+3. Proxy → HTTP history에서 기록을 우클릭하고 Extensions → Burp AI Redaction Gateway Collector → ‘점검 범위의 Proxy 기록을 로컬 도구로 보내기’를 누릅니다.
 4. 확장의 Output에서 전송 건수(`items_sent`)를 확인합니다. 오류가 있으면 Errors를 확인하세요.
 
 범위 밖 기록, 호스트가 없거나 잘못된 기록은 보내지 않습니다. 로컬 주소·IP 주소·URL·경로 형식의 호스트도 제외합니다.
@@ -56,14 +56,15 @@ python -m burp_ai_redaction_gateway verify --input out/receiver
 python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out
 ```
 
-[대시보드](http://127.0.0.1:8766/)에서 `receiver/`로 시작하는 기록의 ‘결과 파일 확인’을 누릅니다.
+[대시보드](http://127.0.0.1:8766/)에서 `receiver/`로 시작하는 기록의 ‘결과 보기’ → ‘결과 파일 확인’을 누릅니다.
 기록은 요청별 폴더에 저장됩니다. 보고서가 없으면 ‘보고서 다시 만들기’를 누르세요.
-내용을 읽고 ‘파일 4개 내보내기’로 필요한 파일만 내려받습니다. 다 썼으면 터미널에서 `Ctrl+C`로 종료합니다.
+내용을 읽고 ‘파일 4개 내보내기’로 네 파일을 별도 폴더에 복사합니다. 개별 파일은 미리보기 옆의 다운로드를 사용하세요. 다 썼으면 터미널에서 `Ctrl+C`로 종료합니다.
 
 ## 연결되지 않을 때
 
 - 확장 파일 생성 실패: `java -version`으로 JDK 21인지 확인하세요. `JAVA_HOME`을 설정했다면 JDK 21 설치 폴더를 가리켜야 합니다. 설치나 설정을 바꾼 뒤에는 PowerShell을 다시 여세요.
 - 전송 실패: 수신기 터미널이 열려 있는지, 수신 주소의 포트가 수신기 명령과 같은지 확인하세요.
+- `port_unavailable`: 이미 실행 중인 프로그램을 확인하거나 포트를 바꾸세요. 수신기 포트를 바꾸면 확장의 전송 주소도 함께 바꿉니다.
 - 전송 건수가 0: 점검 범위와 Proxy 기록의 호스트 정보를 확인하세요. 제한을 해제해 보내지 마세요.
 - 대시보드의 ‘Burp 수집 상태’는 상태를 보는 화면입니다. 확장이나 수신기를 실행하지는 않습니다.
 
@@ -76,6 +77,8 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 
 <details>
 <summary>포트 변경과 기술 참고</summary>
+
+가상 요청으로 확인한 [설치·전송·결과 확인 예제](examples/collector_run.md)에서 실제 화면과 전송·제외 건수를 볼 수 있습니다.
 
 포트 8765가 사용 중이라면 수신기 명령을 `--port 8767`로 바꾸세요. 아래 명령을 실행한 PowerShell에서 Burp도 다시 실행해야 합니다. 이미 열린 Burp에는 적용되지 않습니다.
 
