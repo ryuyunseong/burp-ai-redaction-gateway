@@ -323,6 +323,27 @@ class BeginnerGuideTests(unittest.TestCase):
         for phrase in ("선택한 행만 보내는 메뉴가 아닙니다", "허가받은 대상만", "외부 주소로 전송하지 못하게 제한", "수신기에서 민감정보를 제거", "원본과 대상 호스트 값은 남기지 않습니다", "보고서 다시 만들기"):
             self.assertIn(phrase, text)
 
+    def test_collector_2026_10_example_names_release_type_results_and_real_images(self) -> None:
+        text = (ROOT / "docs" / "examples" / "collector_run.md").read_text(encoding="utf-8")
+        current = text.split("<details>", 1)[0]
+        for phrase in (
+            "2026-10-20", "2026.10-54643", "Java 25", "JDK 21", "Python 3.12.1",
+            "사전 배포판(Early Adopter)", "같은 임시 프로젝트", "공식 JAR", "SHA-256",
+            "https://portswigger.net/burp/releases/professional-community-2026-10",
+            "Extensions → Installed → Add", "빈 Errors 탭", "items_sent=2", "skipped=2",
+            "out_of_scope_skipped=1", "invalid_host_skipped=1", "missing_host_skipped=0",
+            "범위 밖 1건과 IP 주소 1건", "산출물 14개", "검토 후보 5개", "확정 취약점 수가 아닙니다",
+            "CSRF 보호는 `true`", "원문 데이터 포함은 `false`", "수집기 코드 수정은 없었습니다",
+        ):
+            self.assertIn(phrase, current)
+        for image in ("collector-2026-10-install.jpg", "collector-2026-10-handoff.jpg", "collector-2026-10-export.png"):
+            self.assertIn(f"../images/{image}", current)
+            self.assertGreater((ROOT / "docs" / "images" / image).stat().st_size, 1000)
+        self.assertNotIn("**", text)
+        self.assertNotIn("\ufeff", text)
+        self.assertNotIn("\ufffd", text)
+        self.assertNotRegex(text, r"(?<![A-Za-z0-9])[A-Za-z]:[\\/]")
+
     def test_mcp_setup_and_tools_match_documented_sample(self) -> None:
         text = guide("READ_ONLY_MCP.md")
         args = process_command("READ_ONLY_MCP.md")
