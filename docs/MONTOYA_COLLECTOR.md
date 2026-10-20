@@ -3,6 +3,7 @@
 Burp에 설치해 점검 기록을 내 컴퓨터로 가져오는 확장입니다.
 원본 요청·응답을 로컬 수신기로 보내고, 수신기에서 민감정보를 제거한 뒤 검증합니다. AI로 직접 보내지 않습니다.
 가끔 파일을 처리한다면 수집기를 설치하지 않고 [파일 업로드](USAGE.md)를 쓰면 됩니다.
+확인한 Burp 버전과 실제 화면은 [설치·전송·결과 확인 예제](examples/collector_run.md)에 있습니다.
 
 ## 준비
 
@@ -77,8 +78,6 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 
 <details>
 <summary>포트 변경과 기술 참고</summary>
-
-가상 요청으로 확인한 [설치·전송·결과 확인 예제](examples/collector_run.md)에서 실제 화면과 전송·제외 건수를 볼 수 있습니다.
 
 포트 8765가 사용 중이라면 수신기 명령을 `--port 8767`로 바꾸세요. 아래 명령을 실행한 PowerShell에서 Burp도 다시 실행해야 합니다. 이미 열린 Burp에는 적용되지 않습니다.
 
