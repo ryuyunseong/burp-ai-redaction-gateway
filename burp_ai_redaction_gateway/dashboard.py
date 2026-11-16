@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, quote, urlsplit
 
+from . import ai_review
 from .findings import build_finding_candidates
 from .http_server import ExclusiveThreadingHTTPServer
 from .audit_compressed_hmac import AuditCompressedHmacError, verify_compressed_audit_hmac_manifest
@@ -43,7 +44,7 @@ from .mcp_server import (
 from .output import write_outputs
 from .parser import load_events
 from .policy import RedactionPolicy, load_policy
-from .report import DEFAULT_REPORT_PROFILE, REPORT_PROFILE_NAMES, write_report_draft
+from .report import DEFAULT_REPORT_PROFILE, REPORT_PROFILE_NAMES, _report_text, write_report_draft
 from .review import build_review, render_review_summary
 from .risk import DEFAULT_RISK_RATING_PROFILE, RISK_RATING_PROFILE_NAMES
 from .redaction import Redactor
@@ -393,6 +394,7 @@ class DashboardHttpServer(ExclusiveThreadingHTTPServer):
         self.config = DashboardConfig(root=validated_root, policy_path=config.policy_path)
         self.policy = policy
         self.csrf_token = secrets.token_hex(16)
+        self.ai_reviews = ai_review.ReviewSession()
         self.live_capture_lock = threading.Lock()
         self.live_capture_session = LiveCaptureSession(status="idle", updated_at_utc=_utc_now())
 
@@ -431,6 +433,16 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/upload":
                 self._send_html(render_upload_wizard(self.server.csrf_token))
+                return
+            if parsed.path == "/ai-review":
+                self._validate_ai_origin(require_origin=False)
+                output = _verified_output(self.server.config.root, self.server.policy, _required_query_value(parsed.query, "project"))
+                self._send_html(render_ai_review_selection(output, self.server.csrf_token))
+                return
+            if parsed.path == "/ai-review/result":
+                self._validate_ai_origin(require_origin=False)
+                project, result = self.server.ai_reviews.result(_required_query_value(parsed.query, "id"))
+                self._send_html(render_ai_review_result(project, result))
                 return
             if parsed.path == "/output":
                 output_id = _required_query_value(parsed.query, "project")
@@ -519,6 +531,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 self._send_download(output.path, file_name)
                 return
             self._send_error("not_found", HTTPStatus.NOT_FOUND)
+        except ai_review.AiReviewError as error:
+            self._send_html(render_ai_review_error(error.code), HTTPStatus.BAD_REQUEST)
         except DashboardError as error:
             self._send_error(error.error_type, error.status)
         except OSError:
@@ -532,6 +546,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         audit_written = False
         try:
             parsed = urlsplit(self.path)
+            if parsed.path in {"/ai-review/prepare", "/ai-review/send"}:
+                self._handle_ai_review_post(parsed.path)
+                return
             if parsed.path == "/upload":
                 form = self._read_upload_form()
                 action_for_audit = "upload"
@@ -639,6 +656,38 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 )
             self._send_error("dashboard_action_failed", HTTPStatus.BAD_REQUEST)
 
+    def _validate_ai_origin(self, *, require_origin: bool) -> None:
+        host = f"127.0.0.1:{self.server.server_address[1]}"
+        if self.headers.get_all("Host", []) != [host]:
+            raise DashboardError("ai_review_origin_rejected", HTTPStatus.FORBIDDEN)
+        if require_origin and self.headers.get_all("Origin", []) != ["http://" + host]:
+            raise DashboardError("ai_review_origin_rejected", HTTPStatus.FORBIDDEN)
+
+    def _handle_ai_review_post(self, path: str) -> None:
+        self._validate_ai_origin(require_origin=True)
+        form = self._read_form()
+        allowed = {"csrf_token", "project", "candidates"} if path.endswith("/prepare") else {"csrf_token", "confirmation", "consent"}
+        if set(form) - allowed or any(len(values) != 1 for name, values in form.items() if name != "candidates"):
+            raise DashboardError("invalid_ai_review_form", HTTPStatus.BAD_REQUEST)
+        _validate_csrf(_required_form_value(form, "csrf_token"), self.server.csrf_token)
+        try:
+            if path.endswith("/prepare"):
+                output = _verified_output(self.server.config.root, self.server.policy, _required_form_value(form, "project"))
+                token, draft = self.server.ai_reviews.prepare(output.output_id, output.path, form.get("candidates", []))
+                self._send_html(render_ai_review_confirmation(draft, token, self.server.csrf_token))
+                return
+            token = _required_form_value(form, "confirmation")
+            project = self.server.ai_reviews.project_for(token)
+            output = _verified_output(self.server.config.root, self.server.policy, project)
+            result_id = self.server.ai_reviews.send(token, output.path, form.get("consent") == ["yes"])
+            self.send_response(HTTPStatus.SEE_OTHER)
+            self.send_header("Location", "/ai-review/result?id=" + quote(result_id, safe=""))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+        except ai_review.AiReviewError as error:
+            self._send_html(render_ai_review_error(error.code), HTTPStatus.BAD_REQUEST)
+
     def _handle_live_capture_post(self, path: str) -> None:
         form = self._read_form()
         action_name = "live_capture_start" if path.endswith("/start") else "live_capture_stop"
@@ -690,6 +739,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
+        if urlsplit(self.path).path.startswith("/ai-review"):
+            self.send_header("Referrer-Policy", "same-origin")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'")
         self.end_headers()
         self.wfile.write(data)
 
@@ -1447,6 +1501,110 @@ def render_upload_result(result: UploadWizardResult, csrf_token: str) -> str:
     )
 
 
+def _ai_review_header(project: str = "") -> str:
+    href = _output_href(project) if project else "/"
+    return f'<header class="topbar"><div><a class="back" href="{_h(href)}">결과로 돌아가기</a><h1>AI 검토</h1></div><span class="badge neutral">OpenAI · {ai_review.MODEL}</span></header>'
+
+
+def render_ai_review_selection(output: DashboardOutput, csrf_token: str) -> str:
+    candidates = ai_review.list_review_candidates(output.path)
+    choices = "".join(
+        f'<label class="ai-choice"><input type="checkbox" name="candidates" value="{_h(item["finding_id"])}">'
+        f'<span><strong>{_h(item["finding_id"])} · {_h(_report_text(str(item.get("title") or item.get("type"))))}</strong>'
+        f'<small>{_h(item.get("affected_endpoint") or "대상 요청 확인 필요")}</small></span></label>'
+        for item in candidates
+    )
+    key_note = "" if ai_review.api_key_configured() else '<p class="failure-note">API 키 연결이 아직 준비되지 않았습니다. 전송할 내용은 먼저 확인할 수 있습니다.</p>'
+    return _page("AI 검토", _ai_review_header(output.output_id) + f"""
+        {key_note}
+        <section class="workspace-section">
+          <h2>확인할 후보 선택</h2>
+          <p class="review-note">한 번에 1~5개를 선택하세요. 다음 화면에서 내용을 확인하기 전에는 전송하지 않습니다.</p>
+          <form method="post" action="/ai-review/prepare">
+            <input type="hidden" name="csrf_token" value="{_h(csrf_token)}">
+            <input type="hidden" name="project" value="{_h(output.output_id)}">
+            <div class="ai-choices">{choices or '<p>검토 후보가 없습니다.</p>'}</div>
+            <button class="button" type="submit" {'disabled' if not candidates else ''}>전송할 내용 확인</button>
+          </form>
+        </section>
+        <p class="review-note">마스킹된 후보 요약만 사용합니다. 원본 요청·응답과 파일 경로는 보내지 않습니다. AI 제안도 직접 확인해야 할 검토 후보입니다.</p>
+    """)
+
+
+def render_ai_review_confirmation(draft: ai_review.ReviewDraft, token: str, csrf_token: str) -> str:
+    payload = json.loads(draft.input_json)
+    rows = "".join(
+        f'<section class="ai-preview"><h3>{_h(item["finding_id"])} · {_h(_report_text(str(item.get("title") or item.get("type"))))}</h3>'
+        f'<p>{_h(item.get("affected_endpoint") or "")}</p>{_bullets([_report_text(str(value)) for value in item.get("rationale") or []])}</section>'
+        for item in payload["candidates"]
+    )
+    ready = ai_review.api_key_configured()
+    key_note = "" if ready else '<p class="failure-note">API 키 연결을 마친 뒤 다시 시도하세요. 아직 전송하지 않았습니다.</p>'
+    return _page("AI 전송 전 확인", _ai_review_header(draft.project) + f"""
+        <section class="workspace-section">
+          <h2>선택한 후보 {len(draft.candidate_ids)}개</h2>
+          {rows}
+          <details class="secondary-details"><summary>실제로 전송할 자료 전체</summary><pre class="ai-payload">{_h(draft.input_json)}</pre></details>
+        </section>
+        <section class="workspace-section">
+          <h2>OpenAI로 전송</h2>
+          <p class="review-note">위 자료가 외부 서비스로 전송되며 API 이용 요금이 발생할 수 있습니다. 민감한 값이 남아 있지 않은지 직접 확인하세요.</p>
+          <p class="review-note">응답 저장은 끄지만, 제공자의 보안 점검용 보관까지 없애는 설정은 아닙니다. 회사의 외부 전송 정책이 허용하는 자료만 사용하세요.</p>
+          {key_note}
+          <form method="post" action="/ai-review/send">
+            <input type="hidden" name="csrf_token" value="{_h(csrf_token)}">
+            <input type="hidden" name="confirmation" value="{_h(token)}">
+            <label class="ai-choice"><input type="checkbox" name="consent" value="yes" required>
+              <span>위 내용을 확인했으며 OpenAI로 전송하는 데 동의합니다.</span></label>
+            <div class="actions"><button class="button" type="submit" {'disabled' if not ready else ''}>AI 검토 요청</button>
+              <a class="button secondary" href="/ai-review?project={quote(draft.project, safe='')}">선택으로 돌아가기</a></div>
+          </form>
+        </section>
+    """)
+
+
+def render_ai_review_result(project: str, result: dict[str, Any]) -> str:
+    sections = "".join(
+        f'<section class="workspace-section ai-result"><h2>검토 후보 {_h(item["finding_id"])} · {_h(_report_text(str(result.get("candidate_titles", {}).get(item["finding_id"], ""))))}</h2>'
+        f'<p class="badge neutral">{_h(ai_review.ASSESSMENTS[item["assessment"]])}</p><p>{_h(item["summary"])}</p>'
+        f'<h3>근거와 한계</h3>{_bullets(item["evidence_notes"])}'
+        f'<h3>Burp에서 확인할 방법</h3>{_bullets(item["manual_checks"])}'
+        f'<h3>조치 제안</h3>{_bullets(item["remediation"])}</section>'
+        for item in result["reviews"]
+    )
+    return _page("AI 검토 제안", _ai_review_header(project) +
+                 '<p class="review-note">AI의 제안이며 확정 취약점이나 최종 위험도 평가가 아닙니다. 허가된 환경에서 직접 확인하세요. 결과는 이 대시보드를 종료하면 사라집니다.</p>' + sections)
+
+
+def render_ai_review_error(code: str) -> str:
+    messages = {
+        "select_one_to_five_candidates": "후보를 1~5개 선택하세요.",
+        "invalid_candidate_selection": "선택한 후보를 찾을 수 없습니다. 결과 화면에서 다시 선택하세요.",
+        "sensitive_content_blocked": "자료에서 민감정보로 의심되는 내용을 발견해 표시·전송을 차단했습니다. 마스킹 결과를 다시 확인하세요.",
+        "invalid_analysis_file": "분석 파일을 읽을 수 없습니다. 파일을 다시 처리하세요.",
+        "invalid_analysis_packet": "분석 파일 형식이 올바르지 않습니다. 파일을 다시 처리하세요.",
+        "analysis_too_large": "분석 파일이 너무 큽니다. 필요한 기록만 나누어 처리하세요.",
+        "selection_too_large": "선택한 내용이 너무 큽니다. 후보 수를 줄이세요.",
+        "api_key_not_configured": "API 키 연결이 준비되지 않아 전송하지 않았습니다.",
+        "api_authentication_failed": "OpenAI 인증에 실패했습니다. API 키 연결을 확인하세요.",
+        "api_access_denied": "현재 OpenAI 계정으로 이 모델을 사용할 수 없습니다.",
+        "api_limit_reached": "OpenAI 이용 한도에 도달했습니다. 계정의 이용량과 결제 상태를 확인하세요.",
+        "api_request_failed": "OpenAI 요청을 처리하지 못했습니다. 자동으로 다시 보내지 않습니다.",
+        "api_timeout": "OpenAI 응답 시간이 초과됐습니다. 자동으로 다시 보내지 않습니다. 이용량을 확인한 뒤 재시도하세요.",
+        "ai_response_too_large": "AI 응답이 허용 크기를 넘어 표시하지 않았습니다.",
+        "ai_response_incomplete": "AI 응답이 끝나지 않아 표시하지 않았습니다. 후보 수를 줄여 다시 요청하세요.",
+        "ai_response_refused": "AI가 응답을 거절했거나 지원하지 않는 형식으로 응답했습니다.",
+        "ai_response_sensitive_blocked": "AI 응답에서 민감정보로 의심되는 내용을 발견해 표시를 차단했습니다. API 이용량을 확인하세요.",
+        "invalid_ai_response": "AI 응답이 후보 번호·한글 검토 형식에 맞지 않아 표시하지 않았습니다.",
+        "review_confirmation_expired": "확인이 만료됐거나 이미 요청한 내용입니다. 후보를 다시 선택하세요.",
+        "review_source_changed": "확인 이후 분석 파일이 바뀌어 전송을 취소했습니다. 내용을 다시 확인하세요.",
+        "review_consent_required": "내용을 확인한 뒤 전송 동의란을 선택하세요.",
+        "ai_review_busy": "다른 AI 요청을 처리 중입니다. 해당 요청이 끝난 뒤 다시 시도하세요.",
+        "review_result_not_found": "이 검토 결과를 찾을 수 없습니다. 대시보드를 재시작했다면 새로 요청해야 합니다.",
+    }
+    return _page("AI 검토 중단", _ai_review_header() + f'<p role="alert" class="failure-note">{_h(messages.get(code, "AI 검토를 처리하지 못했습니다."))}</p>')
+
+
 def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
     candidates = _load_candidates(output.path)
     candidate_cards = "\n".join(_candidate_card(candidate) for candidate in candidates[:40]) or (
@@ -1463,6 +1621,7 @@ def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
             <p class="subtitle">{_h(output.label)}</p>
           </div>
           <div class="actions">
+            <a class="button" href="/ai-review?project={quote(output.output_id, safe='')}">AI 검토</a>
             <a class="button secondary" href="{_simple_dashboard_href(output.output_id)}">결과 요약</a>
             <a class="button secondary" href="/upload">다른 파일 처리</a>
           </div>
@@ -3583,6 +3742,17 @@ def _page(title: str, body: str) -> str:
     .summary-line span {{ line-height: 1.6; }}
     .workspace-section {{ margin: 0 0 24px; min-width: 0; }}
     .workspace-section h2 {{ margin: 0 0 16px; }}
+    .ai-choices {{ display: grid; gap: 0; margin-bottom: 20px; }}
+    .ai-choice {{ display: flex; gap: 12px; align-items: flex-start; padding: 16px 0; border-bottom: 1px solid var(--border); cursor: pointer; line-height: 1.6; }}
+    .ai-choice input {{ flex: 0 0 18px; width: 18px; height: 18px; margin-top: 4px; }}
+    .ai-choice span {{ min-width: 0; overflow-wrap: anywhere; }}
+    .ai-choice small {{ display: block; color: var(--muted); }}
+    .ai-preview {{ border-bottom: 1px solid var(--border); padding: 12px 0; }}
+    .ai-payload {{ max-width: 100%; max-height: 360px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; font-size: 13px; line-height: 1.6; background: var(--surface-2); }}
+    .ai-preview p, .ai-result p, .ai-result li {{ overflow-wrap: anywhere; line-height: 1.7; }}
+    .ai-result {{ border-top: 1px solid var(--border); padding-top: 24px; }}
+    .ai-result h3 {{ margin-top: 20px; }}
+    button:disabled {{ opacity: 0.5; cursor: not-allowed; }}
     .workflow-grid {{ display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; }}
     .review-note {{ color: var(--muted); font-size: 14px; line-height: 1.65; margin: 16px 0 22px; }}
     .failure-note {{ border-left: 3px solid var(--danger); padding: 14px 18px; line-height: 1.65; background: #fff0ed; }}

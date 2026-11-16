@@ -71,6 +71,12 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 
 </details>
 
+## 대시보드에서 AI 검토 (선택)
+
+OpenAI API 키가 연결된 환경에서는 결과 파일 확인 → AI 검토에서 후보를 선택할 수 있습니다.
+전송할 내용을 직접 확인하고 동의한 경우에만 OpenAI로 보냅니다. 후보별 근거, Burp 확인 방법, 조치 제안을 한글로 받습니다.
+API 이용 요금은 별도이며 AI 결과도 확정 취약점이 아닙니다. [사용 방법과 전송 범위](docs/AI_REVIEW.md)를 먼저 확인하세요.
+
 ## Codex 앱에서 읽기 (선택)
 
 1. [MCP 설정 안내](docs/READ_ONLY_MCP.md)에서 가상 샘플 연결 방법과 FC-0010 실제 조회 예시를 확인하세요.
