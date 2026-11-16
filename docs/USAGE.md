@@ -10,10 +10,10 @@ Windows에서 README.md가 있는 폴더를 열고, 탐색기 주소창에 `powe
 
 ```powershell
 New-Item -ItemType Directory -Force out
-python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out
+python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out --open
 ```
 
-[대시보드](http://127.0.0.1:8766/)를 엽니다. 종료할 때는 터미널에서 `Ctrl+C`를 누르세요.
+브라우저가 자동으로 열립니다. 열리지 않으면 [대시보드](http://127.0.0.1:8766/)를 누르세요. 종료할 때는 터미널에서 `Ctrl+C`를 누릅니다.
 
 ## 2. 파일 처리하기
 
@@ -27,6 +27,18 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 
 다시 처리할 때는 `demo2`처럼 새 작업 이름을 쓰세요. 이름은 영문이나 숫자로 시작해야 합니다.
 영문·숫자·밑줄·하이픈으로 최대 64자까지 쓸 수 있습니다. 실제 고객명이나 주소는 넣지 마세요.
+
+## AI로 점검 가이드 받기 (선택)
+
+1. 결과 파일 확인 → AI 검토에서 후보를 1~5개 선택합니다.
+2. 전송할 전체 내용을 읽고 동의한 뒤 AI 검토 요청을 누릅니다.
+3. Burp 재현 절차와 정상·취약 의심 기준을 비교하고, 확인된 문제에 맞춰 권고 조치를 검토합니다.
+
+OpenAI API 키가 필요하며 요금이 발생할 수 있습니다. [키 연결과 실제 실행 화면](AI_REVIEW.md)을 먼저 확인하세요.
+[가상 샘플 결과](examples/ai_review.md)에는 접근 권한과 쿠키 설정 후보의 점검 예시가 있습니다.
+AI 제안은 확정 취약점이 아니며, 외부 전송 전 민감정보가 남아 있지 않은지 직접 확인해야 합니다.
+
+터미널에서도 [후보 목록 조회·AI 검토](AI_REVIEW.md#터미널에서-사용하기)를 할 수 있습니다. Codex에서 읽으려면 [읽기 전용 MCP](READ_ONLY_MCP.md)를 사용하세요.
 
 ## 3. 내 Burp 기록 사용하기
 
