@@ -78,7 +78,7 @@ class PreparedSample(unittest.TestCase):
 
 class AiReviewSafetyTests(PreparedSample):
     def test_only_allowlisted_models_are_used_and_kept_in_the_confirmation(self):
-        self.assertEqual(ai_review.MODEL, "gpt-6.1-terra")
+        self.assertEqual(ai_review.MODEL, "gpt-6-luna")
         self.assertEqual(set(ai_review.MODELS), {"gpt-6.1-terra", "gpt-6-luna"})
         for model in ai_review.MODELS:
             session = ai_review.ReviewSession()
@@ -114,6 +114,16 @@ class AiReviewSafetyTests(PreparedSample):
         schema = request["text"]["format"]["schema"]["properties"]["reviews"]["items"]
         self.assertIn("normal_result", schema["required"])
         self.assertIn("issue_result", schema["required"])
+
+    def test_default_luna_failure_does_not_fall_back_to_terra(self):
+        session = ai_review.ReviewSession()
+        token, _ = session.prepare("demo", self.output, ["FC-0004"])
+        with patch.object(ai_review, "_load_api_key", return_value=DUMMY_KEY), patch.object(ai_review, "_request_openai", side_effect=ai_review.AiReviewError("api_access_denied")) as request:
+            with self.assertRaisesRegex(ai_review.AiReviewError, "api_access_denied"):
+                session.send(token, self.output, True)
+            self.assertEqual(request.call_count, 1)
+            self.assertEqual(request.call_args.args[0]["model"], "gpt-6-luna")
+            self.assertEqual(session._results, {})
 
     def test_empty_duplicate_unknown_and_oversized_selections_are_blocked(self):
         for ids in ([], ["FC-0004"] * 2, ["FC-9999"], ["../local_only"], [None], [[]], [f"FC-{n:04d}" for n in range(1, 7)]):
@@ -352,9 +362,28 @@ class AiReviewHttpTests(PreparedSample):
         guide = (ROOT / "docs" / "AI_REVIEW.md").read_text(encoding="utf-8")
         self.assertIn("docs/AI_REVIEW.md", readme)
         self.assertIn("OPENAI_API_KEY=", guide)
+        self.assertIn("기본 모델은 GPT-6 Luna", readme)
+        self.assertIn("기본 모델은 GPT-6 Luna", guide)
+        self.assertIn("--model gpt-6.1-terra", guide)
         for phrase in ("확정 취약점", "1~5개", "전송할 내용 확인", "동의란", "store=false", "보안 점검용 로그", "종료하면 사라집니다", "결과 파일 4개", "모든 민감정보를 찾는 것은 아닙니다"):
             self.assertIn(phrase, guide)
         self.assertNotIn("**", guide)
+
+    def test_gui_defaults_to_luna_and_terra_requires_explicit_selection(self):
+        with patch.object(ai_review, "_request_openai") as request:
+            status, body, _ = self.request("GET", "/ai-review?project=demo")
+            self.assertEqual(status, 200)
+            self.assertIn('<option value="gpt-6-luna" selected>', body)
+            self.assertIn('<option value="gpt-6.1-terra" >', body)
+            valid = {"csrf_token": self.server.csrf_token, "project": "demo", "candidates": ["FC-0004"]}
+            for extra, expected in (({}, "gpt-6-luna"), ({"model": "gpt-6.1-terra"}, "gpt-6.1-terra")):
+                with self.subTest(model=expected):
+                    status, confirmation, _ = self.request("POST", "/ai-review/prepare", dict(valid, **extra))
+                    self.assertEqual(status, 200)
+                    self.assertIn(f"OpenAI · {expected}", confirmation)
+                    token = re.search(r'name="confirmation" value="([A-Za-z0-9_-]+)"', confirmation)[1]
+                    self.assertEqual(self.server.ai_reviews._drafts[token].model, expected)
+            request.assert_not_called()
 
     def test_published_review_example_and_screenshots_are_linked_and_raw_free(self):
         example = ROOT / "docs" / "examples" / "ai_review.md"
@@ -524,13 +553,15 @@ class AiReviewCliTests(PreparedSample):
 
     def test_send_uses_the_selected_model_and_prints_checked_korean_output(self):
         before = {p.name: p.read_bytes() for p in (self.output / "ai_candidates").iterdir()}
-        with patch("sys.stdin.isatty", return_value=True), patch("builtins.input", return_value="SEND"), patch.object(ai_review, "_load_api_key", return_value=DUMMY_KEY), patch.object(ai_review, "_request_openai", return_value=model_response()) as request:
-            status, output = self.run_cli("--candidate", "FC-0004", "--model", "gpt-6-luna", "--send")
-            self.assertEqual(status, 0)
-            self.assertEqual(request.call_args.args[0]["model"], "gpt-6-luna")
-            for phrase in ("Burp 재현 절차", "정상 동작", "취약 의심", "권고 조치"):
-                self.assertIn(phrase, output)
-            self.assertNotIn(DUMMY_KEY, output)
+        for extra, expected in (([], "gpt-6-luna"), (["--model", "gpt-6.1-terra"], "gpt-6.1-terra")):
+            with self.subTest(model=expected), patch("sys.stdin.isatty", return_value=True), patch("builtins.input", return_value="SEND"), patch.object(ai_review, "_load_api_key", return_value=DUMMY_KEY), patch.object(ai_review, "_request_openai", return_value=model_response()) as request:
+                status, output = self.run_cli("--candidate", "FC-0004", *extra, "--send")
+                self.assertEqual(status, 0)
+                self.assertEqual(request.call_args.args[0]["model"], expected)
+                self.assertIn(f"모델: {expected}", output)
+                for phrase in ("Burp 재현 절차", "정상 동작", "취약 의심", "권고 조치"):
+                    self.assertIn(phrase, output)
+                self.assertNotIn(DUMMY_KEY, output)
         self.assertEqual(before, {p.name: p.read_bytes() for p in (self.output / "ai_candidates").iterdir()})
 
     def test_changes_while_waiting_for_consent_block_the_request(self):

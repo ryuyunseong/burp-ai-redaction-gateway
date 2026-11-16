@@ -175,7 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     ai = subparsers.add_parser("ai-review", help="마스킹된 점검 후보를 미리 보고, 동의 후 AI 점검 가이드를 받습니다.")
     ai.add_argument("--input", required=True, type=Path, help="검증된 결과 폴더.")
     ai.add_argument("--candidate", action="append", default=[], help="후보 번호. 최대 5개까지 반복 지정합니다.")
-    ai.add_argument("--model", default=ai_review.MODEL, help="gpt-6.1-terra(기본) 또는 gpt-6-luna(저비용형).")
+    ai.add_argument("--model", default=ai_review.MODEL, help="gpt-6-luna(기본). 필요하면 gpt-6.1-terra를 지정합니다.")
     ai.add_argument("--send", action="store_true", help="전체 전송 내용을 표시하고 터미널에서 동의를 받습니다.")
     ai.add_argument("--policy", type=Path, help="선택할 policy.json 경로.")
 

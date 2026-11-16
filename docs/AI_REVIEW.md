@@ -6,7 +6,7 @@
 ## 사용 순서
 
 1. [파일 업로드](USAGE.md)나 [Burp 수집기](MONTOYA_COLLECTOR.md)로 기록을 처리한 뒤 결과 파일 확인 → AI 검토를 누릅니다.
-2. 점검할 후보를 1~5개 선택하고 전송할 내용 확인을 누릅니다. 여기까지는 외부로 보내지 않습니다.
+2. 점검할 후보를 1~5개 선택합니다. 기본 모델은 GPT-6 Luna이며, 필요하면 GPT-6.1 Terra로 바꾼 뒤 전송할 내용 확인을 누릅니다. 여기까지는 외부로 보내지 않습니다.
 3. 실제로 전송할 자료 전체를 펼쳐 읽습니다. 외부로 보내도 되는 내용인지 확인한 뒤 동의란을 선택하고 AI 검토 요청을 누릅니다.
 
 ![점검 항목을 선택하는 실제 대시보드 화면](images/ai-review-selection.jpg)
@@ -34,12 +34,12 @@ OpenAI API 키가 연결된 환경에서 사용할 수 있습니다. 키가 없�
 키가 없다면 [OpenAI 키 관리 화면](https://platform.openai.com/settings/organization/api-keys)에서 사용할 프로젝트를 선택하고 새 키를 발급하세요. 저장소 폴더에 `.env.local` 파일을 만들고 `OPENAI_API_KEY=발급받은키`를 한 줄로 저장합니다. 이 파일은 Git에서 제외됩니다.
 서버는 `OPENAI_API_KEY` 환경변수나 프로젝트의 로컬 전용 `.env.local`에서 키를 읽습니다. 키는 브라우저에 입력하거나 화면에 표시하지 않습니다. 키 값을 채팅, GitHub, 화면 사진에 넣지 마세요.
 
-기본 모델은 GPT-6.1 Terra입니다. 점검 항목 선택 화면에서만 모델을 고르며, 전송 확인 후에는 모델을 바꿀 수 없습니다. ChatGPT 구독과 API 이용 요금은 별도입니다.
+기본 모델은 GPT-6 Luna입니다. GPT-6.1 Terra가 필요할 때만 점검 항목 선택 화면에서 바꾸세요. 전송 확인 후에는 모델을 바꿀 수 없습니다. ChatGPT 구독과 API 이용 요금은 별도입니다.
 
 | 모델 | 용도 | 입력 / 출력 100만 토큰당 |
 | --- | --- | --- |
-| [GPT-6.1 Terra](https://developers.openai.com/api/docs/models/gpt-6.1-terra) | 기본 선택 | $1 / $5 |
-| [GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna) | 반복 점검용 저비용 선택 | $0.10 / $0.50 |
+| [GPT-6 Luna](https://developers.openai.com/api/docs/models/gpt-6-luna) | 기본 선택 | $0.10 / $0.50 |
+| [GPT-6.1 Terra](https://developers.openai.com/api/docs/models/gpt-6.1-terra) | 필요할 때 직접 선택 | $1 / $5 |
 
 2026-11-17 공식 표준 텍스트 단가입니다. 실제 요금은 사용량과 적용 요율에 따라 달라지며, 같은 토큰 수에서 Luna 단가는 Terra의 10%입니다. 두 모델의 점검 정확도가 같다는 뜻은 아닙니다.
 가상 후보 2개로 Terra의 대시보드 검토와 Luna의 터미널 검토를 직접 실행했습니다. 이 예제는 전체 보안 점검 정확도를 비교한 시험은 아닙니다.
@@ -53,14 +53,14 @@ OpenAI API 키가 연결된 환경에서 사용할 수 있습니다. 키가 없�
 python -m burp_ai_redaction_gateway ai-review --input out/demo
 ```
 
-후보 번호를 골라 요청합니다. 전체 전송 내용이 표시된 뒤 직접 연 터미널에서 `SEND`를 입력해야 전송됩니다. 취소하거나 입력하지 않으면 보내지 않습니다.
+후보 번호를 골라 요청하면 GPT-6 Luna를 사용합니다. 전체 전송 내용이 표시된 뒤 직접 연 터미널에서 `SEND`를 입력해야 전송됩니다. 취소하거나 입력하지 않으면 보내지 않습니다.
 
 ```powershell
 python -m burp_ai_redaction_gateway ai-review --input out/demo --candidate FC-0010 --send
 ```
 
 `--candidate FC-0004`처럼 옵션을 반복하면 최대 5개를 함께 검토합니다. `--send`를 빼면 미리보기만 합니다.
-모델을 명시하려면 `--model gpt-6.1-terra` 또는 `--model gpt-6-luna`를 붙입니다. 결과는 한글로 출력되며 기존 파일 4개를 바꾸지 않습니다.
+GPT-6.1 Terra가 필요하면 같은 명령에 `--model gpt-6.1-terra`를 붙입니다. 기본 모델을 명시하려면 `--model gpt-6-luna`를 씁니다. 결과는 한글로 출력되며 기존 파일 4개를 바꾸지 않습니다.
 
 ## Burp·Codex MCP에서 사용하기
 

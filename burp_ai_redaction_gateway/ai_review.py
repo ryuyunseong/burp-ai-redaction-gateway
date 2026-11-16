@@ -17,10 +17,10 @@ from typing import Any
 from .scanner import scan_text
 
 
-MODEL = "gpt-6.1-terra"
+MODEL = "gpt-6-luna"
 MODELS = {
-    "gpt-6.1-terra": "기본형 · GPT-6.1 Terra",
-    "gpt-6-luna": "저비용형 · GPT-6 Luna",
+    "gpt-6-luna": "기본형 · GPT-6 Luna",
+    "gpt-6.1-terra": "선택형 · GPT-6.1 Terra",
 }
 CANDIDATE_LABELS = {
     "idor_candidate": "객체 접근 권한 (IDOR)",
