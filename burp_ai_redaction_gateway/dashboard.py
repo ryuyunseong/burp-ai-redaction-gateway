@@ -7,6 +7,7 @@ import os
 import re
 import secrets
 import threading
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email import policy as email_policy
@@ -664,7 +665,11 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             raise DashboardError("ai_review_origin_rejected", HTTPStatus.FORBIDDEN)
 
     def _handle_ai_review_post(self, path: str) -> None:
-        self._validate_ai_origin(require_origin=True)
+        try:
+            self._validate_ai_origin(require_origin=True)
+        except DashboardError:
+            self._discard_rejected_ai_body()
+            raise
         form = self._read_form()
         allowed = {"csrf_token", "project", "candidates", "model"} if path.endswith("/prepare") else {"csrf_token", "confirmation", "consent"}
         if set(form) - allowed or any(len(values) != 1 for name, values in form.items() if name != "candidates"):
@@ -732,6 +737,32 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format: str, *args: Any) -> None:
         return
+
+    def _discard_rejected_ai_body(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return
+        if not 0 < length <= MAX_FORM_BYTES:
+            return
+        # Closing with unread POST bytes can reset the rejection response on Windows.
+        previous_timeout = self.connection.gettimeout()
+        deadline = time.monotonic() + 1.0
+        try:
+            while length > 0:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                self.connection.settimeout(min(previous_timeout, remaining) if previous_timeout is not None else remaining)
+                chunk = self.rfile.read1(min(length, 4096))
+                if not chunk:
+                    break
+                length -= len(chunk)
+        except OSError:
+            # The request remains rejected even if its body is incomplete or disconnected.
+            pass
+        finally:
+            self.connection.settimeout(previous_timeout)
 
     def _send_html(self, body: str, status: HTTPStatus = HTTPStatus.OK) -> None:
         data = body.encode("utf-8")

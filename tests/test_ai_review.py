@@ -17,7 +17,7 @@ from urllib.parse import urlencode
 
 from burp_ai_redaction_gateway import ai_review
 from burp_ai_redaction_gateway.cli import main
-from burp_ai_redaction_gateway.dashboard import DashboardConfig, create_dashboard_server
+from burp_ai_redaction_gateway.dashboard import MAX_FORM_BYTES, DashboardConfig, DashboardRequestHandler, create_dashboard_server
 from burp_ai_redaction_gateway.policy import load_policy
 from burp_ai_redaction_gateway.receiver import INGEST_PATH, ReceiverConfig, create_server
 from burp_ai_redaction_gateway.workflow import process_export
@@ -381,11 +381,37 @@ class AiReviewHttpTests(PreparedSample):
         valid = {"csrf_token": self.server.csrf_token, "project": "demo", "candidates": ["FC-0004"]}
         with patch.object(ai_review, "_request_openai") as send:
             for values, headers in ((valid, {"Origin": "https://example.invalid"}), (valid, {"Origin": ""}), (valid, {"Origin": "null"}), (dict(valid, csrf_token="DUMMY_INVALID"), {}), (dict(valid, endpoint="https://example.invalid"), {}), (dict(valid, csrf_token=[self.server.csrf_token, self.server.csrf_token]), {}), (dict(valid, model="DUMMY_UNSUPPORTED_MODEL"), {}), (dict(valid, model=list(ai_review.MODELS)), {})):
-                status, _, _ = self.request("POST", "/ai-review/prepare", values, **headers)
-                self.assertIn(status, (400, 403))
+                with self.subTest(values=tuple(values), headers=headers):
+                    status, _, _ = self.request("POST", "/ai-review/prepare", values, **headers)
+                    self.assertIn(status, (400, 403))
             status, _, _ = self.request("GET", "/ai-review?project=demo", Host="example.invalid")
             self.assertEqual(status, 403)
             send.assert_not_called()
+
+    def test_rejected_body_discard_is_bounded_and_does_not_parse_or_prepare(self):
+        handler = DashboardRequestHandler.__new__(DashboardRequestHandler)
+        handler.connection = MagicMock()
+        handler.connection.gettimeout.return_value = None
+        handler.rfile = MagicMock()
+        for length in ("invalid", "-1", "0", str(MAX_FORM_BYTES + 1)):
+            handler.headers = {"Content-Length": length}
+            handler._discard_rejected_ai_body()
+        handler.rfile.read1.assert_not_called()
+        handler.connection.settimeout.assert_not_called()
+        handler.headers = {"Content-Length": "8"}
+        for previous, expected in ((None, 1.0), (0.25, 0.25)):
+            handler.connection.gettimeout.return_value = previous
+            handler.rfile.read1.side_effect = TimeoutError
+            with patch("burp_ai_redaction_gateway.dashboard.time.monotonic", side_effect=[10.0, 10.0]):
+                handler._discard_rejected_ai_body()
+            handler.rfile.read1.assert_called_with(8)
+            self.assertEqual(handler.connection.settimeout.call_args_list[-2].args, (expected,))
+            self.assertEqual(handler.connection.settimeout.call_args_list[-1].args, (previous,))
+        handler.rfile.read1.reset_mock(side_effect=True)
+        handler.rfile.read1.return_value = b"x"
+        with patch("burp_ai_redaction_gateway.dashboard.time.monotonic", side_effect=[10.0, 10.0, 10.6, 11.1]):
+            handler._discard_rejected_ai_body()
+        self.assertEqual([call.args for call in handler.rfile.read1.call_args_list], [(8,), (7,)])
 
     def test_gui_result_uses_post_redirect_get_escapes_html_and_keeps_bundle_unchanged(self):
         before = {path.name: path.read_bytes() for path in (self.output / "ai_candidates").iterdir()}
