@@ -666,14 +666,14 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     def _handle_ai_review_post(self, path: str) -> None:
         self._validate_ai_origin(require_origin=True)
         form = self._read_form()
-        allowed = {"csrf_token", "project", "candidates"} if path.endswith("/prepare") else {"csrf_token", "confirmation", "consent"}
+        allowed = {"csrf_token", "project", "candidates", "model"} if path.endswith("/prepare") else {"csrf_token", "confirmation", "consent"}
         if set(form) - allowed or any(len(values) != 1 for name, values in form.items() if name != "candidates"):
             raise DashboardError("invalid_ai_review_form", HTTPStatus.BAD_REQUEST)
         _validate_csrf(_required_form_value(form, "csrf_token"), self.server.csrf_token)
         try:
             if path.endswith("/prepare"):
                 output = _verified_output(self.server.config.root, self.server.policy, _required_form_value(form, "project"))
-                token, draft = self.server.ai_reviews.prepare(output.output_id, output.path, form.get("candidates", []))
+                token, draft = self.server.ai_reviews.prepare(output.output_id, output.path, form.get("candidates", []), model=form.get("model", [ai_review.MODEL])[0])
                 self._send_html(render_ai_review_confirmation(draft, token, self.server.csrf_token))
                 return
             token = _required_form_value(form, "confirmation")
@@ -1501,84 +1501,133 @@ def render_upload_result(result: UploadWizardResult, csrf_token: str) -> str:
     )
 
 
-def _ai_review_header(project: str = "") -> str:
+def _ai_review_header(project: str = "", stage: int = 1) -> str:
     href = _output_href(project) if project else "/"
-    return f'<header class="topbar"><div><a class="back" href="{_h(href)}">결과로 돌아가기</a><h1>AI 검토</h1></div><span class="badge neutral">OpenAI · {ai_review.MODEL}</span></header>'
+    return_label = "결과 파일" if project else "처리한 기록"
+    steps = "".join(
+        f'<li class="{"is-current" if index == stage else ""}"'
+        f'{" aria-current=step" if index == stage else ""}><span>0{index}</span> {label}</li>'
+        for index, label in enumerate(("항목 선택", "전송 확인", "점검 가이드"), 1)
+    )
+    new_review = f'<a class="button" href="/ai-review?project={quote(project, safe="")}">새 검토</a>' if project and stage == 3 else ""
+    return f"""<nav class="ai-topnav" aria-label="AI 검토 메뉴">
+      <a class="ai-brand" href="/">Burp AI Redaction Gateway</a>
+      <div class="ai-nav-actions"><a href="{_h(href)}">{return_label}</a>{new_review}</div>
+    </nav><header class="ai-heading"><h1>AI 보안 검토</h1>
+      <p>의심 항목의 재현 절차와 판정 기준을 확인합니다.</p>
+    </header><ol class="ai-progress" aria-label="검토 진행 단계">{steps}</ol>"""
+
+
+def _ai_candidate_title(candidate_type: str, title: str) -> str:
+    return ai_review.CANDIDATE_LABELS.get(candidate_type, _report_text(title))
 
 
 def render_ai_review_selection(output: DashboardOutput, csrf_token: str) -> str:
     candidates = ai_review.list_review_candidates(output.path)
+    model_options = "".join(f'<option value="{name}" {"selected" if name == ai_review.MODEL else ""}>{label}</option>' for name, label in ai_review.MODELS.items())
     choices = "".join(
         f'<label class="ai-choice"><input type="checkbox" name="candidates" value="{_h(item["finding_id"])}">'
-        f'<span><strong>{_h(item["finding_id"])} · {_h(_report_text(str(item.get("title") or item.get("type"))))}</strong>'
-        f'<small>{_h(item.get("affected_endpoint") or "대상 요청 확인 필요")}</small></span></label>'
+        f'<span class="ai-choice-title"><code>{_h(item["finding_id"])}</code>'
+        f'<strong>{_h(_ai_candidate_title(item["type"], item["title"]))}</strong></span>'
+        f'<code class="ai-endpoint">{_h(item["affected_endpoint"])}</code></label>'
         for item in candidates
     )
     key_note = "" if ai_review.api_key_configured() else '<p class="failure-note">API 키 연결이 아직 준비되지 않았습니다. 전송할 내용은 먼저 확인할 수 있습니다.</p>'
     return _page("AI 검토", _ai_review_header(output.output_id) + f"""
         {key_note}
-        <section class="workspace-section">
-          <h2>확인할 후보 선택</h2>
-          <p class="review-note">한 번에 1~5개를 선택하세요. 다음 화면에서 내용을 확인하기 전에는 전송하지 않습니다.</p>
+        <div class="ai-selection-layout"><section>
+          <div class="ai-section-heading"><h2>점검 항목 선택</h2><span>{len(candidates)}개 · 최대 5개 선택</span></div>
           <form method="post" action="/ai-review/prepare">
             <input type="hidden" name="csrf_token" value="{_h(csrf_token)}">
             <input type="hidden" name="project" value="{_h(output.output_id)}">
-            <div class="ai-choices">{choices or '<p>검토 후보가 없습니다.</p>'}</div>
-            <button class="button" type="submit" {'disabled' if not candidates else ''}>전송할 내용 확인</button>
+            <label class="ai-model-control">검토 모델<select name="model">{model_options}</select></label>
+            <div class="ai-table-heading" aria-hidden="true"><span></span><span>점검 항목</span><span>대상 요청</span></div>
+            <div class="ai-choices">{choices or '<p class="empty-state">검토 후보가 없습니다.</p>'}</div>
+            <div class="ai-submit-bar"><span>다음 단계에서 전송 내용을 확인합니다.</span>
+              <button class="button" type="submit" {'disabled' if not candidates else ''}>전송할 내용 확인</button></div>
           </form>
-        </section>
-        <p class="review-note">마스킹된 후보 요약만 사용합니다. 원본 요청·응답과 파일 경로는 보내지 않습니다. AI 제안도 직접 확인해야 할 검토 후보입니다.</p>
-    """)
+        </section><aside class="ai-context">
+          <h2>전송 범위</h2><dl><dt>포함</dt><dd>선택한 후보의 마스킹된 요약과 근거</dd>
+          <dt>제외</dt><dd>원본 요청·응답, 파일 경로, 선택하지 않은 후보</dd></dl>
+          <p>내용을 확인하고 동의하기 전에는 외부로 보내지 않습니다.</p>
+          <p>검토 후보입니다. 실제 취약점 여부는 Burp에서 재현해 판단하세요.</p>
+        </aside></div>
+    """, page_class="ai-workspace")
 
 
 def render_ai_review_confirmation(draft: ai_review.ReviewDraft, token: str, csrf_token: str) -> str:
     payload = json.loads(draft.input_json)
     rows = "".join(
-        f'<section class="ai-preview"><h3>{_h(item["finding_id"])} · {_h(_report_text(str(item.get("title") or item.get("type"))))}</h3>'
-        f'<p>{_h(item.get("affected_endpoint") or "")}</p>{_bullets([_report_text(str(value)) for value in item.get("rationale") or []])}</section>'
+        f'<section class="ai-preview"><h3><code>{_h(item["finding_id"])}</code> · {_h(_ai_candidate_title(item["type"], item["title"]))}</h3>'
+        f'<p class="ai-endpoint">{_h(item["affected_endpoint"])}</p>{_bullets([_report_text(str(value)) for value in item.get("rationale") or []])}</section>'
         for item in payload["candidates"]
     )
     ready = ai_review.api_key_configured()
     key_note = "" if ready else '<p class="failure-note">API 키 연결을 마친 뒤 다시 시도하세요. 아직 전송하지 않았습니다.</p>'
-    return _page("AI 전송 전 확인", _ai_review_header(draft.project) + f"""
-        <section class="workspace-section">
-          <h2>선택한 후보 {len(draft.candidate_ids)}개</h2>
+    return _page("AI 전송 전 확인", _ai_review_header(draft.project, 2) + f"""
+        <div class="ai-selection-layout"><section>
+          <div class="ai-section-heading"><h2>선택한 후보 {len(draft.candidate_ids)}개</h2><span>아직 전송하지 않음</span></div>
           {rows}
           <details class="secondary-details"><summary>실제로 전송할 자료 전체</summary><pre class="ai-payload">{_h(draft.input_json)}</pre></details>
         </section>
-        <section class="workspace-section">
-          <h2>OpenAI로 전송</h2>
-          <p class="review-note">위 자료가 외부 서비스로 전송되며 API 이용 요금이 발생할 수 있습니다. 민감한 값이 남아 있지 않은지 직접 확인하세요.</p>
-          <p class="review-note">응답 저장은 끄지만, 제공자의 보안 점검용 보관까지 없애는 설정은 아닙니다. 회사의 외부 전송 정책이 허용하는 자료만 사용하세요.</p>
+        <aside class="ai-consent">
+          <h2>외부 전송 동의</h2>
+          <p>OpenAI · {draft.model}</p>
+          <p>민감한 값이 남지 않았는지 확인하세요. 전송하면 API 요금이 발생할 수 있습니다.</p>
+          <p>응답 저장은 끄지만, 제공자의 보안 점검용 보관까지 없애지는 않습니다. 회사의 외부 전송 정책을 먼저 확인하세요.</p>
           {key_note}
           <form method="post" action="/ai-review/send">
             <input type="hidden" name="csrf_token" value="{_h(csrf_token)}">
             <input type="hidden" name="confirmation" value="{_h(token)}">
-            <label class="ai-choice"><input type="checkbox" name="consent" value="yes" required>
+            <label class="ai-consent-choice"><input type="checkbox" name="consent" value="yes" required>
               <span>위 내용을 확인했으며 OpenAI로 전송하는 데 동의합니다.</span></label>
             <div class="actions"><button class="button" type="submit" {'disabled' if not ready else ''}>AI 검토 요청</button>
               <a class="button secondary" href="/ai-review?project={quote(draft.project, safe='')}">선택으로 돌아가기</a></div>
           </form>
-        </section>
-    """)
+        </aside></div>
+    """, page_class="ai-workspace")
 
 
 def render_ai_review_result(project: str, result: dict[str, Any]) -> str:
-    sections = "".join(
-        f'<section class="workspace-section ai-result"><h2>검토 후보 {_h(item["finding_id"])} · {_h(_report_text(str(result.get("candidate_titles", {}).get(item["finding_id"], ""))))}</h2>'
-        f'<p class="badge neutral">{_h(ai_review.ASSESSMENTS[item["assessment"]])}</p><p>{_h(item["summary"])}</p>'
-        f'<h3>근거와 한계</h3>{_bullets(item["evidence_notes"])}'
-        f'<h3>Burp에서 확인할 방법</h3>{_bullets(item["manual_checks"])}'
-        f'<h3>조치 제안</h3>{_bullets(item["remediation"])}</section>'
+    def title(item: dict[str, Any]) -> str:
+        finding_id = item["finding_id"]
+        return _ai_candidate_title(result.get("candidate_types", {}).get(finding_id, ""), result.get("candidate_titles", {}).get(finding_id, ""))
+
+    navigation = "".join(
+        f'<li><a href="#review-{_h(item["finding_id"])}"><code>{_h(item["finding_id"])}</code><span>{_h(title(item))}</span></a></li>'
         for item in result["reviews"]
     )
-    return _page("AI 검토 제안", _ai_review_header(project) +
-                 '<p class="review-note">AI의 제안이며 확정 취약점이나 최종 위험도 평가가 아닙니다. 허가된 환경에서 직접 확인하세요. 결과는 이 대시보드를 종료하면 사라집니다.</p>' + sections)
+    sections = "".join(
+        f'<article class="ai-result" id="review-{_h(item["finding_id"])}">'
+        f'<header class="ai-section-heading"><h2><code>{_h(item["finding_id"])}</code> · {_h(title(item))}</h2>'
+        f'<span class="ai-assessment">{_h(ai_review.ASSESSMENTS[item["assessment"]])}</span></header>'
+        f'<p class="ai-review-summary">{_h(item["summary"])}</p>'
+        f'<section class="ai-evidence"><h3>관찰 근거와 제한사항</h3>{_bullets(item["evidence_notes"])}</section>'
+        '<div class="ai-check-grid"><section><h3>Burp 재현 절차</h3><ol class="ai-procedure">'
+        + "".join(f'<li>{_h(step)}</li>' for step in item["manual_checks"])
+        + '</ol></section><section class="ai-criteria"><h3>판정 기준</h3>'
+        f'<div class="ai-normal"><h4>정상 동작</h4><p>{_h(item["normal_result"])}</p></div>'
+        f'<div class="ai-issue"><h4>취약 의심</h4><p>{_h(item["issue_result"])}</p></div></section></div>'
+        f'<section class="ai-remediation"><h3>권고 조치</h3>{_bullets(item["remediation"])}</section></article>'
+        for item in result["reviews"]
+    )
+    counts = {name: sum(item["assessment"] == name for item in result["reviews"]) for name in ai_review.ASSESSMENTS}
+    return _page("AI 검토 제안", _ai_review_header(project, 3) + f"""
+      <div class="ai-review-overview"><p>검토 후보입니다. 재현 전에는 취약점으로 확정하지 않습니다.</p>
+        <dl><div><dt>검토 항목</dt><dd>{len(result['reviews'])}</dd></div>
+        <div><dt>재현 필요</dt><dd>{counts['needs_check']}</dd></div>
+        <div><dt>추가 근거</dt><dd>{counts['more_evidence']}</dd></div>
+        <div><dt>오탐 가능</dt><dd>{counts['likely_false_positive']}</dd></div></dl></div>
+      <div class="ai-result-layout"><nav class="ai-index" aria-label="검토 항목"><h2>검토 항목</h2><ul>{navigation}</ul></nav>
+      <div class="ai-results">{sections}</div></div>
+      <footer class="ai-footer">OpenAI · {_h(result.get('model', ai_review.MODEL))} · 허가된 테스트 자료로만 점검하세요. AI 제안은 최종 심각도 평가가 아니며, 결과는 대시보드 종료 시 삭제됩니다.</footer>
+    """, page_class="ai-workspace")
 
 
 def render_ai_review_error(code: str) -> str:
     messages = {
         "select_one_to_five_candidates": "후보를 1~5개 선택하세요.",
+        "unsupported_ai_model": "지원하지 않는 모델입니다. 항목 선택 화면에서 모델을 다시 고르세요.",
         "invalid_candidate_selection": "선택한 후보를 찾을 수 없습니다. 결과 화면에서 다시 선택하세요.",
         "sensitive_content_blocked": "자료에서 민감정보로 의심되는 내용을 발견해 표시·전송을 차단했습니다. 마스킹 결과를 다시 확인하세요.",
         "invalid_analysis_file": "분석 파일을 읽을 수 없습니다. 파일을 다시 처리하세요.",
@@ -1602,7 +1651,7 @@ def render_ai_review_error(code: str) -> str:
         "ai_review_busy": "다른 AI 요청을 처리 중입니다. 해당 요청이 끝난 뒤 다시 시도하세요.",
         "review_result_not_found": "이 검토 결과를 찾을 수 없습니다. 대시보드를 재시작했다면 새로 요청해야 합니다.",
     }
-    return _page("AI 검토 중단", _ai_review_header() + f'<p role="alert" class="failure-note">{_h(messages.get(code, "AI 검토를 처리하지 못했습니다."))}</p>')
+    return _page("AI 검토 중단", _ai_review_header() + f'<p role="alert" class="failure-note">{_h(messages.get(code, "AI 검토를 처리하지 못했습니다."))}</p>', page_class="ai-workspace")
 
 
 def render_output_detail(output: DashboardOutput, csrf_token: str) -> str:
@@ -3689,7 +3738,8 @@ def _h(value: Any) -> str:
     return html.escape(str(value), quote=True)
 
 
-def _page(title: str, body: str) -> str:
+def _page(title: str, body: str, *, page_class: str = "") -> str:
+    body_attributes = f' class="{_h(page_class)}"' if page_class else ""
     return f"""<!doctype html>
 <html lang="ko">
 <head>
@@ -3742,16 +3792,6 @@ def _page(title: str, body: str) -> str:
     .summary-line span {{ line-height: 1.6; }}
     .workspace-section {{ margin: 0 0 24px; min-width: 0; }}
     .workspace-section h2 {{ margin: 0 0 16px; }}
-    .ai-choices {{ display: grid; gap: 0; margin-bottom: 20px; }}
-    .ai-choice {{ display: flex; gap: 12px; align-items: flex-start; padding: 16px 0; border-bottom: 1px solid var(--border); cursor: pointer; line-height: 1.6; }}
-    .ai-choice input {{ flex: 0 0 18px; width: 18px; height: 18px; margin-top: 4px; }}
-    .ai-choice span {{ min-width: 0; overflow-wrap: anywhere; }}
-    .ai-choice small {{ display: block; color: var(--muted); }}
-    .ai-preview {{ border-bottom: 1px solid var(--border); padding: 12px 0; }}
-    .ai-payload {{ max-width: 100%; max-height: 360px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; font-size: 13px; line-height: 1.6; background: var(--surface-2); }}
-    .ai-preview p, .ai-result p, .ai-result li {{ overflow-wrap: anywhere; line-height: 1.7; }}
-    .ai-result {{ border-top: 1px solid var(--border); padding-top: 24px; }}
-    .ai-result h3 {{ margin-top: 20px; }}
     button:disabled {{ opacity: 0.5; cursor: not-allowed; }}
     .workflow-grid {{ display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; }}
     .review-note {{ color: var(--muted); font-size: 14px; line-height: 1.65; margin: 16px 0 22px; }}
@@ -3963,9 +4003,134 @@ def _page(title: str, body: str) -> str:
     .check-table .badge {{ max-width: 100%; white-space: normal; text-align: center; justify-content: center; }}
     .handoff-table th:first-child {{ width: 8%; }}
     .handoff-table th:nth-child(2) {{ width: 35%; }}
+    .ai-workspace {{ --bg: #ffffff; --text: #202c28; --muted: #67736e; --border: #dce3df; --accent: #116b60; --surface-2: #f1f7f4; font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif; font-size: 15px; line-height: 1.65; }}
+    .ai-workspace main {{ width: min(1344px, calc(100% - 64px)); padding: 0 0 40px; }}
+    .ai-workspace h1 {{ font-size: 26px; line-height: 1.4; margin: 0 0 4px; }}
+    .ai-workspace h2 {{ font-size: 19px; line-height: 1.5; }}
+    .ai-workspace h3 {{ font-size: 16px; line-height: 1.5; margin: 0 0 10px; }}
+    .ai-workspace p, .ai-workspace li, .ai-workspace code {{ overflow-wrap: anywhere; }}
+    .ai-workspace code {{ font-family: Consolas, monospace; font-size: 13px; }}
+    .ai-workspace .button {{ border-radius: 4px; min-height: 40px; font-size: 14px; padding: 8px 18px; }}
+    .ai-workspace input[type="checkbox"] {{ width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; margin: 3px 0; }}
+    .ai-topnav {{ display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 68px; border-bottom: 1px solid var(--border); }}
+    .ai-topnav a {{ text-decoration: none; font-weight: 600; }}
+    .ai-brand {{ font-size: 19px; color: var(--accent); }}
+    .ai-nav-actions {{ display: flex; align-items: center; gap: 24px; flex-shrink: 0; }}
+    .ai-heading {{ padding: 24px 0 16px; }}
+    .ai-heading p {{ color: var(--muted); margin: 0; }}
+    .ai-progress {{ display: flex; gap: 28px; margin: 0 0 24px; padding: 0; list-style: none; border-bottom: 1px solid var(--border); }}
+    .ai-progress li {{ display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 8px 16px; border-bottom: 3px solid transparent; margin-bottom: -1px; color: var(--muted); font-weight: 600; font-size: 14px; }}
+    .ai-progress li span {{ font-family: Consolas, monospace; font-size: 12px; }}
+    .ai-progress .is-current {{ color: var(--accent); border-color: var(--accent); }}
+    .ai-selection-layout {{ display: grid; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; gap: 36px; }}
+    .ai-selection-layout > section {{ min-width: 0; }}
+    .ai-section-heading {{ display: flex; align-items: baseline; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; margin-bottom: 16px; }}
+    .ai-section-heading h2 {{ margin: 0; }}
+    .ai-section-heading > span {{ color: var(--muted); font-size: 13px; }}
+    .ai-table-heading, .ai-choice {{ display: grid; grid-template-columns: 20px minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px; }}
+    .ai-table-heading {{ color: var(--muted); font-size: 12px; background: #f5f7f6; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }}
+    .ai-choice {{ border-bottom: 1px solid var(--border); min-height: 70px; cursor: pointer; }}
+    .ai-choice:hover {{ background: #f7f9f8; }}
+    .ai-choice:has(input:checked) {{ background: #edf6f2; }}
+    .ai-choice-title {{ display: flex; align-items: flex-start; flex-direction: column; gap: 2px; min-width: 0; }}
+    .ai-choice-title code {{ color: var(--muted); font-size: 12px; }}
+    .ai-choice-title strong {{ font-size: 14px; font-weight: 600; }}
+    .ai-model-control {{ display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; margin-bottom: 16px; color: var(--muted); }}
+    .ai-model-control select {{ min-height: 40px; max-width: 100%; padding: 8px 32px 8px 12px; border: 1px solid var(--border); border-radius: 4px; font: inherit; color: var(--text); background: white; }}
+    .ai-endpoint {{ color: var(--muted); font-size: 13px; word-break: break-word; }}
+    .ai-submit-bar {{ position: sticky; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 16px; background: white; padding: 16px 0; border-top: 1px solid var(--border); }}
+    .ai-submit-bar span {{ color: var(--muted); font-size: 13px; }}
+    .ai-context {{ padding-left: 24px; border-left: 1px solid var(--border); }}
+    .ai-context h2, .ai-consent h2 {{ margin-bottom: 16px; }}
+    .ai-context dl {{ margin: 0 0 20px; }}
+    .ai-context dt {{ color: var(--text); font-weight: 600; margin: 16px 0 4px; font-size: 13px; }}
+    .ai-context dd {{ margin: 0; }}
+    .ai-context p, .ai-context dd, .ai-consent p {{ color: var(--muted); font-size: 14px; }}
+    .ai-preview {{ border-top: 1px solid var(--border); padding: 20px 0 8px; }}
+    .ai-preview p {{ margin-bottom: 10px; }}
+    .ai-preview ul {{ padding-left: 22px; }}
+    .ai-consent {{ padding: 24px; background: #f5f8f6; border: 1px solid var(--border); border-radius: 4px; }}
+    .ai-consent-choice {{ display: flex; align-items: flex-start; gap: 10px; margin: 20px 0; font-size: 14px; cursor: pointer; }}
+    .ai-consent .actions {{ justify-content: flex-start; }}
+    .ai-payload {{ max-width: 100%; max-height: 360px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 16px; font-size: 12px; line-height: 1.6; background: #f3f5f4; color: var(--text); border-radius: 4px; }}
+    .ai-review-overview {{ display: flex; align-items: center; justify-content: space-between; gap: 12px 24px; padding: 0 0 20px; margin-bottom: 0; border-bottom: 1px solid var(--border); }}
+    .ai-review-overview p {{ font-size: 14px; margin: 0; }}
+    .ai-review-overview dl {{ display: flex; flex-wrap: wrap; gap: 10px 20px; margin: 0; }}
+    .ai-review-overview dl div {{ display: flex; gap: 8px; align-items: baseline; }}
+    .ai-review-overview dt {{ color: var(--muted); font-size: 12px; white-space: nowrap; }}
+    .ai-review-overview dd {{ color: var(--accent); font-size: 18px; font-weight: 700; margin: 0; }}
+    .ai-result-layout {{ display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px; align-items: start; }}
+    .ai-index {{ position: sticky; top: 16px; padding: 26px 20px 20px 0; border-right: 1px solid var(--border); }}
+    .ai-index h2 {{ font-size: 16px; margin: 0 0 16px; }}
+    .ai-index ul {{ list-style: none; padding: 0; margin: 0; }}
+    .ai-index a {{ display: grid; gap: 4px; text-decoration: none; color: var(--text); padding: 12px 10px; border-left: 3px solid transparent; font-size: 13px; }}
+    .ai-index a code {{ font-weight: 600; }}
+    .ai-index a:hover, .ai-index a:focus {{ background: #e9f4ef; border-left-color: var(--accent); }}
+    .ai-result-layout:not(:has(.ai-result:target)) .ai-index li:first-child a,
+    .ai-result-layout:has(.ai-result:nth-child(1):target) .ai-index li:nth-child(1) a,
+    .ai-result-layout:has(.ai-result:nth-child(2):target) .ai-index li:nth-child(2) a,
+    .ai-result-layout:has(.ai-result:nth-child(3):target) .ai-index li:nth-child(3) a,
+    .ai-result-layout:has(.ai-result:nth-child(4):target) .ai-index li:nth-child(4) a,
+    .ai-result-layout:has(.ai-result:nth-child(5):target) .ai-index li:nth-child(5) a {{ background: #e4f1eb; border-left-color: var(--accent); }}
+    .ai-results {{ min-width: 0; }}
+    .ai-result {{ padding: 26px 0; border-bottom: 1px solid var(--border); scroll-margin-top: 20px; }}
+    .ai-result > .ai-section-heading {{ border-bottom: 1px solid var(--border); padding-bottom: 14px; }}
+    .ai-result h2 code {{ font-size: 17px; }}
+    .ai-section-heading > .ai-assessment {{ color: #946400; font-size: 14px; font-weight: 650; }}
+    .ai-review-summary {{ margin-bottom: 20px; }}
+    .ai-evidence {{ margin-bottom: 20px; }}
+    .ai-result ul {{ padding-left: 20px; margin: 0; }}
+    .ai-result li {{ margin-bottom: 6px; }}
+    .ai-check-grid {{ display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px; padding: 20px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }}
+    .ai-procedure {{ margin: 0; padding-left: 22px; }}
+    .ai-procedure li {{ padding-left: 4px; margin-bottom: 12px; }}
+    .ai-procedure li::marker {{ color: var(--accent); font-weight: 650; }}
+    .ai-criteria {{ border-left: 1px solid var(--border); padding-left: 24px; }}
+    .ai-criteria h4 {{ font-size: 14px; margin: 0 0 6px; }}
+    .ai-criteria p {{ margin: 0; font-size: 14px; }}
+    .ai-normal, .ai-issue {{ padding: 12px 14px; border-left: 3px solid; margin-top: 12px; border-radius: 0 4px 4px 0; }}
+    .ai-normal {{ background: #edf7ef; border-color: #2c7950; }}
+    .ai-normal h4 {{ color: #1c6139; }}
+    .ai-issue {{ background: #fff1ed; border-color: #c55b40; }}
+    .ai-issue h4 {{ color: #9b3924; }}
+    .ai-remediation {{ padding-top: 20px; }}
+    .ai-footer {{ color: var(--muted); font-size: 12px; padding-top: 20px; }}
+    @media (max-width: 900px) {{
+      .ai-selection-layout {{ grid-template-columns: minmax(0, 1fr); gap: 24px; }}
+      .ai-context {{ border-left: 0; border-top: 1px solid var(--border); padding: 20px 0 0; }}
+      .ai-result-layout {{ grid-template-columns: 170px minmax(0, 1fr); gap: 20px; }}
+      .ai-check-grid {{ grid-template-columns: minmax(0, 1fr); gap: 20px; }}
+      .ai-criteria {{ border-left: 0; padding-left: 0; }}
+      .ai-review-overview {{ flex-wrap: wrap; }}
+    }}
+    @media (max-width: 600px) {{
+      .ai-workspace main {{ width: calc(100% - 28px); padding-top: 0; }}
+      .ai-topnav {{ padding: 14px 0; flex-wrap: wrap; gap: 10px; }}
+      .ai-brand {{ font-size: 16px; }}
+      .ai-nav-actions {{ font-size: 13px; gap: 16px; }}
+      .ai-nav-actions .button {{ min-height: 32px; padding: 4px 12px; font-size: 13px; }}
+      .ai-heading {{ padding-top: 20px; }}
+      .ai-workspace h1 {{ font-size: 24px; }}
+      .ai-progress {{ gap: 0; }}
+      .ai-progress li {{ flex: 1; justify-content: center; gap: 4px; padding: 8px 2px; font-size: 12px; }}
+      .ai-result-layout {{ grid-template-columns: minmax(0, 1fr); gap: 0; }}
+      .ai-index {{ position: static; padding: 18px 0; border-right: 0; border-bottom: 1px solid var(--border); }}
+      .ai-index h2 {{ margin-bottom: 8px; }}
+      .ai-index ul {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }}
+      .ai-choice, .ai-table-heading {{ grid-template-columns: 18px minmax(0, 1fr); gap: 4px 12px; }}
+      .ai-table-heading > :last-child {{ display: none; }}
+      .ai-choice {{ padding: 12px 6px; }}
+      .ai-choice input {{ grid-row: span 2; align-self: start; }}
+      .ai-choice .ai-endpoint {{ grid-column: 2; }}
+      .ai-submit-bar {{ flex-wrap: wrap; gap: 10px; }}
+      .ai-submit-bar .button {{ width: 100%; }}
+      .ai-consent {{ padding: 18px; }}
+      .ai-result .ai-section-heading {{ gap: 8px; }}
+      .ai-workspace h2 {{ font-size: 18px; }}
+    }}
   </style>
 </head>
-<body>
+<body{body_attributes}>
   <main>{body}</main>
 </body>
 </html>

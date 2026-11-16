@@ -1,8 +1,10 @@
 # 읽기 전용 MCP 설정
 
-MCP를 연결하면 Codex 대화에서 검증된 분석 결과를 읽을 수 있습니다.
-Burp를 조작하거나 원본 요청·응답을 가져오지 않습니다. [파일 업로드와 결과 확인](USAGE.md)만 필요하면 설정하지 않아도 됩니다.
+Codex 대화에서 검증된 분석 결과를 읽습니다. Burp를 조작하거나 원본을 가져오지 않습니다. [파일 업로드와 결과 확인](USAGE.md)만 필요하면 설정하지 않아도 됩니다.
 Python 3.12 이상과 로컬 MCP 연결을 지원하는 Codex 앱이 필요합니다. 조회할 자료를 AI에 공유해도 되는지 먼저 확인하세요.
+
+`Burp 수집기 → 로컬 마스킹·검증 → 대시보드 / Codex MCP` 순서입니다. 원본 조회·도구 실행을 제공하는 [공식 Burp MCP](https://portswigger.net/bappstore/9952290f04ed4f628e624d0aa9dccebc)와는 직접 연결하지 않습니다.
+MCP 조회는 프로젝트의 API 키를 사용하지 않으며 Codex의 요금·한도·공유 정책이 적용됩니다. 별도 API 키를 쓰는 [대시보드·터미널 AI 검토](AI_REVIEW.md)와 구분하세요. 결과는 직접 재현해야 할 검토 후보입니다.
 
 ## 1. 읽을 결과 만들기
 
@@ -12,13 +14,11 @@ README.md가 있는 폴더의 PowerShell에서 실행합니다. 실제 고객 �
 python -m burp_ai_redaction_gateway process --input samples/synthetic_burp_history.json --output out/codex_mcp_sample/demo --project demo
 ```
 
-완료되면 `out/codex_mcp_sample/demo/ai_candidates`의 보고서를 읽어보세요.
-기존 결과가 있으면 `demo2`처럼 마지막 폴더 이름과 `--project` 값을 함께 바꾸세요. 조회할 때도 같은 이름을 씁니다.
+완료되면 `out/codex_mcp_sample/demo/ai_candidates`의 보고서를 읽어보세요. 기존 결과가 있으면 `demo2`처럼 마지막 폴더 이름과 `--project` 값을 함께 바꾸고, 조회할 때도 같은 이름을 씁니다.
 
 ## 2. Codex 앱에 등록하기
 
-설정(Settings) → MCP servers → Add server에서 STDIO(표준 입출력)를 선택합니다.
-이미 `burp_sample`이 등록되어 있다면 다시 추가하지 말고 3번으로 이동하세요.
+설정(Settings) → MCP servers → Add server에서 STDIO(표준 입출력)를 선택합니다. 이미 `burp_sample`이 등록되어 있다면 다시 추가하지 말고 3번으로 이동하세요.
 
 같은 PowerShell에서 아래 두 줄을 실행하면 저장소 폴더와 Python 경로가 차례로 나옵니다.
 

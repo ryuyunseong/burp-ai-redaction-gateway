@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
+import webbrowser
 from pathlib import Path
 
+from . import ai_review
 from .audit_compressed_hmac import (
     AuditCompressedHmacError,
     create_compressed_audit_hmac_manifest,
@@ -169,6 +172,13 @@ def main(argv: list[str] | None = None) -> int:
     review.add_argument("--export-dir", type=Path, help="Optional directory for safe prompt packet copies.")
     review.add_argument("--policy", type=Path, help="Optional policy.json path.")
 
+    ai = subparsers.add_parser("ai-review", help="마스킹된 점검 후보를 미리 보고, 동의 후 AI 점검 가이드를 받습니다.")
+    ai.add_argument("--input", required=True, type=Path, help="검증된 결과 폴더.")
+    ai.add_argument("--candidate", action="append", default=[], help="후보 번호. 최대 5개까지 반복 지정합니다.")
+    ai.add_argument("--model", default=ai_review.MODEL, help="gpt-6.1-terra(기본) 또는 gpt-6-luna(저비용형).")
+    ai.add_argument("--send", action="store_true", help="전체 전송 내용을 표시하고 터미널에서 동의를 받습니다.")
+    ai.add_argument("--policy", type=Path, help="선택할 policy.json 경로.")
+
     report = subparsers.add_parser("report", help="Generate a cautious report draft from verified analysis packets.")
     report.add_argument("--input", required=True, type=Path, help="Verified generated output directory.")
     report.add_argument("--output", type=Path, help="Report draft path. Defaults to report_draft.md under input.")
@@ -193,6 +203,7 @@ def main(argv: list[str] | None = None) -> int:
     dashboard.add_argument("--port", default=DEFAULT_DASHBOARD_PORT, type=int, help="Bind port.")
     dashboard.add_argument("--root", required=True, type=Path, help="Verified output root, for example out.")
     dashboard.add_argument("--policy", type=Path, help="Optional policy.json path.")
+    dashboard.add_argument("--open", action="store_true", help="서버가 열린 뒤 브라우저를 자동으로 엽니다.")
 
     serve = subparsers.add_parser("serve", help="Run the loopback-only Montoya handoff receiver.")
     serve.add_argument("--host", default=DEFAULT_HOST, help="Bind host. Only 127.0.0.1 is allowed.")
@@ -227,6 +238,8 @@ def main(argv: list[str] | None = None) -> int:
         return _audit_compressed_hmac_verify(args.input, args.manifest, args.env_var, args.key_file)
     if args.command == "review":
         return _review(args.input, args.export_dir, args.policy)
+    if args.command == "ai-review":
+        return _ai_review_command(args.input, args.candidate, args.model, args.send, args.policy)
     if args.command == "report":
         return _report(args.input, args.output, args.profile, args.policy)
     if args.command == "viewer":
@@ -234,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "mcp":
         return _mcp(args.root, args.policy)
     if args.command == "dashboard":
-        return _dashboard(args.host, args.port, args.root, args.policy)
+        return _dashboard(args.host, args.port, args.root, args.policy, open_browser=args.open)
     if args.command == "serve":
         return _serve(args.host, args.port, args.output, args.project, args.policy, args.max_bytes)
     parser.error("Unknown command")
@@ -387,6 +400,56 @@ def _review(input_dir: Path, export_dir: Path | None, policy_path: Path | None) 
     return 0
 
 
+def _ai_review_command(input_dir: Path, candidate_ids: list[str], model: str, send: bool, policy_path: Path | None) -> int:
+    try:
+        policy = load_policy(policy_path)
+        if model not in ai_review.MODELS:
+            raise ai_review.AiReviewError("unsupported_ai_model")
+        verification = verify_path(input_dir, policy)
+        if not verification.passed or verification.files_checked == 0:
+            raise ai_review.AiReviewError("verification_failed")
+        if not candidate_ids:
+            if send:
+                raise ai_review.AiReviewError("select_one_to_five_candidates")
+            candidates = ai_review.list_review_candidates(input_dir)
+            print(f"점검 후보 {len(candidates)}개 · 외부 전송 없음")
+            for candidate in candidates:
+                label = ai_review.CANDIDATE_LABELS.get(candidate["type"], "점검 항목")
+                print(ai_review.terminal_text(f"{candidate['finding_id']} · {label} · {candidate['affected_endpoint']}"))
+            return 0
+        session = ai_review.ReviewSession()
+        token, draft = session.prepare("cli_review", input_dir, candidate_ids, model=model)
+        print(f"모델: {draft.model}\n실제로 전송할 자료 전체:")
+        if ai_review.terminal_text(draft.input_json) != draft.input_json:
+            raise ai_review.AiReviewError("invalid_analysis_packet")
+        print(draft.input_json)
+        if not send:
+            print("외부로 전송하지 않았습니다. 요청하려면 같은 명령에 --send를 추가하세요.")
+            return 0
+        if not sys.stdin.isatty():
+            print("직접 연 터미널에서 실행하고 전송 내용을 확인해야 합니다. 전송하지 않았습니다.")
+            return 1
+        print("OpenAI로 전송하면 API 요금이 발생할 수 있습니다. 응답 저장은 꺼도 제공자의 보안 점검용 보관까지 없애지는 않습니다.")
+        if input("외부 전송에 동의하면 SEND를 입력하세요: ").strip() != "SEND":
+            print("전송을 취소했습니다.")
+            return 0
+        if not verify_path(input_dir, policy).passed:
+            raise ai_review.AiReviewError("verification_failed")
+        result_id = session.send(token, input_dir, True)
+        _, result = session.result(result_id)
+        print(ai_review.render_text_review(result), end="")
+        return 0
+    except ai_review.AiReviewError as error:
+        print(f"AI 검토를 중단했습니다. 후보·모델·검증 상태·API 연결을 확인하세요. 안내 코드: {error.code}")
+        return 1
+    except (EOFError, KeyboardInterrupt):
+        print("\n사용자가 확인을 중단했습니다. 자동으로 재전송하지 않습니다.")
+        return 1
+    except (OSError, ValueError):
+        print("분석 자료나 설정을 읽지 못했습니다. 파일 위치와 검증 상태를 확인하세요.")
+        return 1
+
+
 def _report(input_dir: Path, output_path: Path | None, profile: str, policy_path: Path | None) -> int:
     policy = load_policy(policy_path)
     try:
@@ -421,20 +484,27 @@ def _mcp(root: Path, policy_path: Path | None) -> int:
     return 0
 
 
-def _dashboard(host: str, port: int, root: Path, policy_path: Path | None) -> int:
+def _dashboard(host: str, port: int, root: Path, policy_path: Path | None, *, open_browser: bool = False) -> int:
     try:
         server = create_dashboard_server(host, port, DashboardConfig(root=root, policy_path=policy_path))
-        print(f"Dashboard listening on http://{host}:{port}")
-        print("Raw HTTP viewing and replay are unavailable. Dashboard actions require CSRF protection.")
+        url = f"http://{host}:{server.server_address[1]}/"
+        print(f"대시보드: {url}")
+        print("원본 HTTP 조회·재전송은 지원하지 않습니다. 상태 변경 요청은 CSRF 검사를 거칩니다.")
     except DashboardError as error:
         print(f"Dashboard startup failed: {error.error_type}")
         if error.error_type == "port_unavailable":
             print("포트를 열 수 없습니다. 이미 사용 중이라면 --port에 다른 번호를 지정하세요.")
         return 1
     try:
+        if open_browser:
+            try:
+                if not webbrowser.open(url, new=2):
+                    print("브라우저를 열지 못했습니다. 위 주소를 직접 여세요.")
+            except (OSError, webbrowser.Error):
+                print("브라우저를 열지 못했습니다. 위 주소를 직접 여세요.")
         server.serve_forever()
     except KeyboardInterrupt:
-        print("Dashboard stopped")
+        print("대시보드를 종료했습니다.")
     finally:
         server.server_close()
     return 0
