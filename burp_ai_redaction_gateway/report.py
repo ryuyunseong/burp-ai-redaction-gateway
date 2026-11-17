@@ -11,6 +11,7 @@ from .policy import RedactionPolicy
 from .risk import RISK_RATING_PROFILES
 from .scanner import assert_no_sensitive_text
 from .verifier import verify_path
+from .va_classification import classify_candidate, va_label
 
 
 DEFAULT_REPORT_NAME = "report_draft.md"
@@ -135,6 +136,7 @@ def render_report_draft(candidates: list[dict[str, Any]], profile_name: str = DE
         "- 요청·응답 원문, 쿠키·인증 정보·토큰, 실제 도메인·IP·개인정보를 추가하지 마세요.",
         "- 근거 신뢰도는 관찰한 자료의 신뢰 수준이며, 취약점의 심각도가 아닙니다.",
         "- 위험도는 초안입니다. 직접 재현하고 별도로 위험을 평가한 뒤 확정하세요.",
+        "- VA 코드는 프로젝트 점검 분류입니다. 참고 분류·분류 미정은 취약점 탐지 결과가 아니며, 미점검 항목의 정상을 뜻하지 않습니다.",
         "",
     ]
     if not candidates:
@@ -200,11 +202,16 @@ def _candidate_section(candidate: dict[str, Any], profile: ReportProfile) -> lis
     do_not_claim = [item for item in _safe_list(candidate.get("do_not_claim")) if item not in DO_NOT_CLAIM]
 
     lines = [
-        f"## {profile.candidate_label} {finding_id}: {title}",
+        f"## {profile.candidate_label} {finding_id}: {title} · {va_label(kind)}",
         "",
         f"- 대상 요청: {endpoint}",
+        f"- 점검 기준: {va_label(kind)}",
         f"- 근거 번호: {', '.join(evidence_ids) if evidence_ids else '없음'} / 직접 확인 필요: {'예' if manual_required else '아니요'}",
     ]
+    classification = classify_candidate(kind)
+    if classification["subcategory"]:
+        lines.append(f"- 세부 항목: {classification['subcategory']}")
+    lines.append(f"- 분류 근거와 한계: {classification['reason']}")
     if _report_text(kind) != title:
         lines.append(f"- 점검 유형: {_report_text(kind)}")
     lines.extend(["", f"### {profile.rationale_heading}"])

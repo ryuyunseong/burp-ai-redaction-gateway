@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import re
+import tempfile
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from http import HTTPStatus
@@ -15,7 +17,9 @@ from .output import write_outputs
 from .parser import event_from_montoya_handoff
 from .policy import load_policy
 from .redaction import Redactor
+from .report import write_report_draft
 from .verifier import verify_path
+from .viewer import SAFE_FILE_ALLOWLIST
 
 INGEST_PATH = "/ingest/burp-history"
 DEFAULT_HOST = "127.0.0.1"
@@ -30,6 +34,7 @@ class ReceiverConfig:
     project: str
     policy_path: Path | None = None
     max_body_bytes: int = DEFAULT_MAX_BYTES
+    complete_bundle: bool = False
 
 
 @dataclass(frozen=True)
@@ -61,15 +66,38 @@ def ingest_montoya_payload(payload: dict[str, Any], config: ReceiverConfig) -> I
     sanitized = [redactor.sanitize_event(event, 1)]
     findings = build_finding_candidates(sanitized)
     output_dir = config.output_dir / _safe_output_name(str(payload["source_event_id"]))
-    written = write_outputs(config.project, output_dir, sanitized, findings, policy)
-    verification = verify_path(output_dir, policy)
-    if not verification.passed:
-        raise ReceiverError("verification_failed", HTTPStatus.INTERNAL_SERVER_ERROR)
+    if config.complete_bundle:
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        if output_dir.exists() or output_dir.is_symlink():
+            raise ReceiverError("output_already_exists", HTTPStatus.CONFLICT)
+        # Publish only the verified report and bundle, never a half-written capture.
+        with tempfile.TemporaryDirectory(prefix=".ingest-", dir=config.output_dir) as temporary:
+            staged = Path(temporary) / "result"
+            written = write_outputs(config.project, staged, sanitized, findings, policy)
+            if not verify_path(staged, policy).passed:
+                raise ReceiverError("verification_failed", HTTPStatus.INTERNAL_SERVER_ERROR)
+            write_report_draft(staged, None, policy)
+            bundle = staged / "ai_candidates"
+            bundle.mkdir()
+            for name in SAFE_FILE_ALLOWLIST:
+                (bundle / name).write_bytes((staged / name).read_bytes())
+            if not verify_path(staged, policy).passed:
+                raise ReceiverError("verification_failed", HTTPStatus.INTERNAL_SERVER_ERROR)
+            try:
+                staged.rename(output_dir)
+            except FileExistsError:
+                raise ReceiverError("output_already_exists", HTTPStatus.CONFLICT) from None
+            files_written = len(written) + 1 + len(SAFE_FILE_ALLOWLIST)
+    else:
+        written = write_outputs(config.project, output_dir, sanitized, findings, policy)
+        if not verify_path(output_dir, policy).passed:
+            raise ReceiverError("verification_failed", HTTPStatus.INTERNAL_SERVER_ERROR)
+        files_written = len(written)
     return IngestResult(
         status="accepted",
         evidence_id=sanitized[0].evidence_id,
         output_name=output_dir.name,
-        files_written=len(written),
+        files_written=files_written,
         raw_data_included=False,
     )
 
@@ -140,12 +168,14 @@ class _IngestHandler(BaseHTTPRequestHandler):
             raise ReceiverError("non_loopback_client_rejected", HTTPStatus.FORBIDDEN)
         content_type = self.headers.get("Content-Type", "")
         if not content_type.lower().startswith("application/json"):
+            self._discard_rejected_body()
             raise ReceiverError("invalid_content_type", HTTPStatus.UNSUPPORTED_MEDIA_TYPE)
         content_length = self.headers.get("Content-Length")
         if content_length is None or not content_length.isdigit():
             raise ReceiverError("invalid_content_length", HTTPStatus.BAD_REQUEST)
         size = int(content_length)
         if size > self.receiver_config.max_body_bytes:
+            self._discard_rejected_body(max_bytes=64 * 1024)
             raise ReceiverError("payload_too_large", HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
         payload = json.loads(self.rfile.read(size).decode("utf-8"))
         if not isinstance(payload, dict):
@@ -161,6 +191,31 @@ class _IngestHandler(BaseHTTPRequestHandler):
                 "raw_data_included": result.raw_data_included,
             },
         )
+
+    def _discard_rejected_body(self, *, max_bytes: int = 16 * 1024) -> None:
+        try:
+            size = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return
+        if not 0 < size <= max_bytes:
+            return
+        previous_timeout = self.connection.gettimeout()
+        deadline = time.monotonic() + 0.25
+        try:
+            while size > 0:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                self.connection.settimeout(min(previous_timeout, remaining) if previous_timeout is not None else remaining)
+                chunk = self.rfile.read1(min(size, 4096))
+                if not chunk:
+                    break
+                size -= len(chunk)
+        except OSError:
+            # A timed-out or disconnected body remains rejected.
+            pass
+        finally:
+            self.connection.settimeout(previous_timeout)
 
     def _write_json(self, status: HTTPStatus, payload: dict[str, Any]) -> None:
         data = json.dumps(payload, sort_keys=True).encode("utf-8")

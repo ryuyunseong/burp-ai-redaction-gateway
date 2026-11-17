@@ -301,8 +301,8 @@ class BeginnerGuideTests(unittest.TestCase):
         self.assertIn(menu_label, text)
         extension_name = re.search(r'api.extension\(\).setName\("([^"\n]+)"\)', extension).group(1)
         self.assertIn(f"Extensions → {extension_name} →", text)
-        self.assertIn("‘결과 보기’ → ‘결과 파일 확인’", text)
-        self.assertIn("별도 폴더에 복사", text)
+        self.assertIn("capture --open", text)
+        self.assertIn("별도 Export", (ROOT / "docs" / "USAGE.md").read_text(encoding="utf-8"))
         self.assertIn("examples/collector_run.md", text)
         example = (ROOT / "docs" / "examples" / "collector_run.md").read_text(encoding="utf-8")
         self.assertIn("별도 임시 프로젝트", example)
@@ -314,13 +314,11 @@ class BeginnerGuideTests(unittest.TestCase):
         self.assertNotIn("**", example)
         self.assertNotIn("\ufeff", example)
         self.assertNotIn("\ufffd", example)
-        self.assertLess(text.index("선택한 행만 보내는 메뉴가 아닙니다"), text.index(menu_label))
         self.assertIn("Output", text)
         self.assertIn("items_sent", text)
-        self.assertLess(text.index("Ctrl+C"), text.index("verify --input out/receiver"))
-        self.assertLess(text.index("verify --input out/receiver"), text.index("검증이 실패하면 여기서 멈추고"))
-        self.assertLess(text.index("검증이 실패하면 여기서 멈추고"), text.index("dashboard --host"))
-        for phrase in ("선택한 행만 보내는 메뉴가 아닙니다", "허가받은 대상만", "외부 주소로 전송하지 못하게 제한", "수신기에서 민감정보를 제거", "원본과 대상 호스트 값은 남기지 않습니다", "보고서 다시 만들기"):
+        for label in re.findall(r'new JButton\("([^"]+)"\)', extension):
+            self.assertIn(label, text)
+        for phrase in ("선택한 행만이 아니라", "허가받은 대상만", "외부 주소로 전송하지 못하게 제한", "수신기에서 민감정보를 제거", "원본과 대상 호스트 값은 남기지 않습니다", "검증에 실패한 결과는 게시하지", "AI 검토는 내용을 확인하고 별도로 동의", "대기 중인 16건"):
             self.assertIn(phrase, text)
 
     def test_collector_2026_10_example_names_release_type_results_and_real_images(self) -> None:

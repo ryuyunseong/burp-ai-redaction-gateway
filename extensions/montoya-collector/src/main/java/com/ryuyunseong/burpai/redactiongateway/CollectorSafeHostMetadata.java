@@ -26,11 +26,13 @@ final class CollectorSafeHostMetadata {
     }
 
     static CollectorSafeHostMetadata evaluate(ProxyHttpRequestResponse item) {
-        if (item == null || item.request() == null) {
+        return evaluateRequest(item == null ? null : item.request());
+    }
+
+    static CollectorSafeHostMetadata evaluateRequest(HttpRequest request) {
+        if (request == null) {
             return skip(REASON_MISSING_HOST);
         }
-
-        HttpRequest request = item.request();
         if (!request.isInScope()) {
             return skip(REASON_OUT_OF_BURP_SCOPE);
         }

@@ -17566,15 +17566,15 @@ class RedactionGatewayTests(unittest.TestCase):
     def test_readme_quickstart_links_match_current_usage(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         usage = (ROOT / "docs" / "USAGE.md").read_text(encoding="utf-8")
-        command = "python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --root out"
+        command = "python -m burp_ai_redaction_gateway capture --open"
         for text in [readme, usage]:
             self.assertIn(command, text)
-            self.assertIn("New-Item -ItemType Directory -Force out", text)
-            self.assertLess(text.index("New-Item -ItemType Directory -Force out"), text.index(command))
             self.assertIn("samples/synthetic_burp_history.json", text)
             self.assertIn("10 MiB", text)
             self.assertIn("local_only/", text)
         self.assertIn("16 MiB", usage)
+        self.assertIn("New-Item -ItemType Directory -Force out", usage)
+        self.assertIn("dashboard --host 127.0.0.1 --port 8766 --root out", usage)
         for filename in ["analysis_packet.json", "chatgpt_prompt.md", "codex_task_prompt.md", "report_draft.md"]:
             self.assertIn(filename, readme)
         for target in re.findall(r"\]\(([^)]+)\)", readme):
@@ -18029,7 +18029,8 @@ class RedactionGatewayTests(unittest.TestCase):
         self.assertIn("Extensions → Installed", doc)
         self.assertIn("로컬 수신기", doc)
         self.assertIn("외부 주소로 전송하지 못하게 제한", doc)
-        self.assertIn("verify", doc)
+        self.assertIn("검증에 실패한 결과는 게시하지", doc)
+        self.assertIn("capture --open", doc)
         self.assertIn("LIVE_CAPTURE_SCOPE_DRIFT_MATRIX_v0.5.md", doc)
         self.assertIn("synthetic_live_capture_scope_drift_matrix.json", doc)
 
