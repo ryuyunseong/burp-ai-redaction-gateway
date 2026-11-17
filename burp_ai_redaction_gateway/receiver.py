@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import tempfile
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from http import HTTPStatus
@@ -15,7 +16,9 @@ from .output import write_outputs
 from .parser import event_from_montoya_handoff
 from .policy import load_policy
 from .redaction import Redactor
+from .report import write_report_draft
 from .verifier import verify_path
+from .viewer import SAFE_FILE_ALLOWLIST
 
 INGEST_PATH = "/ingest/burp-history"
 DEFAULT_HOST = "127.0.0.1"
@@ -30,6 +33,7 @@ class ReceiverConfig:
     project: str
     policy_path: Path | None = None
     max_body_bytes: int = DEFAULT_MAX_BYTES
+    complete_bundle: bool = False
 
 
 @dataclass(frozen=True)
@@ -61,15 +65,38 @@ def ingest_montoya_payload(payload: dict[str, Any], config: ReceiverConfig) -> I
     sanitized = [redactor.sanitize_event(event, 1)]
     findings = build_finding_candidates(sanitized)
     output_dir = config.output_dir / _safe_output_name(str(payload["source_event_id"]))
-    written = write_outputs(config.project, output_dir, sanitized, findings, policy)
-    verification = verify_path(output_dir, policy)
-    if not verification.passed:
-        raise ReceiverError("verification_failed", HTTPStatus.INTERNAL_SERVER_ERROR)
+    if config.complete_bundle:
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        if output_dir.exists() or output_dir.is_symlink():
+            raise ReceiverError("output_already_exists", HTTPStatus.CONFLICT)
+        # Publish only the verified report and bundle, never a half-written capture.
+        with tempfile.TemporaryDirectory(prefix=".ingest-", dir=config.output_dir) as temporary:
+            staged = Path(temporary) / "result"
+            written = write_outputs(config.project, staged, sanitized, findings, policy)
+            if not verify_path(staged, policy).passed:
+                raise ReceiverError("verification_failed", HTTPStatus.INTERNAL_SERVER_ERROR)
+            write_report_draft(staged, None, policy)
+            bundle = staged / "ai_candidates"
+            bundle.mkdir()
+            for name in SAFE_FILE_ALLOWLIST:
+                (bundle / name).write_bytes((staged / name).read_bytes())
+            if not verify_path(staged, policy).passed:
+                raise ReceiverError("verification_failed", HTTPStatus.INTERNAL_SERVER_ERROR)
+            try:
+                staged.rename(output_dir)
+            except FileExistsError:
+                raise ReceiverError("output_already_exists", HTTPStatus.CONFLICT) from None
+            files_written = len(written) + 1 + len(SAFE_FILE_ALLOWLIST)
+    else:
+        written = write_outputs(config.project, output_dir, sanitized, findings, policy)
+        if not verify_path(output_dir, policy).passed:
+            raise ReceiverError("verification_failed", HTTPStatus.INTERNAL_SERVER_ERROR)
+        files_written = len(written)
     return IngestResult(
         status="accepted",
         evidence_id=sanitized[0].evidence_id,
         output_name=output_dir.name,
-        files_written=len(written),
+        files_written=files_written,
         raw_data_included=False,
     )
 

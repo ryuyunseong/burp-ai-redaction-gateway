@@ -1,7 +1,16 @@
 # 사용 방법
 
-파일 업로드 → 민감정보 제거 → 결과 확인 순서로 사용합니다. AI에 자동으로 보내지 않습니다.
+Burp 확장으로 새 응답을 자동 수집하거나 파일을 업로드해 사용합니다. AI에 자동으로 보내지 않습니다.
 Python 3.12 이상이 필요하며 추가 Python 패키지는 설치하지 않아도 됩니다.
+
+## Burp 탐색 중 자동으로 확인하기
+
+1. [수집기 설치 안내](MONTOYA_COLLECTOR.md)에 따라 Burp에 확장 JAR를 추가하고 점검 범위를 등록합니다.
+2. README.md가 있는 폴더에서 `python -m burp_ai_redaction_gateway capture --open`을 실행합니다.
+3. Burp의 로컬 보안 점검 탭에서 자동 수집 시작을 누르고 웹을 탐색합니다.
+4. 열린 결과 화면에서 검토 후보와 보고서를 확인합니다. 별도 Export나 보고서 생성은 필요 없습니다.
+
+시작 이후 범위 안의 새 Proxy 응답만 받습니다. AI 전송은 별도 동의가 필요합니다. 확장의 중지로 수집을 멈추고, `Ctrl+C`로 수신기와 대시보드를 종료합니다. 파일만 처리하려면 아래 순서를 사용하세요.
 
 ## 1. 대시보드 열기
 
@@ -22,11 +31,9 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 3. 작업 이름에 `demo`를 입력하고 민감정보 제거 시작을 누릅니다.
 4. 결과 파일 확인에서 보고서와 AI에 보낼 검토 요청문을 읽고, 필요한 파일만 내려받습니다.
 
-네 파일을 한 폴더에 모으려면 파일 4개 내보내기를 누르세요. `exports/dashboard/` 아래에 복사됩니다.
-파일 용도는 [결과 파일 안내](OUTPUT_BUNDLE_GUIDE_KO_v0.6.md)를 참고하세요.
+네 파일을 모으려면 파일 4개 내보내기를 누르세요. `exports/dashboard/` 아래에 복사됩니다. 용도는 [결과 파일 안내](OUTPUT_BUNDLE_GUIDE_KO_v0.6.md)를 참고하세요.
 
-다시 처리할 때는 `demo2`처럼 새 작업 이름을 쓰세요. 이름은 영문이나 숫자로 시작해야 합니다.
-영문·숫자·밑줄·하이픈으로 최대 64자까지 쓸 수 있습니다. 실제 고객명이나 주소는 넣지 마세요.
+다시 처리할 때는 `demo2`처럼 새 작업 이름을 쓰세요. 영문이나 숫자로 시작하며 영문·숫자·밑줄·하이픈으로 최대 64자까지 쓸 수 있습니다. 실제 고객명이나 주소는 넣지 마세요.
 
 ## AI로 점검 가이드 받기 (선택)
 
@@ -34,16 +41,14 @@ python -m burp_ai_redaction_gateway dashboard --host 127.0.0.1 --port 8766 --roo
 2. 전송할 전체 내용을 읽고 동의한 뒤 AI 검토 요청을 누릅니다.
 3. Burp 재현 절차와 정상·취약 의심 기준을 비교하고, 확인된 문제에 맞춰 권고 조치를 검토합니다.
 
-OpenAI API 키가 필요하며 요금이 발생할 수 있습니다. [키 연결과 실제 실행 화면](AI_REVIEW.md)을 먼저 확인하세요.
-[가상 샘플 결과](examples/ai_review.md)에는 접근 권한과 쿠키 설정 후보의 점검 예시가 있습니다.
+OpenAI API 키가 필요하며 요금이 발생할 수 있습니다. [키 연결과 실제 실행 화면](AI_REVIEW.md), [가상 샘플 점검 예시](examples/ai_review.md)를 참고하세요.
 AI 제안은 확정 취약점이 아니며, 외부 전송 전 민감정보가 남아 있지 않은지 직접 확인해야 합니다.
 
 터미널에서도 [후보 목록 조회·AI 검토](AI_REVIEW.md#터미널에서-사용하기)를 할 수 있습니다. Codex에서 읽으려면 [읽기 전용 MCP](READ_ONLY_MCP.md)를 사용하세요.
 
 ## 3. 내 Burp 기록 사용하기
 
-Burp의 Proxy → HTTP history에서 필요한 요청을 선택하고, 우클릭한 뒤 Save items로 XML 파일을 저장하세요.
-원본은 `local_only/`에 보관하고 Git에 올리지 마세요. 저장한 파일을 2단계에서 선택하면 됩니다.
+Burp의 Proxy → HTTP history에서 요청을 선택하고, 우클릭 → Save items로 XML을 저장하세요. 원본은 `local_only/`에 보관하고 Git에 올리지 마세요. 저장한 파일을 2단계에서 선택하면 됩니다.
 
 | 실행 방법 | 입력 파일 | 최대 크기 |
 | --- | --- | --- |
@@ -63,8 +68,7 @@ python -m burp_ai_redaction_gateway process --input samples/synthetic_burp_histo
 내 XML은 `--input local_only/history.xml`처럼 입력 위치만 바꾸면 됩니다.
 `--project`는 작업 이름, `--output`은 새 결과 폴더입니다. 기존 폴더는 덮어쓰지 않습니다. 다시 실행할 때는 `--output out/demo2 --project demo2`처럼 둘 다 바꾸세요.
 
-민감정보 제거와 검증, 보고서 작성을 마치면 결과 폴더의 `ai_candidates/`에 파일 4개가 모입니다. 입력 원본은 수정하지 않습니다.
-검사에 실패하면 전달 후보 폴더를 만들지 않습니다. 중간 파일이 남을 수 있으니 공유하지 마세요.
+처리가 끝나면 결과의 `ai_candidates/`에 파일 4개가 모입니다. 입력 원본은 수정하지 않습니다. 검사에 실패하면 전달 후보 폴더를 만들지 않습니다. 중간 파일이 남을 수 있으니 공유하지 마세요.
 
 ## 문제가 생겼을 때
 
@@ -94,8 +98,7 @@ python -m burp_ai_redaction_gateway process --input samples/synthetic_burp_histo
 <details>
 <summary>개발·고급 사용 참고</summary>
 
-결과 화면의 공유 전 추가 점검에서는 파일과 검사 상태만 확인합니다. 파일을 수정하거나 처리를 실행하지 않습니다.
-파일 처리는 위의 ‘명령어로 처리하기’를 따르면 됩니다. 선택 설정은 [구성과 추가 설정](REFERENCE.md)에 모았습니다.
+결과 화면의 공유 전 추가 점검은 조회 전용입니다. 파일 처리는 위의 명령어로 처리하기, 선택 설정은 [구성과 추가 설정](REFERENCE.md)을 참고하세요.
 기존 `review --export-dir`은 분석 파일과 프롬프트 3개만 복사합니다. 보고서를 포함한 4개 파일에는 `process` 또는 대시보드 내보내기를 사용하세요.
 
 </details>

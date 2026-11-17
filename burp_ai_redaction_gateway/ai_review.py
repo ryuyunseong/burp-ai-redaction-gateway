@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from .scanner import scan_text
+from .va_classification import classify_candidate, va_label
 
 
 MODEL = "gpt-6-luna"
@@ -69,7 +70,11 @@ INSTRUCTIONS = (
     "접근 권한 점검에는 허가된 테스트 계정 A와 B의 역할·자료 소유권을 먼저 확인하고 세션을 유지한 교차 접근 결과를 비교하도록 제안하세요. "
     "SameSite=None은 속성 누락이 아닙니다. Secure 누락과 구분하고 관찰되지 않은 쿠키 속성을 추측하지 마세요. "
     "실제 요청 전송, 코드 실행, 파일 접근, 외부 조회를 하지 마세요. 후보 번호는 입력과 같아야 합니다. "
-    "summary는 검토 후보라는 표현을 포함하고, 각 목록은 핵심 1~4개로 짧게 정리하세요."
+    "summary는 검토 후보라는 표현을 포함하고, 각 목록은 핵심 1~4개로 짧게 정리하세요. "
+    "VA-01~VA-30은 사용자가 제공한 프로젝트 점검 분류입니다. 후보별 va_classifications를 기준으로 설명하세요. "
+    "code와 subcategory는 로컬 기준이며 바꾸거나 추측하지 마세요. 하위 분류가 없으면 미정으로 유지하세요. "
+    "reference는 참고 분류일 뿐 해당 취약점의 탐지 결과가 아닙니다. unmapped는 분류 미정으로 설명하고 VA 코드를 붙이지 마세요. "
+    "모든 VA 항목을 검사했거나 미점검 항목이 정상이라고 쓰지 마세요. 다른 코드나 하위 항목을 추가하지 마세요. "
 )
 
 
@@ -156,7 +161,10 @@ def prepare_review(project: str, directory: Path, candidate_ids: list[str], *, m
     if any(value not in by_id for value in candidate_ids):
         raise AiReviewError("invalid_candidate_selection")
     selected = [{name: by_id[value].get(name) for name in INPUT_FIELDS} for value in candidate_ids]
-    payload = {"schema_version": "ai-review-input-v1", "raw_data_included": False, "candidates": selected}
+    payload = {
+        "schema_version": "ai-review-input-v1", "raw_data_included": False, "candidates": selected,
+        "va_classifications": {item["finding_id"]: classify_candidate(item["type"]) for item in selected},
+    }
     text = json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False)
     _check_text(text)
     if len(text.encode("utf-8")) > MAX_INPUT_BYTES:
@@ -279,6 +287,7 @@ def validate_response(response: dict[str, Any], draft: ReviewDraft) -> dict[str,
     if len(reviews) != len(draft.candidate_ids):
         raise AiReviewError("invalid_ai_response")
     seen: set[str] = set()
+    candidate_types = {item["finding_id"]: item["type"] for item in json.loads(draft.input_json)["candidates"]}
     for review in reviews:
         if not isinstance(review, dict) or set(review) != REVIEW_FIELDS:
             raise AiReviewError("invalid_ai_response")
@@ -301,6 +310,10 @@ def validate_response(response: dict[str, Any], draft: ReviewDraft) -> dict[str,
                 raise AiReviewError("invalid_ai_response")
             if any(not isinstance(text, str) or not 1 <= len(text.strip()) <= 1000 or not re.search(r"[가-힣]", text) for text in items):
                 raise AiReviewError("invalid_ai_response")
+        expected_code = classify_candidate(candidate_types[finding_id])["code"]
+        for match in re.finditer(r"\bVA[- ]?(\d{1,2})\b", json.dumps(review, ensure_ascii=False), re.IGNORECASE):
+            if f"VA-{int(match[1]):02d}" != expected_code:
+                raise AiReviewError("ai_response_va_mismatch")
     try:
         _check_text(json.dumps(parsed, ensure_ascii=False))
     except AiReviewError:
@@ -375,7 +388,11 @@ def render_text_review(result: dict[str, Any]) -> str:
     lines = [f"AI 점검 가이드 · {result['model']}", "검토 후보입니다. 재현 전에는 취약점으로 확정하지 않습니다.", ""]
     for review in result["reviews"]:
         label = CANDIDATE_LABELS.get(result["candidate_types"][review["finding_id"]], "점검 항목")
-        lines.extend([f"{review['finding_id']} · {label} · {ASSESSMENTS[review['assessment']]}", review["summary"], "", "관찰 근거와 제한사항"])
+        kind = result["candidate_types"][review["finding_id"]]
+        classification = classify_candidate(kind)
+        lines.extend([f"{review['finding_id']} · {label} · {ASSESSMENTS[review['assessment']]}",
+                      f"점검 기준: {va_label(kind)}", f"세부 항목: {classification['subcategory'] or '미정'}",
+                      classification["reason"], review["summary"], "", "관찰 근거와 제한사항"])
         lines.extend(f"- {value}" for value in review["evidence_notes"])
         lines.append("Burp 재현 절차")
         lines.extend(f"{index}. {value}" for index, value in enumerate(review["manual_checks"], 1))

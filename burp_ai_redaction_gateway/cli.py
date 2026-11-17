@@ -7,6 +7,7 @@ import webbrowser
 from pathlib import Path
 
 from . import ai_review
+from .va_classification import va_label
 from .audit_compressed_hmac import (
     AuditCompressedHmacError,
     create_compressed_audit_hmac_manifest,
@@ -213,7 +214,25 @@ def main(argv: list[str] | None = None) -> int:
     serve.add_argument("--policy", type=Path, help="Optional policy.json path.")
     serve.add_argument("--max-bytes", default=DEFAULT_MAX_BYTES, type=int, help="Maximum accepted JSON payload bytes.")
 
+    capture = subparsers.add_parser("capture", help="Burp 자동 수집용 로컬 수신기와 대시보드를 함께 실행합니다.")
+    capture.add_argument("--root", type=Path, default=Path("out"), help="마스킹한 결과를 저장할 폴더")
+    capture.add_argument("--receiver-port", type=int, default=8765, help="Burp 수신 포트")
+    capture.add_argument("--port", type=int, default=8766, help="대시보드 포트")
+    capture.add_argument("--policy", type=Path, help="마스킹 정책 파일")
+    capture.add_argument("--open", action="store_true", help="브라우저에서 결과 화면을 엽니다.")
+
     args = parser.parse_args(argv)
+    if args.command == "capture":
+        from .capture import run_capture
+        try:
+            return run_capture(args.root, args.receiver_port, args.port, args.policy, open_browser=args.open)
+        except (ReceiverError, DashboardError) as error:
+            print(f"자동 수집 도구를 시작하지 못했습니다: {error.error_type}")
+            print("이미 실행 중인 도구가 있는지 확인하세요. 포트를 바꿀 때는 Burp 전송 주소도 맞춰 주세요.")
+            return 1
+        except OSError:
+            print("자동 수집 결과 폴더에 접근하지 못했습니다. 경로와 쓰기 권한을 확인하세요.")
+            return 1
     if args.command == "process":
         return _process(args.input, args.output, args.project, args.policy)
     if args.command == "generate":
@@ -415,7 +434,7 @@ def _ai_review_command(input_dir: Path, candidate_ids: list[str], model: str, se
             print(f"점검 후보 {len(candidates)}개 · 외부 전송 없음")
             for candidate in candidates:
                 label = ai_review.CANDIDATE_LABELS.get(candidate["type"], "점검 항목")
-                print(ai_review.terminal_text(f"{candidate['finding_id']} · {label} · {candidate['affected_endpoint']}"))
+                print(ai_review.terminal_text(f"{candidate['finding_id']} · {va_label(candidate['type'])} · {label} · {candidate['affected_endpoint']}"))
             return 0
         session = ai_review.ReviewSession()
         token, draft = session.prepare("cli_review", input_dir, candidate_ids, model=model)

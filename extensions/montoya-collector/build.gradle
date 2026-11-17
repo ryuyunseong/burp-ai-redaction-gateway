@@ -42,3 +42,12 @@ tasks.register('collectorScopeMatrixTest', JavaExec) {
 }
 
 check.dependsOn collectorScopeMatrixTest
+
+tasks.register('liveCollectorTest', JavaExec) {
+    group = 'verification'
+    description = 'Checks opt-in live capture with an isolated loopback receiver.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.ryuyunseong.burpai.redactiongateway.LiveCollectorTest'
+}
+
+check.dependsOn liveCollectorTest

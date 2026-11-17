@@ -51,6 +51,7 @@ from .risk import DEFAULT_RISK_RATING_PROFILE, RISK_RATING_PROFILE_NAMES
 from .redaction import Redactor
 from .scanner import assert_no_sensitive_text, scan_text
 from .verifier import VerificationResult, verify_path
+from .va_classification import VA_CATALOG, SCOPE_LABELS, catalog_scope, classify_candidate, va_label
 
 
 DEFAULT_DASHBOARD_HOST = "127.0.0.1"
@@ -408,6 +409,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             parsed = urlsplit(self.path)
             if parsed.path == "/":
                 self._send_html(render_home(self.server.config.root, self.server.policy))
+                return
+            if parsed.path == "/burp":
+                self._send_html(render_burp_capture(self.server.config.root, self.server.policy))
                 return
             if parsed.path == "/settings":
                 self._send_html(render_settings(self.server.config.root))
@@ -1273,6 +1277,7 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
             <p class="subtitle">검증을 통과한 기록과 보고서 초안</p>
           </div>
           <nav class="actions" aria-label="주요 메뉴">
+            <a class="button secondary" href="/burp">Burp 자동 수집</a>
             <a class="button" href="/upload">파일 업로드</a>
             <a class="button secondary" href="/help">도움말</a>
             <a class="button secondary" href="/settings">설정</a>
@@ -1300,6 +1305,39 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
         </details>
         """,
     )
+
+
+def render_burp_capture(root: Path, policy: RedactionPolicy) -> str:
+    outputs, _ = _discover_outputs(root, policy)
+    live_outputs = [output for output in outputs if output.output_id.startswith("burp_live/")]
+    live_outputs.sort(key=lambda output: output.path.stat().st_mtime_ns, reverse=True)
+    rows = []
+    for output in live_outputs[:50]:
+        candidates = _load_candidates(output.path)
+        endpoint = _report_text(str(candidates[0].get("affected_endpoint", ""))) if candidates else "검토 후보 없음"
+        labels = list(dict.fromkeys(va_label(item.get("type")) for item in candidates))
+        rows.append(
+            f'<tr><td><code>{_h(endpoint)}</code></td><td>{len(candidates)}개<br>{"<br>".join(_h(label) for label in labels)}</td>'
+            f'<td><a class="button small" href="{_output_href(output.output_id)}">결과 보기</a> '
+            f'<a href="{_preview_href(output.output_id, "report_draft.md")}">보고서</a></td></tr>'
+        )
+    records = ('<table class="capture-table"><thead><tr><th>요청</th><th>검토 후보</th><th>확인</th></tr></thead>'
+               f'<tbody>{"".join(rows)}</tbody></table>') if rows else '<p class="empty-state">아직 받은 응답이 없습니다.</p>'
+    return _page("Burp 자동 수집", f"""
+        <header class="topbar"><div><a class="back" href="/">처리한 기록으로</a><h1>Burp 자동 수집</h1>
+        <p class="subtitle">수신 → 민감정보 제거 → 검증 → 검토 후보·보고서 생성</p></div>
+        <a class="button secondary" href="/burp">새로고침</a></header>
+        <section class="workspace-section"><h2>새 응답의 점검 결과</h2>
+        <p>Burp의 로컬 보안 점검 탭에서 자동 수집을 시작하세요. 이 화면은 5초마다 갱신됩니다.</p>
+        {records}</section>
+        <p class="review-note">최근 50개 결과를 표시합니다. 전체 기록은 첫 화면에서 확인할 수 있습니다.
+        후보가 없어도 모든 VA 항목이 정상이라는 뜻은 아닙니다. AI로 자동 전송하지 않습니다.</p>
+        <details class="secondary-details"><summary>연결 방법과 수집 범위</summary>
+        <p><code>python -m burp_ai_redaction_gateway capture --open</code>으로 수신기와 대시보드를 함께 실행합니다.
+        Burp에 수집기를 설치하고 점검 범위를 지정한 다음 자동 수집 시작을 누릅니다.</p>
+        <p>시작 이후 점검 범위의 새 Proxy 응답만 받습니다. 과거 기록·범위 밖 요청은 자동 수집하지 않습니다.
+        원문은 로컬 수신기에서 메모리로 처리하며 로그에 남기지 않습니다. 요청 재전송·능동 스캔은 하지 않습니다.</p></details>
+        """, refresh_seconds=5)
 
 
 def render_settings(root: Path) -> str:
@@ -1550,7 +1588,23 @@ def _ai_review_header(project: str = "", stage: int = 1) -> str:
 
 
 def _ai_candidate_title(candidate_type: str, title: str) -> str:
-    return ai_review.CANDIDATE_LABELS.get(candidate_type, _report_text(title))
+    label = ai_review.CANDIDATE_LABELS.get(candidate_type, _report_text(title))
+    value = classify_candidate(candidate_type)
+    return f"{value['code']} {value['title']} · {label}" if value["code"] else label
+
+
+def _va_catalog_details(kinds: list[str]) -> str:
+    scope = catalog_scope(kinds)
+    items = "".join(
+        f'<li><code>{item.code}</code> {_h(item.title)} · {_h(SCOPE_LABELS[scope[item.code]])}'
+        f'<br><small>{_h(" / ".join(item.subcategories) or "별도 세부 항목 없음")}</small></li>'
+        for item in VA_CATALOG
+    )
+    return ('<details class="secondary-details"><summary>VA-01~VA-30 분류와 점검 범위</summary>'
+            '<p>프로젝트 점검 분류입니다. 관련 후보는 확정 취약점이 아니며, 참고 신호와 미점검 항목을 정상으로 판단하지 마세요. '
+            '표시는 분야 단위이며, 나열한 세부 항목 전체를 검사했다는 뜻이 아닙니다. '
+            '모바일·비밀번호 정책·포트·TLS 등은 별도 점검이 필요합니다.</p>'
+            f'<ul>{items}</ul></details>')
 
 
 def render_ai_review_selection(output: DashboardOutput, csrf_token: str) -> str:
@@ -1559,7 +1613,8 @@ def render_ai_review_selection(output: DashboardOutput, csrf_token: str) -> str:
     choices = "".join(
         f'<label class="ai-choice"><input type="checkbox" name="candidates" value="{_h(item["finding_id"])}">'
         f'<span class="ai-choice-title"><code>{_h(item["finding_id"])}</code>'
-        f'<strong>{_h(_ai_candidate_title(item["type"], item["title"]))}</strong></span>'
+        f'<strong>{_h(_ai_candidate_title(item["type"], item["title"]))}</strong>'
+        f'<small>{_h(va_label(item["type"]))}</small></span>'
         f'<code class="ai-endpoint">{_h(item["affected_endpoint"])}</code></label>'
         for item in candidates
     )
@@ -1577,6 +1632,7 @@ def render_ai_review_selection(output: DashboardOutput, csrf_token: str) -> str:
             <div class="ai-submit-bar"><span>다음 단계에서 전송 내용을 확인합니다.</span>
               <button class="button" type="submit" {'disabled' if not candidates else ''}>전송할 내용 확인</button></div>
           </form>
+          {_va_catalog_details([item['type'] for item in candidates])}
         </section><aside class="ai-context">
           <h2>전송 범위</h2><dl><dt>포함</dt><dd>선택한 후보의 마스킹된 요약과 근거</dd>
           <dt>제외</dt><dd>원본 요청·응답, 파일 경로, 선택하지 않은 후보</dd></dl>
@@ -1590,6 +1646,7 @@ def render_ai_review_confirmation(draft: ai_review.ReviewDraft, token: str, csrf
     payload = json.loads(draft.input_json)
     rows = "".join(
         f'<section class="ai-preview"><h3><code>{_h(item["finding_id"])}</code> · {_h(_ai_candidate_title(item["type"], item["title"]))}</h3>'
+        f'<p>{_h(va_label(item["type"]))}</p>'
         f'<p class="ai-endpoint">{_h(item["affected_endpoint"])}</p>{_bullets([_report_text(str(value)) for value in item.get("rationale") or []])}</section>'
         for item in payload["candidates"]
     )
@@ -1624,6 +1681,11 @@ def render_ai_review_result(project: str, result: dict[str, Any]) -> str:
         finding_id = item["finding_id"]
         return _ai_candidate_title(result.get("candidate_types", {}).get(finding_id, ""), result.get("candidate_titles", {}).get(finding_id, ""))
 
+    def classification(item: dict[str, Any]) -> str:
+        kind = result.get("candidate_types", {}).get(item["finding_id"], "")
+        value = classify_candidate(kind)
+        return f'<p>점검 기준: {_h(va_label(kind))}<br>세부 항목: {_h(value["subcategory"] or "미정")}<br>{_h(value["reason"])}</p>'
+
     navigation = "".join(
         f'<li><a href="#review-{_h(item["finding_id"])}"><code>{_h(item["finding_id"])}</code><span>{_h(title(item))}</span></a></li>'
         for item in result["reviews"]
@@ -1632,6 +1694,7 @@ def render_ai_review_result(project: str, result: dict[str, Any]) -> str:
         f'<article class="ai-result" id="review-{_h(item["finding_id"])}">'
         f'<header class="ai-section-heading"><h2><code>{_h(item["finding_id"])}</code> · {_h(title(item))}</h2>'
         f'<span class="ai-assessment">{_h(ai_review.ASSESSMENTS[item["assessment"]])}</span></header>'
+        + classification(item) +
         f'<p class="ai-review-summary">{_h(item["summary"])}</p>'
         f'<section class="ai-evidence"><h3>관찰 근거와 제한사항</h3>{_bullets(item["evidence_notes"])}</section>'
         '<div class="ai-check-grid"><section><h3>Burp 재현 절차</h3><ol class="ai-procedure">'
@@ -1676,6 +1739,7 @@ def render_ai_review_error(code: str) -> str:
         "ai_response_refused": "AI가 응답을 거절했거나 지원하지 않는 형식으로 응답했습니다.",
         "ai_response_sensitive_blocked": "AI 응답에서 민감정보로 의심되는 내용을 발견해 표시를 차단했습니다. API 이용량을 확인하세요.",
         "invalid_ai_response": "AI 응답이 후보 번호·한글 검토 형식에 맞지 않아 표시하지 않았습니다.",
+        "ai_response_va_mismatch": "AI 응답의 VA 코드가 선택한 후보의 분류와 달라 표시하지 않았습니다. 자동으로 다시 보내지 않습니다.",
         "review_confirmation_expired": "확인이 만료됐거나 이미 요청한 내용입니다. 후보를 다시 선택하세요.",
         "review_source_changed": "확인 이후 분석 파일이 바뀌어 전송을 취소했습니다. 내용을 다시 확인하세요.",
         "review_consent_required": "내용을 확인한 뒤 전송 동의란을 선택하세요.",
@@ -2057,6 +2121,8 @@ def _discover_outputs(root: Path, policy: RedactionPolicy) -> tuple[list[Dashboa
     blocked = 0
     for marker in sorted(root.rglob(OUTPUT_MARKER_FILE)):
         output_dir = marker.parent
+        if any(part.startswith(".ingest-") for part in output_dir.relative_to(root).parts):
+            continue
         if output_dir.name == "ai_candidates" and (output_dir.parent / OUTPUT_MARKER_FILE).is_file():
             continue
         try:
@@ -2968,6 +3034,8 @@ def _resolve_output_dir(root: Path, output_id: str) -> Path:
     if relative.is_absolute():
         raise DashboardError("absolute_output_path_forbidden", HTTPStatus.FORBIDDEN)
     _reject_forbidden_parts(relative.parts)
+    if any(part.startswith(".ingest-") for part in relative.parts):
+        raise DashboardError("output_not_ready", HTTPStatus.FORBIDDEN)
     if not relative.parts or any(part in {"", ".", ".."} for part in relative.parts):
         raise DashboardError("invalid_output_id", HTTPStatus.BAD_REQUEST)
     candidate = (root / relative).resolve()
@@ -3223,6 +3291,7 @@ def _candidate_card(candidate: dict[str, Any]) -> str:
         <div>
           <span class="kicker">탐지 후보</span>
           <h3>{_h(finding_id)} - {_h(title)}</h3>
+          <p>{_h(va_label(kind))}</p>
           <p>{_h(kind)} / {_h(endpoint)}</p>
         </div>
         <div class="status-stack">
@@ -3769,13 +3838,15 @@ def _h(value: Any) -> str:
     return html.escape(str(value), quote=True)
 
 
-def _page(title: str, body: str, *, page_class: str = "") -> str:
+def _page(title: str, body: str, *, page_class: str = "", refresh_seconds: int | None = None) -> str:
     body_attributes = f' class="{_h(page_class)}"' if page_class else ""
+    refresh = '<meta http-equiv="refresh" content="5">' if refresh_seconds == 5 else ""
     return f"""<!doctype html>
 <html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  {refresh}
   <title>{_h(title)} - Burp AI Redaction Gateway</title>
   <style>
     :root {{
@@ -3835,6 +3906,9 @@ def _page(title: str, body: str, *, page_class: str = "") -> str:
     .record-actions {{ display: flex; flex-wrap: wrap; gap: 6px; }}
     .records-table th:first-child {{ width: 22%; }}
     .records-table th:last-child {{ width: 28%; }}
+    .capture-table th:first-child {{ width: 25%; }}
+    .capture-table th:last-child {{ width: 20%; }}
+    .capture-table td {{ overflow-wrap: anywhere; line-height: 1.6; }}
     .result-table th:first-child {{ width: 35%; }}
     .result-table th:last-child:not(:nth-child(2)) {{ width: 18%; }}
     .result-table td {{ overflow-wrap: anywhere; line-height: 1.6; }}
@@ -4025,6 +4099,11 @@ def _page(title: str, body: str, *, page_class: str = "") -> str:
       .summary-line {{ gap: 8px 18px; }}
       .records-table th:nth-child(2), .records-table td:nth-child(2), .records-table th:nth-child(5), .records-table td:nth-child(5) {{ display: none; }}
       .records-table th:first-child, .records-table th:last-child {{ width: 50%; }}
+      .capture-table thead {{ display: none; }}
+      .capture-table, .capture-table tbody, .capture-table tr, .capture-table td {{ display: block; width: 100%; }}
+      .capture-table tr {{ border-bottom: 1px solid var(--border); padding: 12px 0; }}
+      .capture-table td {{ border: 0; padding: 6px 0; }}
+      .capture-table td:last-child {{ display: flex; align-items: center; gap: 16px; }}
       .result-table th, .result-table td {{ display: table-cell; }}
       .result-table {{ table-layout: fixed; }}
       .result-table th:first-child {{ width: 40%; }}
