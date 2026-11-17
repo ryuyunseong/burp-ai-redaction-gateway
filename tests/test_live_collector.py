@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import io
 import json
+import os
 import socket
 import tempfile
 import threading
@@ -10,13 +11,13 @@ import unittest
 from contextlib import redirect_stdout
 from http import HTTPStatus
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from burp_ai_redaction_gateway.capture import run_capture
 from burp_ai_redaction_gateway.cli import main
 from burp_ai_redaction_gateway.dashboard import DashboardConfig, DashboardError, create_dashboard_server, render_burp_capture
 from burp_ai_redaction_gateway.policy import load_policy
-from burp_ai_redaction_gateway.receiver import ReceiverConfig, ReceiverError, create_server, ingest_montoya_payload
+from burp_ai_redaction_gateway.receiver import ReceiverConfig, ReceiverError, _IngestHandler, create_server, ingest_montoya_payload
 from burp_ai_redaction_gateway.scanner import assert_no_sensitive_text
 from burp_ai_redaction_gateway.verifier import verify_path
 from burp_ai_redaction_gateway.viewer import SAFE_FILE_ALLOWLIST
@@ -68,6 +69,17 @@ class LiveCollectorTests(unittest.TestCase):
                 ingest_montoya_payload(self.payload(), config)
             self.assertEqual(caught.exception.status, HTTPStatus.CONFLICT)
             self.assertEqual(path.read_bytes(), before)
+
+    def test_capture_page_normalizes_relative_result_root_before_boundary_checks(self):
+        with tempfile.TemporaryDirectory(prefix="burp-live-root-", dir=ROOT.parent) as temporary:
+            root = Path(temporary)
+            config = ReceiverConfig(root / "burp_live", "burp_live", complete_bundle=True)
+            ingest_montoya_payload(self.payload(), config)
+            relative = Path(os.path.relpath(root, Path.cwd()))
+            self.assertFalse(relative.is_absolute())
+            html = render_burp_capture(relative, load_policy())
+            self.assertIn("VA-16", html)
+            self.assertIn("burp-live-fixture-1", html)
 
     def test_failed_verification_does_not_publish_partial_result(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -126,6 +138,24 @@ class LiveCollectorTests(unittest.TestCase):
                 self.assertRegex(browser.call_args.args[0], r"^http://127\.0\.0\.1:\d+/burp$")
             self.assertIn("종료했습니다", text.getvalue())
             self.assertNotIn(temporary, text.getvalue())
+
+    def test_rejected_body_drain_is_bounded_and_preserves_timeout(self):
+        handler = object.__new__(_IngestHandler)
+        handler.receiver_config = ReceiverConfig(Path("out"), "test")
+        handler.connection = MagicMock()
+        handler.connection.gettimeout.return_value = 2.0
+        for length in ("2", "20000", "invalid"):
+            with self.subTest(length=length):
+                handler.headers = {"Content-Length": length}
+                handler.rfile = io.BytesIO(b"{}")
+                handler._discard_rejected_body()
+                self.assertEqual(handler.rfile.tell(), 2 if length == "2" else 0)
+        handler.connection.settimeout.assert_called_with(2.0)
+        handler.headers = {"Content-Length": "2"}
+        handler.rfile = MagicMock()
+        handler.rfile.read1.side_effect = TimeoutError()
+        handler._discard_rejected_body()
+        handler.connection.settimeout.assert_called_with(2.0)
 
     def test_dashboard_port_failure_releases_receiver_port(self):
         with tempfile.TemporaryDirectory() as temporary:

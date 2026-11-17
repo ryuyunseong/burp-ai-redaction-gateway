@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import tempfile
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from http import HTTPStatus
@@ -167,6 +168,7 @@ class _IngestHandler(BaseHTTPRequestHandler):
             raise ReceiverError("non_loopback_client_rejected", HTTPStatus.FORBIDDEN)
         content_type = self.headers.get("Content-Type", "")
         if not content_type.lower().startswith("application/json"):
+            self._discard_rejected_body()
             raise ReceiverError("invalid_content_type", HTTPStatus.UNSUPPORTED_MEDIA_TYPE)
         content_length = self.headers.get("Content-Length")
         if content_length is None or not content_length.isdigit():
@@ -188,6 +190,31 @@ class _IngestHandler(BaseHTTPRequestHandler):
                 "raw_data_included": result.raw_data_included,
             },
         )
+
+    def _discard_rejected_body(self) -> None:
+        try:
+            size = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return
+        if not 0 < size <= min(self.receiver_config.max_body_bytes, 16 * 1024):
+            return
+        previous_timeout = self.connection.gettimeout()
+        deadline = time.monotonic() + 0.25
+        try:
+            while size > 0:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                self.connection.settimeout(min(previous_timeout, remaining) if previous_timeout is not None else remaining)
+                chunk = self.rfile.read1(min(size, 4096))
+                if not chunk:
+                    break
+                size -= len(chunk)
+        except OSError:
+            # A timed-out or disconnected body remains rejected.
+            pass
+        finally:
+            self.connection.settimeout(previous_timeout)
 
     def _write_json(self, status: HTTPStatus, payload: dict[str, Any]) -> None:
         data = json.dumps(payload, sort_keys=True).encode("utf-8")

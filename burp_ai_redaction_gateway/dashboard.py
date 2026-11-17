@@ -1308,6 +1308,7 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
 
 
 def render_burp_capture(root: Path, policy: RedactionPolicy) -> str:
+    root = _validated_root(root)
     outputs, _ = _discover_outputs(root, policy)
     live_outputs = [output for output in outputs if output.output_id.startswith("burp_live/")]
     live_outputs.sort(key=lambda output: output.path.stat().st_mtime_ns, reverse=True)
