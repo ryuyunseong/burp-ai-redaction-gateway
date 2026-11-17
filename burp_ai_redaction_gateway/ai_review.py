@@ -20,6 +20,8 @@ from .va_classification import classify_candidate, va_label
 
 
 MODEL = "gpt-6-luna"
+CODEX = "codex"
+CODEX_LABEL = "Codex · ChatGPT 구독"
 CHAT_DESTINATIONS = {"chatgpt": "ChatGPT 구독", "other": "다른 모델의 대화창"}
 MODELS = {
     "gpt-6-luna": "기본형 · GPT-6 Luna",
@@ -150,7 +152,7 @@ def list_review_candidates(directory: Path) -> list[dict[str, Any]]:
 
 
 def prepare_review(project: str, directory: Path, candidate_ids: list[str], *, model: str = MODEL) -> ReviewDraft:
-    if not isinstance(model, str) or model not in MODELS:
+    if not isinstance(model, str) or (model not in MODELS and model != CODEX):
         raise AiReviewError("unsupported_ai_model")
     if not 1 <= len(candidate_ids) <= MAX_CANDIDATES:
         raise AiReviewError("select_one_to_five_candidates")
@@ -167,6 +169,11 @@ def prepare_review(project: str, directory: Path, candidate_ids: list[str], *, m
         "schema_version": "ai-review-input-v1", "raw_data_included": False, "candidates": selected,
         "va_classifications": {item["finding_id"]: classify_candidate(item["type"]) for item in selected},
     }
+    if model == CODEX:
+        from .codex_review import REVIEW_TASK, candidate_metadata
+
+        payload["review_task"] = REVIEW_TASK
+        payload["candidates"] = [candidate_metadata(item) for item in selected]
     text = json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False)
     _check_text(text)
     if len(text.encode("utf-8")) > MAX_INPUT_BYTES:
@@ -217,9 +224,7 @@ def api_key_configured() -> bool:
         return False
 
 
-def build_request(draft: ReviewDraft) -> dict[str, Any]:
-    if not isinstance(draft.model, str) or draft.model not in MODELS:
-        raise AiReviewError("unsupported_ai_model")
+def review_schema(draft: ReviewDraft) -> dict[str, Any]:
     string_list = {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 4}
     properties = {
         "finding_id": {"type": "string", "enum": list(draft.candidate_ids)},
@@ -231,6 +236,16 @@ def build_request(draft: ReviewDraft) -> dict[str, Any]:
         "issue_result": {"type": "string"},
         "remediation": string_list,
     }
+    return {"type": "object", "additionalProperties": False, "required": ["reviews"], "properties": {
+        "reviews": {"type": "array", "minItems": len(draft.candidate_ids), "maxItems": len(draft.candidate_ids),
+                    "items": {"type": "object", "additionalProperties": False,
+                              "required": list(properties), "properties": properties}},
+    }}
+
+
+def build_request(draft: ReviewDraft) -> dict[str, Any]:
+    if not isinstance(draft.model, str) or draft.model not in MODELS:
+        raise AiReviewError("unsupported_ai_model")
     return {
         "model": draft.model,
         "store": False,
@@ -242,11 +257,7 @@ def build_request(draft: ReviewDraft) -> dict[str, Any]:
         "input": [{"role": "user", "content": draft.input_json}],
         "text": {"format": {
             "type": "json_schema", "name": "candidate_review", "strict": True,
-            "schema": {"type": "object", "additionalProperties": False, "required": ["reviews"], "properties": {
-                "reviews": {"type": "array", "minItems": len(draft.candidate_ids), "maxItems": len(draft.candidate_ids),
-                            "items": {"type": "object", "additionalProperties": False,
-                                      "required": list(properties), "properties": properties}},
-            }},
+            "schema": review_schema(draft),
         }},
     }
 
@@ -379,10 +390,16 @@ class ReviewSession:
             if refreshed.source_digest != draft.source_digest or refreshed.input_json != draft.input_json:
                 raise AiReviewError("review_source_changed")
             _check_text(draft.input_json)
-            result = validate_response(_request_openai(build_request(draft), _load_api_key()), draft)
+            if draft.model == CODEX:
+                from .codex_review import request_review
+
+                response = request_review(draft)
+            else:
+                response = _request_openai(build_request(draft), _load_api_key())
+            result = validate_response(response, draft)
             result["candidate_titles"] = {item["finding_id"]: item.get("title") or item.get("type") for item in json.loads(draft.input_json)["candidates"]}
             result["candidate_types"] = {item["finding_id"]: item["type"] for item in json.loads(draft.input_json)["candidates"]}
-            result["model"] = draft.model
+            result["model"] = CODEX_LABEL if draft.model == CODEX else draft.model
             result_id = secrets.token_urlsafe(24)
             with self._lock:
                 if len(self._results) >= MAX_SESSION_ITEMS:
@@ -414,7 +431,7 @@ def render_text_review(result: dict[str, Any]) -> str:
                       f"점검 기준: {va_label(kind)}", f"세부 항목: {classification['subcategory'] or '미정'}",
                       classification["reason"], review["summary"], "", "관찰 근거와 제한사항"])
         lines.extend(f"- {value}" for value in review["evidence_notes"])
-        lines.append("Burp 재현 절차")
+        lines.append("기록·설정 확인 순서" if result["model"] == CODEX_LABEL else "Burp 재현 절차")
         lines.extend(f"{index}. {value}" for index, value in enumerate(review["manual_checks"], 1))
         lines.extend([f"정상 동작: {review['normal_result']}", f"취약 의심: {review['issue_result']}", "권고 조치"])
         lines.extend(f"- {value}" for value in review["remediation"])

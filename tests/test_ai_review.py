@@ -15,7 +15,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 from urllib.parse import urlencode
 
-from burp_ai_redaction_gateway import ai_review
+from burp_ai_redaction_gateway import ai_review, codex_review
 from burp_ai_redaction_gateway.cli import main
 from burp_ai_redaction_gateway.dashboard import MAX_FORM_BYTES, DashboardConfig, DashboardRequestHandler, create_dashboard_server
 from burp_ai_redaction_gateway.policy import load_policy
@@ -77,6 +77,96 @@ class PreparedSample(unittest.TestCase):
 
 
 class AiReviewSafetyTests(PreparedSample):
+    def test_codex_input_is_closed_vocabulary_and_confirmation_binds_source(self):
+        def edit(packet):
+            item = next(x for x in packet["finding_candidates"] if x["finding_id"] == "FC-0010")
+            item["rationale"].append("DO_NOT_FORWARD_FREE_TEXT")
+            item["title"] = "DO_NOT_FORWARD_TITLE"
+        self.rewrite_packet(edit)
+        session = ai_review.ReviewSession()
+        token, draft = session.prepare("LOCAL_PROJECT", self.output, ["FC-0010"], model="codex")
+        for forbidden in ("LOCAL_PROJECT", "DO_NOT_FORWARD", "affected_endpoint", "recommended_manual_tests", "FC-0004"):
+            self.assertNotIn(forbidden, draft.input_json)
+        self.assertIn("SameSite=None이지만 Secure가 없습니다.", draft.input_json)
+        with patch.object(codex_review, "request_review", side_effect=AssertionError), patch.object(ai_review, "_load_api_key", side_effect=AssertionError):
+            with self.assertRaisesRegex(ai_review.AiReviewError, "review_consent_required"):
+                session.send(token, self.output, False)
+            self.rewrite_packet(lambda packet: packet.update(candidate_count=123))
+            with self.assertRaisesRegex(ai_review.AiReviewError, "review_source_changed"):
+                session.send(token, self.output, True)
+
+    def test_codex_rejects_non_subscription_login_and_does_not_fall_back(self):
+        session = ai_review.ReviewSession()
+        token, _ = session.prepare("demo", self.output, ["FC-0010"], model="codex")
+        with patch.object(codex_review, "_review_home", return_value=self.root), patch.object(codex_review, "_command", return_value="codex"), patch.object(codex_review, "_run", return_value=b"Logged in using an API key") as run, patch.object(ai_review, "_load_api_key", side_effect=AssertionError):
+            with self.assertRaisesRegex(ai_review.AiReviewError, "codex_login_required"):
+                session.send(token, self.output, True)
+            self.assertEqual(run.call_count, 1)
+            with self.assertRaisesRegex(ai_review.AiReviewError, "review_confirmation_expired"):
+                session.send(token, self.output, True)
+
+    def test_codex_rejects_global_instructions_without_starting_process(self):
+        with patch.object(Path, "home", return_value=self.root), patch.object(codex_review, "_command", return_value="codex"), patch.object(codex_review, "_run", side_effect=AssertionError):
+            home = self.root / ".burp-review-codex"
+            with self.assertRaisesRegex(ai_review.AiReviewError, "codex_login_required"):
+                codex_review._review_home()
+            home.mkdir()
+            self.assertEqual(codex_review._review_home(), home)
+            for filename in ("AGENTS.md", "AGENTS.override.md"):
+                (home / filename).touch()
+                with self.assertRaisesRegex(ai_review.AiReviewError, "codex_home_not_isolated"):
+                    codex_review.request_review(ai_review.prepare_review("demo", self.output, ["FC-0010"], model="codex"))
+                (home / filename).unlink()
+
+    def test_codex_sends_exact_preview_in_isolated_context_without_api_credentials(self):
+        draft = ai_review.prepare_review("demo", self.output, ["FC-0010"], model="codex")
+        reply = model_response(["FC-0010"])["output"][0]["content"][0]["text"]
+
+        def run(args, cwd, env, data, *, status=False):
+            self.assertNotIn("OPENAI_API_KEY", env)
+            self.assertNotIn("OPENAI_BASE_URL", env)
+            self.assertEqual(env["CODEX_HOME"], str(self.root))
+            if status:
+                return b"Logged in using ChatGPT"
+            self.assertEqual(data.decode(), draft.input_json)
+            self.assertNotIn(draft.input_json, args)
+            self.assertFalse(cwd.is_relative_to(ROOT))
+            for option in ("--ignore-user-config", "--ignore-rules", "--ephemeral", "--strict-config", 'forced_login_method="chatgpt"',
+                           'permissions.review.filesystem={ ":root" = "deny" }', 'web_search="disabled"'):
+                self.assertIn(option, args)
+            return ("\n".join(map(json.dumps, [{"type": "item.completed", "item": {"type": "agent_message", "text": reply}},
+                                             {"type": "turn.completed"}]))).encode()
+        with patch.object(codex_review, "_command", return_value="codex"), patch.object(codex_review, "_review_home", return_value=self.root), patch.object(codex_review, "_run", side_effect=run), patch.dict(os.environ, {"OPENAI_API_KEY": DUMMY_KEY}):
+            self.assertEqual(ai_review.validate_response(codex_review.request_review(draft), draft)["reviews"][0]["finding_id"], "FC-0010")
+
+    def test_codex_session_accepts_only_a_completed_single_answer(self):
+        msg = {"type": "item.completed", "item": {"type": "agent_message", "text": "answer"}}
+        end = {"type": "turn.completed"}
+        for events in ([msg], [msg, msg, end], [end, msg], [{"type": "error"}, end],
+                       [{"type": "item.completed", "item": {"type": "command_execution"}}, msg, end]):
+            with self.subTest(events=events), self.assertRaisesRegex(ai_review.AiReviewError, "invalid_ai_response"):
+                codex_review._answer("\n".join(map(json.dumps, events)).encode())
+        self.assertEqual(codex_review._answer("\n".join(map(json.dumps, [msg, end])).encode()), "answer")
+        thought = {"type": "item.completed", "item": {"type": "reasoning", "text": "not part of the answer"}}
+        self.assertEqual(codex_review._answer("\n".join(map(json.dumps, [thought, msg, end])).encode()), "answer")
+
+    def test_codex_npm_launches_native_binary_not_a_wrapper(self):
+        for system, triple, magic, name in (("win32", "x86_64-pc-windows-msvc", b"MZ00", "codex.exe"),
+                                            ("linux", "x86_64-unknown-linux-musl", b"\x7fELF", "codex")):
+            prefix = self.root / system
+            prefix.mkdir()
+            shim = prefix / name
+            shim.write_text("#!/usr/bin/env node", encoding="ascii")
+            shim.chmod(0o700)
+            with patch.object(codex_review.sys, "platform", system), patch.object(codex_review.platform, "machine", return_value="x86_64"), patch.object(os, "get_exec_path", return_value=[str(prefix)]):
+                with self.assertRaisesRegex(ai_review.AiReviewError, "codex_not_available"):
+                    codex_review._command()
+                binary = prefix / "node_modules" / "@openai" / "codex" / "node_modules" / "@openai" / f"codex-{system}-x64" / "vendor" / triple / "bin" / name
+                binary.parent.mkdir(parents=True)
+                binary.write_bytes(magic)
+                binary.chmod(0o700)
+                self.assertEqual(codex_review._command(), str(binary.resolve()))
+
     def test_only_allowlisted_models_are_used_and_kept_in_the_confirmation(self):
         self.assertEqual(ai_review.MODEL, "gpt-6-luna")
         self.assertEqual(set(ai_review.MODELS), {"gpt-6.1-terra", "gpt-6-luna"})
@@ -313,6 +403,25 @@ class AiReviewSafetyTests(PreparedSample):
 
 
 class AiReviewHttpTests(PreparedSample):
+    def test_codex_dashboard_previews_before_sending_and_checks_the_answer(self):
+        csrf = self.server.csrf_token
+        args = {"csrf_token": csrf, "project": "demo", "model": "codex", "candidates": ["FC-0004"]}
+        with patch.object(codex_review, "request_review", return_value=model_response()) as review, patch.object(ai_review, "api_key_configured", side_effect=AssertionError), patch.object(ai_review, "_load_api_key", side_effect=AssertionError):
+            status, preview, _ = self.request("POST", "/ai-review/prepare", args)
+            self.assertEqual(status, 200)
+            self.assertIn(ai_review.CODEX_LABEL, preview)
+            review.assert_not_called()
+            token = re.search(r'name="confirmation" value="([A-Za-z0-9_-]+)"', preview)[1]
+            args = {"confirmation": token, "csrf_token": csrf, "consent": "yes"}
+            status, _, headers = self.request("POST", "/ai-review/send", args)
+            self.assertEqual(status, 303)
+            status, answer, _ = self.request("GET", headers["Location"])
+            self.assertEqual(status, 200)
+            self.assertIn(ai_review.CODEX_LABEL, answer)
+            self.assertIn("FC-0004", answer)
+            self.assertEqual(self.request("POST", "/ai-review/send", args)[0], 400)
+            review.assert_called_once()
+
     def setUp(self):
         super().setUp()
         self.server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(root=self.root))
@@ -542,6 +651,22 @@ class AiReviewHttpTests(PreparedSample):
 
 
 class AiReviewCliTests(PreparedSample):
+    def test_codex_cli_requires_interactive_consent_and_validates_answer(self):
+        args = ("--candidate", "FC-0004", "--via", "codex")
+        with patch.object(codex_review, "request_review", return_value=edited_response("summary", "검토 후보: DUMMY_USER@example.invalid")) as review, patch.object(ai_review, "_load_api_key", side_effect=AssertionError):
+            self.assertEqual(self.run_cli(*args)[0], 0)
+            self.assertEqual(self.run_cli(*args, "--model", ai_review.MODEL)[0], 1)
+            with patch("sys.stdin.isatty", return_value=False):
+                self.assertEqual(self.run_cli(*args, "--send")[0], 1)
+            with patch("sys.stdin.isatty", return_value=True), patch("builtins.input", return_value="NO"):
+                self.assertEqual(self.run_cli(*args, "--send")[0], 0)
+            review.assert_not_called()
+            with patch("sys.stdin.isatty", return_value=True), patch("builtins.input", return_value="SEND"):
+                status, body = self.run_cli(*args, "--send")
+            self.assertEqual(status, 1)
+            self.assertIn("ai_response_sensitive_blocked", body)
+            self.assertNotIn("DUMMY_USER", body)
+
     def run_cli(self, *extra):
         output = io.StringIO()
         with redirect_stdout(output):
