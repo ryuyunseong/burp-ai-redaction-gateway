@@ -102,7 +102,7 @@ AI가 취약점을 재현한 결과는 아니며, 최종 판정은 직접 해야
 
 ![실제 AI 응답의 재현 절차와 정상·취약 의심 판정 기준](docs/images/ai-review-result.jpg)
 
-[가상 샘플 결과와 점검 방법](docs/examples/ai_review.md) · [키 연결과 사용 순서](docs/AI_REVIEW.md)
+[Codex 구독으로 검토한 가상 후보 5건과 점검 순서](docs/AI_REVIEW.md#가상-후보-5건의-점검-순서) · [API 검토 예제](docs/examples/ai_review.md) · [연결과 사용 순서](docs/AI_REVIEW.md)
 
 API의 기본 모델은 GPT-6 Luna입니다. 필요하면 GPT-6.1 Terra를 선택할 수 있습니다. 대화창을 쓸 때는 해당 서비스에서 모델을 선택합니다.
 
