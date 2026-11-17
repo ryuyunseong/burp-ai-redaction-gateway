@@ -369,12 +369,12 @@ class AiReviewHttpTests(PreparedSample):
             self.assertIn(phrase, guide)
         self.assertNotIn("**", guide)
 
-    def test_gui_defaults_to_luna_and_terra_requires_explicit_selection(self):
+    def test_gui_offers_chat_first_and_keeps_api_model_confirmation(self):
         with patch.object(ai_review, "_request_openai") as request:
             status, body, _ = self.request("GET", "/ai-review?project=demo")
             self.assertEqual(status, 200)
-            self.assertIn('<option value="gpt-6-luna" selected>', body)
-            self.assertIn('<option value="gpt-6.1-terra" >', body)
+            self.assertLess(body.index('<option value="chatgpt">'), body.index('<option value="gpt-6-luna">'))
+            self.assertIn('<option value="gpt-6.1-terra">', body)
             valid = {"csrf_token": self.server.csrf_token, "project": "demo", "candidates": ["FC-0004"]}
             for extra, expected in (({}, "gpt-6-luna"), ({"model": "gpt-6.1-terra"}, "gpt-6.1-terra")):
                 with self.subTest(model=expected):
@@ -384,6 +384,24 @@ class AiReviewHttpTests(PreparedSample):
                     token = re.search(r'name="confirmation" value="([A-Za-z0-9_-]+)"', confirmation)[1]
                     self.assertEqual(self.server.ai_reviews._drafts[token].model, expected)
             request.assert_not_called()
+
+    def test_chat_preview_is_local_escaped_and_never_creates_an_api_draft(self):
+        from html import escape
+        targets = {"chatgpt": True, "other": False}
+        self.rewrite_packet(lambda packet: packet["finding_candidates"][0].update(rationale=["</textarea><b>demo</b>"]))
+        with patch.object(ai_review, "_load_api_key", side_effect=AssertionError), patch.object(ai_review, "_request_openai", side_effect=AssertionError):
+            for target, has_link in targets.items():
+                form = {"csrf_token": self.server.csrf_token, "project": "demo", "candidates": ["FC-0001"], "model": target}
+                self.assertEqual(self.request("POST", "/ai-review/prepare", dict(form, csrf_token="wrong"))[0], 403)
+                status, page, headers = self.request("POST", "/ai-review/prepare", form)
+                self.assertEqual(status, 200)
+                self.assertIn(escape(ai_review.chat_review_text(self.output, ["FC-0001"])), page)
+                self.assertNotIn("</textarea><b>demo", page)
+                self.assertNotIn("FC-0002", page)
+                self.assertNotIn('name="confirmation"', page)
+                self.assertEqual('href="https://chatgpt.com/"' in page, has_link)
+                self.assertEqual(headers["Cache-Control"], "no-store")
+            self.assertFalse(self.server.ai_reviews._drafts)
 
     def test_published_review_example_and_screenshots_are_linked_and_raw_free(self):
         example = ROOT / "docs" / "examples" / "ai_review.md"
@@ -529,6 +547,22 @@ class AiReviewCliTests(PreparedSample):
         with redirect_stdout(output):
             status = main(["ai-review", "--input", str(self.output), *extra])
         return status, output.getvalue()
+
+    def test_chat_output_matches_selected_sample_without_api_or_tools(self):
+        for via in ("chatgpt", "other"):
+            with self.subTest(via=via), patch.object(ai_review, "_load_api_key", side_effect=AssertionError), patch.object(ai_review, "_request_openai", side_effect=AssertionError):
+                status, text = self.run_cli("--via", via, "--candidate", "FC-0010")
+                self.assertEqual(status, 0)
+                self.assertIn("FC-0010", text)
+                self.assertIn("VA-16", text)
+                self.assertIn("SameSite=None이지만 Secure가 없습니다", text)
+                self.assertNotIn("FC-0009", text)
+                for bad in (["--send"], ["--model", ai_review.MODEL], ["--candidate", "FC-0010"]):
+                    self.assertEqual(self.run_cli("--via", via, "--candidate", "FC-0010", *bad)[0], 1)
+        self.rewrite_packet(lambda p: p.update(private_note="DUMMY_PRIVATE@example.invalid"))
+        status, text = self.run_cli("--via", "chatgpt", "--candidate", "FC-0010")
+        self.assertEqual(status, 1)
+        self.assertNotIn("DUMMY_PRIVATE", text)
 
     def test_list_and_preview_never_send(self):
         with patch.object(ai_review, "_request_openai") as request:
