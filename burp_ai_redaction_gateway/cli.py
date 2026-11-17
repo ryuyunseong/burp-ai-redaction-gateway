@@ -7,7 +7,7 @@ import webbrowser
 from pathlib import Path
 
 from . import ai_review
-from .va_classification import va_label
+from .review_candidates import group_candidates
 from .audit_compressed_hmac import (
     AuditCompressedHmacError,
     create_compressed_audit_hmac_manifest,
@@ -175,7 +175,9 @@ def main(argv: list[str] | None = None) -> int:
 
     ai = subparsers.add_parser("ai-review", help="마스킹된 점검 후보를 미리 보고, 동의 후 AI 점검 가이드를 받습니다.")
     ai.add_argument("--input", required=True, type=Path, help="검증된 결과 폴더.")
-    ai.add_argument("--candidate", action="append", default=[], help="후보 번호. 최대 5개까지 반복 지정합니다.")
+    selection = ai.add_mutually_exclusive_group()
+    selection.add_argument("--candidate", action="append", default=[], help="추천 대신 검토할 후보 번호. 최대 5개까지 지정합니다.")
+    selection.add_argument("--list", dest="list_only", action="store_true", help="묶음별 전체 후보 번호와 추천 이유만 봅니다.")
     ai.add_argument("--via", choices=["api", "codex", *ai_review.CHAT_DESTINATIONS], default="api",
                     help="codex: 로그인한 구독으로 답변 받기, api: 기존 API(기본), chatgpt·other: 직접 복사.")
     ai.add_argument("--model", help="API 모델. 기본은 gpt-6-luna이며 gpt-6.1-terra도 선택할 수 있습니다.")
@@ -260,7 +262,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "review":
         return _review(args.input, args.export_dir, args.policy)
     if args.command == "ai-review":
-        return _ai_review_command(args.input, args.candidate, args.model, args.send, args.policy, args.via)
+        return _ai_review_command(args.input, args.candidate, args.model, args.send, args.policy, args.via, args.list_only)
     if args.command == "report":
         return _report(args.input, args.output, args.profile, args.policy)
     if args.command == "viewer":
@@ -421,7 +423,7 @@ def _review(input_dir: Path, export_dir: Path | None, policy_path: Path | None) 
     return 0
 
 
-def _ai_review_command(input_dir: Path, candidate_ids: list[str], model: str | None, send: bool, policy_path: Path | None, via: str) -> int:
+def _ai_review_command(input_dir: Path, candidate_ids: list[str], model: str | None, send: bool, policy_path: Path | None, via: str, list_only: bool = False) -> int:
     try:
         policy = load_policy(policy_path)
         if via in ai_review.CHAT_DESTINATIONS and (send or model is not None):
@@ -439,14 +441,26 @@ def _ai_review_command(input_dir: Path, candidate_ids: list[str], model: str | N
         if not verification.passed or verification.files_checked == 0:
             raise ai_review.AiReviewError("verification_failed")
         if not candidate_ids:
-            if send:
-                raise ai_review.AiReviewError("select_one_to_five_candidates")
+            if send and list_only:
+                print("--list는 목록 조회 전용입니다. 외부로 보내지 않았습니다.")
+                return 1
             candidates = ai_review.list_review_candidates(input_dir)
-            print(f"점검 후보 {len(candidates)}개 · 외부 전송 없음")
-            for candidate in candidates:
-                label = ai_review.CANDIDATE_LABELS.get(candidate["type"], "점검 항목")
-                print(ai_review.terminal_text(f"{candidate['finding_id']} · {va_label(candidate['type'])} · {label} · {candidate['affected_endpoint']}"))
-            return 0
+            groups = group_candidates(candidates)
+            candidate_ids = [g.members[0]["finding_id"] for g in groups if g.recommended]
+            print(f"점검 후보 {len(candidates)}개 · {len(groups)}개 묶음 · 추천 {len(candidate_ids)}건 · 아직 전송하지 않음")
+            for group in groups:
+                if not (group.recommended or list_only):
+                    continue
+                first = group.members[0]
+                label = ai_review.CANDIDATE_LABELS.get(first["type"], "미분류")
+                print(f"{'추천' if group.recommended else '그 외'} {first['finding_id']} · {label} · 묶음 {len(group.members)}건")
+                print(ai_review.terminal_text(group.reason))
+                if list_only:
+                    for item in group.members:
+                        print(ai_review.terminal_text(f"  {item['finding_id']}  {item['affected_endpoint']}"))
+            print("전체 목록은 --list, 추천 대신 직접 선택하려면 --candidate 후보번호를 사용하세요.")
+            if list_only or not candidate_ids:
+                return 1 if send else 0
         if via in ai_review.CHAT_DESTINATIONS:
             review = ai_review.chat_review_text(input_dir, candidate_ids)
             print(f"{ai_review.CHAT_DESTINATIONS[via]}에서 모델을 선택하고, 공개 가능한 내용인지 확인한 뒤 아래 자료를 붙여넣으세요. API는 호출하지 않습니다.\n")

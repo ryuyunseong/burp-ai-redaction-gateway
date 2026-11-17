@@ -170,7 +170,8 @@ def prepare_review(project: str, directory: Path, candidate_ids: list[str], *, m
         "va_classifications": {item["finding_id"]: classify_candidate(item["type"]) for item in selected},
     }
     if model == CODEX:
-        from .codex_review import REVIEW_TASK, candidate_metadata
+        from .codex_review import REVIEW_TASK
+        from .review_candidates import candidate_metadata
 
         payload["review_task"] = REVIEW_TASK
         payload["candidates"] = [candidate_metadata(item) for item in selected]

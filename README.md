@@ -90,9 +90,9 @@ Export나 매번 전송 버튼을 누를 필요는 없습니다. 시작 이후 �
 
 ## 대시보드에서 AI 검토 (선택)
 
-결과 파일 확인 → AI 검토에서 후보를 1~5개 선택하고 전송할 내용 확인을 누릅니다.
+결과 파일 확인 → AI 검토를 열면 비슷한 후보를 묶고 대표 후보를 최대 5건까지 미리 골라 둡니다. 추천 근거를 읽고 그대로 두거나 선택을 바꾼 뒤 전송할 내용 확인을 누르세요. 동의하기 전에는 보내지 않습니다.
 
-- Codex 구독: 처음 한 번 [검토 전용 Codex에 로그인](docs/AI_REVIEW.md#codex-구독-연결)하세요. 보낼 근거를 확인하고 동의하면 복사할 필요 없이 이 화면에서 답을 받습니다. 터미널에서는 `python -m burp_ai_redaction_gateway ai-review --input out/demo --candidate FC-0010 --via codex --send`를 사용하세요.
+- Codex 구독: 처음 한 번 [검토 전용 Codex에 로그인](docs/AI_REVIEW.md#codex-구독-연결)하세요. 터미널에서는 `python -m burp_ai_redaction_gateway ai-review --input out/demo --via codex`로 추천 이유와 전송 자료를 먼저 봅니다. 검토를 요청할 때만 `--send`를 붙이세요.
 - OpenAI API: 사용할 API 모델을 직접 선택합니다. 구독 검토가 실패해도 API로 대신 보내지 않습니다. 다른 서비스에 직접 붙여넣으려면 대화창 방식을 선택하세요.
 
 Burp 자동 수집은 점검 범위 안에서 새로 관찰한 Proxy 응답을 로컬로 가져옵니다. 의심 기록만 골라 보내는 방식은 아닙니다. 마스킹과 후보 분류는 로컬에서 하고, AI에는 직접 선택하고 확인한 후보만 보냅니다.

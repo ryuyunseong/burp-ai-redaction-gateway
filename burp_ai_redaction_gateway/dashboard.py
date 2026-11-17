@@ -20,6 +20,7 @@ from typing import Any
 from urllib.parse import parse_qs, quote, urlsplit
 
 from . import ai_review
+from .review_candidates import CandidateGroup, group_candidates
 from .findings import build_finding_candidates
 from .http_server import ExclusiveThreadingHTTPServer
 from .audit_compressed_hmac import AuditCompressedHmacError, verify_compressed_audit_hmac_manifest
@@ -1639,21 +1640,39 @@ def _va_catalog_details(kinds: list[str]) -> str:
             f'<ul>{items}</ul></details>')
 
 
-def render_ai_review_selection(output: DashboardOutput, csrf_token: str) -> str:
-    candidates = ai_review.list_review_candidates(output.path)
-    chat_options = "".join(f'<option value="{name}">{label}</option>' for name, label in ai_review.CHAT_DESTINATIONS.items())
-    model_options = "".join(f'<option value="{name}">{label}</option>' for name, label in ai_review.MODELS.items())
-    choices = "".join(
-        f'<label class="ai-choice"><input type="checkbox" name="candidates" value="{_h(item["finding_id"])}">'
+def _ai_choice(item: dict[str, Any], *, checked: bool = False, reason: str = "") -> str:
+    return (
+        f'<label class="ai-choice"><input type="checkbox" name="candidates" value="{_h(item["finding_id"])}"{" checked" if checked else ""}>'
         f'<span class="ai-choice-title"><code>{_h(item["finding_id"])}</code>'
         f'<strong>{_h(_ai_candidate_title(item["type"], item["title"]))}</strong>'
-        f'<small>{_h(va_label(item["type"]))}</small></span>'
+        f'<small>{_h(reason or va_label(item["type"]))}</small></span>'
         f'<code class="ai-endpoint">{_h(item["affected_endpoint"])}</code></label>'
-        for item in candidates
     )
+
+
+def _ai_group(group: CandidateGroup) -> str:
+    first, *others = group.members
+    row = _ai_choice(first, checked=group.recommended, reason=group.reason)
+    if others:
+        row += (f'<details class="ai-related"><summary>비슷한 후보 {len(others)}건</summary>'
+                + "".join(_ai_choice(item) for item in others) + "</details>")
+    return row
+
+
+def render_ai_review_selection(output: DashboardOutput, csrf_token: str) -> str:
+    candidates = ai_review.list_review_candidates(output.path)
+    groups = group_candidates(candidates)
+    recommended = [group for group in groups if group.recommended]
+    others = [group for group in groups if not group.recommended]
+    choices = "".join(_ai_group(group) for group in recommended)
+    if others:
+        choices += (f'<details class="ai-other"{"" if recommended else " open"}><summary>그 밖의 후보 묶음 {len(others)}개</summary>'
+                    + "".join(_ai_group(group) for group in others) + "</details>")
+    chat_options = "".join(f'<option value="{name}">{label}</option>' for name, label in ai_review.CHAT_DESTINATIONS.items())
+    model_options = "".join(f'<option value="{name}">{label}</option>' for name, label in ai_review.MODELS.items())
     return _page("AI 검토", _ai_review_header(output.output_id) + f"""
         <div class="ai-selection-layout"><section>
-          <div class="ai-section-heading"><h2>점검 항목 선택</h2><span>{len(candidates)}개 · 최대 5개 선택</span></div>
+          <div class="ai-section-heading"><h2>점검 항목 선택</h2><span>전체 {len(candidates)}건 · 대표 후보 {len(recommended)}건 추천</span></div>
           <form method="post" action="/ai-review/prepare">
             <input type="hidden" name="csrf_token" value="{_h(csrf_token)}">
             <input type="hidden" name="project" value="{_h(output.output_id)}">
@@ -1661,9 +1680,9 @@ def render_ai_review_selection(output: DashboardOutput, csrf_token: str) -> str:
               <option value="codex">Codex 구독 · 여기서 답변 받기</option>
               <optgroup label="대화창에서 직접 검토">{chat_options}</optgroup>
               <optgroup label="OpenAI API · 사용량 과금">{model_options}</optgroup></select></label>
-            <div class="ai-table-heading" aria-hidden="true"><span></span><span>점검 항목</span><span>대상 요청</span></div>
+            <div class="ai-table-heading" aria-hidden="true"><span></span><span>점검 항목과 근거</span><span>대상 요청</span></div>
             <div class="ai-choices">{choices or '<p class="empty-state">검토 후보가 없습니다.</p>'}</div>
-            <div class="ai-submit-bar"><span>다음 단계에서 전송 내용을 확인합니다.</span>
+            <div class="ai-submit-bar"><span>최대 5건 · 선택한 항목만 미리 봅니다.</span>
               <button class="button" type="submit" {'disabled' if not candidates else ''}>전송할 내용 확인</button></div>
           </form>
           {_va_catalog_details([item['type'] for item in candidates])}
@@ -4197,6 +4216,9 @@ def _page(title: str, body: str, *, page_class: str = "", refresh_seconds: int |
     .ai-choice {{ border-bottom: 1px solid var(--border); min-height: 70px; cursor: pointer; }}
     .ai-choice:hover {{ background: #f7f9f8; }}
     .ai-choice:has(input:checked) {{ background: #edf6f2; }}
+    .ai-related summary, .ai-other summary {{ padding: 9px 12px; color: var(--accent); cursor: pointer; }}
+    .ai-related {{ margin-left: 32px; }}
+    .ai-choice-title small {{ overflow-wrap: anywhere; }}
     .ai-choice-title {{ display: flex; align-items: flex-start; flex-direction: column; gap: 2px; min-width: 0; }}
     .ai-choice-title code {{ color: var(--muted); font-size: 12px; }}
     .ai-choice-title strong {{ font-size: 14px; font-weight: 600; }}

@@ -20,6 +20,7 @@ from burp_ai_redaction_gateway.cli import main
 from burp_ai_redaction_gateway.dashboard import MAX_FORM_BYTES, DashboardConfig, DashboardRequestHandler, create_dashboard_server
 from burp_ai_redaction_gateway.policy import load_policy
 from burp_ai_redaction_gateway.receiver import INGEST_PATH, ReceiverConfig, create_server
+from burp_ai_redaction_gateway.review_candidates import group_candidates
 from burp_ai_redaction_gateway.workflow import process_export
 
 
@@ -77,6 +78,42 @@ class PreparedSample(unittest.TestCase):
 
 
 class AiReviewSafetyTests(PreparedSample):
+    def test_shortlist_groups_observations_not_confirmed_causes(self):
+        items = ai_review.list_review_candidates(self.output)
+        before = copy.deepcopy(items)
+        groups = group_candidates(items)
+        self.assertEqual(items, before)
+        self.assertEqual(groups, group_candidates(list(reversed(items))))
+        members = [[row["finding_id"] for row in g.members] for g in groups]
+        self.assertCountEqual([i for group in members for i in group], [row["finding_id"] for row in items])
+        self.assertIn(["FC-0003", "FC-0007", "FC-0014", "FC-0018"], members)
+        for first, other in (("FC-0002", "FC-0010"), ("FC-0004", "FC-0019")):
+            self.assertFalse(any(first in group and other in group for group in members))
+        selected = [g for g in groups if g.recommended]
+        self.assertEqual(len(selected), 5)
+        self.assertGreaterEqual(len({g.members[0]["type"] for g in selected}), 4)
+        self.assertTrue(all("근거 기록" in g.reason for g in selected))
+
+    def test_shortlist_prefers_distinct_evidence_and_canonical_header_sets(self):
+        first = ai_review.list_review_candidates(self.output)[0]
+        first.update(rationale=["Response did not include: X-Frame-Options, Content-Security-Policy."],
+                     evidence_ids=["EV-0001"] * 4)
+        second = dict(first, finding_id="FC-0030", evidence_ids=["EV-0001", "EV-0002"],
+                      rationale=["Response did not include: Content-Security-Policy, X-Frame-Options."])
+        other = dict(first, finding_id="FC-0031", rationale=["Response did not include: X-Frame-Options."])
+        groups = group_candidates([first, second, other])
+        self.assertEqual([[i["finding_id"] for i in g.members] for g in groups], [["FC-0030", "FC-0001"], ["FC-0031"]])
+        self.assertIn("근거 기록 2건", groups[0].reason)
+
+    def test_shortlist_does_not_recommend_unknown_or_unsupported_evidence(self):
+        self.assertEqual(group_candidates([]), [])
+        item = ai_review.list_review_candidates(self.output)[0]
+        for edit in ({"rationale": ["DUMMY_UNRECOGNIZED"]}, {"evidence_ids": [""]}, {"type": "DUMMY_UNKNOWN"}):
+            group, = group_candidates([dict(item, **edit)])
+            self.assertFalse(group.recommended)
+            self.assertNotIn("DUMMY", group.reason)
+            self.assertEqual(len(group.members), 1)
+
     def test_codex_input_is_closed_vocabulary_and_confirmation_binds_source(self):
         def edit(packet):
             item = next(x for x in packet["finding_candidates"] if x["finding_id"] == "FC-0010")
@@ -403,6 +440,26 @@ class AiReviewSafetyTests(PreparedSample):
 
 
 class AiReviewHttpTests(PreparedSample):
+    def test_shortlist_dashboard_override_and_empty_selection_never_send(self):
+        args = {"csrf_token": self.server.csrf_token, "project": "demo", "model": "codex"}
+        with patch.object(codex_review, "request_review", side_effect=AssertionError), patch.object(ai_review, "_request_openai", side_effect=AssertionError):
+            status, html, _ = self.request("GET", "/ai-review?project=demo")
+            self.assertEqual(status, 200)
+            selected = re.findall(r'name="candidates" value="(FC-\d+)" checked', html)
+            self.assertEqual(len(selected), 5)
+            self.assertIn("FC-0003", selected)
+            self.assertNotIn("FC-0007", selected)
+            self.assertEqual(self.request("POST", "/ai-review/prepare", args)[0], 400)
+            self.assertEqual(self.request("POST", "/ai-review/prepare", dict(args, candidates=[*selected, "FC-0007"]))[0], 400)
+            changed = ["FC-0007" if i == "FC-0003" else i for i in selected]
+            status, preview, _ = self.request("POST", "/ai-review/prepare", dict(args, candidates=changed))
+            self.assertEqual(status, 200)
+            self.assertIn("FC-0007", preview)
+            self.assertNotIn("FC-0003", preview)
+            token = re.search(r'name="confirmation" value="([^"]+)"', preview)[1]
+            self.assertEqual(self.server.ai_reviews._drafts[token].candidate_ids, tuple(changed))
+            self.assertEqual(self.request("POST", "/ai-review/send", {"csrf_token": args["csrf_token"], "confirmation": token})[0], 400)
+
     def test_codex_dashboard_previews_before_sending_and_checks_the_answer(self):
         csrf = self.server.csrf_token
         args = {"csrf_token": csrf, "project": "demo", "model": "codex", "candidates": ["FC-0004"]}
@@ -651,6 +708,29 @@ class AiReviewHttpTests(PreparedSample):
 
 
 class AiReviewCliTests(PreparedSample):
+    def test_shortlist_cli_preview_override_list_and_cancellation(self):
+        def preview_ids(text):
+            payload, _ = json.JSONDecoder().raw_decode(text.split("실제로 전송할 자료 전체:\n", 1)[1])
+            return [item["finding_id"] for item in payload["candidates"]]
+
+        with patch.object(codex_review, "request_review", side_effect=AssertionError), patch.object(ai_review, "_request_openai", side_effect=AssertionError):
+            for via in ("codex", "api"):
+                status, preview = self.run_cli("--via", via)
+                self.assertEqual(status, 0)
+                proposed = re.findall(r"^추천 (FC-\d+)", preview, re.M)
+                self.assertEqual(preview_ids(preview), proposed)
+                self.assertEqual(len(proposed), 5)
+                self.assertEqual(preview_ids(self.run_cli("--via", via, "--candidate", "FC-0007")[1]), ["FC-0007"])
+            status, listing = self.run_cli("--list")
+            self.assertEqual(status, 0)
+            self.assertEqual(len(set(re.findall(r"FC-\d+", listing))), 22)
+            self.assertNotIn("실제로 전송할 자료 전체:", listing)
+            self.assertEqual(self.run_cli("--list", "--send")[0], 1)
+            with patch("sys.stdin.isatty", return_value=True), patch("builtins.input", return_value="NO"):
+                self.assertIn("전송을 취소", self.run_cli("--via", "codex", "--send")[1])
+            with patch("sys.stdin.isatty", return_value=False):
+                self.assertEqual(self.run_cli("--via", "codex", "--send")[0], 1)
+
     def test_codex_cli_requires_interactive_consent_and_validates_answer(self):
         args = ("--candidate", "FC-0004", "--via", "codex")
         with patch.object(codex_review, "request_review", return_value=edited_response("summary", "검토 후보: DUMMY_USER@example.invalid")) as review, patch.object(ai_review, "_load_api_key", side_effect=AssertionError):

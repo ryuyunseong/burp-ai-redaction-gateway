@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import os
 import platform
-import re
 import stat
 import subprocess
 import sys
@@ -13,9 +12,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from .ai_review import AiReviewError, CANDIDATE_LABELS, MAX_RESPONSE_BYTES, ReviewDraft, review_schema
-from .findings import SECURITY_HEADERS_TO_CHECK
-from .report import _report_text
+from .ai_review import AiReviewError, MAX_RESPONSE_BYTES, ReviewDraft, review_schema
 
 
 REVIEW_TASK = (
@@ -28,37 +25,6 @@ _OFF = ("shell_tool", "unified_exec", "code_mode", "code_mode_host", "apps", "pl
         "browser_use", "browser_use_external", "in_app_browser", "computer_use", "image_generation",
         "multi_agent", "multi_agent_v2", "memories", "goals", "remote_control", "workspace_dependencies",
         "skill_mcp_dependency_install", "request_permissions_tool", "tool_suggest")
-_OBSERVATIONS = {
-    "Identifier parameter observed in path or query.", "Authenticated-looking request returned HTTP 2xx.",
-    "Response body shape contains user-specific fields.", "Response schema contains fields that required redaction.",
-    "Response indicates a server error or includes a sanitized error snippet.",
-    "CORS response allows a wildcard origin or credentialed cross-origin access.",
-    "Request appears authenticated and response did not include no-store, no-cache, or private Cache-Control policy.",
-}
-
-
-def candidate_metadata(item: dict[str, Any]) -> dict[str, Any]:
-    kind = item["type"] if item["type"] in CANDIDATE_LABELS else "unmapped"
-    observations = []
-    for line in item["rationale"]:
-        if line in _OBSERVATIONS:
-            observations.append(_report_text(line))
-        elif kind == "weak_cookie_attributes":
-            missing = re.fullmatch(r"Set-Cookie for .+ is missing: (.+)\.", line)
-            if missing and all(x in {"Secure", "HttpOnly", "SameSite"} for x in missing[1].split(", ")):
-                observations.append("쿠키에 없는 속성: " + missing[1])
-            elif re.fullmatch(r"Set-Cookie for .+ uses SameSite=None without Secure\.", line):
-                observations.append("SameSite=None이지만 Secure가 없습니다.")
-        elif kind == "missing_security_headers":
-            headers = re.fullmatch(r"Response did not include: (.+)\.", line)
-            if headers and set(headers[1].split(", ")) <= SECURITY_HEADERS_TO_CHECK:
-                observations.append("응답에 없는 헤더: " + headers[1])
-        elif kind == "sensitive_data_exposure_candidate":
-            count = re.fullmatch(r"Redacted field count: ([0-9]{1,5})\.", line)
-            if count:
-                observations.append(f"마스킹한 항목: {count[1]}개")
-    return {"finding_id": item["finding_id"], "type": kind, "title": CANDIDATE_LABELS.get(kind, "미분류"),
-            "confidence": item["confidence"], "rationale": observations}
 
 
 def _native(path: Path, *, windows: bool) -> bool:
