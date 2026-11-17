@@ -12,6 +12,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 final class LocalGatewayClient {
     static final int MAX_PAYLOAD_BYTES = 1_048_576;
@@ -58,7 +59,6 @@ final class LocalGatewayClient {
         int outOfScopeSkipped = 0;
         int missingHostSkipped = 0;
         int invalidHostSkipped = 0;
-        int index = 1;
 
         for (ProxyHttpRequestResponse item : items) {
             CollectorSafeHostMetadata decision = CollectorSafeHostMetadata.evaluate(item);
@@ -74,17 +74,16 @@ final class LocalGatewayClient {
                 continue;
             }
 
-            post(buildPayload(index, item, decision.host()));
+            post(buildPayload(item, decision.host()));
             sent += 1;
-            index += 1;
         }
 
         return new HandoffResult(sent, skipped, outOfScopeSkipped, missingHostSkipped, invalidHostSkipped);
     }
 
-    private String buildPayload(int index, ProxyHttpRequestResponse item, String requestHost) {
+    private String buildPayload(ProxyHttpRequestResponse item, String requestHost) {
         HttpResponse response = item.hasResponse() ? item.response() : null;
-        return payload("burp-proxy-history-" + index, item.request(), response, requestHost);
+        return payload(UUID.randomUUID().toString(), item.request(), response, requestHost);
     }
 
     private String payload(String eventId, HttpRequest request, HttpResponse response, String requestHost) {

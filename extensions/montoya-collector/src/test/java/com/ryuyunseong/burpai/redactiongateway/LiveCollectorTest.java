@@ -4,12 +4,16 @@ import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.HttpService;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
+import burp.api.montoya.proxy.ProxyHttpRequestResponse;
 import com.sun.net.httpserver.HttpServer;
 
 import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,7 +51,7 @@ public final class LiveCollectorTest {
             require(received.get() == 0, "excluded requests must not be sent");
             live.capture(allowed, response);
             await(() -> live.sent() == 1);
-            require(lastBody.get().contains("burp-live-"), "unique live identifier required");
+            assertUuidIdentifier(lastBody.get());
             require(lastBody.get().contains("montoya-handoff-v1"), "existing handoff schema required");
             String first = lastBody.get();
             live.capture(allowed, response);
@@ -56,13 +60,27 @@ public final class LiveCollectorTest {
             live.stop();
             live.capture(allowed, response);
             require(received.get() == 2, "stopped collector must not send");
+            ProxyHttpRequestResponse historyItem = proxy(ProxyHttpRequestResponse.class, (instance, method, arguments) -> switch (method.getName()) {
+                case "request" -> allowed;
+                case "response" -> response;
+                case "hasResponse" -> true;
+                default -> null;
+            });
+            LocalGatewayClient manual = LocalGatewayClient.fromEndpoint(base + "/ingest");
+            manual.send(List.of(historyItem));
+            String firstBatch = lastBody.get();
+            assertUuidIdentifier(firstBatch);
+            manual.send(List.of(historyItem));
+            assertUuidIdentifier(lastBody.get());
+            require(!firstBatch.equals(lastBody.get()), "manual history batches must use unique identifiers");
+            require(received.get() == 4, "both manual history batches must complete");
             boolean rejected = false;
             try {
                 LocalGatewayClient.fromEndpoint(base + "/redirect").sendPayload("{}");
             } catch (java.io.IOException expected) {
                 rejected = true;
             }
-            require(rejected && received.get() == 2, "redirects must not forward raw data");
+            require(rejected && received.get() == 4, "redirects must not forward raw data");
             for (String endpoint : List.of("https://example.test/ingest", "http://example.test/ingest")) {
                 try {
                     LocalGatewayClient.fromEndpoint(endpoint);
@@ -146,5 +164,11 @@ public final class LiveCollectorTest {
 
     private static void require(boolean condition, String message) {
         if (!condition) { throw new AssertionError(message); }
+    }
+
+    private static void assertUuidIdentifier(String payload) {
+        Matcher field = Pattern.compile("\"source_event_id\":\"([^\"]+)\"").matcher(payload);
+        require(field.find(), "source identifier must be present");
+        require(UUID.fromString(field.group(1)).toString().equals(field.group(1)), "identifier must be a canonical UUID");
     }
 }

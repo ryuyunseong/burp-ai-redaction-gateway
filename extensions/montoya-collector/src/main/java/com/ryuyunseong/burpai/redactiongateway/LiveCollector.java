@@ -50,7 +50,7 @@ final class LiveCollector implements AutoCloseable {
             return;
         }
         try {
-            String payload = client.livePayload("burp-live-" + UUID.randomUUID(), request, response);
+            String payload = client.livePayload(UUID.randomUUID().toString(), request, response);
             if (payload == null) {
                 skipped.incrementAndGet();
                 return;

@@ -4,16 +4,19 @@ import copy
 import io
 import json
 import os
+import shutil
 import socket
 import tempfile
 import threading
 import unittest
+import uuid
 from contextlib import redirect_stdout
 from http import HTTPStatus
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from burp_ai_redaction_gateway.capture import run_capture
+from burp_ai_redaction_gateway import dashboard
 from burp_ai_redaction_gateway.cli import main
 from burp_ai_redaction_gateway.dashboard import DashboardConfig, DashboardError, create_dashboard_server, render_burp_capture
 from burp_ai_redaction_gateway.policy import load_policy
@@ -69,6 +72,17 @@ class LiveCollectorTests(unittest.TestCase):
                 ingest_montoya_payload(self.payload(), config)
             self.assertEqual(caught.exception.status, HTTPStatus.CONFLICT)
             self.assertEqual(path.read_bytes(), before)
+
+    def test_collector_uuid_identifiers_pass_receiver_and_output_verification(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            config = ReceiverConfig(Path(temporary), "burp_live", complete_bundle=True)
+            for identity in (str(uuid.uuid4()), str(uuid.uuid4())):
+                assert_no_sensitive_text(identity)
+                payload = self.payload()
+                payload["source_event_id"] = identity
+                result = ingest_montoya_payload(payload, config)
+                self.assertEqual(result.status, "accepted")
+                self.assertTrue(verify_path(config.output_dir / result.output_name, load_policy()).passed)
 
     def test_capture_page_normalizes_relative_result_root_before_boundary_checks(self):
         with tempfile.TemporaryDirectory(prefix="burp-live-root-", dir=ROOT.parent) as temporary:
@@ -151,6 +165,12 @@ class LiveCollectorTests(unittest.TestCase):
                 handler._discard_rejected_body()
                 self.assertEqual(handler.rfile.tell(), 2 if length == "2" else 0)
         handler.connection.settimeout.assert_called_with(2.0)
+        for length in (20001, 65537):
+            with self.subTest(oversized_length=length):
+                handler.headers = {"Content-Length": str(length)}
+                handler.rfile = io.BytesIO(b"x" * length)
+                handler._discard_rejected_body(max_bytes=64 * 1024)
+                self.assertEqual(handler.rfile.tell(), length if length <= 65536 else 0)
         handler.headers = {"Content-Length": "2"}
         handler.rfile = MagicMock()
         handler.rfile.read1.side_effect = TimeoutError()
@@ -170,6 +190,24 @@ class LiveCollectorTests(unittest.TestCase):
                 restarted.server_close()
             finally:
                 occupied.server_close()
+
+    def test_live_page_selects_fifty_recent_records_before_verification(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = ReceiverConfig(root / "template", "burp_live", complete_bundle=True)
+            result = ingest_montoya_payload(self.payload(), config)
+            source = config.output_dir / result.output_name
+            captures = root / "burp_live"
+            captures.mkdir()
+            for index in range(51):
+                destination = captures / f"burp-live-window-{index:03d}"
+                shutil.copytree(source, destination)
+                os.utime(destination, (1_700_000_000 + index, 1_700_000_000 + index))
+            with patch("burp_ai_redaction_gateway.dashboard._verified_output", wraps=dashboard._verified_output) as verified:
+                html = render_burp_capture(root, load_policy())
+            self.assertEqual(verified.call_count, 50)
+            self.assertIn("burp-live-window-050", html)
+            self.assertNotIn("burp-live-window-000", html)
 
 
 if __name__ == "__main__":

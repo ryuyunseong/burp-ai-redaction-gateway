@@ -53,6 +53,7 @@ python -m burp_ai_redaction_gateway capture --open
 종료할 때는 확장의 중지와 터미널의 `Ctrl+C`를 사용하세요.
 
 과거 기록을 한 번 보내려면 Proxy → HTTP history에서 우클릭한 뒤 Extensions → Burp AI Redaction Gateway Collector → 점검 범위의 Proxy 기록을 로컬 도구로 보내기를 선택합니다. 선택한 행만이 아니라 점검 범위에 포함된 Proxy 기록 전체를 보냅니다. 이 메뉴는 웹 탐색에 요청을 추가로 보내지 않습니다.
+같은 기록을 다시 보내면 별도의 결과로 저장합니다. 기존 결과는 덮어쓰지 않습니다.
 
 ## 연결되지 않을 때
 

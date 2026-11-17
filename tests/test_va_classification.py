@@ -136,6 +136,13 @@ class VaOutputTests(unittest.TestCase):
             self.assertEqual(payload["va_classifications"]["FC-0004"]["code"], "VA-11")
             self.assertNotIn("va_code", payload["candidates"][0])
 
+    def test_ai_checks_va_codes_with_korean_suffixes_and_complete_numbers(self):
+        draft = ai_review.prepare_review("demo", self.directory, ["FC-0004"])
+        for summary in ("VA-02에 해당하는 검토 후보입니다.", "분류VA02는 검토 후보입니다.", "VA-110 검토 후보입니다."):
+            with self.subTest(summary=summary), self.assertRaisesRegex(ai_review.AiReviewError, "ai_response_va_mismatch"):
+                ai_review.validate_response(self.response(summary), draft)
+        self.assertEqual(ai_review.validate_response(self.response("VA-11에 해당하는 검토 후보입니다."), draft)["reviews"][0]["finding_id"], "FC-0004")
+
     def test_human_outputs_share_classification_without_mutating_analysis(self):
         before = copy.deepcopy(self.packet)
         for renderer in (render_chatgpt_analysis_prompt, render_codex_analysis_prompt):

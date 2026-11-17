@@ -175,6 +175,7 @@ class _IngestHandler(BaseHTTPRequestHandler):
             raise ReceiverError("invalid_content_length", HTTPStatus.BAD_REQUEST)
         size = int(content_length)
         if size > self.receiver_config.max_body_bytes:
+            self._discard_rejected_body(max_bytes=64 * 1024)
             raise ReceiverError("payload_too_large", HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
         payload = json.loads(self.rfile.read(size).decode("utf-8"))
         if not isinstance(payload, dict):
@@ -191,12 +192,12 @@ class _IngestHandler(BaseHTTPRequestHandler):
             },
         )
 
-    def _discard_rejected_body(self) -> None:
+    def _discard_rejected_body(self, *, max_bytes: int = 16 * 1024) -> None:
         try:
             size = int(self.headers.get("Content-Length", "0"))
         except ValueError:
             return
-        if not 0 < size <= min(self.receiver_config.max_body_bytes, 16 * 1024):
+        if not 0 < size <= max_bytes:
             return
         previous_timeout = self.connection.gettimeout()
         deadline = time.monotonic() + 0.25

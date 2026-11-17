@@ -311,8 +311,8 @@ def validate_response(response: dict[str, Any], draft: ReviewDraft) -> dict[str,
             if any(not isinstance(text, str) or not 1 <= len(text.strip()) <= 1000 or not re.search(r"[가-힣]", text) for text in items):
                 raise AiReviewError("invalid_ai_response")
         expected_code = classify_candidate(candidate_types[finding_id])["code"]
-        for match in re.finditer(r"\bVA[- ]?(\d{1,2})\b", json.dumps(review, ensure_ascii=False), re.IGNORECASE):
-            if f"VA-{int(match[1]):02d}" != expected_code:
+        for match in re.finditer(r"(?<![A-Za-z0-9_])VA[- ]?([0-9]+)", json.dumps(review, ensure_ascii=False), re.IGNORECASE):
+            if "VA-" + match[1].zfill(2) != expected_code:
                 raise AiReviewError("ai_response_va_mismatch")
     try:
         _check_text(json.dumps(parsed, ensure_ascii=False))

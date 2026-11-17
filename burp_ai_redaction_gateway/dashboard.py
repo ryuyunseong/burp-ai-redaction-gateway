@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import hashlib
+import heapq
 import json
 import os
 import re
@@ -1307,13 +1308,37 @@ def render_home(root: Path, policy: RedactionPolicy) -> str:
     )
 
 
+def _recent_capture_outputs(root: Path, policy: RedactionPolicy) -> list[DashboardOutput]:
+    captures = root / "burp_live"
+    if captures.is_symlink() or not _is_relative_to(captures.resolve(), root) or not captures.is_dir():
+        return []
+
+    def metadata():
+        for path in captures.iterdir():
+            if path.name.startswith(".") or path.is_symlink() or not _is_relative_to(path.resolve(), root):
+                continue
+            marker = path / OUTPUT_MARKER_FILE
+            try:
+                if path.is_dir() and not marker.is_symlink() and marker.is_file():
+                    yield path.stat().st_mtime_ns, path.name, path
+            except OSError:
+                continue
+
+    outputs = []
+    # Select by directory metadata before verifying any report or analysis content.
+    for _, _, path in heapq.nlargest(50, metadata(), key=lambda item: item[:2]):
+        try:
+            outputs.append(_verified_output(root, policy, _relative_output_id(root, path)))
+        except (DashboardError, FileNotFoundError, ValueError):
+            continue
+    return outputs
+
+
 def render_burp_capture(root: Path, policy: RedactionPolicy) -> str:
     root = _validated_root(root)
-    outputs, _ = _discover_outputs(root, policy)
-    live_outputs = [output for output in outputs if output.output_id.startswith("burp_live/")]
-    live_outputs.sort(key=lambda output: output.path.stat().st_mtime_ns, reverse=True)
+    live_outputs = _recent_capture_outputs(root, policy)
     rows = []
-    for output in live_outputs[:50]:
+    for output in live_outputs:
         candidates = _load_candidates(output.path)
         endpoint = _report_text(str(candidates[0].get("affected_endpoint", ""))) if candidates else "검토 후보 없음"
         labels = list(dict.fromkeys(va_label(item.get("type")) for item in candidates))
