@@ -176,8 +176,8 @@ def main(argv: list[str] | None = None) -> int:
     ai = subparsers.add_parser("ai-review", help="마스킹된 점검 후보를 미리 보고, 동의 후 AI 점검 가이드를 받습니다.")
     ai.add_argument("--input", required=True, type=Path, help="검증된 결과 폴더.")
     ai.add_argument("--candidate", action="append", default=[], help="후보 번호. 최대 5개까지 반복 지정합니다.")
-    ai.add_argument("--via", choices=["api", *ai_review.CHAT_DESTINATIONS], default="api",
-                    help="chatgpt: 구독 대화용, other: 다른 모델 대화용, api: 기존 API(기본).")
+    ai.add_argument("--via", choices=["api", "codex", *ai_review.CHAT_DESTINATIONS], default="api",
+                    help="codex: 로그인한 구독으로 답변 받기, api: 기존 API(기본), chatgpt·other: 직접 복사.")
     ai.add_argument("--model", help="API 모델. 기본은 gpt-6-luna이며 gpt-6.1-terra도 선택할 수 있습니다.")
     ai.add_argument("--send", action="store_true", help="전체 전송 내용을 표시하고 터미널에서 동의를 받습니다.")
     ai.add_argument("--policy", type=Path, help="선택할 policy.json 경로.")
@@ -427,9 +427,14 @@ def _ai_review_command(input_dir: Path, candidate_ids: list[str], model: str | N
         if via in ai_review.CHAT_DESTINATIONS and (send or model is not None):
             print("대화용 자료에는 --send나 --model을 함께 쓸 수 없습니다. 모델은 대화창에서 선택하세요.")
             return 1
+        if via == "codex" and model is not None:
+            print("--model은 API 전용입니다. 구독 검토는 Codex의 기본 모델을 사용합니다.")
+            return 1
         model = ai_review.MODEL if model is None else model
         if model not in ai_review.MODELS:
             raise ai_review.AiReviewError("unsupported_ai_model")
+        if via == "codex":
+            model = ai_review.CODEX
         verification = verify_path(input_dir, policy)
         if not verification.passed or verification.files_checked == 0:
             raise ai_review.AiReviewError("verification_failed")
@@ -449,7 +454,8 @@ def _ai_review_command(input_dir: Path, candidate_ids: list[str], model: str | N
             return 0
         session = ai_review.ReviewSession()
         token, draft = session.prepare("cli_review", input_dir, candidate_ids, model=model)
-        print(f"모델: {draft.model}\n실제로 전송할 자료 전체:")
+        print((f"검토 방법: {ai_review.CODEX_LABEL}" if via == "codex" else f"모델: {draft.model}")
+              + "\n실제로 전송할 자료 전체:")
         if ai_review.terminal_text(draft.input_json) != draft.input_json:
             raise ai_review.AiReviewError("invalid_analysis_packet")
         print(draft.input_json)
@@ -459,7 +465,10 @@ def _ai_review_command(input_dir: Path, candidate_ids: list[str], model: str | N
         if not sys.stdin.isatty():
             print("직접 연 터미널에서 실행하고 전송 내용을 확인해야 합니다. 전송하지 않았습니다.")
             return 1
-        print("OpenAI로 전송하면 API 요금이 발생할 수 있습니다. 응답 저장은 꺼도 제공자의 보안 점검용 보관까지 없애지는 않습니다.")
+        if via == "codex":
+            print("로그인한 Codex로 전송합니다. ChatGPT 이용 한도와 보관 정책이 적용됩니다. API로 자동 전환하지 않습니다.")
+        else:
+            print("OpenAI로 전송하면 API 요금이 발생할 수 있습니다. 응답 저장은 꺼도 제공자의 보안 점검용 보관까지 없애지는 않습니다.")
         if input("외부 전송에 동의하면 SEND를 입력하세요: ").strip() != "SEND":
             print("전송을 취소했습니다.")
             return 0
@@ -470,6 +479,8 @@ def _ai_review_command(input_dir: Path, candidate_ids: list[str], model: str | N
         print(ai_review.render_text_review(result), end="")
         return 0
     except ai_review.AiReviewError as error:
+        if error.code == "codex_login_required":
+            print("검토 전용 폴더에서 ChatGPT 로그인이 필요합니다. docs/AI_REVIEW.md의 ‘Codex 구독 연결’을 확인하세요.")
         print(f"AI 검토를 중단했습니다. 후보·모델·검증 상태·API 연결을 확인하세요. 안내 코드: {error.code}")
         return 1
     except (EOFError, KeyboardInterrupt):

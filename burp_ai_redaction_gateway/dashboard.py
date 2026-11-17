@@ -1658,6 +1658,7 @@ def render_ai_review_selection(output: DashboardOutput, csrf_token: str) -> str:
             <input type="hidden" name="csrf_token" value="{_h(csrf_token)}">
             <input type="hidden" name="project" value="{_h(output.output_id)}">
             <label class="ai-model-control">검토 방법<select name="model">
+              <option value="codex">Codex 구독 · 여기서 답변 받기</option>
               <optgroup label="대화창에서 직접 검토">{chat_options}</optgroup>
               <optgroup label="OpenAI API · 사용량 과금">{model_options}</optgroup></select></label>
             <div class="ai-table-heading" aria-hidden="true"><span></span><span>점검 항목</span><span>대상 요청</span></div>
@@ -1691,13 +1692,15 @@ def render_chat_handoff(project: str, destination: str, review: str) -> str:
 
 def render_ai_review_confirmation(draft: ai_review.ReviewDraft, token: str, csrf_token: str) -> str:
     payload = json.loads(draft.input_json)
+    codex = draft.model == ai_review.CODEX
     rows = "".join(
         f'<section class="ai-preview"><h3><code>{_h(item["finding_id"])}</code> · {_h(_ai_candidate_title(item["type"], item["title"]))}</h3>'
         f'<p>{_h(va_label(item["type"]))}</p>'
-        f'<p class="ai-endpoint">{_h(item["affected_endpoint"])}</p>{_bullets([_report_text(str(value)) for value in item.get("rationale") or []])}</section>'
+        + (f'<p class="ai-endpoint">{_h(item["affected_endpoint"])}</p>' if not codex else "")
+        + f'{_bullets([_report_text(str(value)) for value in item.get("rationale") or []])}</section>'
         for item in payload["candidates"]
     )
-    ready = ai_review.api_key_configured()
+    ready = codex or ai_review.api_key_configured()
     key_note = "" if ready else '<p class="failure-note">API 키 연결을 마친 뒤 다시 시도하세요. 아직 전송하지 않았습니다.</p>'
     return _page("AI 전송 전 확인", _ai_review_header(draft.project, 2) + f"""
         <div class="ai-selection-layout"><section>
@@ -1707,9 +1710,9 @@ def render_ai_review_confirmation(draft: ai_review.ReviewDraft, token: str, csrf
         </section>
         <aside class="ai-consent">
           <h2>외부 전송 동의</h2>
-          <p>OpenAI · {draft.model}</p>
-          <p>민감한 값이 남지 않았는지 확인하세요. 전송하면 API 요금이 발생할 수 있습니다.</p>
-          <p>응답 저장은 끄지만, 제공자의 보안 점검용 보관까지 없애지는 않습니다. 회사의 외부 전송 정책을 먼저 확인하세요.</p>
+          <p>OpenAI · {ai_review.CODEX_LABEL if codex else draft.model}</p>
+          <p>{'Codex에 로그인한 ChatGPT 계정으로 보냅니다. 구독 이용 한도를 사용하며 API로 자동 전환하지 않습니다.' if codex else '민감한 값이 남지 않았는지 확인하세요. 전송하면 API 요금이 발생할 수 있습니다.'}</p>
+          <p>{'계정의 보관 정책이 적용됩니다.' if codex else '응답 저장은 끄지만, 제공자의 보안 점검용 보관까지 없애지는 않습니다.'} 회사의 외부 전송 정책을 먼저 확인하세요.</p>
           {key_note}
           <form method="post" action="/ai-review/send">
             <input type="hidden" name="csrf_token" value="{_h(csrf_token)}">
@@ -1744,7 +1747,7 @@ def render_ai_review_result(project: str, result: dict[str, Any]) -> str:
         + classification(item) +
         f'<p class="ai-review-summary">{_h(item["summary"])}</p>'
         f'<section class="ai-evidence"><h3>관찰 근거와 제한사항</h3>{_bullets(item["evidence_notes"])}</section>'
-        '<div class="ai-check-grid"><section><h3>Burp 재현 절차</h3><ol class="ai-procedure">'
+        f'<div class="ai-check-grid"><section><h3>{"기록·설정 확인 순서" if result.get("model") == ai_review.CODEX_LABEL else "Burp 재현 절차"}</h3><ol class="ai-procedure">'
         + "".join(f'<li>{_h(step)}</li>' for step in item["manual_checks"])
         + '</ol></section><section class="ai-criteria"><h3>판정 기준</h3>'
         f'<div class="ai-normal"><h4>정상 동작</h4><p>{_h(item["normal_result"])}</p></div>'
@@ -1767,6 +1770,11 @@ def render_ai_review_result(project: str, result: dict[str, Any]) -> str:
 
 def render_ai_review_error(code: str) -> str:
     messages = {
+        "codex_not_available": "Codex CLI를 찾거나 실행하지 못했습니다. 설치 후 대시보드를 다시 여세요.",
+        "codex_login_required": "AI 검토 안내의 전용 폴더 로그인 절차를 먼저 진행하세요. API로 전환하지 않았습니다.",
+        "codex_home_not_isolated": "전용 Codex 폴더가 연결 경로이거나 개인 지침 파일이 있습니다. 외부 검토를 중단했습니다.",
+        "codex_request_failed": "Codex가 요청을 마치지 못했습니다. CLI 버전과 구독 이용 한도를 확인하세요. 자동으로 다시 보내지 않습니다.",
+        "codex_timeout": "Codex 응답 시간이 초과됐습니다. 자동으로 다시 보내지 않습니다.",
         "select_one_to_five_candidates": "후보를 1~5개 선택하세요.",
         "unsupported_ai_model": "지원하지 않는 모델입니다. 항목 선택 화면에서 모델을 다시 고르세요.",
         "invalid_candidate_selection": "선택한 후보를 찾을 수 없습니다. 결과 화면에서 다시 선택하세요.",

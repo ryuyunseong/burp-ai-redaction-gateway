@@ -1,6 +1,6 @@
 # 대시보드에서 AI 검토하기
 
-마스킹한 점검 후보를 ChatGPT 대화에서 직접 검토하거나, OpenAI API로 대시보드에서 답을 받을 수 있습니다.
+마스킹한 점검 후보를 고르면 로그인한 Codex나 OpenAI API로 검토하고 같은 화면에서 답을 받을 수 있습니다.
 확정 취약점을 찾거나 Burp를 대신 조작하는 기능은 아닙니다.
 
 ## 사용 순서
@@ -11,11 +11,27 @@
 
 | 검토 방법 | 다음 단계 |
 | --- | --- |
-| ChatGPT 구독 | 자료를 확인하고 복사한 뒤 ChatGPT 열기를 누릅니다. 본인 계정에서 사용할 모델을 선택하고 새 대화에 붙여넣어 보냅니다. |
+| Codex 구독 | 후보와 근거를 확인한 뒤 동의란을 선택하고 AI 검토 요청을 누릅니다. 답변에서 근거와 확인할 설정, 권고 조치를 읽습니다. |
+| ChatGPT 대화창 | 자료를 직접 복사해 본인 대화에 붙여넣습니다. |
 | 다른 모델의 대화창 | 승인된 서비스나 로컬 모델의 대화창에 직접 붙여넣습니다. 요금과 보관 정책은 모델 제공자에 따릅니다. |
 | OpenAI API | 자료 전체를 읽고 외부 전송 동의란을 선택한 뒤 AI 검토 요청을 누릅니다. 답변을 대시보드에서 확인합니다. |
 
-대화용 자료도 로컬 민감정보 검사를 거치며, 선택한 후보 번호·분류·근거만 담습니다. 게이트웨이는 대화 계정에 로그인하거나 답변을 가져오지 않습니다. 대화창의 답변은 게이트웨이가 검사하지 않습니다. 외부 공유가 허용되는지 먼저 확인하고 원본·키·추가 파일은 첨부하지 마세요.
+직접 복사하는 방식은 답변을 게이트웨이로 가져오지 않습니다. 어떤 방식을 쓰든 외부 공유가 허용되는지 먼저 확인하고 원본·키·추가 파일은 첨부하지 마세요.
+
+## Codex 구독 연결
+
+평소 쓰는 Codex의 개인 지침이 검토 자료에 섞이지 않도록 로그인 폴더를 분리합니다. Codex CLI를 설치한 뒤 새 PowerShell 창에서 아래 두 줄을 실행하고, 같은 ChatGPT 계정으로 한 번 로그인하세요.
+
+```powershell
+$env:CODEX_HOME = Join-Path $HOME '.burp-review-codex'
+codex login
+```
+
+그 창에서 `codex login status`가 `Logged in using ChatGPT`이면 창을 닫아도 됩니다. macOS·Linux에서는 `CODEX_HOME="$HOME/.burp-review-codex" codex login`을 사용하세요. 이후 대시보드와 터미널은 이 로그인을 함께 사용하며, 기존 Codex 설정과 API 키는 건드리지 않습니다. 이 폴더에 개인 지침 파일을 넣지 마세요.
+
+선택한 후보 번호·분류·근거만 검토합니다. 원본 패킷, 대상 경로, 쿠키 이름, 자유 입력 문장은 포함하지 않습니다. 답변은 후보 번호·형식·민감정보 검사를 통과해야 표시됩니다. 로그인이나 검토에 실패해도 API로 다시 보내지 않습니다.
+
+Codex CLI 0.144.1에서 가상 샘플 FC-0010을 터미널과 대시보드로 검토했습니다. 쿠키의 `SameSite=None`은 설정된 값이고, 확인할 항목은 `Secure`와 `HttpOnly` 누락입니다. 쿠키 용도와 운영 설정을 확인하기 전에는 취약점으로 확정하지 않습니다.
 
 ![기존 API 방식으로 점검 항목을 선택한 화면](images/ai-review-selection.jpg)
 
@@ -65,7 +81,13 @@ OpenAI API 키가 연결된 환경에서 사용할 수 있습니다. 키가 없�
 python -m burp_ai_redaction_gateway ai-review --input out/demo
 ```
 
-ChatGPT 구독으로 검토하려면 대화용 자료를 출력해 직접 붙여넣습니다. 다른 모델은 `--via other`로 바꾸세요. 이 두 방식은 API 키가 필요 없으며 `--send`와 함께 쓸 수 없습니다.
+구독으로 바로 답을 받으려면 다음 명령을 실행하세요. 전송할 자료를 읽고 `SEND`를 입력합니다. 미리보기만 하려면 `--send`를 빼세요.
+
+```powershell
+python -m burp_ai_redaction_gateway ai-review --input out/demo --candidate FC-0010 --via codex --send
+```
+
+대화창에 직접 붙여넣을 자료만 필요하면 아래처럼 실행합니다. 다른 서비스는 `--via other`를 사용하세요.
 
 ```powershell
 python -m burp_ai_redaction_gateway ai-review --input out/demo --candidate FC-0010 --via chatgpt
