@@ -147,6 +147,25 @@ class AiReviewSafetyTests(PreparedSample):
             with self.subTest(events=events), self.assertRaisesRegex(ai_review.AiReviewError, "invalid_ai_response"):
                 codex_review._answer("\n".join(map(json.dumps, events)).encode())
         self.assertEqual(codex_review._answer("\n".join(map(json.dumps, [msg, end])).encode()), "answer")
+        thought = {"type": "item.completed", "item": {"type": "reasoning", "text": "not part of the answer"}}
+        self.assertEqual(codex_review._answer("\n".join(map(json.dumps, [thought, msg, end])).encode()), "answer")
+
+    def test_codex_npm_launches_native_binary_not_a_wrapper(self):
+        for system, triple, magic, name in (("win32", "x86_64-pc-windows-msvc", b"MZ00", "codex.exe"),
+                                            ("linux", "x86_64-unknown-linux-musl", b"\x7fELF", "codex")):
+            prefix = self.root / system
+            prefix.mkdir()
+            shim = prefix / name
+            shim.write_text("#!/usr/bin/env node", encoding="ascii")
+            shim.chmod(0o700)
+            with patch.object(codex_review.sys, "platform", system), patch.object(codex_review.platform, "machine", return_value="x86_64"), patch.object(os, "get_exec_path", return_value=[str(prefix)]):
+                with self.assertRaisesRegex(ai_review.AiReviewError, "codex_not_available"):
+                    codex_review._command()
+                binary = prefix / "node_modules" / "@openai" / "codex" / "node_modules" / "@openai" / f"codex-{system}-x64" / "vendor" / triple / "bin" / name
+                binary.parent.mkdir(parents=True)
+                binary.write_bytes(magic)
+                binary.chmod(0o700)
+                self.assertEqual(codex_review._command(), str(binary.resolve()))
 
     def test_only_allowlisted_models_are_used_and_kept_in_the_confirmation(self):
         self.assertEqual(ai_review.MODEL, "gpt-6-luna")

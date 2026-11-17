@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import json
 import os
+import platform
 import re
-import shutil
 import stat
 import subprocess
+import sys
 import tempfile
 import threading
 from pathlib import Path
@@ -60,16 +61,45 @@ def candidate_metadata(item: dict[str, Any]) -> dict[str, Any]:
             "confidence": item["confidence"], "rationale": observations}
 
 
+def _native(path: Path, *, windows: bool) -> bool:
+    if not path.is_file() or not os.access(path, os.X_OK):
+        return False
+    with path.open("rb") as stream:
+        magic = stream.read(4)
+    if windows:
+        return magic.startswith(b"MZ")
+    return magic == b"\x7fELF" or magic.hex() in {"feedface", "cefaedfe", "feedfacf", "cffaedfe", "cafebabe", "cafebabf"}
+
+
 def _command() -> str:
-    # Do not launch scripts or search the working directory for a program.
-    name = "codex.exe" if os.name == "nt" else "codex"
+    # Launch the native process itself, never a shell/Node wrapper with inherited pipes.
+    windows = sys.platform == "win32"
+    name = "codex.exe" if windows else "codex"
+    arch = {"amd64": "x86_64", "x86_64": "x86_64", "arm64": "aarch64", "aarch64": "aarch64"}.get(platform.machine().lower())
+    target = {"win32": "pc-windows-msvc", "linux": "unknown-linux-musl", "darwin": "apple-darwin"}.get(sys.platform)
+    cwd = Path.cwd().resolve()
     for entry in os.get_exec_path():
         path = Path(entry)
-        if not path.is_absolute() or path.resolve().is_relative_to(Path.cwd().resolve()):
+        if not path.is_absolute() or path.resolve().is_relative_to(cwd):
             continue
-        executable = shutil.which(str(path / name))
-        if executable and Path(executable).is_file():
-            return executable
+        direct = path / name
+        options = [direct]
+        if arch and target:
+            root = path / "node_modules" / "@openai" / "codex"
+            if not windows and direct.is_symlink():
+                launcher = direct.resolve()
+                if launcher.name == "codex.js" and launcher.parent.name == "bin":
+                    root = launcher.parent.parent
+            package = f"codex-{sys.platform}-{'x64' if arch == 'x86_64' else 'arm64'}"
+            for base in (root / "node_modules" / "@openai" / package, root.parent / package, root):
+                options.append(base / "vendor" / f"{arch}-{target}" / "bin" / name)
+        for candidate in options:
+            try:
+                executable = candidate.resolve()
+                if not executable.is_relative_to(cwd) and _native(executable, windows=windows):
+                    return str(executable)
+            except (OSError, RuntimeError):
+                continue
     raise AiReviewError("codex_not_available")
 
 
@@ -122,6 +152,8 @@ def _answer(events: bytes) -> str:
                 complete = True
             elif kind == "item.completed" and event["item"]["type"] == "agent_message":
                 messages.append(event["item"]["text"])
+            elif kind in ("item.started", "item.completed") and event["item"]["type"] == "reasoning":
+                continue
             elif kind not in ("thread.started", "turn.started"):
                 raise ValueError()
         if not complete or len(messages) != 1 or not isinstance(messages[0], str):
