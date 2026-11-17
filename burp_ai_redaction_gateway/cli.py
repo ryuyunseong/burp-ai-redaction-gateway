@@ -176,7 +176,9 @@ def main(argv: list[str] | None = None) -> int:
     ai = subparsers.add_parser("ai-review", help="마스킹된 점검 후보를 미리 보고, 동의 후 AI 점검 가이드를 받습니다.")
     ai.add_argument("--input", required=True, type=Path, help="검증된 결과 폴더.")
     ai.add_argument("--candidate", action="append", default=[], help="후보 번호. 최대 5개까지 반복 지정합니다.")
-    ai.add_argument("--model", default=ai_review.MODEL, help="gpt-6-luna(기본). 필요하면 gpt-6.1-terra를 지정합니다.")
+    ai.add_argument("--via", choices=["api", *ai_review.CHAT_DESTINATIONS], default="api",
+                    help="chatgpt: 구독 대화용, other: 다른 모델 대화용, api: 기존 API(기본).")
+    ai.add_argument("--model", help="API 모델. 기본은 gpt-6-luna이며 gpt-6.1-terra도 선택할 수 있습니다.")
     ai.add_argument("--send", action="store_true", help="전체 전송 내용을 표시하고 터미널에서 동의를 받습니다.")
     ai.add_argument("--policy", type=Path, help="선택할 policy.json 경로.")
 
@@ -258,7 +260,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "review":
         return _review(args.input, args.export_dir, args.policy)
     if args.command == "ai-review":
-        return _ai_review_command(args.input, args.candidate, args.model, args.send, args.policy)
+        return _ai_review_command(args.input, args.candidate, args.model, args.send, args.policy, args.via)
     if args.command == "report":
         return _report(args.input, args.output, args.profile, args.policy)
     if args.command == "viewer":
@@ -419,9 +421,13 @@ def _review(input_dir: Path, export_dir: Path | None, policy_path: Path | None) 
     return 0
 
 
-def _ai_review_command(input_dir: Path, candidate_ids: list[str], model: str, send: bool, policy_path: Path | None) -> int:
+def _ai_review_command(input_dir: Path, candidate_ids: list[str], model: str | None, send: bool, policy_path: Path | None, via: str) -> int:
     try:
         policy = load_policy(policy_path)
+        if via in ai_review.CHAT_DESTINATIONS and (send or model is not None):
+            print("대화용 자료에는 --send나 --model을 함께 쓸 수 없습니다. 모델은 대화창에서 선택하세요.")
+            return 1
+        model = ai_review.MODEL if model is None else model
         if model not in ai_review.MODELS:
             raise ai_review.AiReviewError("unsupported_ai_model")
         verification = verify_path(input_dir, policy)
@@ -435,6 +441,11 @@ def _ai_review_command(input_dir: Path, candidate_ids: list[str], model: str, se
             for candidate in candidates:
                 label = ai_review.CANDIDATE_LABELS.get(candidate["type"], "점검 항목")
                 print(ai_review.terminal_text(f"{candidate['finding_id']} · {va_label(candidate['type'])} · {label} · {candidate['affected_endpoint']}"))
+            return 0
+        if via in ai_review.CHAT_DESTINATIONS:
+            review = ai_review.chat_review_text(input_dir, candidate_ids)
+            print(f"{ai_review.CHAT_DESTINATIONS[via]}에서 모델을 선택하고, 공개 가능한 내용인지 확인한 뒤 아래 자료를 붙여넣으세요. API는 호출하지 않습니다.\n")
+            print(ai_review.terminal_text(review))
             return 0
         session = ai_review.ReviewSession()
         token, draft = session.prepare("cli_review", input_dir, candidate_ids, model=model)

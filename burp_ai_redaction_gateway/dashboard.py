@@ -683,7 +683,13 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         try:
             if path.endswith("/prepare"):
                 output = _verified_output(self.server.config.root, self.server.policy, _required_form_value(form, "project"))
-                token, draft = self.server.ai_reviews.prepare(output.output_id, output.path, form.get("candidates", []), model=form.get("model", [ai_review.MODEL])[0])
+                destination = form.get("model", [ai_review.MODEL])[0]
+                candidates = form.get("candidates", [])
+                if destination in ai_review.CHAT_DESTINATIONS:
+                    review = ai_review.chat_review_text(output.path, candidates)
+                    self._send_html(render_chat_handoff(output.output_id, destination, review))
+                    return
+                token, draft = self.server.ai_reviews.prepare(output.output_id, output.path, candidates, model=destination)
                 self._send_html(render_ai_review_confirmation(draft, token, self.server.csrf_token))
                 return
             token = _required_form_value(form, "confirmation")
@@ -1635,7 +1641,8 @@ def _va_catalog_details(kinds: list[str]) -> str:
 
 def render_ai_review_selection(output: DashboardOutput, csrf_token: str) -> str:
     candidates = ai_review.list_review_candidates(output.path)
-    model_options = "".join(f'<option value="{name}" {"selected" if name == ai_review.MODEL else ""}>{label}</option>' for name, label in ai_review.MODELS.items())
+    chat_options = "".join(f'<option value="{name}">{label}</option>' for name, label in ai_review.CHAT_DESTINATIONS.items())
+    model_options = "".join(f'<option value="{name}">{label}</option>' for name, label in ai_review.MODELS.items())
     choices = "".join(
         f'<label class="ai-choice"><input type="checkbox" name="candidates" value="{_h(item["finding_id"])}">'
         f'<span class="ai-choice-title"><code>{_h(item["finding_id"])}</code>'
@@ -1644,15 +1651,15 @@ def render_ai_review_selection(output: DashboardOutput, csrf_token: str) -> str:
         f'<code class="ai-endpoint">{_h(item["affected_endpoint"])}</code></label>'
         for item in candidates
     )
-    key_note = "" if ai_review.api_key_configured() else '<p class="failure-note">API 키 연결이 아직 준비되지 않았습니다. 전송할 내용은 먼저 확인할 수 있습니다.</p>'
     return _page("AI 검토", _ai_review_header(output.output_id) + f"""
-        {key_note}
         <div class="ai-selection-layout"><section>
           <div class="ai-section-heading"><h2>점검 항목 선택</h2><span>{len(candidates)}개 · 최대 5개 선택</span></div>
           <form method="post" action="/ai-review/prepare">
             <input type="hidden" name="csrf_token" value="{_h(csrf_token)}">
             <input type="hidden" name="project" value="{_h(output.output_id)}">
-            <label class="ai-model-control">검토 모델<select name="model">{model_options}</select></label>
+            <label class="ai-model-control">검토 방법<select name="model">
+              <optgroup label="대화창에서 직접 검토">{chat_options}</optgroup>
+              <optgroup label="OpenAI API · 사용량 과금">{model_options}</optgroup></select></label>
             <div class="ai-table-heading" aria-hidden="true"><span></span><span>점검 항목</span><span>대상 요청</span></div>
             <div class="ai-choices">{choices or '<p class="empty-state">검토 후보가 없습니다.</p>'}</div>
             <div class="ai-submit-bar"><span>다음 단계에서 전송 내용을 확인합니다.</span>
@@ -1665,6 +1672,20 @@ def render_ai_review_selection(output: DashboardOutput, csrf_token: str) -> str:
           <p>내용을 확인하고 동의하기 전에는 외부로 보내지 않습니다.</p>
           <p>검토 후보입니다. 실제 취약점 여부는 Burp에서 재현해 판단하세요.</p>
         </aside></div>
+    """, page_class="ai-workspace")
+
+
+def render_chat_handoff(project: str, destination: str, review: str) -> str:
+    link = ('<a class="button" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">ChatGPT 열기</a>'
+            if destination == "chatgpt" else "")
+    return _page("대화용 검토 자료", f"""
+      <nav class="ai-topnav"><a href="/ai-review?project={quote(project, safe='')}">항목 선택으로</a></nav>
+      <header class="ai-heading"><h1>{_h(ai_review.CHAT_DESTINATIONS[destination])}에서 검토</h1>
+      <p>아래 내용을 확인하고 복사한 뒤, 사용할 모델의 대화창에 붙여넣으세요. 답변은 그 대화에서 확인합니다.</p></header>
+      <label for="review-text">대화용 자료 · 아직 전송하지 않음</label>
+      <textarea id="review-text" class="ai-handoff-text" readonly spellcheck="false">{_h(review)}</textarea>
+      <p>API 키는 사용하지 않습니다. 직접 보내는 자료에는 해당 서비스의 이용 한도와 보관 정책이 적용됩니다.</p>
+      {link}
     """, page_class="ai-workspace")
 
 
@@ -4214,6 +4235,8 @@ def _page(title: str, body: str, *, page_class: str = "", refresh_seconds: int |
     .ai-result h2 code {{ font-size: 17px; }}
     .ai-section-heading > .ai-assessment {{ color: #946400; font-size: 14px; font-weight: 650; }}
     .ai-review-summary {{ margin-bottom: 20px; }}
+    .ai-handoff-text {{ display: block; box-sizing: border-box; width: 100%; height: 22rem; margin: 8px 0 16px;
+      padding: 14px; resize: vertical; border: 1px solid var(--border); border-radius: 4px; font: inherit; }}
     .ai-evidence {{ margin-bottom: 20px; }}
     .ai-result ul {{ padding-left: 20px; margin: 0; }}
     .ai-result li {{ margin-bottom: 6px; }}
