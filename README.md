@@ -97,10 +97,13 @@ Export나 매번 전송 버튼을 누를 필요는 없습니다. 시작 이후 �
 
 Burp 자동 수집은 점검 범위 안에서 새로 관찰한 Proxy 응답을 로컬로 가져옵니다. 의심 기록만 골라 보내는 방식은 아닙니다. 마스킹과 후보 분류는 로컬에서 하고, AI에는 직접 선택하고 확인한 후보만 보냅니다.
 
-아래는 가상 샘플의 접근 권한·쿠키 설정 후보 2개를 실제 OpenAI API로 검토한 화면입니다.
-AI가 취약점을 재현한 결과는 아니며, 최종 판정은 직접 해야 합니다. API 이용 요금은 별도입니다.
+가상 샘플에서 나온 후보 22건 중 5건이 미리 선택된 화면입니다. 추천만으로는 전송되지 않습니다.
 
-![실제 AI 응답의 재현 절차와 정상·취약 의심 판정 기준](docs/images/ai-review-result.jpg)
+![Codex 구독 검토를 위해 대표 후보 5건이 선택된 대시보드](docs/images/codex-review-shortlist.jpg)
+
+아래는 동의 후 받은 Codex 구독 답변입니다. 쿠키 후보 `FC-0010`에서 `SameSite=None`은 설정된 값이고, 빠진 속성은 `Secure`와 `HttpOnly`입니다. 이 쿠키가 실제 인증에 쓰이는지는 확인되지 않았습니다.
+
+![Codex의 실제 답변: 검토한 후보 5건의 목록과 FC-0010의 관찰 근거](docs/images/codex-review-answer.jpg)
 
 [Codex 구독으로 검토한 가상 후보 5건과 점검 순서](docs/AI_REVIEW.md#가상-후보-5건의-점검-순서) · [API 검토 예제](docs/examples/ai_review.md) · [연결과 사용 순서](docs/AI_REVIEW.md)
 
