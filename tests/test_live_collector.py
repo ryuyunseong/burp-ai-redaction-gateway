@@ -55,12 +55,38 @@ class LiveCollectorTests(unittest.TestCase):
                     self.assertNotIn("DUMMY_COOKIE_VALUE", text)
                     self.assertNotIn("FAKE-client.example.test", text)
             html = render_burp_capture(root, load_policy())
-            self.assertIn('http-equiv="refresh" content="5"', html)
+            self.assertNotIn('http-equiv="refresh"', html)
             self.assertIn("VA-16", html)
             self.assertIn("burp-live-fixture-1", html)
             self.assertIn("burp-live-fixture-2", html)
             self.assertIn("모든 VA 항목이 정상이라는 뜻은 아닙니다", html)
             self.assertEqual(list(config.output_dir.glob(".ingest-*")), [])
+
+    def test_capture_refresh_is_opt_in_and_reading_the_guide_stops_it(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            server = create_dashboard_server("127.0.0.1", 0, DashboardConfig(Path(temporary)))
+            worker = threading.Thread(target=server.serve_forever, daemon=True)
+            worker.start()
+            try:
+                for path in ("/burp", "/burp?view=unrecognized-mode", "/burp?view=guide", "/burp?view=live"):
+                    with self.subTest(path=path):
+                        status, html = request(server, "GET", path)
+                        self.assertEqual(status, 200)
+                        if path.endswith("=live"):
+                            self.assertIn('http-equiv="refresh" content="5"', html)
+                            self.assertIn('href="/burp?view=guide#capture-guide"', html)
+                            self.assertIn('href="/burp">화면 자동 갱신 끄기', html)
+                        else:
+                            self.assertNotIn('http-equiv="refresh"', html)
+                            self.assertIn('href="/burp?view=live"', html)
+                            self.assertIn('id="capture-guide"', html)
+                            self.assertNotIn("unrecognized-mode", html)
+                            if path.endswith("=guide"):
+                                self.assertIn('class="secondary-details" open>', html)
+            finally:
+                server.shutdown()
+                server.server_close()
+                worker.join(timeout=5)
 
     def test_duplicate_live_identifier_does_not_overwrite_existing_result(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -73,16 +99,32 @@ class LiveCollectorTests(unittest.TestCase):
             self.assertEqual(caught.exception.status, HTTPStatus.CONFLICT)
             self.assertEqual(path.read_bytes(), before)
 
-    def test_collector_uuid_identifiers_pass_receiver_and_output_verification(self):
+    def test_collector_uuid_results_appear_in_dashboard_without_exposing_source_identifier(self):
         with tempfile.TemporaryDirectory() as temporary:
-            config = ReceiverConfig(Path(temporary), "burp_live", complete_bundle=True)
-            for identity in (str(uuid.uuid4()), str(uuid.uuid4())):
-                assert_no_sensitive_text(identity)
-                payload = self.payload()
-                payload["source_event_id"] = identity
+            root = Path(temporary)
+            config = ReceiverConfig(root / "burp_live", "burp_live", complete_bundle=True)
+            for identity in ("a12b3c45-678d-4ef1-9a02-3b4c5d6e7f89", str(uuid.uuid4())):
+                payload = dict(self.payload(), source_event_id=identity)
                 result = ingest_montoya_payload(payload, config)
                 self.assertEqual(result.status, "accepted")
+                self.assertRegex(result.output_name, r"^c[0-9a-f]{20}$")
                 self.assertTrue(verify_path(config.output_dir / result.output_name, load_policy()).passed)
+                html = render_burp_capture(root, load_policy())
+                self.assertIn(result.output_name, html)
+                self.assertNotIn(identity, html)
+                with self.assertRaises(ReceiverError) as caught:
+                    ingest_montoya_payload(payload, config)
+                self.assertEqual(caught.exception.status, HTTPStatus.CONFLICT)
+
+    def test_existing_uuid_capture_is_not_replaced_or_republished(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            identity = str(uuid.uuid4())
+            (root / identity).mkdir()
+            with self.assertRaises(ReceiverError) as caught:
+                ingest_montoya_payload(dict(self.payload(), source_event_id=identity), ReceiverConfig(root, "burp_live", complete_bundle=True))
+            self.assertEqual(caught.exception.status, HTTPStatus.CONFLICT)
+            self.assertEqual(list(root.iterdir()), [root / identity])
 
     def test_capture_page_normalizes_relative_result_root_before_boundary_checks(self):
         with tempfile.TemporaryDirectory(prefix="burp-live-root-", dir=ROOT.parent) as temporary:

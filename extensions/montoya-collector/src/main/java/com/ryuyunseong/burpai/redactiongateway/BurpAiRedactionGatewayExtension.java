@@ -43,11 +43,7 @@ public final class BurpAiRedactionGatewayExtension implements BurpExtension {
 
             @Override
             public ProxyResponseToBeSentAction handleResponseToBeSent(InterceptedResponse response) {
-                try {
-                    live.capture(response.initiatingRequest(), response);
-                } catch (RuntimeException exception) {
-                    logging.logToError("자동 수집 중 응답을 읽지 못했습니다. 원문은 기록하지 않습니다.");
-                }
+                live.capture(response);
                 return ProxyResponseToBeSentAction.continueWith(response, response.annotations());
             }
         });
@@ -85,7 +81,7 @@ public final class BurpAiRedactionGatewayExtension implements BurpExtension {
         timer.addActionListener(action -> {
             start.setEnabled(!live.running());
             stop.setEnabled(live.running());
-            status.setText((live.running() ? "수집 중" : "중지됨") + " · 전송 " + live.sent()
+            status.setText((live.running() ? "수집 중" : "중지됨") + " · Proxy 응답 " + live.observed() + " · 전송 " + live.sent()
                 + " · 제외 " + live.skipped() + " · 실패 " + live.failed());
         });
         timer.start();

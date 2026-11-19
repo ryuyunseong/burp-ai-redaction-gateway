@@ -1,7 +1,6 @@
 package com.ryuyunseong.burpai.redactiongateway;
 
-import burp.api.montoya.http.message.requests.HttpRequest;
-import burp.api.montoya.http.message.responses.HttpResponse;
+import burp.api.montoya.proxy.http.InterceptedResponse;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -14,6 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 final class LiveCollector implements AutoCloseable {
     private final LocalGatewayClient client;
     private final ThreadPoolExecutor worker;
+    private final AtomicLong observed = new AtomicLong();
     private final AtomicLong sent = new AtomicLong();
     private final AtomicLong skipped = new AtomicLong();
     private final AtomicLong failed = new AtomicLong();
@@ -40,17 +40,19 @@ final class LiveCollector implements AutoCloseable {
     }
 
     boolean running() { return session != null; }
+    long observed() { return observed.get(); }
     long sent() { return sent.get(); }
     long skipped() { return skipped.get(); }
     long failed() { return failed.get(); }
 
-    void capture(HttpRequest request, HttpResponse response) {
+    void capture(InterceptedResponse response) {
         String activeSession = session;
         if (activeSession == null) {
             return;
         }
+        observed.incrementAndGet();
         try {
-            String payload = client.livePayload(UUID.randomUUID().toString(), request, response);
+            String payload = client.livePayload(UUID.randomUUID().toString(), response.initiatingRequest(), response);
             if (payload == null) {
                 skipped.incrementAndGet();
                 return;

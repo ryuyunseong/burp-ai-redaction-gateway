@@ -3,8 +3,8 @@ package com.ryuyunseong.burpai.redactiongateway;
 import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.HttpService;
 import burp.api.montoya.http.message.requests.HttpRequest;
-import burp.api.montoya.http.message.responses.HttpResponse;
 import burp.api.montoya.proxy.ProxyHttpRequestResponse;
+import burp.api.montoya.proxy.http.InterceptedResponse;
 import com.sun.net.httpserver.HttpServer;
 
 import java.lang.reflect.Proxy;
@@ -40,26 +40,31 @@ public final class LiveCollectorTest {
         String base = "http://127.0.0.1:" + server.getAddress().getPort();
         try (LiveCollector live = new LiveCollector(LocalGatewayClient.fromEndpoint(base + "/ingest"))) {
             HttpRequest allowed = request("example.test", true, 100);
-            HttpResponse response = response();
-            live.capture(allowed, response);
-            require(received.get() == 0, "capture must be disabled initially");
+            InterceptedResponse response = response(allowed);
+            InterceptedResponse unreadable = proxy(InterceptedResponse.class, (instance, method, arguments) -> {
+                throw new IllegalStateException("unreadable fixture");
+            });
+            live.capture(unreadable);
+            require(received.get() == 0 && live.observed() == 0 && live.failed() == 0, "disabled collector must ignore responses");
             live.start();
-            live.capture(request("other.test", false, 100), response);
-            live.capture(request("127.0.0.1", true, 100), response);
-            live.capture(request("example.test", true, LocalGatewayClient.MAX_PAYLOAD_BYTES + 1), response);
+            live.capture(unreadable);
+            require(live.observed() == 1 && live.failed() == 1, "an unreadable Proxy response must count as a failure");
+            live.capture(response(request("other.test", false, 100)));
+            live.capture(response(request("127.0.0.1", true, 100)));
+            live.capture(response(request("example.test", true, LocalGatewayClient.MAX_PAYLOAD_BYTES + 1)));
             require(live.skipped() == 3, "scope and size exclusions");
             require(received.get() == 0, "excluded requests must not be sent");
-            live.capture(allowed, response);
+            live.capture(response);
             await(() -> live.sent() == 1);
             assertUuidIdentifier(lastBody.get());
             require(lastBody.get().contains("montoya-handoff-v1"), "existing handoff schema required");
             String first = lastBody.get();
-            live.capture(allowed, response);
+            live.capture(response);
             await(() -> live.sent() == 2);
             require(!first.equals(lastBody.get()), "events must not overwrite each other");
             live.stop();
-            live.capture(allowed, response);
-            require(received.get() == 2, "stopped collector must not send");
+            live.capture(response);
+            require(received.get() == 2 && live.observed() == 6, "stopped collector must not count or send");
             ProxyHttpRequestResponse historyItem = proxy(ProxyHttpRequestResponse.class, (instance, method, arguments) -> switch (method.getName()) {
                 case "request" -> allowed;
                 case "response" -> response;
@@ -110,17 +115,17 @@ public final class LiveCollectorTest {
         server.start();
         try (LiveCollector live = new LiveCollector(LocalGatewayClient.fromEndpoint("http://127.0.0.1:" + server.getAddress().getPort() + "/ingest"))) {
             live.start();
-            live.capture(request("example.test", true, 100), response());
+            live.capture(response(request("example.test", true, 100)));
             require(entered.await(5, TimeUnit.SECONDS), "worker did not start");
             for (int index = 0; index < 20; index++) {
-                live.capture(request("example.test", true, 100), response());
+                live.capture(response(request("example.test", true, 100)));
             }
             require(live.skipped() == 4, "queue must be bounded to sixteen waiting items");
             live.stop();
             release.countDown();
             await(() -> live.sent() == 1);
             live.start();
-            live.capture(request("example.test", true, 100), response());
+            live.capture(response(request("example.test", true, 100)));
             await(() -> live.sent() == 2);
             require(received.get() == 2, "stop must discard pending raw payloads without replay");
         } finally {
@@ -141,9 +146,10 @@ public final class LiveCollectorTest {
         });
     }
 
-    private static HttpResponse response() {
+    private static InterceptedResponse response(HttpRequest request) {
         ByteArray bytes = proxy(ByteArray.class, (instance, method, args) -> method.getName().equals("length") ? 100 : null);
-        return proxy(HttpResponse.class, (instance, method, args) -> switch (method.getName()) {
+        return proxy(InterceptedResponse.class, (instance, method, args) -> switch (method.getName()) {
+            case "initiatingRequest" -> request;
             case "toByteArray" -> bytes;
             case "toString" -> "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{}";
             default -> null;
