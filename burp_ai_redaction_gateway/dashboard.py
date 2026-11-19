@@ -413,7 +413,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 self._send_html(render_home(self.server.config.root, self.server.policy))
                 return
             if parsed.path == "/burp":
-                self._send_html(render_burp_capture(self.server.config.root, self.server.policy))
+                view = _optional_query_value(parsed.query, "view")
+                self._send_html(render_burp_capture(self.server.config.root, self.server.policy, view=view))
                 return
             if parsed.path == "/settings":
                 self._send_html(render_settings(self.server.config.root))
@@ -1341,7 +1342,7 @@ def _recent_capture_outputs(root: Path, policy: RedactionPolicy) -> list[Dashboa
     return outputs
 
 
-def render_burp_capture(root: Path, policy: RedactionPolicy) -> str:
+def render_burp_capture(root: Path, policy: RedactionPolicy, *, view: str = "") -> str:
     root = _validated_root(root)
     live_outputs = _recent_capture_outputs(root, policy)
     rows = []
@@ -1356,21 +1357,33 @@ def render_burp_capture(root: Path, policy: RedactionPolicy) -> str:
         )
     records = ('<table class="capture-table"><thead><tr><th>요청</th><th>검토 후보</th><th>확인</th></tr></thead>'
                f'<tbody>{"".join(rows)}</tbody></table>') if rows else '<p class="empty-state">아직 받은 응답이 없습니다.</p>'
+    live_view = view == "live"
+    if live_view:
+        controls = '<a class="button secondary" href="/burp">화면 자동 갱신 끄기</a>'
+        guide = '<a href="/burp?view=guide#capture-guide">자동 갱신을 멈추고 연결 방법 보기</a>'
+    else:
+        refresh_url = "/burp?view=guide#capture-guide" if view == "guide" else "/burp"
+        controls = (f'<a class="button secondary" href="{refresh_url}">새 결과 확인</a> '
+                    '<a href="/burp?view=live">5초마다 화면 갱신</a>')
+        guide = f"""<details id="capture-guide" class="secondary-details"{" open" if view == "guide" else ""}>
+            <summary>연결 방법과 수집 범위</summary>
+            <p><code>python -m burp_ai_redaction_gateway capture --open</code>을 실행하고 터미널을 열어 두세요.
+            확장을 설치하는 것만으로는 수집이 시작되지 않습니다.</p>
+            <p>Burp의 로컬 보안 점검 탭에서 자동 수집 시작을 누르세요. 전송·제외·실패가 모두 0이면
+            Proxy → Open browser로 허가된 페이지를 열고 HTTP history에 상태 코드가 있는 새 행이 생기는지 확인하세요.</p>
+            <p>점검 범위에 있는 새 Proxy 응답만 받습니다. 과거 기록이나 범위 밖 요청은 보내지 않습니다.
+            원문은 로컬 수신기의 메모리에서 처리하며 로그에 남기지 않습니다. 요청 재전송이나 능동 스캔은 하지 않습니다.</p></details>"""
     return _page("Burp 자동 수집", f"""
         <header class="topbar"><div><a class="back" href="/">처리한 기록으로</a><h1>Burp 자동 수집</h1>
         <p class="subtitle">수신 → 민감정보 제거 → 검증 → 검토 후보·보고서 생성</p></div>
-        <a class="button secondary" href="/burp">새로고침</a></header>
+        <div class="actions">{controls}</div></header>
         <section class="workspace-section"><h2>새 응답의 점검 결과</h2>
-        <p>Burp의 로컬 보안 점검 탭에서 자동 수집을 시작하세요. 이 화면은 5초마다 갱신됩니다.</p>
+        <p>Burp의 로컬 보안 점검 탭에서 자동 수집을 시작하세요. 화면 갱신 여부는 수집에 영향을 주지 않습니다.</p>
         {records}</section>
         <p class="review-note">최근 50개 결과를 표시합니다. 전체 기록은 첫 화면에서 확인할 수 있습니다.
         후보가 없어도 모든 VA 항목이 정상이라는 뜻은 아닙니다. AI로 자동 전송하지 않습니다.</p>
-        <details class="secondary-details"><summary>연결 방법과 수집 범위</summary>
-        <p><code>python -m burp_ai_redaction_gateway capture --open</code>으로 수신기와 대시보드를 함께 실행합니다.
-        Burp에 수집기를 설치하고 점검 범위를 지정한 다음 자동 수집 시작을 누릅니다.</p>
-        <p>시작 이후 점검 범위의 새 Proxy 응답만 받습니다. 과거 기록·범위 밖 요청은 자동 수집하지 않습니다.
-        원문은 로컬 수신기에서 메모리로 처리하며 로그에 남기지 않습니다. 요청 재전송·능동 스캔은 하지 않습니다.</p></details>
-        """, refresh_seconds=5)
+        {guide}
+        """, refresh_seconds=5 if live_view else None)
 
 
 def render_settings(root: Path) -> str:

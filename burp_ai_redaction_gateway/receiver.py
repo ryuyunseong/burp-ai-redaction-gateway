@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import tempfile
@@ -26,6 +27,7 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 DEFAULT_MAX_BYTES = 1_048_576
 SAFE_OUTPUT_NAME_RE = re.compile(r"[^A-Za-z0-9_.-]+")
+COLLECTOR_UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
 
 
 @dataclass(frozen=True)
@@ -68,6 +70,12 @@ def ingest_montoya_payload(payload: dict[str, Any], config: ReceiverConfig) -> I
     output_dir = config.output_dir / _safe_output_name(str(payload["source_event_id"]))
     if config.complete_bundle:
         config.output_dir.mkdir(parents=True, exist_ok=True)
+        if COLLECTOR_UUID_RE.fullmatch(payload["source_event_id"]):
+            # Keep old captures intact and keep the public result path short enough to scan normally.
+            if output_dir.exists() or output_dir.is_symlink():
+                raise ReceiverError("output_already_exists", HTTPStatus.CONFLICT)
+            digest = hashlib.sha256(payload["source_event_id"].encode("ascii")).hexdigest()
+            output_dir = config.output_dir / ("c" + digest[:20])
         if output_dir.exists() or output_dir.is_symlink():
             raise ReceiverError("output_already_exists", HTTPStatus.CONFLICT)
         # Publish only the verified report and bundle, never a half-written capture.
